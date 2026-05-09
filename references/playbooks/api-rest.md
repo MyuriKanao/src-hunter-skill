@@ -221,11 +221,12 @@ GET /api/v1/orders/{id} 接口未校验资源所有权，账号 A 可读取账�
 - **禁**：用速率漏洞实际发短信 100 条到他人手机。最多发到自己手机 10 条。
 - **禁**：用 CORS 漏洞做真实跨域 PoC（让朋友访问 attacker.com）。自己浏览器自演。
 
+
 ## Payload 库
 
 _15 个结构化 web payload，含完整攻击链 + WAF/EDR 绕过变体_
 
-**Payloader 类别分布：** API安全 (12) · WebSocket安全 (3)
+**类别分布：** API安全 (12) · WebSocket安全 (3)
 
 ### · API安全
 

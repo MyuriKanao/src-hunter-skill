@@ -1,0 +1,115 @@
+{
+  "id": 363680,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjM2ODA=",
+  "url": "https://hackerone.com/reports/363680",
+  "title": "Constant-time comparison is not always implemented; critical areas are vulnerable to key-timing attacks",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-06-09T08:51:57.047Z",
+  "submitted_at": "2018-06-09T08:51:57.047Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "anonimal",
+    "url": "/anonimal",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/040/857/f23cc3be09a21e17bc43975987c10ba2b6427239_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-08-06T15:13:53.417Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-07-27T10:55:40.203Z",
+  "team_member_agreed_on_going_public_at": "2018-08-06T15:13:53.306Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "In my most superficial of reviews, constant-time comparison appears to not be globally implemented (at a glance, only implemented within the ref10 implementation).\n\nWith that said, the following areas either appear to be vulnerable, or are potentially vulnerable, to key-timing attacks:\n\n1. Containers used for RingCT (in particular, the key struct) as deployed throughout RingCT\n2. The definition and implementations of `CRYPTO_MAKE_COMPARABLE`\n3. `equalKeys` in rctOps.cpp, whose comparison speed appears to be relative to its available hardware\n\nFor points 1 and 2, as a steadfast rule; do **NOT** use `memcmp` when comparing cryptographic secrets (or any cryptographic material for that matter). For point 3, be careful with conditional branches which can be optimized or subject to speculative execution. One possible fix for point 3 is to perform an XOR of all the bytes in both buffers, and then compare the result (see kovri below).\n\nAs the literature states, key timing vulnerabilities can range from somewhat-trivial to extremely-difficult to exploit. For this report, I cannot assess a difficulty. For an active attack, monero has a very simple yet friendly network layer which I *imagine* could make remote execution *somewhat* easier (depending on the context and application) but, I don't have PoC. Now, at the local level for, let's say, a malicious node that wants to forge X before sending to the next peer, the results could be easier to attain (again, no PoC).\n\nThis was only the most superficial of reviews - so please forgive any assumptions or inaccuracies on my part. If I had more time with this issue, I would love to look deeper in order to provide a more details and to assert a monero PoC. Unfortunately, I am too busy with kovri - but I hope that this report will at least raises awareness.\n\nMitigation:\n\n- Use a function which provides constant-time comparison. For example, [kovri has a crypto++ solution](https://github.com/monero-project/kovri/issues/895) at its disposal.\n\n## Impact\n\nAt first glance, a forged RingCT signature - but the extent of the problem could be possibly extended to other areas (to be determined).",
+  "weakness": {
+    "id": 39,
+    "name": "Missing Required Cryptographic Step"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-08-26T10:55:40.318Z",
+  "allow_singular_disclosure_after": -243059293.39136904,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "ali",
+    "apapedulimu",
+    "cryptographer",
+    "anomalroil",
+    "misspan",
+    "jrballi"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

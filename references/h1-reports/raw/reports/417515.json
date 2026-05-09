@@ -1,0 +1,121 @@
+{
+  "id": 417515,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MTc1MTU=",
+  "url": "https://hackerone.com/reports/417515",
+  "title": "Locked_Transfer functional burning",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-10-02T10:43:45.526Z",
+  "submitted_at": "2018-10-02T10:43:45.526Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "keejef",
+    "url": "/keejef",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/366/617/c7884bf9d308f6616439c2acffb8fff73b25cbe7_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-07-09T21:46:20.520Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-07-04T00:45:24.099Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** Using the `locked_transfer` command in the monero-wallet-cli users can send outputs with high lock times like 1,000,000 blocks. A vendor will accept these transactions with no warnings and credit a user balance. The user can now withdrawal or sell this balance and the vendor is left with outputs that will not unlock for 1000s of years.\n\n**Description:** \n\nThis bug essentially exploits the use of the `show_transfers` command by vendors that credit balances, functionally the result is the same as the double output bug found a week [ago](https://github.com/monero-project/monero/pull/4438). It is presumed at this point that anything in the Cryptonote/ Monero protocol that can show a valid transfer in `show_transfers` will be accepted by vendors, even if it creates un-spendable or functionality un-spendable outputs.\n\n## Releases Affected:\n\n  *  0.12.3.0 Lithium Luna - All Operating Systems \n  *  Current Monero master \n\nThis will also affect all Cryptonote coins with `locked_transfer` and exchanges that use `show_transfers`\n\n## Steps To Reproduce:\n\n  1. Transfer Monero or other Cryptonote coin to wallet-cli \n  2. Use `locked_transfer` set a high amount lockblocks, send to exchange or other vendor that will credit your balance.\n  3. Sell, or withdrawal your currency on the exchange, leaving them with locked coins, the attacker only loses the minimal fee that the exchange charges, while the exchange is left with un-spendable coins. \n\nThis bug has been tested against two separate exchanges with very small amounts of Monero, that will unlock after 4 months. This method will likely be effective against all exchanges that use `show_transfers` as a method of auditing incoming transactions (which i think is nearly all of them).  \n\nP.S. Discovery of bugs like these would not be possible without the help of my coworkers at Loki, so i want to thank them for their help brainstorming on this one.\n\n## Impact\n\nThis bug cannot be used to create new Monero but it can be used to attack Monero vendors with coins they can functionally never spend.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-08-03T00:45:24.179Z",
+  "allow_singular_disclosure_after": -213547002.32734418,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "dhakal_ananda",
+    "akaash_pantherdefence",
+    "cryptographer",
+    "ilux",
+    "c0ch1_l0c0"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

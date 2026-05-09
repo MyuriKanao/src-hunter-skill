@@ -1,0 +1,160 @@
+{
+  "id": 1543718,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNTQzNzE4",
+  "url": "https://hackerone.com/reports/1543718",
+  "title": "DOS via issue preview",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-04-18T17:44:47.481Z",
+  "submitted_at": "2022-04-18T17:44:47.605Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "legit-security",
+    "url": "/legit-security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/e47rd2mqtuc9z8dayu9aqolfjdbt/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-11-04T03:47:01.857Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-21T07:27:03.979Z",
+  "team_member_agreed_on_going_public_at": "2022-11-04T03:47:01.706Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\nPreviewing an issue with a specially-crafted description results in high CPU usage for 60 seconds (request timeout).\nMultiple requests can be issued in parallel to create a larger impact.\n\n### Steps to reproduce\n1. Given an authorized user (on GitLab.com - anyone can self-register. On EE - depends on instance configuration).\n2. Create an issue with the following description (provided a one-line python script to avoid bloating):\n3. Hit the preview button.\n\nSteps 2&3 can be accomplished via the preview_markdown API endpoint.\n\nThe script:\n```python -c \"print('![l' * int(1048576 / 3 - 1) + '\\n')\"```\nNote: this is essentially the maximal description size, but a smaller number of repetitions works too.\n\n### Impact\nAfter 60 seconds (timeout) - the request fails.\nMeanwhile, on the server end, (a single) CPU is burnt out (verified against a local EE instance).\nIssuing multiple requests in parallel results in multiple CPUs burn out.\nUsing the DockerHub image, the entire server is completely unavailable by repeatedly sending a small number of requests repeatedly.\n\n### Examples\nThe bug is instance-independent, works on latest versions. Since GitLab.com is open-core - it would work on GitLab too.\n\n### What is the current *bug* behavior?\nThe HTTP request fails for timeout while the server is burning CPU.\n\nOn the code side:\n```texts_and_contexts``` is being initialized here:\n\n```\ndef analyze(text, context = {})\n      @texts_and_contexts << { text: text, context: context }\n    end\n```\n\nIt is then used at banzai/reference_extractor.rb:\n```\ndef html_documents\n      ...\n      @html_documents ||= Renderer.cache_collection_render(@texts_and_contexts)\n      ...\n```\n\nThe CPU utilization is found in the execution of ```cache_collection_render```.\n\n### What is the expected *correct* behavior?\nFix the implementation of ```cache_collection_render```.\n\n### Relevant logs and/or screenshots\n### Output of checks\n#### Results of GitLab environment info\n\n## Impact\n\nA complete denial of service of a GitLab EE instance.\nAs this vulnerability impacts GitLab.com, we assume that this vulnerability opens the door for a DDOS attack.",
+  "bounty_amount": "7640.0",
+  "formatted_bounty": "$7,640",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 25,
+  "voters": [
+    "jumpydata",
+    "n1m0",
+    "zy9ard3",
+    "r4gh4v_",
+    "shreyaschavhan",
+    "pwrspl0it",
+    "xsky",
+    "mrnbayoh",
+    "mmdz",
+    "kmxx",
+    "and 15 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 55897,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://gitlab.com/gitlab-org/gitlab",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 144715,
+      "category": "researcher",
+      "content": "We are Legit Security, a company building a solution that protects development environments and pipelines from security risks such as software supply-chain attacks and sensitive data exposure.\nYou can read a bit about us at http://www.legitsecurity.com.",
+      "updated_at": "2022-04-18T17:45:08.655Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2315797,
+        "username": "legit-security",
+        "name": "Legit Security",
+        "bio": "Prevent Software Supply Chain Attacks",
+        "cleared": false,
+        "verified": false,
+        "website": "https://www.legitsecurity.com/",
+        "location": "",
+        "created_at": "2022-04-18T13:17:11.910Z",
+        "url": "https://hackerone.com/legit-security",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/e47rd2mqtuc9z8dayu9aqolfjdbt/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/e47rd2mqtuc9z8dayu9aqolfjdbt/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/e47rd2mqtuc9z8dayu9aqolfjdbt/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

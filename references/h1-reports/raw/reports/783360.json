@@ -1,0 +1,134 @@
+{
+  "id": 783360,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83ODMzNjA=",
+  "url": "https://hackerone.com/reports/783360",
+  "title": "Open memory dump method leaking customer information ,secret keys , password , source code & admin accounts",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-01-25T21:57:38.304Z",
+  "submitted_at": "2020-01-25T21:57:38.304Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "secyour-org",
+    "url": "/secyour-org",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/qoo1lgra0jrxknlbsiaae79vryn1/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 42368,
+    "url": "https://hackerone.com/stripo",
+    "handle": "stripo",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/042/368/5b1017d17427be6c8e05cbc95da27646bf45e925_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/042/368/5b1017d17427be6c8e05cbc95da27646bf45e925_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Stripo Inc",
+      "twitter_handle": "",
+      "website": "https://stripo.email",
+      "about": "Stripo is a lightweight and intuitive email template editor that lets users build professional looking and highly responsive email templates."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-01-31T08:11:14.686Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-01-30T11:51:37.726Z",
+  "team_member_agreed_on_going_public_at": "2020-01-31T08:11:14.608Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nStripo uses Spring boot for the backend API development , and misconfigured the application to open actuator APIs to the public.\n\nThis issue is found in 3 domains , don't know if I need to publish 3 reports for that, or just one report , but the domains are :\nhttps://my.stripo.email/cabinet/stripeapi/actuator\nhttps://plugins.stripo.email/actuator\nhttps://plugin.stripo.email/actuator\n\nit might be available in other micro services as well\n\n\n\n## Steps To Reproduce:\n\n  1. Go to the following URL : https://my.stripo.email/cabinet/stripeapi/actuator/heapdump\n  1. This url will download the heap dump of the server \n  1. using a memory analyzer such as Eclipse memory analyzer or VisualVM open the downloaded file\n  1. By searching inside the file you can find all the secrets , credentials , urls , JWT tokens & JWT secret keys, which can be used and generate any JWT token and takeover any account on the system.\n  1. Attached some examples of what can be found and used by this vulnerability, and you can imagine any bad scenario, and this issue can be used to take over/down Stripo\n\n## Supporting Material/References:\nPlease find more information about actuator on the following URL:\nhttps://docs.spring.io/spring-boot/docs/current-SNAPSHOT/actuator-api/html/#heapdump\n\n\nExample of open functionalities:\n████\n\nAdmin Credentials:\n███\n\nOther User's information:\n█████████\n\nBilling Service Credentials:\n████\n\nConfig Server Credentials:\n███████\n\n## Impact\n\nThis vulnerability allows any attacker to perform many severe attacks such as :\n\n- Upgrade accounts without payments.\n- Get logged in customer information and get access to the session & JWT tokes to take over accounts\n- PII Data leaking \n- Accessing all credentials from the application properties such as , admin credentials, swagger credentials , billing credentials .\n- Get database credentials\n- Server Environment variable\n- Server config Properties.\n- Payments manipulations and money stealing\n- and more",
+  "weakness": {
+    "id": 137,
+    "name": "Exposed Dangerous Method or Function"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 157,
+  "voters": [
+    "m4khn0",
+    "orange303",
+    "a_d_a_m",
+    "pudsec",
+    "xploiterr",
+    "checkm50",
+    "p1stachios",
+    "discodamone",
+    "holyfield",
+    "skarsom",
+    "and 147 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 38702,
+    "asset_type": "URL",
+    "asset_identifier": "my.stripo.email",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

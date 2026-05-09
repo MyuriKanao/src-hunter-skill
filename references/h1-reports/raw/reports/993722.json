@@ -1,0 +1,160 @@
+{
+  "id": 993722,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85OTM3MjI=",
+  "url": "https://hackerone.com/reports/993722",
+  "title": "Unrestricted access to quiesce functionality in dss.api.playstation.com REST API leads to unavailability of application",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-09-29T00:25:48.733Z",
+  "submitted_at": "2020-09-29T00:25:48.799Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "wiiiiam",
+    "url": "/wiiiiam",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/xw30vcfbor8epimjzbxy6djvsy0v/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-03-30T04:22:00.184Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-08T12:44:18.849Z",
+  "team_member_agreed_on_going_public_at": "2021-03-30T04:22:00.059Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "1000.0",
+  "formatted_bounty": "$1,000",
+  "weakness": {
+    "id": 152,
+    "name": "Missing Authorization"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 48,
+  "voters": [
+    "velozs",
+    "ds82",
+    "hicham_rs",
+    "battle_angel",
+    "mattberg",
+    "ali",
+    "mohaned0101",
+    "spam404",
+    "0nlymohammed",
+    "nkr",
+    "and 38 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 40730,
+    "asset_type": "URL",
+    "asset_identifier": "*.api.playstation.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 34839,
+      "category": "team",
+      "content": "## Report Summary\n----\nUnrestricted access to the quiesce function via a `PUT` request to `https://dss.api.playstation.com/api/application/state` makes the application unreachable for an uncertain amount of time.\n\n## Steps To Reproduce\n----\n[Reproduction method #1]\n+ *Burp Suite is the program required for the following method of reproduction*\n+ *Any OS platform can be used to reproduce this bug*\n  \n1. Using Burp Suite, go to *Proxy* tab -> *Intercept* tab. On this pane, click on **Open Browser** to launch the embedded chromium browser. {F1006879}\n1. In the chromium browser address bar, enter: https://dss.api.playstation.com/api/application/state\n1. In Burp Suite, go to *Proxy* tab -> *HTTP history* and in this window pane, click on the request so that it is highlighted and press keys: `CTRL+R` \n{F1006881}\n1. Click on the tab *Repeater* in Burp Suite and in the left pane labeled *Request*, omit the word GET and type PUT so that the first line now looks like this: \n`PUT /api/application/state HTTP/1.1`\n1. Click on the first of the last two empty lines in the request and type: `Content-Type: application/json`. On the last of the empty lines type: `Content-Length: ` with a space at the end and leave this value to be filled by Burp Suite. Press ENTER twice so that two empty lines remain.\n1. On the last empty line of the pair type the following JSON name/value pair: `{\"appState\":\"quiesce\"}`\n1. The request should appear like this: {F1006882} Click **Send**.\n\nWithin as low as 15 seconds, on refresh or on visitation to another path of the application e.g. https://dss.api.playstation.com/api/application.wadl , the application should return a 502 Bad Gateway error response.\n\n----\n[Reproduction method #2]\n+ *Firefox browser is the program required for the following method of reproduction*\n+ *Any OS platform can be used to reproduce this bug*\n\n1. In the Firefox browser address bar, enter: https://dss.api.playstation.com/api/application/state\n1. Once the page has loaded, press the key combination: `CTRL+SHIFT+E` to access the *Network* tool and click on the button labeled *Reload*.\n1. Once the Network view is populated with the GET request the browser sent, click on its entry so that it is highlighted and right-click to open a context menu and click on *Edit and Resend*.\n\n\n4. In *New Request* editor that opened on the right end of the Network window, perform the following edits:\n  * In the box labeled **Method** change GET to PUT\n  * at the end of the **Request Headers** box, add the following lines: `Content-Type: application/json` and `Content-Length: 22`\n  * In the box labeled **Request Body** box enter: `{\"appState\":\"quiesce\"}`\n5. The request should look like this: {F1006899} Click **Send**.\n\nWithin as low as 15 seconds, on refresh or on visitation to another path of the application e.g. https://dss.api.playstation.com/api/application.wadl , the application should return a 502 Bad Gateway error response.\n+-+-+\n## Supporting Material/References\n----\n  * Burp-Step1.png, Burp-Step2.png, Burp-Step3.png\n  * Firefox-Step1.png, Firefox-Step2.png, Firefox-Step3.png\n  * impact.png\n\n## Impact\n\nNo authorization for `/api/application/state` allows an attacker to disrupt the availability of the application in a sustained manner for an undisclosed amount of time through multiple PUT requests for quiescence. This affected host was unavailable for over an hour at the start of today starting at around 10:40 AM CDT UTC-5 and persisting past 11:45 CDT UTC-5 the last time I performed the request. \n\n[7:07 PM UTC-5] I tested Reproduction method #2 and 502 response was received.\n",
+      "updated_at": "2021-03-30T04:21:19.045Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 319901,
+        "username": "serv",
+        "name": "s",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-07-30T18:21:23.048Z",
+        "url": "https://hackerone.com/serv",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

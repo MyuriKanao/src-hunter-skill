@@ -1,0 +1,118 @@
+{
+  "id": 918946,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MTg5NDY=",
+  "url": "https://hackerone.com/reports/918946",
+  "title": "Subdomain takeover due to an unclaimed Amazon S3 bucket on ███",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-07-08T14:05:14.708Z",
+  "submitted_at": "2020-07-08T14:05:14.708Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0x0d0",
+    "url": "/0x0d0",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/7wu3mzp4ed980h038c52v1c5ut1s/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-09-03T17:29:19.205Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-08-15T00:48:32.833Z",
+  "team_member_agreed_on_going_public_at": "2020-09-03T17:29:19.093Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nAn unclaimed Amazon S3 bucket on █████████ gives an attacker the possibility to gain full control over this subdomain.\n\n**Description:**\n`███████` pointed to an S3 bucket that did no longer exists. The bucket points to an Amazon S3 website bucket in the US East region. I claimed this bucket and successfully took over this subdomain. \n\nNote:\nI am reporting this issue to DoD since: \"████████ ██████\" The ████████ is linked to ███, so I believe this belongs here. I discovered this domain initially from the DoD websites list. Please excuse if this is a misconception. \n\n## Impact\nThis is extremely vulnerable to attacks as a malicious user could create any web page with any content and host it on the ██████████ domain. This would allow them to post malicious content which would be mistaken for a valid site. They could:\n * XSS\n * Phishing\n * Bypass domain security \n * Steal sensitive user data, cookies, etc. \n\n## Step-by-step Reproduction Instructions\n`dig ███` results in: \n\n```\n; <<>> DiG 9.11.3-1ubuntu1.12-Ubuntu <<>> ███\n;; global options: +cmd\n;; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 53839\n;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 4096\n;; QUESTION SECTION:\n;███████.    IN  A\n\n;; ANSWER SECTION:\n██████████. 1022 IN CNAME   ████-website-us-east-1.amazonaws.com.\n██████████-website-us-east-1.amazonaws.com. 1022 IN CNAME s3-website-us-east-1.amazonaws.com.\ns3-website-us-east-1.amazonaws.com. 2542 IN A   █████\n\n;; Query time: 304 msec\n;; SERVER: 10.68.0.1#53(10.68.0.1)\n;; WHEN: Wed Jul 08 22:01:20 KST 2020\n;; MSG SIZE  rcvd: 154\n```\n\n1. █████████ points to an Amazon S3 bucket in the S3 US East 1 region. Visiting http://███████ revealed that the bucket did not exist (refer to `before.png`). \n2. I created an S3 bucket with the name `████████` on my S3 account in the US East 1 region and uploaded an `index.html` and  an XSS POC (`xss_poc_998877665544332211.html`).\n3. Visiting http://███ shows the successful subdomain takeover. View the page source to see the following comment: ` <!-- Demonstrated subdomain takeover by chron0x -->`\n4. Visiting http://████████/xss_poc_998877665544332211.html you can see the simple XSS payload in action. \n\n## Suggested Mitigation/Remediation Actions\nRemove the █████ DNS entry and I will remove the bucket from my Amazon account as soon as this issue is resolved. If you want to reclaim the domain instead, please let me know in the comments and I free the bucket before.\n\n## Impact\n\nHigh. An attacker can use the domain for various malicious activities ranging from XSS, over phishing to cookie stealing, etc. All of this while using a trusted domain name (██████).",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 22,
+  "voters": [
+    "loaymorad",
+    "rook1337",
+    "0x0d0",
+    "livadak",
+    "cranelabz",
+    "0nlymohammed",
+    "dastan_9408",
+    "k105la",
+    "sa1tama0",
+    "e0x1337",
+    "and 12 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

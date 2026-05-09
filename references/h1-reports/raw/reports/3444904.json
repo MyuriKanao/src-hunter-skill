@@ -1,0 +1,123 @@
+{
+  "id": 3444904,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDQ0OTA0",
+  "url": "https://hackerone.com/reports/3444904",
+  "title": "Heap Buffer Overflow in TFTP",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2025-11-29T17:06:00.738Z",
+  "submitted_at": "2025-11-29T17:06:00.927Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "helspy",
+    "url": "/helspy",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-01T07:41:33.559Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-11-30T08:46:49.988Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Summary:\nA heap buffer overflow vulnerability exists in the TFTP implementation of libcurl. The vulnerability is triggered when a malicious TFTP server sends an OACK (Option  acknowledgment) packet with a blksize option that is larger than the default block size (512 bytes). libcurl updates its internal block size variable but fails to reallocate the receive and send buffers (rpacket and spacket). When the application subsequently receives data (in tftp_rx) or sends data (in tftp_tx) using the larger block size, it writes past the end of the allocated buffer, leading to a heap buffer overflow.\n\n\n# Affected version\n**curl 8.18.0-DEV** (based on LIBCURL_VERSION in  include/curl/curlver.h) Platform: Windows (reproduced on)\n\n\n# Steps To Reproduce:\n1. Save the provided reproduction script as tftp_repro.py.\n2. Run the script: python tftp_repro.py. This starts a malicious TFTP server on port 6969.\n3. In another terminal, run a curl command to fetch a file from this server: curl tftp://localhost:6969/test (Note: Ensure you are using a curl build that includes this vulnerable code. If testing with a system curl, it might not be vulnerable or might be a different version).\n4. The server will send an OACK with blksize=2048 and then a DATA packet of 2048 bytes.\n5. The curl client will crash or exhibit undefined behavior due to the heap overflow.\n\n# Supporting Material/References:\nVulnerable Code Location: **lib/tftp.c**, function: **tftp_parse_option_ack**\n updates **state->blksize** without reallocating **state->spacket.data** and **state->rpacket.data**.\nReproduction Script: **tftp_repro.py**\n\n## Impact\n\n# Summary:\nThis vulnerability allows a malicious TFTP server to cause a heap buffer overflow on the client.\n\n**Remote Code Execution (RCE)**: By carefully crafting the payload in the DATA packet, an attacker could overwrite critical heap metadata or function pointers, potentially leading to arbitrary code execution on the victim's machine with the privileges of the curl process.\n\n**Denial of Service (DoS)**: The overflow can corrupt memory structures, causing the curl application to crash or behave unpredictably, leading to a denial of service.\n\n## Impact\n\n## Summary:\nThis vulnerability allows a malicious TFTP server to cause a heap buffer overflow on the client.\n\n**Remote Code Execution (RCE)**: By carefully crafting the payload in the DATA packet, an attacker could overwrite critical heap metadata or function pointers, potentially leading to arbitrary code execution on the victim's machine with the privileges of the curl process.\n**Denial of Service (DoS)**: The overflow can corrupt memory structures, causing the curl application to crash or behave unpredictably, leading to a denial of service.",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 14,
+  "voters": [
+    "2026",
+    "kamekame",
+    "cowboycracker7",
+    "guanart",
+    "arizion",
+    "0xrootsudo",
+    "kw0lf",
+    "abidashraf851",
+    "peiterjoe",
+    "ongunakay",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

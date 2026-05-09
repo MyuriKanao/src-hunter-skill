@@ -1,0 +1,125 @@
+{
+  "id": 633231,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82MzMyMzE=",
+  "url": "https://hackerone.com/reports/633231",
+  "title": "pre-auth Stored XSS in comments via javascript: url when administrator edits user supplied comment",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-07-01T15:53:12.245Z",
+  "submitted_at": "2019-07-01T15:53:12.245Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "simonscannell",
+    "url": "/simonscannell",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/HvE5FGgP56eXFMNMr4rwmunu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 55,
+    "url": "https://hackerone.com/wordpress",
+    "handle": "wordpress",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "WordPress",
+      "twitter_handle": "wordpress",
+      "website": "https://wordpress.org/",
+      "about": "Beautiful sites of any kind."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-08-18T18:01:25.262Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-07-19T18:01:23.660Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "When a comment is submitted, it is filtered via `wp_rel_nofollow_callback()`, which adds the `rel` attribute to `<a>` tags within the anchor:\n\n```\nfunction wp_rel_nofollow_callback( $matches ) {\n\t$text = $matches[1];\n\t$atts = shortcode_parse_atts( $matches[1] );\n\t$rel  = 'nofollow';\n\n\tif ( ! empty( $atts['href'] ) ) {\n\t\tif ( in_array( strtolower( wp_parse_url( $atts['href'], PHP_URL_SCHEME ) ), array( 'http', 'https' ), true ) ) {\n\t\t\tif ( strtolower( wp_parse_url( $atts['href'], PHP_URL_HOST ) ) === strtolower( wp_parse_url( home_url(), PHP_URL_HOST ) ) ) {\n\t\t\t\treturn \"<a $text>\";\n\t\t\t}\n\t\t}\n\t}\n\n\tif ( ! empty( $atts['rel'] ) ) {\n\t\t$parts = array_map( 'trim', explode( ' ', $atts['rel'] ) );\n\t\tif ( false === array_search( 'nofollow', $parts ) ) {\n\t\t\t$parts[] = 'nofollow';\n\t\t}\n\t\t$rel = implode( ' ', $parts );\n\t\tunset( $atts['rel'] );\n\n\t\t$html = '';\n\t\tforeach ( $atts as $name => $value ) {\n\t\t\t$html .= \"{$name}=\\\"\" .  $value . '\" ';\n\t\t}\n\t\t$text = trim( $html );\n\t}\n\treturn \"<a $text rel=\\\"\" . esc_attr( $rel ) . '\">';\n}\n```\n\nif the `rel` attribute is already set, the `<a>` tag is built back together with the values returned by `shortcode_parse_atts()`.  This is problematic, since `shortcode_parse_atts()` calls `stripcslashes()` on the attribute values, which for example allows turning `\\x3a` into `:`. \n\nTherefor the `esc_url()` function can be bypassed by:\n1. using a URL such as `javascript\\x3aalert(1);` \n2. getting an admin to edit and update the comment containing the XSS payload\n3. done\n\nI recommend moving away from `shortcode_parse_atts()` because of side effects like these. I also got close to a XSS without user interaction through the same mechanisms but it fails luckily.\n\n### PoC:\n\n1. As an unauthenticated user, create a comment with the following content:\n```\nHi!\nI really enjoy your work. We've also written a blog post about it here: http://dummysite.com/awesome-blogpost. Feel free to check it out!\n<a href=\"javascript\\x3aalert(1);\">Visit my web page</a>\n```\n\n2. create a second comment with the content:\n```\nI just noticed a typo in the URL! Could you please change it from dummysite.com to dummysite2.com? Thank you so much\n```\n3. Log in as an admin, go to the comments section and edit the comment and click save\n4. View the comment on the post, click the \"Visit my web page\" URL and see the alert() box popping up.\n\n## Impact\n\nThrough the XSS, RCE can be gained. Obviously a lot of user interaction is required but yeah, it is a super easy to copy & paste payload that could be used against non technical users. The XSS could then also be triggered via clickjacking.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-08-18T18:01:23.746Z",
+  "allow_singular_disclosure_after": -180566206.4088255,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "cxzer0",
+    "mashoud1122",
+    "foobar7",
+    "ali",
+    "pr0f0x01",
+    "sibwtf",
+    "jesuser14",
+    "nekoneko000",
+    "paqman",
+    "silverdel",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2750,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "WordPress Core",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

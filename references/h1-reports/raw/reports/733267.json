@@ -1,0 +1,149 @@
+{
+  "id": 733267,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83MzMyNjc=",
+  "url": "https://hackerone.com/reports/733267",
+  "title": "[Portal 2] Remote Code Execution via voice packets",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-11-09T23:41:47.850Z",
+  "submitted_at": "2019-11-09T23:41:47.850Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gamer7112",
+    "url": "/gamer7112",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-05-10T18:18:11.771Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-05-06T17:25:49.508Z",
+  "team_member_agreed_on_going_public_at": "2021-05-10T18:18:11.538Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "5000.0",
+  "formatted_bounty": "$5,000",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 172,
+  "voters": [
+    "orange303",
+    "pretorian",
+    "arist0phanes",
+    "monke",
+    "therealbrenu",
+    "joaxcar",
+    "n1m0",
+    "discodamone",
+    "redhotchilihacker_",
+    "base_64",
+    "and 162 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 1290,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "*.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 50005,
+      "category": "team",
+      "content": "#Description\nRCE can be achieved on other players via voice packets due to the lack of length validation when reading into a stack based buffer.\n\n#POC\n1. As the victim, invite the attacker into a game. \n2. Wait until both players have loaded into the game.\n3. Inject the following DLL into the attackers portal 2 process: {F630586} (source code: {F630587})\n4. View that calc has been opened on the victims computer.\n\nIf these steps are followed correctly the outcome should look like so\n{F630585}\n\n#Vulnerable Code\n```cpp\nbool CGameClient::ProcessVoiceData( CLC_VoiceData *msg )\n{\n\tchar voiceDataBuffer[4096];\n\n\tmsg->m_DataIn.ReadBits( voiceDataBuffer, msg->m_nLength );\n\n\tSV_BroadcastVoiceData( this, Bits2Bytes(msg->m_nLength), voiceDataBuffer, msg->m_xuid ); // length is in bits\n\n\treturn true;\n}\n```\n\n## Impact\n\nRCE allows arbitrary code execution on the attacker's victim.",
+      "updated_at": "2021-05-10T18:16:33.524Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 279011,
+        "username": "mikela",
+        "name": "Mike L",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-05-17T22:06:50.780Z",
+        "url": "https://hackerone.com/mikela",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

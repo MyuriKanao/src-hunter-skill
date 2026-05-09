@@ -1,0 +1,160 @@
+{
+  "id": 1250273,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjUwMjcz",
+  "url": "https://hackerone.com/reports/1250273",
+  "title": "Tor Browser using --log or --verbose logs the exact connection time a client connects to any v2 domains.",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2021-07-02T20:37:16.654Z",
+  "submitted_at": "2021-07-02T20:37:16.712Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sickcodes",
+    "url": "/sickcodes",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/yhqjS3Lp1zFH9fw8UdN1WUFh/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1800,
+    "url": "https://hackerone.com/torproject",
+    "handle": "torproject",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/800/6e575d0a9127b91e83833cf4a9e6be6e8b30cbc3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/800/6e575d0a9127b91e83833cf4a9e6be6e8b30cbc3_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Tor",
+      "twitter_handle": "torproject",
+      "website": "https://www.torproject.org/",
+      "about": "Anonymity Online"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-09-27T09:14:58.374Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-09-26T08:06:16.300Z",
+  "team_member_agreed_on_going_public_at": "2021-09-27T09:14:58.252Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA vulnerability in the Tor Browser 78.11.0esr and below allows a local or physical attacker to view metadata about v2 domains, namely the exact timestamp that a user connected to a v2 onion address while using either the --log or --verbose command line options. A local or physical attacker can identify the exact moment a user connected to a new v2 onion site, easily triangulating the user via a complete log of connection timestamps in the log file, or verbosely in the terminal window. This timestamp is generated every single time a client connects to a v2 onion address and could therefore be easily compared with a server connection log, a compromised Tor end point, or other related Tor attack, affecting the confidentiality & integrity of a user's Tor session when using --log or --verbose.\n\n## Steps To Reproduce:\nDownload Tor latest\nUse either:\n`./start-tor-browser.desktop --log ./file.log`\n`./start-tor-browser.desktop --verbose`\n\nVisit http://wikitoronionlinks.com/\n\nClick on an assortment of .onion v2 URLs.\n\nInspect the output.\n\nNotably, the warning occurs when the client connects, rather than clicking a link, making it even easier to pair up with server connection times.\n\n## Supporting Material/References:\n\n```\n[user@hostname tor-browser_en-US]$ ./start-tor-browser.desktop --verbose\nLaunching './Browser/start-tor-browser --detach --verbose'...\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nJul 02 20:06:58.983 [notice] Tor 0.4.5.9 (git-d0ed04d50e80fe1c) running on Linux with Libevent 2.1.11-stable, OpenSSL 1.1.1k, Zlib 1.2.11, Liblzma N/A, Libzstd N/A and Glibc 2.33 as libc.\nJul 02 20:06:58.983 [notice] Tor can't help you if you use it wrong! Learn how to be safe at https://www.torproject.org/download/download#warning\nJul 02 20:06:58.983 [notice] Read configuration file \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/Tor/torrc-defaults\".\nJul 02 20:06:58.983 [notice] Read configuration file \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/Tor/torrc\".\nJul 02 20:06:58.984 [notice] Opening Control listener on 127.0.0.1:9151\nJul 02 20:06:58.984 [notice] Opened Control listener connection (ready) on 127.0.0.1:9151\nJul 02 20:06:58.984 [notice] DisableNetwork is set. Tor will not make or accept non-control network connections. Shutting down all existing connections.\nJul 02 20:06:58.000 [notice] Parsing GEOIP IPv4 file /tmp/tor-browser_en-US/Browser/TorBrowser/Data/Tor/geoip.\nJul 02 20:06:59.000 [notice] Parsing GEOIP IPv6 file /tmp/tor-browser_en-US/Browser/TorBrowser/Data/Tor/geoip6.\nJul 02 20:06:59.000 [notice] Bootstrapped 0% (starting): Starting\nJul 02 20:06:59.000 [notice] Starting with guard context \"default\"\nJul 02 20:06:59.000 [notice] Delaying directory fetches: DisableNetwork is set.\nJul 02 20:06:59.000 [notice] New control connection opened from 127.0.0.1.\nJul 02 20:06:59.000 [notice] DisableNetwork is set. Tor will not make or accept non-control network connections. Shutting down all existing connections.\nJul 02 20:06:59.000 [notice] New control connection opened from 127.0.0.1.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nJul 02 20:07:01.000 [notice] DisableNetwork is set. Tor will not make or accept non-control network connections. Shutting down all existing connections.\nJul 02 20:07:01.000 [notice] DisableNetwork is set. Tor will not make or accept non-control network connections. Shutting down all existing connections.\nJul 02 20:07:01.000 [notice] DisableNetwork is set. Tor will not make or accept non-control network connections. Shutting down all existing connections.\nJul 02 20:07:01.000 [notice] Opening Socks listener on 127.0.0.1:9150\nJul 02 20:07:01.000 [notice] Opened Socks listener connection (ready) on 127.0.0.1:9150\nJul 02 20:07:01.000 [notice] Renaming old configuration file to \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/Tor/torrc.orig.1\"\nJul 02 20:07:02.000 [notice] Bootstrapped 5% (conn): Connecting to a relay\nJul 02 20:07:02.000 [notice] Bootstrapped 10% (conn_done): Connected to a relay\nJul 02 20:07:02.000 [notice] Bootstrapped 14% (handshake): Handshaking with a relay\nJul 02 20:07:02.000 [notice] Bootstrapped 15% (handshake_done): Handshake with a relay done\nJul 02 20:07:02.000 [notice] Bootstrapped 20% (onehop_create): Establishing an encrypted directory connection\nJul 02 20:07:02.000 [notice] Bootstrapped 25% (requesting_status): Asking for networkstatus consensus\nJul 02 20:07:02.000 [notice] Bootstrapped 30% (loading_status): Loading networkstatus consensus\nJul 02 20:07:03.000 [notice] I learned some more directory information, but not enough to build a circuit: We have no usable consensus.\nJul 02 20:07:04.000 [notice] Bootstrapped 40% (loading_keys): Loading authority key certs\nJul 02 20:07:04.000 [notice] The current consensus has no exit nodes. Tor can only build internal paths, such as paths to onion services.\nJul 02 20:07:04.000 [notice] Bootstrapped 45% (requesting_descriptors): Asking for relay descriptors\nJul 02 20:07:04.000 [notice] I learned some more directory information, but not enough to build a circuit: We need more microdescriptors: we have 0/6832, and can only build 0% of likely paths. (We have 0% of guards bw, 0% of midpoint bw, and 0% of end bw (no exits in consensus, using mid) = 0% of path bw.)\nJul 02 20:07:05.000 [notice] Bootstrapped 50% (loading_descriptors): Loading relay descriptors\nJul 02 20:07:06.000 [notice] The current consensus contains exit nodes. Tor can build exit and internal paths.\nJul 02 20:07:07.000 [notice] Bootstrapped 55% (loading_descriptors): Loading relay descriptors\nJul 02 20:07:07.000 [notice] Bootstrapped 60% (loading_descriptors): Loading relay descriptors\nJul 02 20:07:07.000 [notice] Bootstrapped 69% (loading_descriptors): Loading relay descriptors\nJul 02 20:07:08.000 [notice] Bootstrapped 75% (enough_dirinfo): Loaded enough directory info to build circuits\nJul 02 20:07:08.000 [notice] Bootstrapped 80% (ap_conn): Connecting to a relay to build circuits\nJul 02 20:07:08.000 [notice] Bootstrapped 85% (ap_conn_done): Connected to a relay to build circuits\nJul 02 20:07:08.000 [notice] Bootstrapped 89% (ap_handshake): Finishing handshake with a relay to build circuits\nJul 02 20:07:09.000 [notice] Bootstrapped 90% (ap_handshake_done): Handshake finished with a relay to build circuits\nJul 02 20:07:09.000 [notice] Bootstrapped 95% (circuit_create): Establishing a Tor circuit\nJul 02 20:07:10.000 [notice] Bootstrapped 100% (done): Done\nJul 02 20:07:10.000 [notice] New control connection opened from 127.0.0.1.\nJul 02 20:07:10.000 [notice] New control connection opened from 127.0.0.1.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nJul 02 20:07:58.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nJul 02 20:07:59.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nJul 02 20:07:59.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 37: Use of ambiguous path in <dir> element. please add prefix=\"cwd\" if current behavior is desired.\nFontconfig warning: \"/tmp/tor-browser_en-US/Browser/TorBrowser/Data/fontconfig/fonts.conf\", line 85: unknown element \"blank\"\nJul 02 20:08:07.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:08:07.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:08:10.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:08:28.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:08:28.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:08:28.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:08:28.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:08:28.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\nJul 02 20:09:30.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\n^[[1;2D\t^CJul 02 20:19:34.000 [notice] Interrupt: exiting cleanly.\nExiting due to channel error.\nExiting due to channel error.\nExiting due to channel error.\nExiting due to channel error.\nExiting due to channel error.\nExiting due to channel error.\nExiting due to channel error.\n\n```\n\n  * [attachment / reference]\n\n## Impact\n\nViolate the confidentiality & integrity of a user's Tor session.",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1362752,
+      "file_name": "tor_browser_v2_timestamps.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/rqkmrls1scquowedsdzwonoox5qx?response-content-disposition=attachment%3B%20filename%3D%22tor_browser_v2_timestamps.mp4%22%3B%20filename%2A%3DUTF-8%27%27tor_browser_v2_timestamps.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151327Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9d6e0f249be6d8c929afb3f775a04aa85271e66e0269be5585f505ffb3863109",
+      "file_size": 1542701,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 4,
+  "voters": [
+    "sickcodes",
+    "brumens",
+    "whocare712",
+    "m0m3dh1t"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 68696,
+    "asset_type": "OTHER",
+    "asset_identifier": "Tor Browser",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 88950,
+      "category": "researcher",
+      "content": "NOTE: This is a correlation attack and requires a sophisticated attacker to perform. A complicated attack would require physical access to the device running tor browser, as well as either operating rogue/bad exit nodes, or a compromised/fake hidden service, or combination of that.\n\nNOTE2: Title is incorrect. The logs are always stored and can be viewed with or without flags.\n\n### Title\nCVE-2021-39246 - Tor Browser through 10.5.6 and 11.x through 11.0a4 allows a correlation attack excessive verbose logging - Windows, macOS, Linux\n\n### CVE ID\nCVE-2021-39246\n\n### CVSS Score\nPending\n\n### Internal ID\nSICK-2021-111\n\n# Vendor\nTor \n\n### Product\nTor Browser on Windows, macOS, Linux\n\n### Product Versions\n10.5.6 and 11.x through 11.0a4\n\n### Vulnerability Details\n\nTor Browser through 10.5.6 and 11.x through 11.0a4 allows a correlation attack that can compromise the privacy of visits to v2 onion addresses. Exact timestamps of these onion-service visits are logged locally, and an attacker might be able to compare them to timestamp data collected by the destination server (or collected by a rogue site within the Tor network). This occurs by default, with or without verbose.\n\n### Vendor Response\nOpen pull request in relation to timestamp logging as v2 will be deprecated soon:\n\n[https://gitlab.torproject.org/tpo/core/tor/-/merge_requests/434](https://gitlab.torproject.org/tpo/core/tor/-/merge_requests/434).\n\n### Proof of Concept\n\n`Tor Browser` latest `10.5.6` is affected.\n\n`Tor Browser` alpha `11.0a4` is affected.\n\nThis is because `Tor 0.4.6` introduced a warning every time a client connects to a v2 domain.\n\nSee: [https://gitlab.torproject.org/tpo/core/tor/-/commit/5e836eb80c31b97f87b152351b6a7a932aeffaed](https://gitlab.torproject.org/tpo/core/tor/-/commit/5e836eb80c31b97f87b152351b6a7a932aeffaed)\n\nAlso see \"Log warning when connecting to soon-to-be-deprecated v2 onions.\"\n\nhttps://gitlab.torproject.org/tpo/core/tor/-/commit/80c404c4b79f3bcba3fc4585d4c62a62a04f3ed9\n\n\n```bash\n\ncd /tmp\n\nwget https://www.torproject.org/dist/torbrowser/10.5.6/tor-browser-linux64-10.5.6_en-US.tar.xz\n\ntar -xzvf tor-browser-linux64-10.5.6_en-US.tar.xz\n\ncd /tmp/tor-browser_en-US/\n\n./start-tor-browser.desktop --verbose\n\n# Launching './Browser/start-tor-browser --detach --verbose'...\n\n```\n\nVisit any v2 onion site, connection timestamps are logged at the exact moment the server responds.\n\n```console\nSep 24 16:28:52.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\n\nSep 24 16:28:52.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\n\nSep 24 16:28:52.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\n\nSep 24 16:29:02.000 [warn] Warning! You've just connected to a v2 onion address. These addresses are deprecated for security reasons, and are no longer supported in Tor. Please encourage the site operator to upgrade. For more information see https://blog.torproject.org/v2-deprecation-timeline\n\n```\n\n#### Disclosure Timeline\n* **2021-07-02** - Researcher discovers vulnerability on bounty platform\n* **2021-07-07** - Report closed as informative\n* **2021-08-17** - Researcher requests CVE\n* **2021-08-17** - Vendor re-notified via sec mailing list, and on bounty platform chat.\n* **2021-09-10** - No response: researcher opens Pull Request to remove timestamps.\n* **2021-09-24** - CVE published\n\n### Links\n\n[https://github.com/sickcodes/security/blob/master/advisories/SICK-2021-111.md](https://github.com/sickcodes/security/blob/master/advisories/SICK-2021-111.md)\n\n[https://sick.codes/sick-2021-111](https://sick.codes/sick-2021-111)\n\n[https://www.privacyaffairs.com/cve-2021-39246-tor-vulnerability/](https://www.privacyaffairs.com/cve-2021-39246-tor-vulnerability/)\n\n[https://gitlab.torproject.org/tpo/core/tor/-/commit/80c404c4b79f3bcba3fc4585d4c62a62a04f3ed9](https://gitlab.torproject.org/tpo/core/tor/-/commit/80c404c4b79f3bcba3fc4585d4c62a62a04f3ed9)\n\n[https://gitlab.torproject.org/tpo/core/tor/-/merge_requests/434](https://gitlab.torproject.org/tpo/core/tor/-/merge_requests/434)\n\n[https://hackerone.com/reports/1250273](https://hackerone.com/reports/1250273)\n\n### Researchers\n- *Sick Codes* [https://github.com/sickcodes](https://github.com/sickcodes) || [https://twitter.com/sickcodes](https://twitter.com/sickcodes)\n\n- *Miklos Zoltan* [https://twitter.com/mzb4455](https://twitter.com/mzb4455) || [https://www.privacyaffairs.com/authors/miklos/](https://www.privacyaffairs.com/authors/miklos/)\n\n#### CVE Links\n\n[https://sick.codes/sick-2021-111](https://sick.codes/sick-2021-111)\n\n[https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-39246](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-39246)\n\n[https://nvd.nist.gov/view/vuln/detail?vulnId=CVE-2021-39246](https://nvd.nist.gov/view/vuln/detail?vulnId=CVE-2021-39246)\n",
+      "updated_at": "2021-09-30T03:52:57.606Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1214012,
+        "username": "sickcodes",
+        "name": "sick.codes",
+        "bio": "https://sick.codes",
+        "cleared": true,
+        "verified": true,
+        "website": "https://sick.codes",
+        "location": "",
+        "created_at": "2020-06-25T17:15:32.951Z",
+        "url": "https://hackerone.com/sickcodes",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/yhqjS3Lp1zFH9fw8UdN1WUFh/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/yhqjS3Lp1zFH9fw8UdN1WUFh/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/yhqjS3Lp1zFH9fw8UdN1WUFh/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

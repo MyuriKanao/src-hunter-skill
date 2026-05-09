@@ -1,0 +1,149 @@
+{
+  "id": 3183520,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTgzNTIw",
+  "url": "https://hackerone.com/reports/3183520",
+  "title": "Non-premium user can disable Ads in japanese version of dic.pixiv.net",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-06-09T06:19:31.715Z",
+  "submitted_at": "2025-06-09T06:19:32.144Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "lainkusanagi",
+    "url": "/lainkusanagi",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ydckr082mlc0evl6k5nbdzsm7puh/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 29446,
+    "url": "https://hackerone.com/pixiv",
+    "handle": "pixiv",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/zwZW6NWs5m7fkL6SV9jkncqW/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/zwZW6NWs5m7fkL6SV9jkncqW/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "pixiv",
+      "twitter_handle": "pixiv",
+      "website": "https://www.pixiv.net",
+      "about": "Online community platform for creators all over the world."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-04-27T03:58:30.124Z",
+  "bug_reporter_agreed_on_going_public_at": "2026-02-20T16:00:10.351Z",
+  "team_member_agreed_on_going_public_at": "2026-04-27T03:58:29.800Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "3000.0",
+  "formatted_bounty": "$3,000",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 83,
+  "voters": [
+    "kingsmanbuggy",
+    "d0u6ur45u",
+    "coder_mohammed",
+    "n1m0",
+    "ganeshbagaria",
+    "bewgsy",
+    "zy9ard3",
+    "0-chrollo-0",
+    "folklor",
+    "fa-hacker",
+    "and 73 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 38700,
+    "asset_type": "URL",
+    "asset_identifier": "dic.pixiv.net",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 847258,
+      "category": "team",
+      "content": "## Summary\n\nA vulnerability is identified in the Japanese version of the pixiv dictionary website (`dic.pixiv.net`) where non-premium users can disable advertisements. Normally, the ability to disable ads is restricted to premium users only, as indicated by the \"P\" icon next to the ad display settings in the user profile. However, due to improper access control at the API endpoint `/_api/update_user_setting`, any authenticated user can modify their ad display preferences without verification of premium status.\n\n## Steps to Reproduce\n\n1. Disable any ad-blocker plugins in your browser and login as a non-premium Pixiv user\n2. Browse to `https://dic.pixiv.net` (the Japanese version that doesn't have /en in the URL) and observe ads being displayed normally\n3. Intercept any request to `dic.pixiv.net` that includes your cookies\n4. Modify the request by:\n   - Changing the HTTP method to POST\n   - Setting the target URL to `/_api/update_user_setting`\n   - Including the following JSON data in the request body: `{\"setting\":{\"showAds\":false,\"showNewUI\":true}}`\n   - Note: No need to worry about the Content-Type header, as the server does not validate it\n5. Send the request - the response should be `{\"success\":true}`\n{F4536685}\n6. Go to your profile at `https://dic.pixiv.net/mypage` and verify that \"表示しない\" (Do not display ads) is now selected despite not being a premium user\n{F4536687}\n7. Browse the site to confirm that ads are no longer displayed\n\n## Impact\n\nThe vulnerability allows non-premium users to access a feature that should be restricted to paying customers only. This can result in:\n\n1. Lost revenue from reduced ad impressions when non-premium users disable advertisements\n2. Devaluation of the premium subscription offering, as one of its key benefits (ad-free browsing) can be obtained for free\n3. Potential widespread exploitation if knowledge of this vulnerability spreads among users\n\n",
+      "updated_at": "2026-04-27T03:57:56.786Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 4050532,
+        "username": "namazu",
+        "name": "尚輝 後藤",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2025-07-01T00:35:03.100Z",
+        "url": "https://hackerone.com/namazu",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/v4akfoi2gtbn5g2b5cy68ama95u5/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/v4akfoi2gtbn5g2b5cy68ama95u5/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/v4akfoi2gtbn5g2b5cy68ama95u5/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

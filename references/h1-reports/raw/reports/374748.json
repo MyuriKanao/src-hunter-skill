@@ -1,0 +1,142 @@
+{
+  "id": 374748,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNzQ3NDg=",
+  "url": "https://hackerone.com/reports/374748",
+  "title": "SQL injection in Serendipity (serendipity_fetchComments)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-06-30T15:34:42.642Z",
+  "submitted_at": "2018-06-30T15:34:42.642Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "bb9866f3f743d6bf69b6836",
+    "url": "/bb9866f3f743d6bf69b6836",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 30278,
+    "url": "https://hackerone.com/hannob",
+    "handle": "hannob",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/030/278/97035f061f6de55a9362b39edae4f5948bda6735_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/030/278/97035f061f6de55a9362b39edae4f5948bda6735_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Hanno's projects",
+      "twitter_handle": "hanno",
+      "website": "https://hboeck.de/",
+      "about": "Personal web projects from Hanno Böck."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-11-09T14:44:05.375Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-11-09T14:44:05.320Z",
+  "team_member_agreed_on_going_public_at": "2018-11-09T14:37:41.862Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Summary\n\nAn authenticated administrator can alter *Entries to display on frontpage* and *Entries to display in Feeds* in a way to perform a SQL injection and extract database records or access files on the underlying system.\n\n##Description\n\nThe function `serendipity_fetchComments` (implemented in `functions_comments.inc.php`) allows to obtain an array of comments related to a specific entry id. It accepts six parameters that will impact the query:\n- `$id`: casted as integer and then used in the query;\n- `$limit`: used unescaped in the query;\n- `$order `: used unescaped in the query;\n- `$showAll`: adds a fixed condition to the query;\n- `$type`: used unescaped in the query;\n- `$where`: used unescaped in the query.\n\nThus, any use of `serendipity_fetchComments` where either `$limit`, `$order`, `$type` or `$where` are user-controlled will result in a SQL injection. Two vulnerable calls were discovered.\n\nThe first one can be found in `rss.php`. The value of `$serendipity['RSSfetchLimit']` comes from website's configuration (*Entries to display in Feeds*) and is used as second argument of `serendipity_fetchComments`:\n\n```php\n<?php\n// [...]\nswitch ($_GET['type']) {\n    case 'comments_and_trackbacks':\n    case 'trackbacks':\n    case 'comments':\n        $entries     = serendipity_fetchComments(isset($_GET['cid']) ? $_GET['cid'] : null, $serendipity['RSSfetchLimit'], 'co.id desc', false, $_GET['type']);\n```\n\nThe same way, `serendipity_printCommentsByAuthor` (implemented in `functions_comments.inc.php`) uses `$serendipity['fetchLimit']` as second argument. The value of `$serendipity['fetchLimit']` also comes from website's configuration (*Entries to display on frontpage*):\n\n```php\n<?php\n// [...]\n    $sql_limit = $serendipity['fetchLimit'] * ($serendipity['GET']['page']-1) . ',' . $serendipity['fetchLimit'];\n    $c = serendipity_fetchComments(null, $sql_limit, 'co.entry_id DESC, co.id ASC', false, $type, $sql_where);\n```\n## Steps To Reproduce\n\n  1. Access https://blog.fuzzing-project.org/serendipity_admin.php?serendipity[adminModule]=configuration as authenticated administrator.\n  1. Alter either *Entries to display on frontpage* or *Entries to display in Feeds* (under *Appearance and Options*) by adding any non-numeric character in one of these fields.\n  1. Access https://blog.fuzzing-project.org/rss.php?type=comment if you edited *Entries to display in Feeds*, or the homepage is you edited *Entries to display on frontpage*. The character \nbroke the correctness of the query and an error message will be displayed.\n\nI don't have any test environment at the moment but let me know if you need a real payload to show it's possible to extract arbitrary database records.\n\n## Impact\n\nAn authenticated administrator can extract database records, including password hashes of other users of the instance. Depending on database user privileges, it could also allow to access other bases or files on the underlying server.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-12-09T14:37:41.921Z",
+  "allow_singular_disclosure_after": -233973941.29382208,
+  "singular_disclosure_allowed": true,
+  "vote_count": 4,
+  "voters": [
+    "geeknik",
+    "eveeez",
+    "0xqmrx3",
+    "wphackedhelp"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 11140,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.fuzzing-project.org",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 9817,
+      "category": "team",
+      "content": "Bug in upstream Serendipity software, got fixed in version 2.1.3.\n\nThe impact is limited, as it requires a backend login. Still it's a great finding and many thanks to the reporter.",
+      "updated_at": "2018-08-17T01:39:48.281Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 20918,
+        "username": "hanno",
+        "name": "Hanno Böck",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://hboeck.de/",
+        "location": "",
+        "created_at": "2015-04-21T23:34:53.960Z",
+        "url": "https://hackerone.com/hanno",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/020/918/74da560ef66bf8cc239e219843444b441a7dfac6_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/020/918/74da560ef66bf8cc239e219843444b441a7dfac6_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/020/918/74da560ef66bf8cc239e219843444b441a7dfac6_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

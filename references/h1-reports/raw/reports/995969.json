@@ -1,0 +1,121 @@
+{
+  "id": 995969,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85OTU5Njk=",
+  "url": "https://hackerone.com/reports/995969",
+  "title": "Manipulate Uneditable Messages in Support",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2020-10-01T15:37:47.475Z",
+  "submitted_at": "2020-10-01T15:37:47.558Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ahmd_halabi",
+    "url": "/ahmd_halabi",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/v5avg4d1h9rv0h91rrgjkae1rdac/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 48311,
+    "url": "https://hackerone.com/cs_money",
+    "handle": "cs_money",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6zBhWTJ4KuDdcSg86WvWXrFV/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/6zBhWTJ4KuDdcSg86WvWXrFV/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "CS Money",
+      "twitter_handle": "csmoneytrade",
+      "website": "https://cs.money",
+      "about": "CS2 trading platform that helps people to trade, buy, sell and search for the best skins and deals they could possibly find."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-10-27T19:28:43.629Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-20T20:50:19.015Z",
+  "team_member_agreed_on_going_public_at": "2020-10-27T19:28:43.538Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nHello,\n\nThe support section has a validation on all the posted messages where it doesn't allow you to edit your messages after some minutes from posting them.\nI was able to bypass this protection and edit successfully the previous messages that can't be edited.\n\nAfter further investigation, I found that whenever you create/send a message, there is a date value made of numbers generated in the response which indicates the timestamp or the date that the message was created.\nAnd when you edit that message, the same value is used as a date parameter in the edit request.\n\nThe bug is that the date parameter is still active for the unedited messages, so when you perform an editable request having the old unedited message's date value as a date parameter, the request will be successful and the new edit text will be successfully applied.\n\n## Steps To Reproduce:\n1. So first you need to identify the message initial date, send a message in the support section, intercept its request and see the response containing the target date.\n\n```\n█████████\nHost: support.cs.money\n\n{\"user_steamid\":\"id-number\",\"text\":\"test\",\"settings\":{\"skin_exterior\":0,\"eco\":0,\"unavailable\":1,\"hints_in_trade\":1,\"lock_skin\":0,\"popup_skin\":1,\"reserved_skin\":1,\"save_filter\":0,\"virtual_trade\":0,\"skins_ticker\":1,\"beautiful_pics\":1,\"skins_float\":0,\"rarity\":0,\"collection\":0,\"conveyor\":1,\"block_red_points\":0,\"sourcePay\":\"scrill\"},\"bot_mode\":\"trade\",\"user_mode\":\"trade\"}\n```\n\n██████\n\n'2. Say that you no longer are able to edit the above message created by you. So now create another message. Click edit, send the message and intercept its request.\n'3. Add the date value from the step 1 response in the `date` value, and add the new message content in the `new_message` value.\n\n```\n███████\nHost: support.cs.money\n\n{\"date\":\"date-value\",\"new_message\":\"Hackerone edited message changed successfully === bug\"}\n```\n\n'4. Forward the request and see the response code id 200 OK, Reload the page and see that the message is edited successfully.\n\n## Supporting Material/References:\nPlease see the video below where I explained the bug step-by-step.\n\n█████\n\n## Impact\n\nUsers are able to edit their old messages that are not supposed to be editable anymore. This can lead to serious issues because they are being edited on the server too.\nAlso this is a bypass for the application validation and violation of its protection.\nI think this can lead to serious problems if malicious users edit the messages to bad or harmful content.\n\nBest Regards.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 9,
+  "voters": [
+    "sheikhrishad0",
+    "najeh_halawani",
+    "dnelsaka",
+    "thalaivar304",
+    "0xsheet",
+    "amad3u6",
+    "what_web",
+    "011alsanosi",
+    "eingengraou"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 45903,
+    "asset_type": "URL",
+    "asset_identifier": "support.cs.money",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

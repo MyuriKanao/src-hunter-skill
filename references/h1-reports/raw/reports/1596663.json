@@ -1,0 +1,123 @@
+{
+  "id": 1596663,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNTk2NjYz",
+  "url": "https://hackerone.com/reports/1596663",
+  "title": "Admin can create a hidden admin account  which even the owner can not detect and remove and do administrative actions on the application.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-06-10T08:27:06.453Z",
+  "submitted_at": "2022-06-10T08:27:06.602Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "41bin",
+    "url": "/41bin",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35710,
+    "url": "https://hackerone.com/reddit",
+    "handle": "reddit",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/osci5oey0q0wkiom39bk5onv8p7q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/osci5oey0q0wkiom39bk5onv8p7q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Reddit",
+      "twitter_handle": "reddit",
+      "website": "https://www.reddit.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-11-14T04:34:23.023Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-11-14T04:34:22.874Z",
+  "team_member_agreed_on_going_public_at": "2022-06-21T21:25:49.568Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "ads.reddit.com is an ads creating and managing application for reddit. The application has the feature to invite other members to the organization and give different roles at ad management.\nTesting around the role management functionalities, I have noticed that a user with the same email can get invited to the same organization multiple times if the user is assigned with different roles.\nSo, taking advantage of this behavior I found the admin as an attacker can create an `undetectable/hidden admin account` and do administrative actions on the organization like remove other users and invite other users. Since this malicious account information  can not be seen in the `members` section, even the `owner` of the organization can not detect and remove this malicious user from the organization.\n\n**Steps to reproduce:**\n1) Login as admin from https://ads.reddit.com/\n```\nI know creating an owner account and then creating an admin account with in a limited time is  little-bit painful.\nYou can use the following credentials to login as admin\n\n        email :██████████\n        name: ███████\n        password : ██████████\n```\n2) Go to https://ads.reddit.com/account/███/permissions and invite a user (malicious hidden user) by giving the role as `admin`\n3) login to that account (malicious hidden user) from a different browser and accept the invite. \n4) Same as the second step, go to the admin account and invite the same malicious user by giving the role as `Analyst`.\n5) Now go to the malicious user account and then go to https://ads.reddit.com/accounts.\n6) You will see the new invitation arrived with the `Analyst` role. Accept the invitation.\n7) From this account (malicious) go to https://ads.reddit.com/account/████████/billing while intercepting  the requests using burpsuite.\n8) Look at the burp history and find out the `Authorization token` used by the account and copy it. (see `copy-the-auth-token.png`)\n9) Now go to the normal admin account and change the permission of this malicious account to `None`   (It removes malicious account from the organization) and refresh the page to confirm that the malicious user is removed.\n10) Using burpsuite repeater, change the email and send the following request by replacing the token which you copied from the 8'th step.\n```\nPOST /api/v2.0/accounts/█████████/invitations HTTP/2\nHost: ads-api.reddit.com\nContent-Length: 87\nSec-Ch-Ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"102\"\nAccept: application/json\nContent-Type: application/json\nAuthorization: ██████\nSec-Ch-Ua-Mobile: ?0\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36\nSec-Ch-Ua-Platform: \"Linux\"\nOrigin: https://ads.reddit.com\nSec-Fetch-Site: same-site\nSec-Fetch-Mode: cors\nSec-Fetch-Dest: empty\nReferer: https://ads.reddit.com/\nAccept-Encoding: gzip, deflate\nAccept-Language: en-GB,en-US;q=0.9,en;q=0.8\n\n{\"data\":{\"recipient_email\":\"█████████\",\"type\":\"ADMIN\"}}\n\n```\n11) Now you are able to invite other users to the organization even though you are not a member of that organization.\n\n## Impact\n\nLet me explain the `impact` with different scenarios as an example.\n\n1)\n-  The owner invites an admin to the organization and the admin who knows about this issue creates an account in this way.\n- Latter, the owner decide to change the role of this admin to `analyst`  or remove this admin from the organization due to some reasons\n- Now the `admin as the malicious user`, can do sensitive actions in the organization like inviting or removing other users.\n- When the `owner` goes to the `members` section, he will not find the malicious account there and even he `can not remove` that malicious account from the organization.\n\n2)\n- It also happens when the owner or admin invites other users accidentally in this way.  \n- It is not complicated, the vulnerability arises when a user accepts multiple invitations assigned with different roles from a single organization.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 180,
+  "voters": [
+    "cb3d7",
+    "ra5h",
+    "0xcyborg",
+    "bulldawg",
+    "jumpydata",
+    "leodog896",
+    "mr-medi",
+    "itsashim",
+    "tinmo",
+    "0xhuz",
+    "and 170 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18899,
+    "asset_type": "URL",
+    "asset_identifier": "ads.reddit.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

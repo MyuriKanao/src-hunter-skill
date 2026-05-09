@@ -1,0 +1,129 @@
+{
+  "id": 1122791,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTIyNzkx",
+  "url": "https://hackerone.com/reports/1122791",
+  "title": "[hta3] Remote Code Execution on  https://███ via improper access control to SCORM Zip upload/import",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-03-11T05:59:47.383Z",
+  "submitted_at": "2021-03-11T05:59:47.432Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cdl",
+    "url": "/cdl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/pjn96wngvyyvquwg2vukftoern72/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-09-15T13:28:18.119Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-07-30T13:40:15.677Z",
+  "team_member_agreed_on_going_public_at": "2022-09-15T13:28:17.948Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThere is a Remote Code Execution vulnerability at https://█████████/Kview/CustomCodeBehind/base/courseware/scorm/management/scorm2004uploadcourse.aspx which allows any user to upload a SCORM course package. Furthermore, an attacker can add an ASPX shell to the SCORM package which will then get extracted onto the server, where the attacker can then execute commands.\n\n## Steps To Reproduce:\n\n  1. Visit `https://███████/` and log in with the credentials: `██████████`\n  2. Now download this \"malicious\" SCORM course package: █████\n  3. If you `unzip scorm.zip`, you will notice this is a valid SCORM [package](https://scorm.com/scorm-explained/technical-scorm/content-packaging/), and you will also notice that I've included an ASPX file in `shared/cdlcdlcdl.aspx` which runs the `whoami` command. Notice I also included that file reference in the Scorm Manifest (`imsmanifest.xml`)\n4. Visit https://████████/Kview/CustomCodeBehind/base/courseware/scorm/management/scorm2004uploadcourse.aspx, select the ██████ file. Start **intercepting** in Burp Suite Repeater. \n5. Forward the POST request to `/Kview/CustomCodeBehind/base/courseware/scorm/management/scorm2004uploadcourse.aspx`\n6. Now intercept the request to `/Kview/CustomCodeBehind/base/courseware/scorm/management/scorm2004editmetadata.aspx`\n7. Right-Click on it, Hover down to \"Do intercept\" and click \"response to this request\" then forward it.  (In your web-browser you might be able to just right-click, inspect-element, and search for strCourseId in there but my browser was being funky).\n8. Once you've received the response, search for \"strCourseId\" and grab it.\n\nFor example, you would grab `F6BAC72B45D64B34ACB662BB001D8523` out of the following response:\n\n```html\n<a onclick=\"return&#32;ConfirmBeforeNavigateAway(&#39;Are&#32;you&#32;sure&#32;you&#32;want&#32;to&#32;navigate&#32;away&#32;from&#32;this&#32;page?&#32;\\n\\nYou&#32;made&#32;changes&#32;that&#32;will&#32;not&#32;be&#32;saved&#32;if&#32;you&#32;continue.&#32;\\n\\nClick&#32;OK&#32;to&#32;proceed&#32;or&#32;Cancel&#32;to&#32;return&#32;to&#32;the&#32;page.&#39;);\" id=\"ML.BASE.WF.ReuploadCourse\" class=\"WorkflowButton\" NavigatingURL=\"Courseware/SCORM/Management/SCORM2004ReuploadCourse.aspx\" ItemId=\"&lt;IDTable&gt;&lt;strCourseId&gt;F6BAC72B45D64B34ACB662BB001D8523&lt;/strCourseId&gt;&lt;strVersionId&gt;F6BAC72B45D64B34ACB662BB001D8523&lt;/strVersionId&gt;&lt;/IDTable&gt;\" href=\"javascript:__doPostBack(&#39;ML.BASE.WF.ReuploadCourse&#39;,&#39;&#39;)\"><span>Course Files</span></a>\n```\n9. Now, visit `https://█████/CServer/Courseware/<YOUR_COURSE_ID>/shared/cdlcdlcdl.aspx` and you will see the shell executes:\n\n███\n\n## Supporting Material/References:\n- https://█████/CServer/Courseware/F6BAC72B45D64B34ACB662BB001D8523/shared/cdlcdlcdl.aspx\n\n## Proof-of-Concept Video\n█████████\n\n## Impact\n\nCritical, an attacker can execute commands on this military server, steal sensitive information, pivot to internal systems, etc.\n\nBest,\n@cdcl",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 28,
+  "voters": [
+    "mspanos",
+    "haxor31337",
+    "cdl",
+    "zy9ard3",
+    "shreyaschavhan",
+    "tess",
+    "red_darkin",
+    "dilawer",
+    "f_m",
+    "pr0f0x01",
+    "and 18 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

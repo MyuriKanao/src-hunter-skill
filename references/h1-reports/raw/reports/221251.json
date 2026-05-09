@@ -1,0 +1,121 @@
+{
+  "id": 221251,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjEyNTE=",
+  "url": "https://hackerone.com/reports/221251",
+  "title": "heap-buffer-overflow (read outside of buffer) in mrb_vm_exec()",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-04-15T18:08:56.021Z",
+  "submitted_at": "2017-04-15T18:08:56.021Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "geeknik",
+    "url": "/geeknik",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jgjvp6dlesp661w5ashvoami0j3c/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-05-09T12:43:39.447Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-05-09T02:45:30.738Z",
+  "team_member_agreed_on_going_public_at": "2017-05-09T12:43:39.389Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Triggered in `3231219` (14 April 2017). Compiled with afl-gcc + asan.\n\n`./mirb < test000`\n\n```\n==10555==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60200001c920 at pc 0x52be2c bp 0x7ffe6751ada0 sp 0x7ffe6751ad98\nREAD of size 16 at 0x60200001c920 thread T0\n    #0 0x52be2b in mrb_vm_exec /root/mruby/src/vm.c:1556\n    #1 0x530a19 in mrb_vm_run /root/mruby/src/vm.c:829\n    #2 0x53260f in mrb_run /root/mruby/src/vm.c:2644\n    #3 0x53260f in ecall /root/mruby/src/vm.c:320\n    #4 0x4fd59f in mrb_vm_exec /root/mruby/src/vm.c:1716\n    #5 0x530a19 in mrb_vm_run /root/mruby/src/vm.c:829\n    #6 0x53260f in mrb_run /root/mruby/src/vm.c:2644\n    #7 0x53260f in ecall /root/mruby/src/vm.c:320\n    #8 0x508b65 in mrb_vm_exec /root/mruby/src/vm.c:1170\n    #9 0x530a19 in mrb_vm_run /root/mruby/src/vm.c:829\n    #10 0x53260f in mrb_run /root/mruby/src/vm.c:2644\n    #11 0x53260f in ecall /root/mruby/src/vm.c:320\n    #12 0x508b65 in mrb_vm_exec /root/mruby/src/vm.c:1170\n    #13 0x530a19 in mrb_vm_run /root/mruby/src/vm.c:829\n    #14 0x40781f in main /root/mruby/mrbgems/mruby-bin-mirb/tools/mirb/mirb.c:549\n    #15 0x7f93c4ea5b44 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x21b44)\n    #16 0x40a71c (/root/mruby/bin/mirb+0x40a71c)\n\n0x60200001c920 is located 0 bytes to the right of 16-byte region [0x60200001c910,0x60200001c920)\nallocated by thread T0 here:\n    #0 0x7f93c55849f6 in __interceptor_realloc (/usr/lib/x86_64-linux-gnu/libasan.so.1+0x549f6)\n    #1 0x421a2e in mrb_realloc_simple /root/mruby/src/gc.c:202\n    #2 0x421a2e in mrb_realloc /root/mruby/src/gc.c:216\n    #3 0x421a2e in mrb_malloc /root/mruby/src/gc.c:237\n\nSUMMARY: AddressSanitizer: heap-buffer-overflow /root/mruby/src/vm.c:1556 mrb_vm_exec\n```",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 176172,
+      "file_name": "test000",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/176/172/fca839da8ed6c9f6598c8fc6ba9d4c9853280ec4/test000?response-content-disposition=attachment%3B%20filename%3D%22test000%22%3B%20filename%2A%3DUTF-8%27%27test000&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153115Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6d92fc3fafbe5f53b5d57b23285fa6c21ffd4bb1f69e730048cc98f1aea9a531",
+      "file_size": 198,
+      "type": "text/plain",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-06-08T02:45:30.783Z",
+  "allow_singular_disclosure_after": -281450744.4619416,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "geeknik",
+    "eveeez",
+    "spetr0x"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

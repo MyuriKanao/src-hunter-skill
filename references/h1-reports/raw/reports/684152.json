@@ -1,0 +1,132 @@
+{
+  "id": 684152,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82ODQxNTI=",
+  "url": "https://hackerone.com/reports/684152",
+  "title": "Steal all MKR from `flap` during liquidation by exploiting lack of validation in `flap.kick`",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-08-29T07:18:26.210Z",
+  "submitted_at": "2019-08-29T07:18:26.210Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "lucash-dev",
+    "url": "/lucash-dev",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/515/399/dd4a50c732c98417d7be59efa049e8c234259884_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 38065,
+    "url": "https://hackerone.com/makerdao_bbp",
+    "handle": "makerdao_bbp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/PxXdq1Fo6fX6n4fzUk31AqPD/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/PxXdq1Fo6fX6n4fzUk31AqPD/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "BlockDev Sp. Z o.o",
+      "twitter_handle": "makerdao",
+      "website": "https://makerdao.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-09-26T15:34:59.756Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-09-26T15:34:59.686Z",
+  "team_member_agreed_on_going_public_at": "2019-09-25T17:59:15.207Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe `flap` contract provides the ability to auction DAI for MKR. That's a fundamental functionality of the MCD system, invoked usually from the `vow` contract.\nA flaw in the validation of calls to `flap.kick`, however, allows a malicious user to create \"fake' auctions that can be later used to steal MKR from `flap` during the liquidation (`end`) phase.\n\n## Detailed description\n\nThe method `flap.kick`, used to start an auction of DAI (for MKR) in the `flap` contract, lacks any validation of the `bid` parameter. Since the method is public, a malicious user can directly invoke it, passing an arbitrary `bid` parameter -- affecting other contracts that assume this value represents the highest bid in the auction.\n\nWhile it's possible that this issue will cause other problems, in this report I'll focus on what seems to be the highest severity attack enabled by it.\n\nThe attack consists of two parts:\n\n1 - During the normal operation of the MCD system (contracts not \"caged\"), the attacker will create one or more \"fake\" auctions by calling `flap.kick`. The `bid` parameter can be arbitrarily large, and won't be validated in any way. On the other hand, the `lot` parameter can be arbitrarily small, as long as it's not zero, which means the auction can be placed with almost zero cost.\n\n2 - After governance calls `end.cage`, the auctions are stopped -- but any MKR deposited in the `flap` contract for any outstanding auction will still be there until someone calls `yank` for each one.\nAt this point, the attacker can call `flap.yank` for his own \"fake\" auctions, and that will result in him getting MKR transferred from the `flap` contract to himself -- in whatever amount was specified as `bid` in step 1.\n\nSince the attacker might no know beforehand, it would be wise for them to create multiple \"fake\" auctions. In particular, an exponential series of auctions, with `bid` values 1, 2, 4, 8, 16... will allow the attacker to extract any exact amount of MKR from the `flap` contract.\n\n\n## Steps To Reproduce:\nI've attached to this report a modified version of `end.t.sol` which contains a test (the last one, `test_steal_mkr_from_flapper`) that reproduces this attack.\n\nPlease don't hesitate to contact me if you have any trouble understanding or reproducing this issue.\n\n## Impact\n\nThis issue allows an attacker to steal arbitrary amounts of MKR deposited for auction.\nThat impact is particularly troubling, as MKR tokens are used to govern the platform, and anyone maliciously obtaining large quantities of these tokens might use them to further affect other core functionalities, potentially leading to stealing collateral, DAI etc. Also, because the same MKR token might be used for governance of future versions of the contracts, the damage might be much more enduring and harder to mitigate.\n\nGiven the above, and the minimal cost for perpetrating the attack, this issue would normally be classified as Critical. The specific policies for this program, though, won't allow for that, since this attack doesn't steal collateral directly. So, I classified the severity as High.",
+  "weakness": {
+    "id": 107,
+    "name": "Improper Input Validation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 569418,
+      "file_name": "steal-mkr-flap.t.sol",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/Q45Veqfp8RMbKPKU6vDbxetm?response-content-disposition=attachment%3B%20filename%3D%22steal-mkr-flap.t.sol%22%3B%20filename%2A%3DUTF-8%27%27steal-mkr-flap.t.sol&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152146Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=888b2ad7bbbe0ff693eaac979d75eae66eb55f43766e8adfea8192211f9af957",
+      "file_size": 25099,
+      "type": "application/octet-stream",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 55,
+  "voters": [
+    "env",
+    "tightropemonkey",
+    "an40r1",
+    "n1m0",
+    "dittyroma",
+    "p1stachios",
+    "mashoud1122",
+    "zonduu",
+    "7odamoo",
+    "ali",
+    "and 45 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 34664,
+    "asset_type": "OTHER",
+    "asset_identifier": "MCD_FLAP",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

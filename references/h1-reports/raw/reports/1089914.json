@@ -1,0 +1,119 @@
+{
+  "id": 1089914,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDg5OTE0",
+  "url": "https://hackerone.com/reports/1089914",
+  "title": "Responsible Disclosure of Privacy Leakage Issue",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2021-01-28T21:21:20.313Z",
+  "submitted_at": "2021-01-28T21:21:20.380Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mzaheri",
+    "url": "/mzaheri",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-06-29T06:31:08.419Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-06-07T01:20:49.567Z",
+  "team_member_agreed_on_going_public_at": "2021-06-29T06:31:08.284Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Greetings,\n\nI am Mojtaba Zaheri, a doctoral candidate in Computer Science, affiliated with the [NJIT Cybersecurity Research Center](https://centers.njit.edu/cybersecurity/welcome/). Together with my doctoral dissertation advisor, Prof. Reza Curtmola, we are reaching out to perform responsible disclosure of a vulnerability present on the GitLab website. Please let us know if you have any comments regarding this disclosure.\n\n### Summary:\nWe have identified a leaky resource attack against several high-profile resource-sharing websites, including GitLab, that allows an attacker to infer the unique identity of a victim that visits an attacker-controlled website. This targeted privacy attack can have a significant impact on the privacy of individuals.\n\nEven though previous work introduced the attack using images (i.e., leaky images [1]), in this report we show that the attack works with any resource that can be privately shared with the victim and can be rendered on a webpage. In particular, we show the attack also works with other media files, such as video and audio files. Thus, we generically refer to the attack as a leaky resource attack. An attacker exploiting these vulnerabilities can identify a user of the GitLab website while the user visits an attacker-controlled website, using the cookie(s) set by the GitLab website in her browser.\n\nThe leaky image attack [1] leverages the existence of a state-dependent URL (SD-URL) on the image-sharing website, i.e. a URL for which the response is different depending on the victim’s state with respect to the image-sharing website. For example, if the user is the targeted victim, the content will be loaded, otherwise, it will not be loaded. The attacker can learn information about this response based on an XS-leak that bypasses the Same-Origin Policy which normally prevents the attacker from reading the contents of a cross-origin response. [1] describes script-based and scriptless variants of the leaky image attack. The scriptless variant relies on the object HTML tag for the XS-leak, using this tag’s if-then-else behavior to enable the attack.\n\nWe reveal a new SD-URL for resources in the GitLab service and introduce two new HTML-only XS-Leaks. We show that a leaky resource attack can be performed using video and audio HTML tags. The previously known scriptless attack was based on the object HTML tag, but we find that it is not reliable: It does not work against all vulnerable resource-sharing services and only works in some browsers. As opposed to this, we show that attacks based on the video and audio tags are very reliable, as they work against all the vulnerable services we identified and across all browsers we tested with (Firefox, Edge, Chrome).\n\nWe describe below the threat model, the exploit vector, and the actual steps that need to be followed on your website to set up a leaky resource attack. We also explain potential fixes.\n\n### Threat Model:\nWe consider attackers that can bring together the following necessary ingredients for a successful leaky resource attack:\n1. The attacker and the victim are users of the same resource sharing service.\n2. The resource sharing service allows its users to share resources privately with each other and authenticates users through cookies.\n3. The attacker convinces the victim to visit the attack page (which is controlled by the attacker) while the victim is logged into her account with the resource sharing service (which is not controlled by the attacker).\n4. The attacker can determine if the victim loaded the resources successfully.\n\nThe attack is effective because these requirements can be achieved in multiple ways and are within easy reach of the attacker. For requirement #1, GitLab is popular, so the victim may have an account; also, GitLab has free membership, and so the attacker can just create an account. For requirement #2, these are the de facto mechanisms for many of the resource sharing services. Requirement #3 can be achieved in multiple ways, including via phishing emails, or via a watering-hole approach. It is common for a large portion of internet users to be logged in to GitLab when they are surfing the internet. Requirement #4 is crucial for the attack and can be achieved as follows. The attack page contains a state-dependent URL (SD-URL) that points to content on the target website (i.e., GitLab). When a user makes a request for the SD-URL, the response is different depending on the user's state with respect to the GitLab website. For example, if the user is the targeted victim, the content will be loaded, otherwise, it will not be loaded. The attacker can learn information about this response based on an XS-leak that bypasses the Same-Origin Policy which normally prevents the attacker from reading the contents of a cross-origin response.\n\n### Attacks:\nThe new SD-URL we use can be exploited by a script-based XL-leak, but here we focus on scriptless XS-leaks, as privacy-aware users may disable scripts or use protection mechanisms that prevent script-based XS-leaks.\n\nThe pattern of the SD-URL used is:\n```\nhttps://gitlab.com/{userName}/{repoName}/-/raw/{branchName}/{fileName}\n```\nThis SD-URL is valid until the resource is unshared or deleted.\n\nExploiting this SD-URL based on object tag HTML-only XS-Leak from [1]:\n```\n<object data =\"https://gitlab.com/{userName}/{repoName}/-/raw/{branchName}/{fileName}\" type =\"image/png\">\n             <object data =\"Fallback-URL\" type =\"image/png\"></object>\n</object>\n```\nCommunication method using the object HTML tag: If the outer object element (SD-URL) fails to load, then the fallback is to load the inner object element (Fallback-URL, controlled by the attacker). This fallback-based mechanism can be used to simulate an if-then-else control flow instruction in pure HTML. The attack does not work with browsers we tested (Chrome 87.0, Edge 87.0, and Firefox 83.0).\n\nHere we describe the video and audio HTML tags as new XS-leaks that are reliable across all browsers we tested (Chrome 87.0, Edge 87.0, and Firefox 83.0).\n```\n<video width=\"320\" height=\"240\" controls autoplay muted>\n        <source src=\"https://gitlab.com/{userName}/{repoName}/-/raw/{branchName}/{fileName}\" type =\"video/webm\">\n        <source src=\"Fallback-URL\" type =\"video/webm\">\n</video>\n```\nCommunication Method using video HTML tag: If the first source (SD-URL) cannot be loaded, then the fallback is to load the second source (Fallback-URL, controlled by the attacker).\n```\n<audio width=\"320\" height=\"240\" controls autoplay>\n         <source src=\"https://gitlab.com/{userName}/{repoName}/-/raw/{branchName}/{fileName}\" type =\"audio/ogg\">\n         <source src=\"Fallback-URL\" type =\"audio/ogg\">\n</audio>\n```\nCommunication Method using audio HTML tag: If the first source (SD-URL) cannot be loaded, then the fallback is to load the second source (Fallback-URL, controlled by the attacker).\n\nNormally, the source elements are used by website authors to specify multiple alternative media resources for media elements. However, these alternatives can be used to trigger a fallback behavior that mimics an if-then-else control flow. Both resources used in these tests have the type webm and ogg for video and audio tags respectively, but other video and audio file types can be used as well. By checking the HTTP Request Headers, the attacker can make sure whether the specific file type is supported by the browser, and so prepare an appropriate webpage.\n\n### Steps to Reproduce:\nThe attacker first shares privately a resource with the target victim using a sharing service. The attacker then embeds a link to the privately shared resource on a webpage she controls. When a visitor loads that webpage, the resource will be successfully retrieved only if the visitor is the targeted victim, since only the victim is allowed to retrieve the resource (assuming the victim's browser is logged into the sharing service). By observing the success of loading the resource through an XS-leak, the attacker will know if the intended victim has visited the attacker's website.\n\n1) Upload and share privately the resource with the victim in GitLab.\n2) Open the resource in the browser to get the SD-URL.\n3) Embed the SD-URL in an attacker-controlled webpage with an XS-leak.\n\n### Fix:\n1.       Server-side defense:\nThe SameSite cookie attribute can be used to impose restrictions when cookies can be sent. Although setting this cookie attribute to strict or lax could limit the attack surface in theory, our findings show that many popular sharing services are still vulnerable, because the attribute is either set to none or not enabled at all. A major reason for this is that the SameSite cookie attribute interferes with services provided by websites. Two examples are a watch later button on a YouTube video embedded in a non-YouTube website, and a website that embeds the GoogleMaps service, in order to show user-specific resources, such as saved and favorite locations on the map. As an additional drawback, when the SameSite attribute is not set, browsers have inconsistent default behaviors. Chromium-based browsers versions 80 and above treat cookies as if a lax SameSite attribute is set, whereas Firefox (tested up to version 83) treats them as if SameSite is set to none.\n\n2.       Client-side defense:\nWe have devised a client-side defense that can be implemented as a browser extension and can thus be deployed immediately without buy-in from websites and browser vendors. The defense is included in a research article that is currently under submission for publication at an academic conference.\n\n### References:\n[1] Staicu, C.A., Pradel, M.: Leaky images: Targeted privacy attacks in the web. In: Proc. of the 28th USENIX Security Symposium. pp. 923-939 (2019)\n\n## Impact\n\nThe leaky resource attack is a targeted privacy attack, in which an individual browsing an attacker-controlled webpage can be uniquely identified. This is in contrast with other known de-anonymization techniques, such as third-party tracking (e.g., tracking pixels or tracking IPs) or social media fingerprinting, that do not provide this level of accuracy. As such, leaky resources can be abused in a variety of privacy-sensitive scenarios, including law enforcement gathering evidence regarding the online activity of individuals, oppressive governments tracking political dissidents, de-anonymizing reviewers for a conference paper, blackmailing individuals based on their online activity, or health insurance companies discriminating individuals based on their online activity.",
+  "weakness": {
+    "id": 46,
+    "name": "Privacy Violation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "akashhamal0x01",
+    "ibring",
+    "niked",
+    "ekgaribadmi",
+    "hiking_hacker",
+    "meispi",
+    "mzaheri"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

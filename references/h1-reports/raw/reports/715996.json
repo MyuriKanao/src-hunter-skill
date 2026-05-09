@@ -1,0 +1,132 @@
+{
+  "id": 715996,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83MTU5OTY=",
+  "url": "https://hackerone.com/reports/715996",
+  "title": "http request smuggling in  twitter.com",
+  "state": "Closed",
+  "substate": "duplicate",
+  "severity_rating": "high",
+  "readable_substate": "Duplicate",
+  "created_at": "2019-10-16T23:54:00.683Z",
+  "submitted_at": "2019-10-16T23:54:00.683Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "protostar0",
+    "url": "/protostar0",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ui1kM4KhDiMyxXF5Gn6FioNa/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61,
+    "url": "https://hackerone.com/x",
+    "handle": "x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "X / xAI",
+      "twitter_handle": "XSecurity",
+      "website": "https://x.com",
+      "about": "X helps you create and share ideas and information instantly, without barriers."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-18T00:25:13.213Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-10T22:54:21.483Z",
+  "team_member_agreed_on_going_public_at": "2020-11-18T00:25:13.143Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nthe same vulnerability reported in other domain , see this report [here](https://hackerone.com/reports/713285) \n**Description:** \nthe Description of HTTP request smuggling attacks : [here](https://portswigger.net/web-security/request-smuggling)\n\n##Detect HTTP request smuggling attack (subdomains vulnerable):\n-to detect HTTP request smuggling attack with add header `Transfer-Encoding: chunked` \nand encode the body of request with chunked encode.\n1. send request with a valid chunked encode and you will get response means that the **back-end server accept chunked encode**\n2. send a large value in hex of chunked encode , if get ** delay of response**  means its vulnerable. \nresource: https://portswigger.net/web-security/request-smuggling/finding\n\n## CONFIRMATION:\n\n##POC:\n\nin this POC i will use TWEET request as second request (payload) ,means that if the HTTP request smuggling attack success,\nwill get a new TWEET in my account \n\nF609847\n\n\n## Steps To Reproduce:\n\n\nps : i use chrome browser,with burp\n1- choose any valid POST request (or change GET to POST) from twitter.com and send it to repeater\n2- delete this header (Connection: close  ,Accept-Encoding: gzip, deflate)\n3- add this header <Transfer-Encoding: chunked>\n\n4- add chunked encode    put a valid chunked code or   [ put just 0 with two CRLFs]\n5-put the second request  [i use a TWEET request ]\n6- send the attacker request\n\n## Impact\n\nimpact of http request smuggling \n- https://portswigger.net/research/http-desync-attacks-request-smuggling-reborn\n- https://portswigger.net/web-security/request-smuggling/exploiting",
+  "weakness": {
+    "id": 86,
+    "name": "HTTP Request Smuggling"
+  },
+  "original_report_id": 713285,
+  "original_report_url": "https://hackerone.com/reports/713285",
+  "attachments": [
+    {
+      "id": 609847,
+      "file_name": "twitter_HTTP_SMUG_POC.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/JJD8madMdguC3c4YZ6qYdEhQ?response-content-disposition=attachment%3B%20filename%3D%22twitter_HTTP_SMUG_POC.mp4%22%3B%20filename%2A%3DUTF-8%27%27twitter_HTTP_SMUG_POC.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ47IOYM63%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152850Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDt2pA4ORu3j0CnLrZYnzP7XaKVG5cS2f1fRngACU%2BRxwIhAJl%2B7iyrsT%2FdqYckJm%2Bhwl1NQsxE1ueuI6aZrMAGNEVLKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzHCvj93uC1lWI8jxEqjgXcaT8fA1L7puv03BEbg7O%2FavEjl5VCXCy1JMvsOut%2FATGv02GosQIBWE2YIkJKviW5mg1kja1MqinC1hQ%2F7vXE%2Fjds67JmvLr3ZK8L0jidDBdciEgxht%2Bj7tC5Z6zRSwQxn0mgPH%2BqPNEPtGXc22tmX75lDDll2NPZLkLYaWMTj160Czo3NrAp0%2Fa5rGUWcEy8baUsZt3M0IKccDlq1vt8TrdWsE7i%2B1NcOd3UzU%2BZlUXrUOZQ3Zwz9HTNfYnMSt%2FntJQI42E5g%2BwGGzIb1rElIWUCER7r6x%2BoLu5jkSCXyF2O%2B0TwF223DavlygkX0%2FqR9X5z%2FayyB5MWdk%2FCAtvA8xxvglEvbBQj49rZmF5Pi8wgIm3vuJWM7y%2FxzIKURdCBpXTswKNGbyQOqbw5oS0GLGsXdh8kd9hB0t45msp7laAMVZvqC0juMNMZJGyS3uAcJSfhcI%2BEpihuYegvnXTznkATcGgWY7VXkI2y0Lpw%2B93nHN%2FlHf4zL8PP9HHFUbqi9uiph7w851lZObeobq1d5Lprz5ek1K%2B0iwIpa1QOo%2Blj1PDIqBDT%2F%2FbAHv6DdjaOqiuh2FyM%2B9cn6DrtPT6oxPxcBYJqqw%2BcMdHKf3ievZghquEx1RuSxPgt8b4wkGVrsl3OeZo%2BtRYC4pPa2WqH0T9YOsyA3NSgB0GfmwSWJPtTyc8MY00GJSTesBDzI4IzsEfkTUQH4yOnp8P7nPnlKUpBXQJCyFkEljbujArgtsp2QqSEv%2FdoEQ9lG5XJ5SRAO5DOEAgnlXKUUS00%2BVDZynj8QxF289AAlDmygKWaLmu2KYjHnA%2F8duyKoGHUF5i%2FxGyDnKqDBPSGsAv%2FUxGl6rlTNPt53H7z6NPKAV4wiur8zwY6sAHVoAM%2FsIovelBN3G6gVkybeN69BViaGwJEmuQWnwEWOp3XLL3k%2FbJ3GZ%2FWBYzwxHRLW3Rnhs6LHF%2FRLrXacPt8vRHFfJZHJlJQjccTZrfwOm0w%2Falri2nQaPMkEWsStlHrCspb8v0pIsD8CK2x5GisZz%2BUzx7Bye0X4%2BPuoU3OySBJ4qQEHZ9aMOtl%2FwgsJPLZ48DTccfQN2ytGIUk9xHJnooEFJNHqn2ayiSJGguFZQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=72b97276dc46905f3c8f859684c7a094892d7f20e06311d5d8f2c60b305890c9",
+      "file_size": 17633126,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 17,
+  "voters": [
+    "dnelsaka",
+    "zeroxyele",
+    "s3c",
+    "yusuf_furkan",
+    "0xwise",
+    "f0rhacksd",
+    "zerox4",
+    "world12",
+    "juhertra",
+    "tomasfedi",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 1062,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.twitter.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

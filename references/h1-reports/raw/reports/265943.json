@@ -1,0 +1,149 @@
+{
+  "id": 265943,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNjU5NDM=",
+  "url": "https://hackerone.com/reports/265943",
+  "title": "Stealing SSO Login Tokens (snappublisher.snapchat.com)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-09-05T07:03:06.903Z",
+  "submitted_at": "2017-09-05T07:03:06.903Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "coolboss",
+    "url": "/coolboss",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/o9xuztxxejbmnyjt6pvwh0yojogs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 513,
+    "url": "https://hackerone.com/snapchat",
+    "handle": "snapchat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/513/87067c5c4ed63c2c07a522ca3198d2310e2a14c6_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/513/87067c5c4ed63c2c07a522ca3198d2310e2a14c6_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Snapchat",
+      "twitter_handle": "",
+      "website": "https://www.snapchat.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-07-29T22:37:09.907Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-11-04T11:14:57.449Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Description\nAttacker can steal SSO login tokens for snappublisher.snapchat.com by chaining different flaws in SSO and Snapchat’s Snappublisher tool. Detailed attack flow is as follows.\n\n# Attack Flow\n1.. Snapchat fetches a `SSO LOGIN TOKEN` from `accounts.snapchat.com` to login into different products of Snapchat i.e. SnapPublisher, Ads Manager, Business Manager, etc. provided that user is logged into `accounts.snapchat.com`.\neg. To login into SnapPublisher following requests are made …\n1] https://accounts.snapchat.com/accounts/login?client_id=creativesuite-prod&referrer=https://snappublisher.snapchat.com/sso_continue\n2] 302 redirect to\nhttps://accounts.snapchat.com/accounts/sso?client_id=creativesuite-prod&referrer=https%3A%2F%2Fsnappublisher.snapchat.com%2Fsso_continue\n3] again 302 redirect to \nhttps://snappublisher.snapchat.com/sso_continue?ticket=redacted\n\nSo, a SSO login token `ticket` is sent from `accounts.snapchat.com` to `snappublisher.snapchat.com` which is used to login the user. And is also used in `Authorization header` when making requests to API.\n\nNow, we are going to steal this SSO login token `ticket` which will allow us to login and control victim’s account.\n\n2.. On `snappublisher.snapchat.com`, I was able to upload a `svg` image to google cloud storage, using which I run my javascript code.\nNote: Use `import from site` functionality via `https://snappublisher.snapchat.com/snaps/create/new` and import my `xss-svg` image from here (███████/tokenstealer.svg). This alerts and logs `#hashfragment` in the console. \nI have already did this in my POC so this is just for understanding purpose. My image URL is `https://snappublisher.snapchat.com/api/v1/media/████████/file/somthine.svg?%23pranav`\n\n3.. Now, other flaws in SSO …\n1] In this URL \n`https://accounts.snapchat.com/accounts/sso?client_id=creativesuite-prod&referrer=https://snappublisher.snapchat.com/api/v1/media/████████/file/somthine.svg?%23pranav`\n\n`referrer` parameter can be controlled and any `snappublisher.snapchat.com` URL is allowed.\nAlso, `%23pranav`, this `#hashfragment` is allowed in `referrer ` parameter. \n\nI take advantage of both these flaws to flow the `SSO login token` to my website or land to a page which I control.\nNote: `#hashfragment` is send further by browser for `302` / `307` redirects.\n\n\n4.. CSRF Login flaw\nSSO functionality is vulnerable to CSRF attack so I can login other people into my account. I use this functionality to login user into my account.\n\n5.. Token doesn’t expire flaw \nOnce the SSO login token is used, it doesn’t expire and can be reused multiple times.\n\nSo, simple attack flow is as follows :\n1. User is logged into `accounts.snapchat.com`.\n2. Attacker logs user into his/her `snappublisher.snapchat.com` account via CSRF login flaw.\n3. Now, attacker makes a request to fetch SSO login token `https://accounts.snapchat.com/accounts/sso?client_id=creativesuite-prod&referrer=https://snappublisher.snapchat.com/api/v1/media/█████████/file/somthine.svg?%23pranav` and redirects the token in `#hashfragment` to `https://snappublisher.snapchat.com/api/v1/media/█████/file/somthine.svg?%23pranav`\n4. `https://snappublisher.snapchat.com/api/v1/media/████/file/somthine.svg?%23pranav` this redirects with `307` status code to `storage.googleapis.com/creativesuite-prod-media/*` with `SSO login token ticket` in  `#hashfragment` carried forward by browser.\n5. Svg image executes my js code and alerts and logs the `SSO login token ticket` in the console.\n6. I can use the `ticket` to login into victim’s account. Via `https://snappublisher.snapchat.com/sso_continue?ticket=<stolen token>`\n\n# Proof Of Concept\n\nVideo POC : █████████(Unlisted video on youtube)\n\n1. Login into your account on `accounts.snapchat.com`.\n2. Login into your SnapPublisher account `snappublisher.snapchat.com`.\n3. Visit (█████) which fetches `user’s SSO login token` which can be used to login. (This alerts and logs the `token` in console.)\n4. Use the token via `https://snappublisher.snapchat.com/sso_continue?ticket=<stolen token>`\n\n\n# Impact \n1. Gain unauthorized access to Snappublisher account.\n2. Can use the SSO login token to make API requests.\n\n# Recommendations\n\n1. For SSO functionality …\n1] Add `state` param to prevent `CSRF login` on `https://snappublisher.snapchat.com/sso_continue?ticket=<token>` \n2] In `referrer` param of the following URL \n`https://accounts.snapchat.com/accounts/sso?client_id=creativesuite-prod&referrer=https://snappublisher.snapchat.com/api/v1/media/██████████/file/somthine.svg?%23pranav` disallow `#hashfragments` to be included.\n3] Make the `referrer` param of the following URL \n`https://accounts.snapchat.com/accounts/sso?client_id=creativesuite-prod&referrer=https://snappublisher.snapchat.com/api/v1/media/███████/file/somthine.svg?%23pranav` more specific and restricted similar to your OAuth2 adsapi.\n4] SSO login token should be one time use and should not be able to use it again and again.\n\n2. For SnapPublisher\n1] I observed you are using Google Cloud Storage, so blocking `svg` images or disallowing any uploads of `svg-xss` images will further enhance security. Otherwise, one can easily get `xss` on `storage.google`\n\n\nLet me know if you need any help. :-)\n\nRegards,\nPranav Hivarekar\n",
+  "bounty_amount": "7500.0",
+  "formatted_bounty": "$7,500",
+  "weakness": {
+    "id": 1002,
+    "name": "Authentication Bypass"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 242,
+  "voters": [
+    "cyberjoinsthehunt",
+    "taha",
+    "abdu11ah",
+    "arist0phanes",
+    "coder_mohammed",
+    "orange303",
+    "loaymorad",
+    "tamay",
+    "kubowsec",
+    "qiaoqiao",
+    "and 232 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 11824,
+    "asset_type": "URL",
+    "asset_identifier": "snappublisher.snapchat.com",
+    "max_severity": "high"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 25258,
+      "category": "team",
+      "content": "@coolboss was able to chain multiple security issues, which allowed him to extract SSO tokens from Snapchat users by sending them to a malicious website. ",
+      "updated_at": "2020-11-04T11:05:39.201Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 293963,
+        "username": "apfeifer_sc",
+        "name": "Ansgar Pfeifer",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-06-18T21:45:07.172Z",
+        "url": "https://hackerone.com/apfeifer_sc",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

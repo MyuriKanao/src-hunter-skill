@@ -1,0 +1,149 @@
+{
+  "id": 2900606,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTAwNjA2",
+  "url": "https://hackerone.com/reports/2900606",
+  "title": "sys_fsc2h_ctrl kernel stack free",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-12-15T21:52:00.832Z",
+  "submitted_at": "2024-12-15T21:52:01.064Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "theflow0",
+    "url": "/theflow0",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-04-18T06:40:26.814Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-04-18T06:40:26.599Z",
+  "team_member_agreed_on_going_public_at": "2025-04-18T06:14:46.192Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 50,
+    "name": "Use After Free"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 232,
+  "voters": [
+    "orange303",
+    "0xcyborg",
+    "mr-medi",
+    "0x_mrx",
+    "0o00",
+    "lio346",
+    "vivekms",
+    "n1m0",
+    "drsniper",
+    "hg_real",
+    "and 222 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 57105,
+    "asset_type": "HARDWARE",
+    "asset_identifier": "PlayStation 5",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 676763,
+      "category": "team",
+      "content": "## Summary\nIt is possible to cause a kernel stack free in the syscall sys_fsc2h_ctrl.\n\nConsider 4 threads:\nThread 1: The command CMD_WAIT (0x10001) in sys_fsc2h_ctrl waits for path 1.\nThread 2: The command CMD_WAIT (0x10001) in sys_fsc2h_ctrl waits for path 2.\nThread 3: The command CMD_RESOLVE (0x20005) in sys_fsc2h_ctrl sets the pointer of path 2 to a local stack buffer and sleeps.\nThread 4: The command CMD_COMPLETE (0x20003) in sys_fsc2h_ctrl writes data into that local stack buffer and wakes up the thread 3.\nThread 2: This thread wakes up before thread 3 and it will free path 2. However, that is not a malloc() allocation, but it is actually a pointer to kernel stack.\n\n## Impact\n\nPrivilege escalation.",
+      "updated_at": "2025-04-18T06:13:39.928Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 240130,
+        "username": "hacker-01",
+        "name": "DP",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-02-09T18:50:35.590Z",
+        "url": "https://hackerone.com/hacker-01",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

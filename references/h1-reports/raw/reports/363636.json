@@ -1,0 +1,145 @@
+{
+  "id": 363636,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjM2MzY=",
+  "url": "https://hackerone.com/reports/363636",
+  "title": "DoS through PeerExplorer",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-06-09T05:00:54.753Z",
+  "submitted_at": "2018-06-09T05:00:54.753Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "z3t",
+    "url": "/z3t",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/042/875/f509a2a60ca4f406a7194137e1f5df0ea52cc0c9_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 25854,
+    "url": "https://hackerone.com/rootstocklabs",
+    "handle": "rootstocklabs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/7q67oftq9lv3d00bgl62x7sn1j6e/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/7q67oftq9lv3d00bgl62x7sn1j6e/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rootstock Labs",
+      "twitter_handle": "rootstocklabs",
+      "website": "https://rootstocklabs.com",
+      "about": "Make Bitcoin work for everyone"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-09-18T13:16:28.759Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-09-18T13:07:08.066Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** The peer discovery implementation is vulnerable to a Denial of Service attack due to improper management of connections.\n\n**Description:** The two main files of interest in detailing this vulnerability are [PeerExplorer.java](https://github.com/rsksmart/rskj/blob/master/rskj-core/src/main/java/co/rsk/net/discovery/PeerExplorer.java) and [NodeChallengeManager.java](https://github.com/rsksmart/rskj/blob/master/rskj-core/src/main/java/co/rsk/net/discovery/NodeChallengeManager.java). To explain the flow of execution I'll be mentioning two theoretical nodes: an attacker, \"N1\" and a target, \"N2\".\n\nWhen N1 sends an initial \"ping\" message to N2, N2 will reply with a \"pong\" message and a subsequent ping message to continue the handshake. After this, when N1 replies with a pong message, N2 will attempt to add N1 to its structure holding established connections. The relevant code snippets from `PeerExplorer.java` are below:\n```    \npublic void handlePong(String ip, PongPeerMessage message) {\n\tPeerDiscoveryRequest request = this.pendingPingRequests.get(message.getMessageId());\n\n\tif (request != null && request.validateMessageResponse(message)) {\n\t\tthis.pendingPingRequests.remove(message.getMessageId());\n\t\tNodeChallenge challenge = this.challengeManager.removeChallenge(message.getMessageId());\n\t\tif (challenge == null) {\n\t\t\tthis.addConnection(message, ip, message.getPort());\n\t\t}\n\t}\n}\n...\nprivate void addConnection(PongPeerMessage message, String ip, int port) {\n\tNode senderNode = new Node(message.getNodeId().getID(), ip, port);\n\tif (!StringUtils.equals(senderNode.getHexId(), this.localNode.getHexId())) {\n\t\tOperationResult result = this.distanceTable.addNode(senderNode);\n\n\t\tif (result.isSuccess()) {\n\t\t\tNodeID senderId = senderNode.getId();\n\t\t\tthis.establishedConnections.put(senderId, senderNode);\n\t\t\tlogger.debug(\"New Peer found ip:[{}] port[{}]\", ip, port);\n\t\t} else {\n\t\t\tthis.challengeManager.startChallenge(result.getAffectedEntry().getNode(), senderNode, this);\n\t\t}\n\t}\n}\n```\nThe `addConnection` method first attempts to add N1 to the `NodeDistanceTable` - a structure designed to hold a limited number of nodes (by default, 4096). If this insertion fails due to the target `NodeDistanceTable` bucket already being full, the attempted connection is instead added to `NodeChallengeManager`. The relevant code snippets from `NodeChallengeManager.java` are below:\n```\npublic NodeChallenge startChallenge(Node challengedNode, Node challenger, PeerExplorer explorer) {\n\tPingPeerMessage pingMessage = explorer.sendPing(challengedNode.getAddress(), 1, challengedNode);\n\tString messageId = pingMessage.getMessageId();\n\tNodeChallenge challenge = new NodeChallenge(challengedNode, challenger, messageId);\n\tactiveChallenges.put(messageId, challenge);\n\treturn challenge;\n}\n\npublic NodeChallenge removeChallenge(String challengeId) {\n\treturn activeChallenges.remove(challengeId);\n}\n```\n\nThrough the `startChallenge` method N2 will send N1 another ping message, adding a \"challenge\" to `activeChallenges` with that new ping message's `messageId`. The issue here is that **the entry is only ever removed from `activeChallenges` if N1 replies with a pong that has the same `messageId` as the new ping message** - as seen in `PeerExplorer.handlePong`. Thus, N1 is able to create an arbitrary number of entries in `activeChallenges` by never sending N2 a pong with the challenge ping's `messageId`.\n\nIt should be noted that there is a slight limitation as to how this could be exploited by a single host. The relevant code snippets from `PeerExplorer.java` are below:\n```\npublic PingPeerMessage sendPing(InetSocketAddress nodeAddress, int attempt, Node node) {\n\tPingPeerMessage nodeMessage = checkPendingPeerToAddress(nodeAddress);\n\n\tif (nodeMessage != null) {\n\t\treturn nodeMessage;\n\t}\n\t....\n}\n...\nprivate PingPeerMessage checkPendingPeerToAddress(InetSocketAddress address) {\n\tfor (PeerDiscoveryRequest req : this.pendingPingRequests.values()) {\n\t\tif (req.getAddress().equals(address)) {\n\t\t\treturn (PingPeerMessage) req.getMessage();\n\t\t}\n\t}\n\n\treturn null;\n}\n\n```\nThe `sendPing` method will only ever actually send a new ping to N1 if there are no pending pings to its `InetSocketAddress` (which is deemed equal if the host and port match) - as seen in `checkPendingPeerToAddress`. However, pending pings have a set expiry time (by default, 30 seconds) and those that have expired are cleared by `PeerExplorerCleaner` at a fixed rate (by default, every 60 seconds). So due to this limitation, with the default configuration settings a single host can only complete 65,535 handshakes (one per port) every minute - imposing a (perhaps unreachable) limit on the time it takes to exhaust the target node's memory. Though this can obviously be circumvented by using multiple hosts to attack a target node. \n\n\nBecause most peer discovery functionality identifies nodes by their `NodeID` and not by host/port, it's trivial to send a flood of requests with unique `NodeID`s to fill `NodeDistanceTable` and subsequently make an unrestricted amount of in-memory insertions into `NodeChallengeManager.activeChallenges`. This is further aided by the fact that `NodeChallengeManager` is never purged, so the request flood does not have to occur within a short period of time. Memory exhaustion will eventually occur as the `NodeChallenge` objects begin taking up a significant amount of memory and are not eligible for garbage collection. This is expected to eventually disable node functionality as individual threads die when they throw `OutOfMemoryError`s, but in my testing it ended up crashing the whole JVM after reaching ~200,000 insertions.\n\n## Steps To Reproduce:\n\nI've attached a PoC program that interfaces with the RSKj library for the sake of simplicity. Due to the PoC program being somewhat inefficient and unreliable, I ended up accelerating the testing process by modifying my testing node's `NodeChallengeManager` to make 10 insertions per valid `startChallenge` call. If you're interested in running the PoC despite those issues, follow these steps:\n  1. Download a copy of the RSKj code\n  2. Move the PoC files into the `co.rsk.net.discovery` package (overwrite `PeerExplorer.java` with my modified version)\n  3. Launch a node for testing - ensure peer discovery is enabled\n  4. Compile and run the PoC from `PeerFlood` - arguments format: `<local_address> <target_address> <target_port> <num_threads>`\n  5. Monitor testing node's logs and stability\n\nIf you're developing your own PoC, you need to simply flood a testing node with connections that use random `NodeID`s, completing a single ping<->pong handshake then immediately disconnecting.\n\n## Mitigation\nThis could be mitigated by implementing expiring challenges that are cleared by `PeerExplorerCleaner`.\n\n## Impact\n\nAn attacker could crash any RSKj node with peer discovery enabled (which it is by default).",
+  "bounty_amount": "4000.0",
+  "formatted_bounty": "$4,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 306904,
+      "file_name": "PoC.zip",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/306/904/b3bb57dc81076b13db555b631fa4d85b459d15bd/PoC.zip?response-content-disposition=attachment%3B%20filename%3D%22PoC.zip%22%3B%20filename%2A%3DUTF-8%27%27PoC.zip&response-content-type=application%2Fzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152141Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=80f6d57127e0a3157c3d2862e97650b9861eb53e87a0836c7d0397d8f18e15f8",
+      "file_size": 2341,
+      "type": "application/zip",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 50,
+  "voters": [
+    "n1m0",
+    "ali",
+    "tess",
+    "sameerphad72",
+    "lucash-dev",
+    "spam404",
+    "dhakal_ananda",
+    "s_p_q_r",
+    "theappsec",
+    "foreguard",
+    "and 40 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.7,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5820,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rsksmart/rskj",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 3418861,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDE4ODYx",
+  "url": "https://hackerone.com/reports/3418861",
+  "title": "libcurl FTP path normalization flaw allows decoded %2e%2e → CWD .. and directory escape (Path Traversal, CWE-22)",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-11-10T19:43:51.819Z",
+  "submitted_at": "2025-11-10T19:43:52.136Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ahn0x",
+    "url": "/ahn0x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/37pidd64guddjf2tiwq4jpng1l6t/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-11-11T16:16:19.274Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-11-11T16:11:01.160Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "ftp_parse_url_path in lib/ftp.c URL-decodes FTP path segments (e.g. %2e%2e) and then splits the decoded path into components using an ad-hoc loop that skips empty components produced by //. The code does not perform canonical path normalization (no stack-based handling of . or ..). As a result, encoded traversal sequences such as %2e%2e decode to .. and may become normal path components that cause libcurl to issue CWD .. commands to the remote FTP server. This enables client-driven directory traversal in contexts where an attacker can supply an FTP URL to an application using libcurl.\n\nAI usage statement: I used an AI assistant to help draft and structure this report. All technical claims, tests and trace excerpts were executed and verified manually by me in a local test environment. I did not use AI to generate exploit code.\n\nAffected version\n\nPlease include the exact output of curl -V here when submitting.\n(Example placeholder — replace with your exact output):\n\ncurl 8.4.0 (x86_64-pc-linux-gnu) libcurl/8.4.0 OpenSSL/1.1.1k zlib/1.2.11\n\n\nTest environment used for verification: Debian-based VM (local build or system curl), pyftpdlib test FTP server (pyftpdlib 2.1.0 used in my tests).\n\nSteps To Reproduce:\n\nOnly run these steps in an environment you control.\n\nPrepare local test directories and files:\n\nmkdir -p ~/curl-test/dir ~/curl-test/testdir\necho \"INSIDE\" > ~/curl-test/dir/inside.txt\necho \"OUTSIDE\" > ~/curl-test/testdir/outside.txt\ncd ~/curl-test\n\n\nStart a simple local FTP server in that directory (example):\n\n# If not installed: python3 -m pip install pyftpdlib\npython3 -m pyftpdlib -w\n# Server serves current directory on 127.0.0.1:2121 (or default FTP port)\n\n\nRun curl with trace enabled using an URL that contains an encoded traversal adjacent to repeated slashes:\n\ncurl --trace-ascii curl_trace.txt -v \"ftp://127.0.0.1:2121/dir//%2e%2e/testdir\" 2>&1 | tee curl_stdout.txt\n\n\nInspect curl_trace.txt for the CWD commands. Example trace excerpt (observed locally):\n\n> CWD dir\n< 250 \"/dir\" is the current directory.\n> CWD ..\n< 250 \"/\" is the current directory.\n\n\nThis shows that %2e%2e was decoded to .. and libcurl attempted CWD ...\n\nSupporting Material/References:\n\nAll evidence provided inline as text (no attachments).\n\nTrace excerpt (text-only):\n\n> CWD dir\n< 250 \"/dir\" is the current directory.\n> CWD ..\n< 250 \"/\" is the current directory.\n\n\nRelevant local code pointers (text-only):\n\n/* url-decode ftp path before further evaluation */\nresult = Curl_urldecode(ftp->path, 0, &ftpc->rawpath, &pathLen, REJECT_CTRL);\n\n/* parse the URL path into separate path components */\nwhile(dirAlloc--) {\n  const char *spos = strchr(curPos, '/');\n  size_t clen = spos - curPos;\n  if(!clen && (ftpc->dirdepth == 0))\n    ++clen;\n  /* we skip empty path components, like \"x//y\" ... */\n  if(clen) {\n    ftpc->dirs[ftpc->dirdepth].start = (int)(curPos - rawPath);\n    ftpc->dirs[ftpc->dirdepth].len = (int)clen;\n    ftpc->dirdepth++;\n  }\n  curPos = spos + 1;\n}\n\n/* sink: later used to send CWD */\nresult = Curl_pp_sendf(data, &ftpc->pp, \"CWD %s\", ftpc->entrypath);\n\n## Impact\n\nPath Traversal (CWE-22) — Improper Input Validation (CWE-20)\n\nOverview:\nBecause libcurl decodes URL-encoded path segments before canonicalization and then accepts decoded .. components as valid path elements, an attacker who controls an FTP URL may cause libcurl to issue CWD .. commands. This client-side behavior can be leveraged in realistic attack scenarios where libcurl is used by applications for automated FTP fetches.\n\nRealistic attack scenarios & consequences:\n\nRemote file disclosure (Confidentiality): An attacker can craft a URL that causes libcurl to traverse to parent directories and attempt RETR on files outside the intended directory. In automated downloaders, update fetchers, backup/restore scripts, or content importers that accept external FTP URLs, this may expose sensitive configuration files, credentials, or private data.\n\nExample: ftp://victim-server/uploads/%2e%2e/private/secret.cfg may lead the client to CWD uploads → CWD .. → RETR private/secret.cfg depending on server behavior and client usage.\n\nBypass of client-side filters (Integrity/Authorization): Applications that perform naive sanitization (e.g., simply searching for literal ..) can be bypassed by sending encoded equivalents (%2e%2e) because decoding occurs before canonicalization.\n\nSupply chain & automation abuse: Software that automatically processes FTP URLs (e.g., CI/CD, synchronization tools) could be tricked into fetching or overwriting files outside the permitted area, leading to broader system compromise or corruption.\n\nVariance by server implementation: The concrete impact depends on the FTP server’s path handling. Some servers may ignore .., some may enforce chroot-like restrictions, and some may honor CWD ... If the server honors CWD .. and the client has permissions to access files above the target directory, the impact is higher.\n\nExploitability / Preconditions:\n\nAttacker must be able to supply an FTP URL that is processed by an application using libcurl (this is common in automated workflows or user-provided URL features).\n\nNo special authentication is required in the core logic: if the client is unauthenticated and the server allows directory changes, it may be exploitable unauthenticated; otherwise, impact is limited by authentication and server configuration.\n\nSeverity & CVSS guidance (estimate):\n\nSuggested severity: High.\n\nCVSS example vector (estimate for remote readability, no privileges, no user interaction):\nAV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N → CVSS ~7.x\n(Adjust upward if unauthenticated access to highly sensitive data is possible.)\n\nWhy this is significant:\nThis is not merely a formatting bug — it is a parsing/normalization logic gap that can be reliably triggered by encoded input. Many applications implicitly trust libcurl for correct path handling; if libcurl issues unintended CWD/RETR commands based on crafted URLs, confidential files could be exposed or automation workflows abused.\n\nSuggested remediation summary (recap):\n\nPerform canonical path normalization after URL-decoding and before splitting into path components (stack-based . / .. handling, collapse //).\n\nReject paths that attempt to traverse above the allowed root for absolute paths (return an error instead of sending CWD).\n\nAdd unit tests for encoded traversal cases and mixed permutations.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 16,
+  "voters": [
+    "x2n",
+    "i0xs3dawi",
+    "2026",
+    "sle3pyhead",
+    "kamekame",
+    "mtmask",
+    "imostafaa511",
+    "knotstied",
+    "fhqb",
+    "breachcraft",
+    "and 6 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

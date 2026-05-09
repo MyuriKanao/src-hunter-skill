@@ -1,0 +1,134 @@
+{
+  "id": 2298307,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjk4MzA3",
+  "url": "https://hackerone.com/reports/2298307",
+  "title": "Buffer Overflow Vulnerability in WebSocket Handling",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2023-12-28T06:55:53.765Z",
+  "submitted_at": "2023-12-28T06:55:53.883Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "hackers_",
+    "url": "/hackers_",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-01-02T08:15:26.866Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2023-12-28T16:50:47.641Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nHello security team,\nHope you are doing well :)\n\nI would like to report a potential security vulnerability in the WebSocket handling code of the curl library. The issue is related to the usage of the `strcpy` function, which can lead to a buffer overflow if the length of the input is not properly checked. The vulnerable code snippet is located at [this link](https://github.com/curl/curl/blob/e251e858b941e29bb95a6c0d26bb45981a872585/lib/ws.c#L581).\n\n## Steps To Reproduce:\n\n1. Trigger the WebSocket functionality with a crafted request.\n2. Provide a base64-encoded nonce value that exceeds the buffer size.\n3. Observe that the `strcpy` function is used without proper bounds checking.\n\n## Fix:\nTo address this issue, it is recommended to replace the `strcpy` function with the safer alternative `strncpy` and explicitly specify the maximum length to copy. Here's an example fix:\n\n```c\nstrncpy(keyval, randstr, sizeof(keyval) - 1);\nkeyval[sizeof(keyval) - 1] = '\\0';  // Null-terminate the string\n```\n\nThis modification ensures that only a specified number of characters (up to the buffer size minus 1) are copied, preventing buffer overflow.\n\n## Reference:\nhttps://cwe.mitre.org/data/definitions/122.html\n\n## Impact\n\nThis vulnerability may allow an attacker to execute arbitrary code, potentially leading to a compromise of the application or system. An attacker could exploit this weakness by providing a specially crafted WebSocket request, causing a buffer overflow and overwriting adjacent memory.",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 38,
+  "voters": [
+    "sah1dx",
+    "seanpesce",
+    "infamousnullptr",
+    "urinaori",
+    "exec_iq",
+    "kaulse",
+    "darkerink",
+    "polem4rch",
+    "cosmossec",
+    "hackermaneia_",
+    "and 28 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

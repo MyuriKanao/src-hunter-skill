@@ -1,0 +1,125 @@
+{
+  "id": 1380121,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzgwMTIx",
+  "url": "https://hackerone.com/reports/1380121",
+  "title": "Critical full compromise of jarvis-new.urbanclap.com via weak session signing",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-10-25T11:50:21.513Z",
+  "submitted_at": "2021-10-25T11:50:21.616Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ian",
+    "url": "/ian",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/lk26w7vc15x7xwoc7njokw0ks4rn/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 33640,
+    "url": "https://hackerone.com/urbancompany",
+    "handle": "urbancompany",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/033/640/87257b3f89c545bf39ee0ca471206ead8718d191_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/033/640/87257b3f89c545bf39ee0ca471206ead8718d191_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Urban Company",
+      "twitter_handle": "urbancompany_uc",
+      "website": "https://www.urbancompany.com",
+      "about": "Urban Company is a platform that allows skilled, professional to connect with users looking for specific at-home services"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-01-30T20:03:00.574Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-12-01T07:05:05.048Z",
+  "team_member_agreed_on_going_public_at": "2022-01-30T20:03:00.431Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nHi there, I discovered that jarvis-new.urbanclap.com uses a weak Flask session key. Because Flask sessions are signed with a static secret, if this secret is known to an attacker then they can modify the session state. In this case, we can modify the Redash `user_id` for the session and log in as any user. **This results in a full compromise of the instance.** I have attached a screenshot showing that I logged into `█████████@urbancompany.com` and have full admin permissions:\n\n██████████\n████\n██████████\n███████\n\n## How to fix\nChange the `REDASH_COOKIE_SECRET` and `REDASH_SECRET_KEY` to a random value immediately.\n\n## PoC\nFor simplicity, it is easiest to forge a password reset link for Redash. We can do this with a bit of Python. To get the reset link for user ID 1, we simply run:\n```\n>>> from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature\n>>> serializer = URLSafeTimedSerializer(\"███\")\n>>> serializer.dumps(str(\"1\"))\n'███'\n```\n\nThen, we can browse to `https://jarvis-new.urbanclap.com/reset/█████` and choose a new password for user ID 1. This then logs us into their account.\n\n## Impact\n\nSince this is connected to all of your databases, this is likely a significant leak of PII and other sensitive information. This is easily a critical issue.",
+  "bounty_amount": "1500.0",
+  "formatted_bounty": "$1,500",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 123,
+  "voters": [
+    "napkin",
+    "orange303",
+    "n1m0",
+    "ganeshbagaria",
+    "a_d_a_m",
+    "tolga",
+    "konstanz2412",
+    "palaziv",
+    "haxor31337",
+    "bombon",
+    "and 113 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 15485,
+    "asset_type": "URL",
+    "asset_identifier": "www.urbancompany.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "id": 812064,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84MTIwNjQ=",
+  "url": "https://hackerone.com/reports/812064",
+  "title": "SAML authentication bypass",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-03-06T10:09:08.702Z",
+  "submitted_at": "2020-03-06T10:09:08.702Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tomp1",
+    "url": "/tomp1",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-06-18T17:23:50.076Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-05-19T17:23:38.723Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nWhen using SAML authentication, responses are not checked properly. This allows attacker to inject/modify any assertions in the SAML response and thus, for example, authenticate as administrator.\n\n## Description\n\nFollowing code snippets are from *app/meteor-accounts-saml/server/saml_utils.js*\nWhen checking the signature, the first Signature element which is found in the whole response XML is used:\n\n`316 const signature = xmlCrypto.xpath(doc, '//*[local-name(.)=\\'Signature\\' and namespace-uri(.)=\\'http://www.w3.org/2000/09/xmldsig#\\']')[0];`\n\n After the XML signature has been verified, the code proceeds to use the first Response element found in the whole XML to get assertions and attributes. \n\n`516 const response = doc.getElementsByTagNameNS('urn:oasis:names:tc:SAML:2.0:protocol', 'Response')[0];`\n\n**However there is no check that the signature that was checked relates to the response element that is being used.** Thus attacker can take a valid SAML response, with some valid signature, and add Response element, that has no signatures, in the beginning of the XML. The code finds the original signature and validates that, but proceeds to use the malicious Response element, which is found first in the document.\n\nAlso the validating the status from the response happens before signature validation\n\n`501 const statusValidateObj = self.validateStatus(doc);`\n\n## Releases Affected:\n\nTested on 3.0.3 but appears to affect all versions based on the history of saml_utils.js file.\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n  1. Configure the application to use SAML authentication\n  1. When logging in, intercept the POST request with a proxy tool\n  1. Use the attached `samlbypasspoc.py` file to create a new value for the parameter `SAMLResponse`. Run the script in python3 with the URL encoded SAMLResponse as argument.\n  1. Replace the parameter value with the one given by the POC script and forward the request\n\nThis requires altering the POC to suite the configuration. Beginning from the line 25, you can alter the response elements as needed to desired values. \n\nIn the sample POC file, attributes `OrganizationName` and `Email` and the element `NameID` are changed. In the setup I tested this resulted in login as a newly created admin.\n\n## Supporting Material/References:\n\n  * samlbypasspoc.py\n\n## Suggested mitigation\n\n  * Refactor the code so that the same elements (references) are used when checking the signature and when reading the attributes\n  * Do not use hard coded indexes when selecting the elements\n\n## Impact\n\nSAML authentication can be bypassed and attacker can log in as any user (e.g. admin user)",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 739127,
+      "file_name": "samlbypasspoc.py",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/NxEmSxWnQK1GxnM8DPfvyTze?response-content-disposition=attachment%3B%20filename%3D%22samlbypasspoc.py%22%3B%20filename%2A%3DUTF-8%27%27samlbypasspoc.py&response-content-type=text%2Fx-python&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6INISVZ3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151841Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQCxA0kU9XiY%2BIErAIXnMsMVNtl%2FE5gn07DboF84Ro4GewIhAKcH526HP%2FUTlGNE%2Bn3Z%2BKrZG7OBGUuwQgTF7eN2vM4XKrsFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igxkq1afLOUwAnpcC78qjwVV7NeQwp6c10oAYyQZlXnTn9gI0Ts%2B9KxIUb4X8GpfDoGqGGXzDUQxkGsQu%2BPGy%2F%2FLIf4JfosEHqORZBSn%2FScHH6f8LzV6C0KHK5jRpzQtoK%2F%2BENjjdQs8haxQiuT2ZRFBcypmd%2BAKTGjMSxe4m1XWFhwDwiIhkY4qm7a2FYMp5nDCtx3KQI%2FBZyn8PShdZTH0P%2By7VBQ%2F7qmQfGzhvWv1dz1CZTBIkOuFKsqQPB6Koah6W78OSIGVKi5bgEbMBingtEmJ67j3Yr992mXh%2BvSXohKdY1Y4gWOHtCfjLzyQE5pPInEBsVtBGV7KCZLUfMqzJ9LJ96B9KpY0ChVQl5mGV5zWxAMtbJ5Vs9gGY3RyPhS7bRETfqgxrAx7fcN6s8RmdT7DYDhWzH%2FP0BjJIdJDI7NR5GJuCWE5Jp9qxnUCt%2B4gv3ZC2QMTB8KLoIlR0q2ZYGEK5v6hdyXfuOuDfEJDL50qQ7qcZN5ziQc%2F5dwCpUhkm9D%2FeZ9j08ZPtOjZcuOqBvbaX7fjVDJtqdjKNG7pSWm0UuWgGiY5D7qRTGWtkavFUSB%2FJvd9qFDSqQXdF8tdsMp8xoBVOF6hhDYRtFbvodyM3sZz%2BswB4ngY6NZrwHECBMmTLsy3YGvQcm3XtOS2xP6hv4egpk347yDEi2PK3l1l7eXzvKJanMacTaMuna2%2BFljYwc%2BLcaUCqFEPfbrjl0X7PPFZQ6sjs3K5sSVE4Z8U%2FHhfR0sV2PLc%2BPJwd6ot9QM98J6UZZqNievrEktulW2VN%2Bng2aPiSqIupgmtEbBMp%2FbECVgwy%2FsQPOL%2FvfvMiWb%2F3SSI55L26VjoVhSSgQC2bm2Rxjv%2BMvwUaqLhX2f28%2Fb6Kz6vgIehCdJzML29%2FM8GOrABGc1isADKJTP2ykuKvj%2BPktq52gWZ9Sl8NQxqpeEdGbEYy8HeJ9qEps%2Fx8nQ%2B0D8zhGH1Ra6nI%2B4jtk8iQWWguah%2B34MJnN2L9sLZd3gkqWmOFGbT1viV3Ej8OnaiPBxI5dC5CzXX17If2zHZSygBHyPXnpGECPPipctHHdSAba6Wkg5J0m9bcPvgIkHBVUReeA%2BlLaf37ZKiYx4iHg2UIdedWVwsHggGaWLH0syaN2w%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=bd748d103d018e7a72446075c02656f4d067ae88591f9ef91398b99f0b1d3422",
+      "file_size": 1407,
+      "type": "text/x-python",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-06-18T17:23:38.758Z",
+  "allow_singular_disclosure_after": -185838902.6981813,
+  "singular_disclosure_allowed": true,
+  "vote_count": 14,
+  "voters": [
+    "fabianfreyer",
+    "p1stachios",
+    "pesticide",
+    "brahim_boufakri01",
+    "pr0f0x01",
+    "rut00",
+    "spetr0x",
+    "rh21a",
+    "destinedtohack",
+    "darkbytex1337",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

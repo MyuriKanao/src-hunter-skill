@@ -1,0 +1,131 @@
+{
+  "id": 879803,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84Nzk4MDM=",
+  "url": "https://hackerone.com/reports/879803",
+  "title": "Bypass of SSRF Vulnerability",
+  "state": "Closed",
+  "substate": "duplicate",
+  "severity_rating": "high",
+  "readable_substate": "Duplicate",
+  "created_at": "2020-05-21T15:34:21.355Z",
+  "submitted_at": "2020-05-21T15:34:21.355Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "njgadhiya",
+    "url": "/njgadhiya",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/juyRbkkFiEePab7nf6ZZZNhd/20fc426031f09e5347054871ae4e3af2478fd2b3d5e8a321468ecf6f2da5ac20"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-06-28T08:34:16.514Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-07-14T07:45:51.248Z",
+  "team_member_agreed_on_going_public_at": "2021-06-28T08:34:16.384Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Bypass of SSRF report https://hackerone.com/reports/793704 \n\nFix applied after reporting the actual report did not prevent from SSRF issue.\nhttps://github.com/TryGhost/Ghost/commit/47739396705519a36018686894d1373e9eb92216#diff-3aa52b4b8c6e0fb8422de65648e35887R101\n\nThe function fetchOembedData() only validates, IPv4, IPv6 and localhost:\n\nif (!HTTP_REGEX.test(protocol) || hostname === 'localhost' || IPV4_REGEX.test(hostname) || IPV6_REGEX.test(hostname))\n\nHowever, it is possible that an attacker would be able to bypass localhost validations with following domains or such:\n\nhttp://spoofed.burpcollaborator.net\nhttp://localtest.me\nhttp://customer1.app.localhost.my.company.127.0.0.1.nip.io\nhttp://mail.ebc.apple.com redirect to 127.0.0.6 == localhost\nhttp://bugbounty.dod.network redirect to 127.0.0.2 == localhost\n\n##Recommendation \nIn order to fix, this vulnerability all the URL provided with \"/ghost/api/v3/admin/oembed/?url=http://169.254.169.254/metadata/v1.json&type=embed\" and URLs getting as a response should be resolved and it should again pass through the filters added to above functions.\n\n## Impact\n\n* An attacker with publisher role (editor, author, contributor, administrator) in a blog may be able to leverage this to make arbitrary GET requests in a Ghost Blog instance's to internal external network.",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": 815084,
+  "original_report_url": "https://hackerone.com/reports/815084",
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 8,
+  "voters": [
+    "0xwise",
+    "mr-inspector",
+    "collinsmarra",
+    "steve2gold",
+    "destinedtohack",
+    "ekgaribadmi",
+    "filipcotan",
+    "althepilot"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

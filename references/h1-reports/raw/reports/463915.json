@@ -1,0 +1,120 @@
+{
+  "id": 463915,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NjM5MTU=",
+  "url": "https://hackerone.com/reports/463915",
+  "title": "URL Advisor component in KIS products family is vulnerable to Universal XSS",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-12-17T14:00:58.680Z",
+  "submitted_at": "2018-12-17T14:00:58.680Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "palant",
+    "url": "/palant",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/125/397/69a28ca9d5030b1db03411852407732328b571c3_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 2379,
+    "url": "https://hackerone.com/kaspersky",
+    "handle": "kaspersky",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/379/d7dc3ce53a84816885872fb423816bfbbbd36390_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/002/379/d7dc3ce53a84816885872fb423816bfbbbd36390_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Kaspersky",
+      "twitter_handle": "kaspersky",
+      "website": "http://www.kaspersky.com",
+      "about": "Kaspersky is the world’s largest privately-held vendor of endpoint protection and cybersecurity solutions for business and consumers."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-08-28T17:54:25.462Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-07-29T17:54:20.126Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary**\nIn Microsoft Edge, URL Advisor UI is served as first-party content on every domain. So the XSS vulnerability I found in this UI automatically applies to all websites, it allows running code in the context of *any* domain.\n\n**Description**\nURL Advisor frame is located under https://www.google.com/<INJECT_ID>/ua/url_advisor_balloon.html and https://www.yahoocom/<INJECT_ID>/ua/url_advisor_balloon.html in Microsoft Edge (always the same INJECT_ID value). It gets its content from a message sent via `window.postMessage()` without validating message origin. Under some circumstances it will assign that data as link target, so a malicious website can make that link point to a javascript: URL. Clickjacking then allows making the user click that link - while sites like google.com use X-Frame-Options header to disallow framing, no such restrictions are in place for the url_advisor_balloon.html frame.\n\n**Environment**\n- Scope: Application\n- Product name: Kaspersky Internet Security\n- Product version: 19.0.0.1088\n- OS name and version (incl SP): Windows 10.0.17134\n- Attack type: Universal XSS\n- Maximum user privileges needed to reproduce your issue: no privileges\n\n**Steps to reproduce**\n1. Download attached `server.py` and `universal_xss.html` to some directory on your computer and run `server.py` (Python 3 required). This is a very rudimentary HTTP server running on http://localhost:5000/, you could use some other web server as well.\n2. Edit the file %WINDIR%\\sysnative\\drivers\\etc\\hosts as administrator and add the following line: `127.0.0.1 www.google.example.com`. Normally, you would just use a subdomain of a domain you own - the host name has to start with \"www.google.\" for URL Advisor to apply to it.\n3. Open Microsoft Edge and go to http://www.google.example.com:5000/universal_xss.html\n4. As advised by the page, move your mouse and click somewhere on the page.\n\nYou will see an alert message saying: \"Hi, this is JavaScript code running on www.google.com.\" That's the result of the code `alert('Hi, this JavaScript code is running on ' + document.domain)` executing in the context of the Google website. Injecting code into any other domain would have been easily possible as well.\n\n**Recommendation**\nThis user interface should never be served as first-party, even once the vulnerability here is fixed. Any XSS vulnerability in Kaspersky code automatically elevates to Universal XSS otherwise, this is too dangerous. Frankly, I don't see why it is done in this way with Microsoft Edge - in Firefox and Internet Explorer the same UI is always served via kis.v2.scr.kaspersky-labs.com, so vulnerabilities here don't affect other websites.\n\n## Impact\n\nA malicious website can easily make users click by pretending to be a game. And while the user clicks, they will be allowing the attackers to inject code into various internet domains and exfiltrating data in the background.",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-08-28T17:54:20.221Z",
+  "allow_singular_disclosure_after": -211325246.35477602,
+  "singular_disclosure_allowed": true,
+  "vote_count": 65,
+  "voters": [
+    "ikuamike",
+    "sp1d3rs",
+    "foobar7",
+    "b1gb1t",
+    "ali",
+    "sameerphad72",
+    "spam404",
+    "s_p_q_r",
+    "mik317",
+    "mouhannadlrx0",
+    "and 55 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

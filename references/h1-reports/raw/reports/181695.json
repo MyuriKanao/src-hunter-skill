@@ -1,0 +1,118 @@
+{
+  "id": 181695,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODE2OTU=",
+  "url": "https://hackerone.com/reports/181695",
+  "title": "Undefined method_missing null pointer dereference",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-12T03:27:22.300Z",
+  "submitted_at": "2016-11-12T03:27:22.300Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "h72",
+    "url": "/h72",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/llf9qq317dedunxi4grrtc0q8w2j/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-17T01:03:38.615Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-17T01:03:38.543Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T19:48:28.097Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "It's possible to segfault mruby by undefining `BasicObject#method_missing` in certain cases.\n\nThere is a fallback method_missing C function (`mrb_method_missing`) which is called in _some_ cases when the VM fails to look up the `method_missing` method:\n\n    > BasicObject.remove_method(:method_missing); 1.foo\n    NoMethodError: undefined method 'foo' for 1\n\nHowever the `mrb_method_missing` fallback is not consistently used.\n\n`Kernel#__send__` calls into `mrb_funcall_with_block` in `vm.c`, which contains the following code at line 362 (as of commit 88604e39ac9c25ffdad2e3f03be26516fe866038):\n\n        c = mrb_class(mrb, self);\n        p = mrb_method_search_vm(mrb, &c, mid);\n        if (!p) {\n          undef = mid;\n          mid = mrb_intern_lit(mrb, \"method_missing\");\n          p = mrb_method_search_vm(mrb, &c, mid);\n          n++; argc++;\n        }\n\nIf the method search for `method_missing` fails, `p` will be a null pointer. Further down on line 380, `p` is tested with `MRB_PROC_CFUNC_P`, which deferences `p`.\n\nThis segfault can be reproduced with the following code:\n\n    BasicObject.remove_method(:method_missing)\n    1.__send__(:foo)\n\nThe method search logic in the `OP_SUPER` instruction is also buggy. The same bug can be triggered through `OP_SUPER` with the following code:\n\n    BasicObject.remove_method(:method_missing)\n\n    class A\n      def foo\n        super\n      end\n    end\n\n    A.new.foo\n\nI'm not familiar enough with the mruby VM internals to write a patch for this. It _should_ just be a matter of making sure `mrb_method_missing` is called if a `method_missing` method search fails (as the logic in `OP_SEND` instruction does).",
+  "bounty_amount": "8000.0",
+  "formatted_bounty": "$8,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-15T19:48:28.122Z",
+  "allow_singular_disclosure_after": -293830707.55607855,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "mpz",
+    "eveeez",
+    "spetr0x",
+    "scept1c",
+    "elakrimi",
+    "hackerjuan",
+    "b35d5b5bf5ea351ffda64782a5990"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

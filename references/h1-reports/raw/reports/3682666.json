@@ -1,0 +1,129 @@
+{
+  "id": 3682666,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjgyNjY2",
+  "url": "https://hackerone.com/reports/3682666",
+  "title": "Use-after-free in `curl_easy_ssls_export()` during callback re-entrancy",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2026-04-18T23:21:44.631Z",
+  "submitted_at": "2026-04-18T23:22:33.485Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "m1llie",
+    "url": "/m1llie",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-04-29T06:10:44.082Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-04-19T21:36:01.064Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n`curl_easy_ssls_export()` iterates the SSL session list and invokes a caller-provided callback for each entry. If that callback calls `curl_easy_ssls_import()` on the same easy handle, the import path can evict and free the current session node while the export loop still holds it. The subsequent `Curl_node_next(n)` dereferences freed memory and triggers AddressSanitizer as a heap-use-after-free. I reproduced this on curl GitHub HEAD `54ded66618a2388e88e715c5eb4477d1083582ef`. The relevant code path is `lib/vtls/vtls_scache.c`, primarily `Curl_ssl_session_export()` around line 1214 with the related eviction path in `cf_scache_peer_add_session()` around line 781.\n\n## Affected version\nReproduced on libcurl built from curl GitHub HEAD `54ded66618a2388e88e715c5eb4477d1083582ef` on Linux x86_64. The build used the OpenSSL backend with `clang`, AddressSanitizer, UndefinedBehaviorSanitizer, and configure options `--disable-shared --enable-ssls-export --with-openssl`.\n\n## Steps To Reproduce:\n1. Build the tested curl source with OpenSSL and `--enable-ssls-export`, for example:\n\n```bash\nautoreconf -fi\nCC=clang CFLAGS=\"-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1\" \\\nLDFLAGS=\"-fsanitize=address,undefined\" \\\n./configure --disable-shared --enable-ssls-export --with-openssl\nmake -j\"$(nproc)\"\n```\n\n2. Compile the attached `poc.c` against the freshly built static libcurl:\n\n```bash\nclang -fsanitize=address,undefined -fno-omit-frame-pointer -g -O1 \\\n  -I./include -I./lib \\\n  poc.c ./lib/.libs/libcurl.a \\\n  -lssl -lcrypto -lz -lpthread -ldl \\\n  -o /tmp/poc_curl_ssls_export_uaf\n```\n\n3. Run the PoC:\n\n```bash\nASAN_OPTIONS=\"halt_on_error=0:print_stacktrace=1:detect_leaks=0\" \\\nUBSAN_OPTIONS=\"print_stacktrace=1:halt_on_error=0\" \\\n  /tmp/poc_curl_ssls_export_uaf\n```\n\n4. The PoC imports TLS session entries for the same peer and then calls `curl_easy_ssls_export()`. During the export callback it re-enters `curl_easy_ssls_import()` on the same easy handle, mutating the session list while the export code still holds the current node.\n\nObserved sanitizer output:\n\n```text\nERROR: AddressSanitizer: heap-use-after-free\n#0 Curl_node_next /src/curl/lib/llist.c:246\n#1 Curl_ssl_session_export /src/curl/lib/vtls/vtls_scache.c:1214\n```\n\n## Impact\n\nAn application using the SSL session export/import API can trigger a heap use-after-free in libcurl. In the tested build this is a reliable crash. In non-instrumented builds, dereferencing a freed list node may also lead to memory corruption, depending on allocator state and surrounding heap layout.",
+  "weakness": {
+    "id": 50,
+    "name": "Use After Free"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5759993,
+      "file_name": "poc.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/2a33ey795rh983nv9e38wl1582m0?response-content-disposition=attachment%3B%20filename%3D%22poc.c%22%3B%20filename%2A%3DUTF-8%27%27poc.c&response-content-type=text%2Fx-c%2B%2Bsrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ47IOYM63%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145908Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDt2pA4ORu3j0CnLrZYnzP7XaKVG5cS2f1fRngACU%2BRxwIhAJl%2B7iyrsT%2FdqYckJm%2Bhwl1NQsxE1ueuI6aZrMAGNEVLKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzHCvj93uC1lWI8jxEqjgXcaT8fA1L7puv03BEbg7O%2FavEjl5VCXCy1JMvsOut%2FATGv02GosQIBWE2YIkJKviW5mg1kja1MqinC1hQ%2F7vXE%2Fjds67JmvLr3ZK8L0jidDBdciEgxht%2Bj7tC5Z6zRSwQxn0mgPH%2BqPNEPtGXc22tmX75lDDll2NPZLkLYaWMTj160Czo3NrAp0%2Fa5rGUWcEy8baUsZt3M0IKccDlq1vt8TrdWsE7i%2B1NcOd3UzU%2BZlUXrUOZQ3Zwz9HTNfYnMSt%2FntJQI42E5g%2BwGGzIb1rElIWUCER7r6x%2BoLu5jkSCXyF2O%2B0TwF223DavlygkX0%2FqR9X5z%2FayyB5MWdk%2FCAtvA8xxvglEvbBQj49rZmF5Pi8wgIm3vuJWM7y%2FxzIKURdCBpXTswKNGbyQOqbw5oS0GLGsXdh8kd9hB0t45msp7laAMVZvqC0juMNMZJGyS3uAcJSfhcI%2BEpihuYegvnXTznkATcGgWY7VXkI2y0Lpw%2B93nHN%2FlHf4zL8PP9HHFUbqi9uiph7w851lZObeobq1d5Lprz5ek1K%2B0iwIpa1QOo%2Blj1PDIqBDT%2F%2FbAHv6DdjaOqiuh2FyM%2B9cn6DrtPT6oxPxcBYJqqw%2BcMdHKf3ievZghquEx1RuSxPgt8b4wkGVrsl3OeZo%2BtRYC4pPa2WqH0T9YOsyA3NSgB0GfmwSWJPtTyc8MY00GJSTesBDzI4IzsEfkTUQH4yOnp8P7nPnlKUpBXQJCyFkEljbujArgtsp2QqSEv%2FdoEQ9lG5XJ5SRAO5DOEAgnlXKUUS00%2BVDZynj8QxF289AAlDmygKWaLmu2KYjHnA%2F8duyKoGHUF5i%2FxGyDnKqDBPSGsAv%2FUxGl6rlTNPt53H7z6NPKAV4wiur8zwY6sAHVoAM%2FsIovelBN3G6gVkybeN69BViaGwJEmuQWnwEWOp3XLL3k%2FbJ3GZ%2FWBYzwxHRLW3Rnhs6LHF%2FRLrXacPt8vRHFfJZHJlJQjccTZrfwOm0w%2Falri2nQaPMkEWsStlHrCspb8v0pIsD8CK2x5GisZz%2BUzx7Bye0X4%2BPuoU3OySBJ4qQEHZ9aMOtl%2FwgsJPLZ48DTccfQN2ytGIUk9xHJnooEFJNHqn2ayiSJGguFZQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7bd2b8856dc405c759aaf7f2a734054743a789cdc017395c96dd739a9582e24b",
+      "file_size": 4818,
+      "type": "text/x-c++src",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 8,
+  "voters": [
+    "wassemalaaiddin",
+    "whitedevil0422",
+    "minimikk",
+    "teamerr404",
+    "arsen_the_chuck",
+    "arpeet433",
+    "m2r1",
+    "luis_dg9"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

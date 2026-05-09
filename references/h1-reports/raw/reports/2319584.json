@@ -1,0 +1,179 @@
+{
+  "id": 2319584,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMzE5NTg0",
+  "url": "https://hackerone.com/reports/2319584",
+  "title": "\"Assertion failed\" in node::http2::Http2Session::~Http2Session() leads to HTTP/2 server crash",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-01-15T14:48:54.977Z",
+  "submitted_at": "2024-01-15T14:48:55.123Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bart",
+    "url": "/bart",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/154/65b70bcb5b2ee4ae9ac8c6f518590c3cb9c08550_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2024-27983"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2024-04-08T22:25:42.342Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-04-08T22:25:42.164Z",
+  "team_member_agreed_on_going_public_at": "2024-04-03T14:52:36.716Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n\nI discovered a vulnerability in Node.js HTTP/2 stack (`http2`) package. An attacker can send a very small amount of TCP packets with a few HTTP/2 frames inside. After a few seconds a Node.js (latest: 21.5.0 and latest LTS: v20.11.0) server crash with the following stack:\n```\n  #  node[3253]: virtual node::http2::Http2Session::~Http2Session() at ../src/node_http2.cc:534\n  #  Assertion failed: (current_nghttp2_memory_) == (0)\n\n----- Native stack trace -----\n\n 1: 0xca5430 node::Abort() [node]\n 2: 0xca54b0 node::errors::SetPrepareStackTraceCallback(v8::FunctionCallbackInfo<v8::Value> const&) [node]\n 3: 0xce7156 node::http2::Http2Session::~Http2Session() [node]\n 4: 0xce7192 node::http2::Http2Session::~Http2Session() [node]\n 5: 0x106f01d v8::internal::GlobalHandles::InvokeFirstPassWeakCallbacks() [node]\n 6: 0x10f3215 v8::internal::Heap::PerformGarbageCollection(v8::internal::GarbageCollector, v8::internal::GarbageCollectionReason, char const*) [node]\n 7: 0x10f3d7c v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [node]\n 8: 0x10ca081 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]\n 9: 0x10cb215 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]\n10: 0x10a8866 v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [node]\n11: 0x15035f6 v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [node]\n12: 0x7f41df699ef6 \nAborted (core dumped)\n```\nThe attack is easy to perform so a permanent Denial of Service is possible. It is also hard to debug from server admins (check Impact section).\n\n**Description:**\n\nThe `http2` package has an  assertion in the `Http2Session` destructor which check if current memory usage of nghttp2 library (`current_nghttp2_memory_`) has been reset to 0.\n```c++\nHttp2Session::~Http2Session() {\n  CHECK(!is_in_scope());\n  Debug(this, \"freeing nghttp2 session\");\n  // Explicitly reset session_ so the subsequent\n  // current_nghttp2_memory_ check passes.\n  session_.reset();\n  CHECK_EQ(current_nghttp2_memory_, 0);\n}\n```\nHowever it is possible to leave some data in nghttp2 memory (or counter is improperly implemented) after reset when headers with HTTP/2 [`CONTINUATION` frame](https://datatracker.ietf.org/doc/html/rfc9113#name-continuation) are sent to the server and then a TCP connection is abruptly closed by the client triggering the `Http2Session` destructor while header frames are still being processed (and stored in memory).\n\n## Steps To Reproduce:\n\n  1. Start a `http2` server.\n  2. Send a HTTP/2 request:\n     * Send necessary init frames.\n     * Send `HEADERS` frame for a simple `GET /` request (with no `END_HEADERS` flag).\n     * Send `CONTINUATION` frame with a single header (also with no `END_HEADERS` flag).\n  3. Disconnect TCP connection.\n\nI'm attaching an exploit in Golang that demonstrates the issue. It starts a loop and in each iteration it opens a TCP connection to the server. It sends necessary headers and then just leaves the connection open. After 10 seconds, another go routine simply exists the application which kills all opened TCP connections which triggers the bug. To run it simply run: `go run ./exploit2.go -address [server]`. For simplicity it works only for `h2c` (HTTP/2 without TLS) server but with extra code it should work against any Node.js server (with TLS).\n\nI was testing it against the simple Node.js server:\n```nodejs\nconst http2 = require('http2');\nconst fs = require('fs');\n\nconst server = http2.createServer();\n\nserver.on('error', (err) => console.error(err));\n\nserver.on('stream', (stream, headers) => {\n    // Respond to the request with a simple hello world message\n    stream.respond({\n        'content-type': 'text/plain; charset=utf-8',\n        ':status': 200\n    });\n    stream.end('Hello World with HTTP/2!');\n    console.log(\"Request handled\")\n});\n\nserver.listen(7777, () => {\n    console.log('Server is running on http://localhost:7777');\n});\n```\n\n## Impact\n\nAn attacker can make the Node.js HTTP/2 server completely unavailable. Because of the fact that send HTTP/2 frames never establish a full HTTP request, the server admins may have problems with debugging the issue or rate-limiting the attacker (requests not visible in the logs). The payload sent to exploit the issue is also very small.\n\nAdditionally, an attack can cause some problems with data integrity because `GOAWAY` frames will not be sent but they contain (often important): `Last-Stream-ID` parameter, from specification:\n> The last stream identifier in the GOAWAY frame contains the highest-numbered stream identifier for which the sender of the GOAWAY frame might have taken some action on or might yet take action on. All streams up to and including the identified stream might have been processed in some way.\n\nThis means that clients may submit duplicate request for request that have been already processed by a server.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2982549,
+      "file_name": "Screen_Recording_2024-01-15_at_15.40.42.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/lv1rvahtyi4xdo10imdmjdvadjl8?response-content-disposition=attachment%3B%20filename%3D%22Screen_Recording_2024-01-15_at_15.40.42.mov%22%3B%20filename%2A%3DUTF-8%27%27Screen_Recording_2024-01-15_at_15.40.42.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150444Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=146c3c482e2e1e58e32e4b26a8acd4f84fd4ebb3ddab9bacdfd143b4d37e6b7f",
+      "file_size": 8334590,
+      "type": "video/quicktime",
+      "moderated": null
+    },
+    {
+      "id": 2982550,
+      "file_name": "exploit2.go",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/gixjvg9yongga9d3o2j7rf1qdzj9?response-content-disposition=attachment%3B%20filename%3D%22exploit2.go%22%3B%20filename%2A%3DUTF-8%27%27exploit2.go&response-content-type=text%2Fx-go&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150444Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=28fb6a0b6c3928b5c8a78cf07decb3db8620b2a25a0dfbfa1f76ee7ba42a2c5c",
+      "file_size": 2834,
+      "type": "text/x-go",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2024-05-03T14:52:36.937Z",
+  "allow_singular_disclosure_after": -63591127.09708501,
+  "singular_disclosure_allowed": true,
+  "vote_count": 65,
+  "voters": [
+    "ryuku",
+    "worstwursts",
+    "0xcyborg",
+    "zy9ard3",
+    "shubhankargaur",
+    "chupa__chups",
+    "cosmossec",
+    "pacmanx",
+    "kurogai",
+    "cyborg_m",
+    "and 55 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "low",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 421496,
+      "category": "team",
+      "content": "An attacker can make the Node.js HTTP/2 server completely unavailable by sending a small amount of HTTP/2 frames packets with a few HTTP/2 frames inside. It is possible to leave some data in nghttp2 memory after reset when headers with HTTP/2 CONTINUATION frame are sent to the server and then a TCP connection is abruptly closed by the client triggering the Http2Session destructor while header frames are still being processed (and stored in memory) causing a race condition.\n",
+      "updated_at": "2024-03-22T14:11:28.597Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2195374,
+        "username": "rafaelgss",
+        "name": "Rafael Gonzaga",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://rafaelgss.dev",
+        "location": "",
+        "created_at": "2022-01-27T23:52:59.861Z",
+        "url": "https://hackerone.com/rafaelgss",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/03cmza9kg8sgdwaepi579m4hvctl/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/03cmza9kg8sgdwaepi579m4hvctl/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/03cmza9kg8sgdwaepi579m4hvctl/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

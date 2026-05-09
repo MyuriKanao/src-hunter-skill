@@ -1,0 +1,111 @@
+{
+  "id": 713975,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83MTM5NzU=",
+  "url": "https://hackerone.com/reports/713975",
+  "title": "Only OpenSSL handles a CRL when passed in via CApath ",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2019-10-14T14:51:22.948Z",
+  "submitted_at": "2019-10-14T14:51:22.948Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "salvet",
+    "url": "/salvet",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-01-08T09:09:22.411Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-01-08T09:09:22.368Z",
+  "team_member_agreed_on_going_public_at": "2021-01-08T08:21:25.201Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nCode in vtls/nss.c interprets CApath option differently than OpenSSL-using code,\nuser can be mislead to unsecure use of curl/libcurl easily. CApath directory\ncan contain CRL files in addition to CA certificate files and they are used\nfor certificate verification when curl calls OpenSSL. Code path using NSS blindly\nloads all files residing in CApath as CA certificates instead, which has two effects:\nfirst, the meaning of CRLs is ignored and revoked certificates can be accepted,\nsecond, NSS may find duplicate SN in corrupt 'CA certificate' during TLS handshake and break\nconnection to legitimate server (NSS does not perform full validation in load\nand search routines, ASN.1 templates used can mistakenly match both types of object).\nSuch use is not explicitly supported according to curl documentation strictly speaking\nbut I find current implementation very risky (I know security professionals who have fallen to this trap)\nand recommend adding validation/type detection for each file loaded\nfrom CApath (or using c_hash-style name extensions if any file with such extension\nis present, if full validation is deemed too complicated or as a quick fix helping most users).\n\n# Steps To Reproduce:\n  1. revoke a certificate, install resulting CRL in CApath, try with NSS-based curl\n  2. try connecting TLS server whose CA has self-signed certificate with SN=1 and CRL in CApath\n     (success can depend on order of directory entries)\n\n## Supporting Material/References:\n[list any additional material (e.g. screenshots, logs, etc.)]\n\n  * [attachment / reference]\n\n## Impact\n\nAn attacker can impersonate TLS server using revoked (presumably leaked) certificate.",
+  "weakness": {
+    "id": 28,
+    "name": "Improper Certificate Validation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 0,
+  "voters": [],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

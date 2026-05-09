@@ -1,0 +1,166 @@
+{
+  "id": 187305,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODczMDU=",
+  "url": "https://hackerone.com/reports/187305",
+  "title": "Invalid handling of zero-length heredoc identifiers leads to infinite loop in the sandbox",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-12-01T11:47:43.778Z",
+  "submitted_at": "2016-12-01T11:47:43.778Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "dkasak",
+    "url": "/dkasak",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/122/858/df3e45a00fd0f5e53ef7dc7f9b12168cbde93200_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-01-12T00:37:21.368Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-01-12T00:37:21.327Z",
+  "team_member_agreed_on_going_public_at": "2017-01-11T21:54:06.985Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Introduction\n============\n\nCertain invalid Ruby programs (which should normally raise a syntax error) are able to cause an infinite loop in MRuby's parser which makes the mruby-engine sandbox (and consequently the MRI process it is running in) unresponsive to SIGTERM. The process begins looping forever and has to be terminated using SIGABRT or SIGKILL. The bug is caused by an improper handling of heredocs with a zero-length identifier.\n\nProof of concept\n================\n\ninfinite_heredoc.rb:\n--------------------\n\n    <<''.a begin\n\n1. Save the above code as `infinite_heredoc.rb`.\n2. Run either:\n   a) `mruby infinite_heredoc.rb`\n   b) `sandbox infinite_heredoc.rb`\n3. Both cause an infinite loop, but b) also leaves the process unresponsive to SIGTERM.\n\nDiscussion\n==========\n\nEverything below assumes the latest master of the mruby repository as of Dec 01th, which is commit `2cca9d368815e9c83a7489c40d69937d68cb43a2`.\n\nThe `<<''`˙in the above POC code is parsed as a heredoc with an empty identifier. The rest of the POC is needed to bring the parser in a state where it is:\n\n   1. Continually searching for the identifier.\n   2. Erroneously thinking it found it, thereby signalling an end of the heredoc by pushing a `tHEREDOC_END` token.\n   3. This token is then invalid for the current parser state, which makes it push an error token.\n   4. Finally, while processing the error, the parser eventually calls `parse_string` again, which brings the process back to step 1, resulting in an infinite loop.\n\nA variation of the bug, using `do` instead of `begin`:\n\ninfinite_heredoc_variation.rb:\n------------------------------\n\n    <<''.a do\n\nAn excerpt from the parser's debug output, demonstrating the above:\n\n    Reading a token: Next token is token tHEREDOC_END ()\n    Error: discarding token tHEREDOC_END ()\n    Error: popping token error ()\n    Stack now 0 2 81 370 586 257 8 199\n    Shifting token error ()\n    Entering state 271\n    Reading a token: Next token is token tHEREDOC_END ()\n    Error: discarding token tHEREDOC_END ()\n    [...]\n\nIt is interesting to study what output MRI's parser gives for the same input:\n\n    infinite_heredoc.rb:1: can't find string \"\" anywhere before EOF\n    infinite_heredoc.rb:1: syntax error, unexpected end-of-input, expecting tSTRING_CONTENT or tSTRING_DBEG or tSTRING_DVAR or tSTRING_END\n    <<''.a begin\n        ^\n\nFor a heredoc with a non-zero name, both MRuby and MRI produce similar outputs:\n\nheredoc_valid_name.rb\n---------------------\n\n    <<'h'.a begin\n\nMRuby output\n------------\n\n    heredoc_valid_name.rb:3:0: can't find heredoc delimiter \"h\" anywhere before EOF\n    heredoc_valid_name.rb:3:0: syntax error, unexpected $end\n\nMRI output\n----------\n\n    heredoc_valid_name.rb:1: can't find string \"h\" anywhere before EOF\n    heredoc_valid_name.rb:1: syntax error, unexpected end-of-input, expecting tSTRING_CONTENT or tSTRING_DBEG or tSTRING_DVAR or tSTRING_END\n    <<'h'.a begin\n        ^\n\nSolution\n========\n\nThe problematic code is located `parse.y`, function `parse_string`, starting at line 3956:\n\n    if ((len-1 == hinf->term_len) && (strncmp(s, hinf->term, len-1) == 0)) {\n        return tHEREDOC_END;\n    }\n\nThe above code checks whether the current heredoc identifier can be matched and, if so, signals the end of the heredoc by returning a `tHEREDOC_END` token. The code is incorrect in the case when the length parameter is 0 due to the use of `strncmp` since it will return 0 even when the input strings are different (as is the case here, where `s` is `\"\\n\"` and `hinf->term` is `\"\"`). Therefore, the check incorrectly succeeds when it shouldn't.\n\nA possible fix is to check whether `hinf->term_len != 0` in addition to the present checks so zero-length heredoc identifiers are invalidated.\n\nempty_heredoc_identifier.patch\n------------------------------\n\n    diff --git a/mrbgems/mruby-compiler/core/parse.y b/mrbgems/mruby-compiler/core/parse.y\n    index bf893fb..85150fc 100644\n    --- a/mrbgems/mruby-compiler/core/parse.y\n    +++ b/mrbgems/mruby-compiler/core/parse.y\n    @@ -3953,7 +3953,7 @@ parse_string(parser_state *p)\n                --len;\n            }\n            }\n    -        if ((len-1 == hinf->term_len) && (strncmp(s, hinf->term, len-1) == 0)) {\n    +        if ((len-1 == hinf->term_len) && (strncmp(s, hinf->term, len-1) == 0) && (hinf->term_len != 0)) {\n            return tHEREDOC_END;\n            }\n        }\n\nWith the provided patch, MRuby correctly terminates with the POC and issues an error message very similar to the one in MRI:\n\n    infinite_heredoc.rb:3:0: can't find heredoc delimiter \"\" anywhere before EOF\n    infinite_heredoc.rb:3:0: syntax error, unexpected $end\n\nIn addition, all the tests pass.\n\n--\nDenis Kasak\nDamir Jelić",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 139327,
+      "file_name": "infinite_heredoc.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/139/327/929c2620e52f0a589c0ab9e8b49cb3b727590fed/infinite_heredoc.rb?response-content-disposition=attachment%3B%20filename%3D%22infinite_heredoc.rb%22%3B%20filename%2A%3DUTF-8%27%27infinite_heredoc.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153124Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=088b79eb3c83886a7eedce8a4bd4be4579cacc1660edaf75ec6dfd7d311fbe88",
+      "file_size": 13,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 139328,
+      "file_name": "infinite_heredoc_variation.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/139/328/c85f7e3556cb7cd6c9d1539bc50720435e68db1a/infinite_heredoc_variation.rb?response-content-disposition=attachment%3B%20filename%3D%22infinite_heredoc_variation.rb%22%3B%20filename%2A%3DUTF-8%27%27infinite_heredoc_variation.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153124Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9d51f38728d741b770b076b7cdbfe1beca926ef0d1b097a9ee87622f5be37e9f",
+      "file_size": 10,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 139329,
+      "file_name": "heredoc_valid_name.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/139/329/e0da80004f27e891f5078cbd07daf6d32a3d22fa/heredoc_valid_name.rb?response-content-disposition=attachment%3B%20filename%3D%22heredoc_valid_name.rb%22%3B%20filename%2A%3DUTF-8%27%27heredoc_valid_name.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153124Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=28e6f4e61a3d66e38a66aa8a24d4f2ed8bf714c2ced4bbe8d36c941d8d556fa8",
+      "file_size": 14,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 139330,
+      "file_name": "empty_heredoc_identifier.patch",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/139/330/04cf921090a34878ddbe93579d50b2edad44cdd8/empty_heredoc_identifier.patch?response-content-disposition=attachment%3B%20filename%3D%22empty_heredoc_identifier.patch%22%3B%20filename%2A%3DUTF-8%27%27empty_heredoc_identifier.patch&response-content-type=text%2Fx-diff&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153124Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=e7c4e88ed24e36adc4840d43cadd13cfbbc1246e1e701b81cb122928e07d8739",
+      "file_size": 538,
+      "type": "text/x-diff",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-02-10T21:54:07.052Z",
+  "allow_singular_disclosure_after": -291577037.88722247,
+  "singular_disclosure_allowed": true,
+  "vote_count": 23,
+  "voters": [
+    "dkasak",
+    "dgaletic",
+    "ras-it",
+    "michiel",
+    "icanthack",
+    "danila",
+    "supernatural",
+    "madrobot",
+    "mpz",
+    "eveeez",
+    "and 13 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

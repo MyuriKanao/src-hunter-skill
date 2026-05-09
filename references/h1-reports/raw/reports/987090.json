@@ -1,0 +1,116 @@
+{
+  "id": 987090,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85ODcwOTA=",
+  "url": "https://hackerone.com/reports/987090",
+  "title": "https://██████ vulnerable to CVE-2020-3187 - Unauthenticated arbitrary file deletion in Cisco ASA/FTD",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-09-21T09:40:35.332Z",
+  "submitted_at": "2020-09-21T09:40:35.359Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "pwnsauc3_",
+    "url": "/pwnsauc3_",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/y4n71chj6124pkf5ikvg51fhovoj/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-3187"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-10-16T19:52:42.423Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-05T17:41:47.090Z",
+  "team_member_agreed_on_going_public_at": "2020-10-16T19:52:42.331Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi team , while testing i found a host ip https://█████████ which belong to DoD (██████████.mil) running web services interface of Cisco ASA/FTD and it is vulnerable to CVE-2020-3187 - Unauthenticated arbitrary file deletion in Cisco ASA/FTD. An attacker could exploit this vulnerability by sending a crafted HTTP request containing directory traversal character sequences. An exploit could allow the attacker to view or delete arbitrary files on the targeted system. When the device is reloaded after exploitation of this vulnerability, any files that were deleted are restored. The attacker can only view and delete files within the web services file system.\n\nVulnerable IP : https://█████████\ni did a whois search on it and it confirmed it belongs to DoD as you seen below\n\n████\n\nSteps to Reproduce\n-----------------------------\ngo to https://████\n\n█████\n\nyou will be redirected to SSL VPN service and you will see a web services interface of Cisco ASA/FTD. In above pic you can see the page we are looking at a web service which is vulnerable to CVE 2020-3187 and you can also see the certificate which indicates that this belongs to █████.mil.\n\nProof of Concept\n-------------------------\nNow we know that in CVE-2020-3187 - Unauthenticated arbitrary file deletion in Cisco ASA/FTD. This allow the attacker to view or delete arbitrary files on the targeted system\nIn this we can delete the files. For example the logo file present on the server at https://████/+CSCOU+/csco_logo.gif can be deleted by the following steps\n\nThis can be done by sending a curl request as : curl -H \"Cookie: token=../+CSCOU+/csco_logo.gif\" https://target/+CSCOE+/session_password.html\n\n1. To delete this just hit the following command on your terminals.\n```\ncurl -H “Cookie: token=../+CSCOU+/csco_logo.gif” https://█████/+CSCOE+/session_password.html\n```\nIf that did not work because sometimes logo.gif/png has permission issues so try this \"https://██████/+CSCOE+/blank.html\"\n\n2. You can also delete the file \"/+CSCOE+/blank.html\" (an empty HTML file), as it might be a problem with the permission of the custom logo file sometimes logo.gif has permission issue so we might not be able to delete but we can delete other files\n\nAfter, this the files ( logo and blank html page ) will be deleted from the server, for better demonstration check out this video :\n\n- https://video.twimg.com/ext_tw_video/1286808440271183873/pu/vid/1270x720/8tccA2VgHV9TDtW4.mp4\n\nWarning : This can lead to a denial of service (DOS) on the VPN by deleting the lua source code files from the file system, which will break the WebVPN interface until the device is rebooted.\n\nNow i haven't deleted the logo file because i didn't wanted to cause any damage so i used another method which can help us confirming that target is vulnerable to this without causing damage and for that just check if \"/+CSCOE+/session_password.html\" endpoint exists, and it gives \"200 OK\" status, then it should be vulnerable because this affected endpoint has been removed from the patched versions.\n\nI sent a curl request to check and it gave 200 ok as shown below:\n\n█████\n\nIn a nutshell:\n```\n/+CSCOE+/session_password.html -> 200 = Vulnerable\n/+CSCOE+/session_password.html -> 404 = Patched\n```\nbecause in patched versions this /+CSCOE+/session_password.html file is removed and you will not see it so if it is showing 200 ok then it is vulnerable as you have seen in above pic where it shows a 200 ok while curl request to\n\ncurl -kI https://█████/+CSCOE+/session_password.html\n\nMitigation/Remediation Actions\n--------------------------------------------\nUpgrade the ASA software version per the referenced advisory. This advisory is available at the following link:\nhttps://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-asaftd-path-JE3azWw43\n\nReference\n----------------\nhttps://twitter.com/aboul3la/status/1286809567989575685\nhttps://medium.com/@parasarora06/hunting-for-cve-2020-3187-2020-3452-9f0dcc66f4d8\nhttps://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-asaftd-path-JE3azWw43\nhttp://packetstormsecurity.com/files/158648/Cisco-Adaptive-Security-Appliance-Software-9.7-Arbitrary-File-Deletion.html\n\n## Impact\n\nHigh - This vulnerability allows the attacker to delete files within the web services file system.",
+  "weakness": {
+    "id": 12,
+    "name": "Array Index Underflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "shubham_srt",
+    "dastan_9408",
+    "pwnsauc3_",
+    "ikemurami",
+    "invisible_man",
+    "wbx",
+    "spedooo_api"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

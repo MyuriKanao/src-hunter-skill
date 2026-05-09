@@ -1,0 +1,133 @@
+{
+  "id": 398799,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zOTg3OTk=",
+  "url": "https://hackerone.com/reports/398799",
+  "title": "Unauthenticated blind SSRF in OAuth Jira authorization controller",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-24T03:05:22.400Z",
+  "submitted_at": "2018-08-24T03:05:22.400Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-03-14T16:28:39.097Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-02-12T16:28:38.692Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The `Oauth::Jira::AuthorizationsController#access_token` endpoint is vulnerable to a blind SSRF vulnerability. The vulnerability allows an attacker to make arbitrary HTTP/HTTPS requests inside a GitLab instance's network.\n\n# Proof of concept\nTo reproduce the vulnerability, follow the steps below.\n\n - spin up a GitLab EE instance with the latest version (11.2.1-ee)\n - send a `POST` request to the `/-/jira/login/oauth/callback` endpoint, as shown below. In the request, point the `Host` header to the hostname / IP address and port number you want to send the request to:\n\n```\ncurl -X POST -H 'Host: 162.243.147.21:81' 'https://gitlab.com/-/jira/login/oauth/access_token'\n```\n\n - Observe a `POST` request being sent to `162.243.147.21:81` (in this case HTTPS):\n\n```\nListening on [0.0.0.0] (family 0, port 81)\nConnection from [35.231.137.154] port 81 [tcp/*] accepted (family 2, sport 58558)\n��ؒ����\n��/$����4�i�,�֟J%>�+�/�,�0�����#�'�\t��$�(�\n�gk39@j28��<=/5�l162.243.147.21\n\n Connection closed, listening again.\n```\n\n# Vulnerable code\nThe following code can be found in the `Oauth::Jira::AuthorizationsController#access_token` method.\n\n```ruby\ndef access_token\n  auth_params = params\n                  .slice(:code, :client_id, :client_secret)\n                  .merge(grant_type: 'authorization_code', redirect_uri: oauth_jira_callback_url)\n\n  auth_response = Gitlab::HTTP.post(oauth_token_url, body: auth_params, allow_local_requests: true)\n  token_type, scope, token = auth_response['token_type'], auth_response['scope'], auth_response['access_token']\n\n  render text: \"access_token=#{token}&scope=#{scope}&token_type=#{token_type}\"\nend\n```\n\nThe `GItlab::HTTP.post` call is using the `oauth_token_url` directly. This `_url` Rails routing helper uses the `Host` header to construct the URL it needs to point to. Because every host is accepted in GitLab, the constructed URL can point to an internal system. This is how it's supposed to work. However, the `Host` header should be checked before making the `post` call to avoid an attacker being able to make arbitrary requests.\n\n## Impact\n\nThe response of the server is actually interpreted, but this is limited to a JSON response that returns an `access_token`, `scope`, and `token_type`. However, this may have additional consequences in case there are unauthenticated endpoints within the instance's network. This isn't very likely, which is why the attack complexity is set to High. It has a minor impact on Availability, because a thread is blocked on the TCP read timeout, which is set to 60 seconds (`curl -X POST -H 'Host: 162.243.147.21:81'   0.03s user 0.01s system 0% cpu 1:00.76 total`). The integrity impact is currently set at High, but this depends on additional factors, such as what other internal services can be hit. The user does not need to be authenticated to execute the call.",
+  "bounty_amount": "4000.0",
+  "formatted_bounty": "$4,000",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-03-14T16:28:38.859Z",
+  "allow_singular_disclosure_after": -225759680.49954298,
+  "singular_disclosure_allowed": true,
+  "vote_count": 233,
+  "voters": [
+    "loaymorad",
+    "he4am",
+    "notpwnguy",
+    "arist0phanes",
+    "orange303",
+    "p1stachios",
+    "badcracker",
+    "mashoud1122",
+    "sklnhunt",
+    "base_64",
+    "and 223 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

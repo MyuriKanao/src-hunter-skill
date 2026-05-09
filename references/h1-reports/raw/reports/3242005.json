@@ -1,0 +1,132 @@
+{
+  "id": 3242005,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjQyMDA1",
+  "url": "https://hackerone.com/reports/3242005",
+  "title": "Use-After-Free in OpenSSL Keylog Callback via SSL_get_ex_data() in libcurl",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-07-09T03:04:29.345Z",
+  "submitted_at": "2025-07-09T03:04:29.559Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "brobagazzzx",
+    "url": "/brobagazzzx",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/si1ovfqmh9me37m7gk8811l4pkim/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-07-09T13:45:38.982Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-07-09T13:36:52.979Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Summary:\n\nA Use-After-Free (UAF) vulnerability exists in libcurl when the OpenSSL SSL_CTX_set_keylog_callback is set. The callback may be invoked after the associated SSL object has been freed via SSL_free(), leading to access to a dangling pointer and potential crash or information leak via SSL_get_ex_data().\n\nThis can be triggered manually or accidentally through custom keylog callbacks when ex_data is accessed inside the callback and the SSL object is no longer valid.\n\nSecurity impact: Under specific conditions (when keylog callback is configured), it results in a segmentation fault (DoS). If further heap grooming or ex_data abuse is possible, this may lead to code execution.\n\nAffected version\n\nTested on:\n\ncurl 8.8.0 (OpenSSL 3.3.0)\nRelease-Date: 2024-06-26\nProtocols: dict file ftp ftps gopher gophers http https imap imaps mqtt pop3 pop3s rtsp scp sftp smb smbs smtp smtps telnet tftp\nFeatures: alt-svc AsynchDNS HSTS HTTP2 HTTPS-proxy IPv6 Largefile libz NTLM NTLM_WB SSL threadsafe TLS-SRP UnixSockets\nPlatform: Termux (Android 11, aarch64)\nOpenSSL: 3.3.0 built from source\n\n\n---\n\nSteps To Reproduce:\n\n1. Build the following minimal C program (tested with gcc -o segv segv.c -lssl -lcrypto):\n\n\n\n#include <openssl/ssl.h>\n#include <openssl/err.h>\n#include <stdio.h>\n#include <stdlib.h>\n\nvoid my_keylog_cb(const SSL *ssl, const char *line) {\n    printf(\"Keylog callback: %s\\n\", line);\n    // UAF: SSL already freed\n    void *ptr = SSL_get_ex_data((SSL *)ssl, 0);  // cast to remove const\n    printf(\"Data: %p\\n\", ptr);\n}\n\nint main() {\n    SSL_library_init();\n    SSL_load_error_strings();\n\n    SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());\n    SSL_CTX_set_keylog_callback(ctx, my_keylog_cb);\n\n    SSL *ssl = SSL_new(ctx);\n\n    int idx = SSL_get_ex_new_index(0, \"mydata\", NULL, NULL, NULL);\n    char *data = strdup(\"hello\");\n    SSL_set_ex_data(ssl, idx, data);\n\n    SSL_free(ssl);  // Free SSL\n\n    // Trigger callback after free\n    my_keylog_cb(ssl, \"CLIENT_RANDOM deadbeef...\");\n\n    SSL_CTX_free(ctx);\n    free(data);\n    return 0;\n}\n\n2. Run the binary:\n\n\n\n$ ./segv\nKeylog callback: CLIENT_RANDOM deadbeef...\nData: 0x0\nSegmentation fault\n\nWas an AI involved?\n\nNo, the bug was discovered through manual auditing and testing.\nHowever, AI (ChatGPT) was used only to assist in writing documentation and estimating CVSS/weakness classification (e.g., CWE-416).\n\n## Impact\n\nUnder specific conditions (when keylog callback is configured), it results in a segmentation fault (DoS). If further heap grooming or ex_data abuse is possible, this may lead to code execution.",
+  "weakness": {
+    "id": 50,
+    "name": "Use After Free"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4540190,
+      "file_name": "curl.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/02gj0j7ethrlj2lzsea3159whrnp?response-content-disposition=attachment%3B%20filename%3D%22curl.png%22%3B%20filename%2A%3DUTF-8%27%27curl.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150114Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c55e1d9e9eef32b28a7d1bc248fa84f27aba377e874396679f03e1826f308029",
+      "file_size": 9477,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 30,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "0xm394tr0n",
+    "icecream_23",
+    "dr4k0n5600",
+    "abdelrahhman",
+    "brazil1",
+    "ianuzi",
+    "k3nny",
+    "adarsh01securityanlayst",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

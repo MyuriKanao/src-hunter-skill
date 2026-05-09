@@ -1,0 +1,169 @@
+{
+  "id": 3058919,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDU4OTE5",
+  "url": "https://hackerone.com/reports/3058919",
+  "title": "Application Level DoS - Large Markdown Payload in Reply Section Leading to Resource Exhaustion",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-03-25T15:57:42.656Z",
+  "submitted_at": "2025-03-25T15:57:43.111Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "theteatoast",
+    "url": "/theteatoast",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/tx1q69a9e9o0hu5066adn7mul0oc/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16893,
+    "url": "https://hackerone.com/discourse",
+    "handle": "discourse",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Discourse",
+      "twitter_handle": "discourse",
+      "website": "https://discourse.org",
+      "about": "Discourse is JavaScript (ember.js) and Ruby on Rails based 100% open source discussion software -- https://github.com/discourse/discourse"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-10-18T16:47:02.928Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-09-18T16:46:59.858Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nAn application level Denial of Service (DoS) vulnerability was identified in the reply section on https://try.discourse.org\n\nBy submitting an excessively large markup payload (~800,000 characters), the server takes 30 seconds to respond before returning an HTTP/2 502 Bad Gateway error. This indicates potential resource exhaustion or backend service failure, which could be exploited to degrade or disrupt website availability.\n\n## Attack Scenario:\n\nIf an attacker automates this request using multiple parallel requests (e.g., via Burp Intruder, Python scripts, or a botnet), it can cause severe resource exhaustion.\n\nThe backend service will be overwhelmed, leading to widespread downtime, preventing legitimate users from accessing the forum.\n\n## Steps To Reproduce:\n1. Login with valid credentials on `https://try.discourse.org`\n\n2. Navigate to the default discobot grettings message.\n{F4182648}\n\n3. Reply the message with the following paylod while intercepting the request: `https://github.com/theteatoast/theteatoast.github.io/blob/main/payload.txt`\n{F4182646}\n\n4. Repeat the request and observe that the server takes ~30 seconds before responding with 502.\n{F4182647}\n\n##Video POC:\n{F4182629}\n\n##Suggested Mitigation:\n\n1. Implement input length restrictions on replies to prevent excessive payload sizes.\n\n2. Introduce rate-limiting and request throttling to mitigate automated abuse.\n\n3. Optimize backend request handling to reject large payloads early before processing.\n\n##Note:\n\nThis Proof of Concept (PoC) was performed solely for demonstration purposes, with no intent to harm the system. I ensured minimal impact while testing.\n\n## Impact\n\n1. Attackers can exploit this to cause severe delays and temporary or prolonged service disruption.\n\n2. The lack of input validation allows attackers to send multiple large requests in parallel, leading to backend resource exhaustion.\n\n3. If automated, this attack could render the forum completely inaccessible.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4182629,
+      "file_name": "dis_dos.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/phebqpiojqxmka8jvn7nhsohoe7h?response-content-disposition=attachment%3B%20filename%3D%22dis_dos.mp4%22%3B%20filename%2A%3DUTF-8%27%27dis_dos.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150038Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=936c5897f2c1f359bbd6948d7ccae91a7ca19b3bc641dabc1fa4f281ab9ad141",
+      "file_size": 78785354,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 4182646,
+      "file_name": "dis_2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/5dhf776pb769lwp94ky8g4c2t1pz?response-content-disposition=attachment%3B%20filename%3D%22dis_2.png%22%3B%20filename%2A%3DUTF-8%27%27dis_2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150038Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=31a4e2ef8e20d185920dde0a0a42751162edb78cdee110c34673b974d23866b0",
+      "file_size": 605097,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4182647,
+      "file_name": "dis_3.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9wtk1inedcvfc876y26vho4jy4re?response-content-disposition=attachment%3B%20filename%3D%22dis_3.png%22%3B%20filename%2A%3DUTF-8%27%27dis_3.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150038Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b0fd314415af0169a4146eef0b88d4e97ff1d5a396d58676e889bcfafa30b117",
+      "file_size": 1423788,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4182648,
+      "file_name": "dis_1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/hl6suhkedx4nva891nbvhy1s0ngr?response-content-disposition=attachment%3B%20filename%3D%22dis_1.png%22%3B%20filename%2A%3DUTF-8%27%27dis_1.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150038Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=232f98baf0fe67e5e5786ef2e7dc204120f1ca1ec6f15081b11f1aa2b7ef76cd",
+      "file_size": 147772,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": "2025-10-18T16:47:00.012Z",
+  "allow_singular_disclosure_after": -17532818.869969446,
+  "singular_disclosure_allowed": true,
+  "vote_count": 83,
+  "voters": [
+    "purpledog",
+    "0xcyborg",
+    "momollax",
+    "orange303",
+    "loaymorad",
+    "zy9ard3",
+    "deel_",
+    "l3zwanoir",
+    "vaaq",
+    "mohaned0101",
+    "and 73 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 63654,
+    "asset_type": "URL",
+    "asset_identifier": "try.discourse.org",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

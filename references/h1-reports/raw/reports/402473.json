@@ -1,0 +1,120 @@
+{
+  "id": 402473,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MDI0NzM=",
+  "url": "https://hackerone.com/reports/402473",
+  "title": "Arbitrary File Download as Shopmanager",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-29T15:43:55.540Z",
+  "submitted_at": "2018-08-29T15:43:55.540Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "simonscannell",
+    "url": "/simonscannell",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/HvE5FGgP56eXFMNMr4rwmunu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 111,
+    "url": "https://hackerone.com/automattic",
+    "handle": "automattic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Automattic",
+      "twitter_handle": "",
+      "website": "https://automattic.com",
+      "about": "WordPress.com, WooCommerce, WordPress VIP, Jetpack, Beeper, Texts, Akismet, Gravatar, Crowdsignal, Tumblr and more!"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-12-19T14:23:57.394Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-11-19T14:23:55.332Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Due to a flaw in the way WooCommerce handles downloadable products, a shop manager can download arbitrary files on the server.\n\nThe video shows the exploit and how simple it is:\nhttps://www.youtube.com/watch?v=bkrHpqht5SM\n\nThe function responsible for validating the download file input is the following:\n(/woocommerce/includes/abstracts/abstract-wc-product.php)\n```\n\tpublic function set_downloads( $downloads_array ) {\n\t\t$downloads = array();\n\t\t$errors    = array();\n\n\t\tforeach ( $downloads_array as $download ) {\n\t\t\tif ( is_a( $download, 'WC_Product_Download' ) ) {\n\t\t\t\t$download_object = $download;\n\t\t\t} else {\n\t\t\t\t$download_object = new WC_Product_Download();\n\n\t\t\t\t// If we don't have a previous hash, generate UUID for download.\n\t\t\t\tif ( empty( $download['download_id'] ) ) {\n\t\t\t\t\t$download['download_id'] = wp_generate_uuid4();\n\t\t\t\t}\n\n\t\t\t\t$download_object->set_id( $download['download_id'] );\n\t\t\t\t$download_object->set_name( $download['name'] );\n\t\t\t\t$download_object->set_file( $download['file'] );\n\t\t\t}\n\n\t\t\t// Validate the file extension.\n\t\t\tif ( ! $download_object->is_allowed_filetype() ) {\n\t\t\t\tif ( $this->get_object_read() ) {\n\t\t\t\t\t/* translators: %1$s: Downloadable file */\n\t\t\t\t\t$errors[] = sprintf( __( 'The downloadable file %1$s cannot be used as it does not have an allowed file type. Allowed types include: %2$s', 'woocommerce' ), '<code>' . basename( $download_object->get_file() ) . '</code>', '<code>' . implode( ', ', array_keys( $download_object->get_allowed_mime_types() ) ) . '</code>' );\n\t\t\t\t}\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\t// Validate the file exists.\n\t\t\tif ( ! $download_object->file_exists() ) {\n\t\t\t\tif ( $this->get_object_read() ) {\n\t\t\t\t\t/* translators: %s: Downloadable file */\n\t\t\t\t\t$errors[] = sprintf( __( 'The downloadable file %s cannot be used as it does not exist on the server.', 'woocommerce' ), '<code>' . $download_object->get_file() . '</code>' );\n\t\t\t\t}\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\t$downloads[ $download_object->get_id() ] = $download_object;\n\t\t}\n\n\t\tif ( $errors ) {\n\t\t\t$this->error( 'product_invalid_download', $errors[0] );\n\t\t}\n\n\t\t$this->set_prop( 'downloads', $downloads );\n\t}\n```\nWhen I took a look at the function I naturally wanted to see if there was a way to bypass is_allowed_filetype().\n\nThe function does the following:\n\n```\n\tpublic function is_allowed_filetype() {\n\t\tif ( 'relative' !== $this->get_type_of_file_path() ) {\n\t\t\treturn true;\n\t\t}\n\t\treturn ! $this->get_file_extension() || in_array( $this->get_file_type(), $this->get_allowed_mime_types(), true );\n\t}\n```\nIt will see what type of file path it is (it could be a URL, it could be an absolute path etc.) and interestingly enough it will only validate the file extension if it is a relative path. So of course I wanted to see what would happen if we would enter an absolute path, since then I could bypass the extension check entirely.\n\n```\n\tpublic function get_type_of_file_path( $file_path = '' ) {\n\t\t$file_path = $file_path ? $file_path : $this->get_file();\n\t\tif ( 0 === strpos( $file_path, 'http' ) || 0 === strpos( $file_path, '//' ) ) {\n\t\t\treturn 'absolute';\n\t\t} elseif ( '[' === substr( $file_path, 0, 1 ) && ']' === substr( $file_path, -1 ) ) {\n\t\t\treturn 'shortcode';\n\t\t} else {\n\t\t\treturn 'relative';\n\t\t}\n\t}\n```\n\nAnd I was right. Funny enough, input is only an absolute path if it starts with two slashes. So all I did was  to set the download file to //home/simon/html/wordpress/wp-config.php and then just downloaded it.\n\nAs a patch recommendation: Also check the file types if it is an absolute path.\n\nBest regards,\nSimon\n\n## Impact\n\nWhen an attacker can download the wp-config.php file, a privilege escalation is easily possible. He could either log into the database if the DB host is not localhost or if the WordPress installation is used with a shared hosting provider, he can simply get some hosting space on the same server and then access the database, which leads to a complete compromise of the installation.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-12-19T14:23:55.421Z",
+  "allow_singular_disclosure_after": -201574591.05651963,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "mashoud1122",
+    "ali",
+    "tess",
+    "sameerphad72",
+    "t4ym",
+    "cryptographer",
+    "0xm1racle",
+    "facelessdevhack",
+    "thehassantahir",
+    "y51r",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

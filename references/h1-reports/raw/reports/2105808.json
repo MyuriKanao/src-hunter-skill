@@ -1,0 +1,134 @@
+{
+  "id": 2105808,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTA1ODA4",
+  "url": "https://hackerone.com/reports/2105808",
+  "title": "DOS of RSKJ server",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-08-10T20:59:30.549Z",
+  "submitted_at": "2023-08-10T20:59:30.691Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "spacewasp",
+    "url": "/spacewasp",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 25854,
+    "url": "https://hackerone.com/rootstocklabs",
+    "handle": "rootstocklabs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/7q67oftq9lv3d00bgl62x7sn1j6e/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/7q67oftq9lv3d00bgl62x7sn1j6e/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rootstock Labs",
+      "twitter_handle": "rootstocklabs",
+      "website": "https://rootstocklabs.com",
+      "about": "Make Bitcoin work for everyone"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-13T14:23:25.409Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-06-13T14:23:24.777Z",
+  "team_member_agreed_on_going_public_at": "2025-06-13T13:51:28.697Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Due of closing of report (ID #2102315) I will summarize total reproducible report here\n\n## Summary:\nDOS of RSKJ server\n\n## Steps To Reproduce:\n\n  1. download https://github.com/rsksmart/rskj/releases/download/FINGERROOT-5.0.0/rskj-core-5.0.0-FINGERROOT-all.jar\n  2. at server side run\n```\n java -classpath rskj-core-5.0.0-FINGERROOT-all.jar -Drpc.providers.web.cors=* -Drpc.providers.web.ws.enabled=true co.rsk.Start\n```\nit opens `UDPv6` port `5050`\n\n  3. at client side install python3 and library `pip install pysha3`, download  {F2591198},  modify `HOST` inside and run it against server.\n  4.the `UDPServer` is going to process *only* one UDP packet forever and it prevents to process other packages received from different nodes. In a while (some minutes left) the application crashes.\n\n## Supporting Material/References:\nThe root cause:\nbytesToLength returns -5 and length becomes 0\nhttps://github.com/rsksmart/rskj/blob/master/rskj-core/src/main/java/org/ethereum/util/RLP.java#L432\nthis is legal\nhttps://github.com/rsksmart/rskj/blob/master/rskj-core/src/main/java/org/ethereum/util/RLP.java#L440\nand position is unchangeable\nhttps://github.com/rsksmart/rskj/blob/master/rskj-core/src/main/java/org/ethereum/util/RLP.java#L405\nhttps://github.com/rsksmart/rskj/blob/master/rskj-core/src/main/java/org/ethereum/util/RLP.java#L403\n\n## Impact\n\nServer stops to process the incoming traffic at `UDPv6` port `5050`. In a while the application crashes as Out of memory.\ndue of everywhere usage of vulnerable function `decode2` there may be affected another entry points of service.",
+  "bounty_amount": "5000.0",
+  "formatted_bounty": "$5,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2591198,
+      "file_name": "poc.py",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/mf4sh2k6sn86r7u1trkfx9wnmgck?response-content-disposition=attachment%3B%20filename%3D%22poc.py%22%3B%20filename%2A%3DUTF-8%27%27poc.py&response-content-type=text%2Fx-python&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150133Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=613c22752a731e0149ce728f18184f3072fa823c092fd4b215b3d72951c9b10c",
+      "file_size": 427,
+      "type": "text/x-python",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 120,
+  "voters": [
+    "santoryuhunter",
+    "oldrashed",
+    "mikelly",
+    "orange303",
+    "cy4n1de",
+    "n1m0",
+    "drsniper",
+    "zy9ard3",
+    "candysec",
+    "red_darkin",
+    "and 110 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 5820,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rsksmart/rskj",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

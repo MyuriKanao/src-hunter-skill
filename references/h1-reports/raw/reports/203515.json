@@ -1,0 +1,137 @@
+{
+  "id": 203515,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMDM1MTU=",
+  "url": "https://hackerone.com/reports/203515",
+  "title": "Wordpress 4.7.2 - Two XSS in Media Upload when file too large.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-02-05T01:16:31.298Z",
+  "submitted_at": "2017-02-05T01:16:31.298Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "skansing",
+    "url": "/skansing",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/039/510/0486a9d2ba97f04a35e587c7483914cb5299c526_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 55,
+    "url": "https://hackerone.com/wordpress",
+    "handle": "wordpress",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "WordPress",
+      "twitter_handle": "wordpress",
+      "website": "https://wordpress.org/",
+      "about": "Beautiful sites of any kind."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-07-17T23:52:34.026Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-06-17T23:52:32.237Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Description\n-------------------\nAn attacker can inject a malicious script in to the filename which a victim tries to upload leading to XSS inside the administrators control panel.\n\nTwo different \"file to large\" cases end up in interpolating the file name and appending it into DOM unsanitized leading to XSS.\n\nI have attached pictures of one of the cases, in the attached case the file was 12.4 MB, in a freshly installed environment. For reproduction note that any file type can be used (.jar whatever) as the vuln happens before the type is validated.\n\nPoC\n-------------------\nCreate a 20MB file called \n\n`Dinosaurs secret life<img src=x  onerror=alert(1)>.png`\n\nGoto your wordpress site `http://127.0.0.1/wp-admin/media-new.php` and drag`n`drop or use file manager or choose the file via. the \"Select Files\" button.\n\nA error will appear with `... exceeds the maximum upload size for this site.` along with a alert box to display that the payload has been executed.\n\nDetails on XSS\n-------------------\nThe file `script-loader.php` prepares an array of messages for use later.\n\n```\n\t// error message for both plupload and swfupload\n\t$uploader_l10n = array(\n                ...\n\t\t'file_exceeds_size_limit' => __('%s  exceeds the maximum upload size for this site.'),\n\t\t'big_upload_failed' => __('Please try uploading this file with the %1$sbrowser uploader%2$s.'),\n\t\t...\n\t);\n```\n\nThe payload will be injected into the `%s` in the key `file_exceeds_size_limit`.\n\nThis happens because the `$uploader_l10n` is passed to `handlers.min.js` (non minified version shown)\n and interpolated without escaping the value previously.\n\nFirst the value passes trough a error case \n```\n// $uploader_l10n\ncase plupload.FILE_SIZE_ERROR:\n\t\t\tuploadSizeError(uploader, fileObj); // fileObj contains the filename payload in name attribute.\n\t\t\tbreak;\n....\nif ( max > hundredmb && fileObj.size > hundredmb )\n\t\t\t\twpFileError( fileObj, pluploadL10n.big_upload_failed.replace('%1$s', '<a class=\"uploader-html\" href=\"#\">').replace('%2$s', '</a>') );\n```\n\nand lastely interpolated and appended to the dom.\n\n```\n\nfunction uploadSizeError( up, file, over100mb ) {\n\tvar message;\n\n\tif ( over100mb )\n\t\tmessage = pluploadL10n.big_upload_queued.replace('%s', file.name) + ' ' + pluploadL10n.big_upload_failed.replace('%1$s', '<a class=\"uploader-html\" href=\"#\">').replace('%2$s', '</a>');\n\telse\n\t\tmessage = pluploadL10n.file_exceeds_size_limit.replace('%s', file.name);\n\n\n\tjQuery('#media-items').append('<div id=\"media-item-' + file.id + '\" class=\"media-item error\"><p>' + message + '</p></div>');\n\tup.removeFile(file);\n}\n```\n\nThe critical lines are \n```\nmessage = pluploadL10n.big_upload_queued.replace('%s', file.name) + ' ' + pluploadL10n.big_upload_failed.replace('%1$s', '<a class=\"uploader-html\" href=\"#\">').replace('%2$s', '</a>');\n\telse\n\t\tmessage = pluploadL10n.file_exceeds_size_limit.replace('%s', file.name);\n```\n\n# Suggested fix:\nRemove the filename or escape safely in context.",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 157473,
+      "file_name": "payload_effect.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/157/473/398a407dcaa4bbc9543dd26e03116978ffbc150a/payload_effect.png?response-content-disposition=attachment%3B%20filename%3D%22payload_effect.png%22%3B%20filename%2A%3DUTF-8%27%27payload_effect.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6UGRTR27%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152545Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQC9S7gl8Lhm9OiY2NaTN9CsWTXSoAfClOR4lsIlXWRW%2BQIhALl6%2Fbx5xdfHyByCa1ClMVgyj35T6BLDDn1vdHrUG1TSKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzQMjOKJEJm1X63EsoqjgUESuK5vKqe2FXeKHLOEnuoXPPQAkoXNnxwlj5lKWQpRyqH8ZMcCc81CLztxhwHhONljtkM8vK8hlvdNkXy5UUjQ%2F0JjD7MmW2w7BrtuL6LcEi4ZLwjRrhSUfbGbc5GMxXl1GYxYnT30oNt9cIcBlZZZGmjG%2BM9hDoX32a0FEBjifQ%2FwvX1sfrXI5KFYQhPTycvhtq1EmNa2TckjCGKPvNXIL4G4Z7RavgDDhiA6FMM3PxrZjvYlQjtJYHCK%2F7HztR2h3wkR8nWpShgbD9fx8i3s7mhf0B7y0zG6b%2FXdd9CKQ1b8rj5eIl02M7licURHOufDholroccJTPR9lpiCkpRE1vwcPhrVmrIZglkvG88ulh8AlrmnNpahYRWxb4aCjH522ipm8ia2HonKXKiHiVSKIBg02gExv5Tp%2FBRvW%2FR4FfXfx%2BqAdfIT7Z%2B8Ujf4uwZAJUakr1aNM%2FzYJdpS8PmAUPrzRKaqv%2FWKOhTbN5pfijT4zBBzS2jG1xxGb9Xwl61G8LXCE32GRxDospC70Z7GNuNRtL4l%2FvjVEI8qUsyCLgGM8rnHG93bKBFatP9ubdbsLjfEA9yXCcCIwftX%2BUJKXE%2FUirv0wijI%2Bp%2BeVk%2FMi1KsCo0IgOFYwxC1en%2Bcat6q7OJMOTfsUqjLUIG%2BZIDvqkBX7AkaB0BTmL6lYC5OCEVmvmitvII7IrL5IirAPqsvLNHer9RWy%2FpQd2JCUZ0p6kNNXxtaWaEEx%2BeKgHVE3eeXtGSorsU1S4gX5GMOWzai3fxh8BoCaM6eoQ9pB5oo8ILnHA29lg7wccazFxPDvZ7C5fmk8RRYfBVNCjC8FtUvWx77a3WJf47U2rO4YdKu%2BxtgaAvPF%2FhAIofWg0wlvf8zwY6sAFu6UWr2bCF6kXNKMMdNea8qujy6JQDMh6nO7NQC%2Fn3JbRvz2IKfqd0H26bS%2BKJkXebmFW3%2BbD51g%2BSumhDiEF7tSpZWlKpdpVwmvxUnVHK29R8T9j%2F%2FTR%2F7Axgqz%2F1N8o7GjnInmxtABzOo7PUkopRe9tkLtY%2BEeuStOhAXsVzdvtFEN4drVZOQ5qoh2dcZRapsoRvHysAKkKnpxd%2FZm7lc%2FVeItZwHodhed6GS5qZYw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0c01c2fc3f6776a1f3d939c4aee89971573f63898b8e805bb6b05c6783d6a188",
+      "file_size": 86903,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 157474,
+      "file_name": "Payload_drop.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/157/474/81f27f31cfd9311974a97b22fc212977d2d08e92/Payload_drop.png?response-content-disposition=attachment%3B%20filename%3D%22Payload_drop.png%22%3B%20filename%2A%3DUTF-8%27%27Payload_drop.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6UGRTR27%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152545Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQC9S7gl8Lhm9OiY2NaTN9CsWTXSoAfClOR4lsIlXWRW%2BQIhALl6%2Fbx5xdfHyByCa1ClMVgyj35T6BLDDn1vdHrUG1TSKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzQMjOKJEJm1X63EsoqjgUESuK5vKqe2FXeKHLOEnuoXPPQAkoXNnxwlj5lKWQpRyqH8ZMcCc81CLztxhwHhONljtkM8vK8hlvdNkXy5UUjQ%2F0JjD7MmW2w7BrtuL6LcEi4ZLwjRrhSUfbGbc5GMxXl1GYxYnT30oNt9cIcBlZZZGmjG%2BM9hDoX32a0FEBjifQ%2FwvX1sfrXI5KFYQhPTycvhtq1EmNa2TckjCGKPvNXIL4G4Z7RavgDDhiA6FMM3PxrZjvYlQjtJYHCK%2F7HztR2h3wkR8nWpShgbD9fx8i3s7mhf0B7y0zG6b%2FXdd9CKQ1b8rj5eIl02M7licURHOufDholroccJTPR9lpiCkpRE1vwcPhrVmrIZglkvG88ulh8AlrmnNpahYRWxb4aCjH522ipm8ia2HonKXKiHiVSKIBg02gExv5Tp%2FBRvW%2FR4FfXfx%2BqAdfIT7Z%2B8Ujf4uwZAJUakr1aNM%2FzYJdpS8PmAUPrzRKaqv%2FWKOhTbN5pfijT4zBBzS2jG1xxGb9Xwl61G8LXCE32GRxDospC70Z7GNuNRtL4l%2FvjVEI8qUsyCLgGM8rnHG93bKBFatP9ubdbsLjfEA9yXCcCIwftX%2BUJKXE%2FUirv0wijI%2Bp%2BeVk%2FMi1KsCo0IgOFYwxC1en%2Bcat6q7OJMOTfsUqjLUIG%2BZIDvqkBX7AkaB0BTmL6lYC5OCEVmvmitvII7IrL5IirAPqsvLNHer9RWy%2FpQd2JCUZ0p6kNNXxtaWaEEx%2BeKgHVE3eeXtGSorsU1S4gX5GMOWzai3fxh8BoCaM6eoQ9pB5oo8ILnHA29lg7wccazFxPDvZ7C5fmk8RRYfBVNCjC8FtUvWx77a3WJf47U2rO4YdKu%2BxtgaAvPF%2FhAIofWg0wlvf8zwY6sAFu6UWr2bCF6kXNKMMdNea8qujy6JQDMh6nO7NQC%2Fn3JbRvz2IKfqd0H26bS%2BKJkXebmFW3%2BbD51g%2BSumhDiEF7tSpZWlKpdpVwmvxUnVHK29R8T9j%2F%2FTR%2F7Axgqz%2F1N8o7GjnInmxtABzOo7PUkopRe9tkLtY%2BEeuStOhAXsVzdvtFEN4drVZOQ5qoh2dcZRapsoRvHysAKkKnpxd%2FZm7lc%2FVeItZwHodhed6GS5qZYw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9e258b9206c6f3f0a79227fe53626971d9a67111d4005e67dbd9dbbbf7c62192",
+      "file_size": 128319,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-07-17T23:52:32.310Z",
+  "allow_singular_disclosure_after": -278004793.24842757,
+  "singular_disclosure_allowed": true,
+  "vote_count": 23,
+  "voters": [
+    "bogdantc",
+    "bl4de",
+    "s_p_q_r",
+    "skansing",
+    "ak1",
+    "madrobot",
+    "r3y",
+    "eveeez",
+    "khizer47",
+    "vulnh0lic",
+    "and 13 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

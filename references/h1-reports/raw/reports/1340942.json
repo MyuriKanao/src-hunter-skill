@@ -1,0 +1,149 @@
+{
+  "id": 1340942,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzQwOTQy",
+  "url": "https://hackerone.com/reports/1340942",
+  "title": "size_t-to-int vulnerability in exFAT leads to memory corruption via malformed USB flash drives",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-09-15T19:53:27.587Z",
+  "submitted_at": "2021-09-15T19:53:27.689Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "theflow0",
+    "url": "/theflow0",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-09-21T19:06:48.490Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-12-07T16:27:01.466Z",
+  "team_member_agreed_on_going_public_at": "2022-09-21T19:06:48.300Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 13,
+    "name": "Incorrect Calculation of Buffer Size"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 278,
+  "voters": [
+    "neeythann",
+    "ba-reynolds",
+    "cxzer0",
+    "jumpydata",
+    "orange303",
+    "cyolos",
+    "n1m0",
+    "b19r8a14",
+    "fqdn",
+    "thruster",
+    "and 268 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 40736,
+    "asset_type": "HARDWARE",
+    "asset_identifier": "PlayStation 4",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 194565,
+      "category": "team",
+      "content": "## Summary\n\nA heap-based buffer overflow can be triggered by a malformed exFAT USB flash drive. \n\n## Vulnerability\n\nThe vulnerability is in Sony's exFAT implementation where there is an integer truncation from 64bit to 32bit on a size variable that is used to allocate the up-case table:\n\n```c\nint UVFAT_readupcasetable(void *unused, void *fileSystem) {\n  ...\n  size_t dataLength = *(size_t *)(upcaseEntry + 24);\n  size_t size = sectorSize + dataLength - 1;\n  size = size - size % sectorSize;\n  uint8_t *data = sceFatfsCreateHeapVl(0, size);\n  ...\n  while (1) {\n    ...\n    UVFAT_ReadDevice(fileSystem, offset, sectorSize, data);\n    ...\n    data += sectorSize;\n    ...\n  }\n}\n```\n\nNamely, `dataLength` and `size` are both 64bit wide, however the `size` argument of `sceFatfsCreateHeapVl()` is 32bit wide:\n\n```c\nvoid *sceFatfsCreateHeapVl(void *unused, int size) {\n  return malloc(size, M_EXFATFSPATH, M_WAITOK | M_ZERO);\n}\n```\n\nWhen using a big size for `dataLength`, this function will therefore only allocate a small buffer, and as a result overflow and corrupt subsequent objects on the heap when calling `UVFAT_ReadDevice()`.\n\nFor example, using `sectorSize=0x200` and `dataLength=0x100000200` we have:\n\n```\n    size = (sectorSize + dataLength - 1) - (sectorSize + dataLength - 1) % sectorSize;\n<=> size = (0x200 + 0x100000200 - 1) - (0x200 + 0x100000200 - 1) % 0x200;\n<=> size = 0x1000003FF - 0x1FF;\n<=> size = 0x100000200;\n```\n\nWhen passing this size to `sceFatfsCreateHeapVl()`, the leading 1 is cut off to `0x200`.\n\n\n## Exploitation\n\nThis vulnerability allows us to allocate any buffer on the heap with size >= 512 and multiple of 512, and allows us to overflow by a multiple of 512. There are interesting objects that one could spray on the heap such as `struct usb_endpoint` which contain interesting pointers that one could corrupt.\n\n\n## Impact\n\nJailbreak the PS4/PS5 by plugging in the USB and directly getting kernel code execution.",
+      "updated_at": "2022-09-21T19:04:16.230Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 240130,
+        "username": "hacker-01",
+        "name": "DP",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-02-09T18:50:35.590Z",
+        "url": "https://hackerone.com/hacker-01",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

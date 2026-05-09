@@ -1,0 +1,138 @@
+{
+  "id": 1690000,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjkwMDAw",
+  "url": "https://hackerone.com/reports/1690000",
+  "title": "Weak randomness in WebCrypto keygen",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-09-02T19:03:49.714Z",
+  "submitted_at": "2022-09-02T19:03:49.776Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bnoordhuis",
+    "url": "/bnoordhuis",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2022-35255"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-10-26T08:18:10.825Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2022-09-26T08:18:02.360Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "https://github.com/nodejs/node/pull/35093 introduced a call to `EntropySource()` in `SecretKeyGenTraits::DoKeyGen()` in `src/crypto/crypto_keygen.cc`. There are two problems with this:\n\n1. It does not check the return value, it assumes `EntropySource()` always succeeds, but it can (and sometimes will) fail.\n\n2. The random data returned by`EntropySource()` may not be cryptographically strong and therefore not suitable as keying material.\n\nAn example is a freshly booted system or a system without `/dev/random` or `getrandom(2)`.\n\n## Impact\n\n`EntropySource()` calls out to openssl's `RAND_poll()` and `RAND_bytes()` in a best-effort attempt to obtain random data.\n\nOpenSSL has a built-in CSPRNG but that can fail to initialize, in which case it's possible either:\n\n1. No random data gets written to the output buffer, i.e., the output is unmodified, or\n\n2. Weak random data is written. It's theoretically possible for the output to be fully predictable because the CSPRNG starts from a predictable state.\n\nThe output buffer is allocated in `SecretKeyGenTraits::DoKeyGen()` using `OPENSSL_malloc()` (alias for `CRYPTO_malloc()`), which in turn calls `malloc()`.\n\n`malloc()` does not zero the buffer but its contents may be predicted or manipulated by an external attacker, e.g. by manipulating an arraybuffer, then forcing the GC to reclaim it.\n\nUsers can override the CSPRNG (and do) so there are probably more failure modes. A buggy CSPRNG could write out only zeroes, for example, comparable to (2).\n\nI have a (trivial!) patch available. H1 gives this a really high CVSS score but I suppose that's appropriate when the worst case failure mode is a complete breakdown of confidentiality and integrity.",
+  "weakness": {
+    "id": 44,
+    "name": "Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-10-26T08:18:02.454Z",
+  "allow_singular_disclosure_after": -111567072.29138376,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "martinvw",
+    "shreyaschavhan",
+    "freedfr0md3sire",
+    "ttmachine",
+    "godtengri",
+    "shivammusic",
+    "ruy_to",
+    "azdpsi",
+    "optimus_101",
+    "rayjolt",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.4,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

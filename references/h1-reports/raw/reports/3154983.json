@@ -1,0 +1,174 @@
+{
+  "id": 3154983,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTU0OTgz",
+  "url": "https://hackerone.com/reports/3154983",
+  "title": "IDOR: Account Deletion via Session Misbinding – Attacker Can Delete Victim Account",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-05-20T15:52:48.175Z",
+  "submitted_at": "2025-05-20T15:52:48.865Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "z3phyrus",
+    "url": "/z3phyrus",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/5tokugw3ulkh2rn37wn87358qb3l/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61236,
+    "url": "https://hackerone.com/mozilla",
+    "handle": "mozilla",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/0p8e6gg8xoy45dhjxs5wh4iti6k8/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/0p8e6gg8xoy45dhjxs5wh4iti6k8/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Mozilla",
+      "twitter_handle": "",
+      "website": "https://www.mozilla.org",
+      "about": "Mozilla web bug bounty program specific to encouraging security research in Mozilla's products and web services."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-06-03T08:38:03.802Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-05-29T04:21:24.786Z",
+  "team_member_agreed_on_going_public_at": "2025-06-03T08:38:03.577Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA critical vulnerability in the Firefox Accounts API allows an authenticated attacker to permanently delete any user's account by sending a `POST /v1/account/destroy` request using attacker session, but including the victim’s `email` and `authPW` (password hash) in the JSON payload. The server fails to verify that the session making the request belongs to the account being deleted.\n\n## Steps To Reproduce:\n1. Login to the victim's account.\n{F4367852}\n\n2. Use Burp Suite to intercept a request to the endpoint https://api.accounts.firefox.com/v1/account/destroy when deleting the account. Capture the JSON body, for example:\n```\n{\n\"email\": \"victims344@gmail.com\",\n\"authPW\": \"42b4c2940fe2efecce851a2d8e9754d0f1cb1d37e3ccaabb060f9ac21900caff\"\n}\n```\n███████\n\n3. Then cancel the request (don't let it reach the server).\n\n4. Login to the attacker's account.\n████████\n\n5. Again, use Burp Suite to intercept a request to the same endpoint https://api.accounts.firefox.com/v1/account/destroy when deleting the account. Send it to the Repeater and cancel the request.\n██████\n\n6. In the attacker's request, replace the JSON body with the victim's harvested data:\n```\n{\n\"email\": \"victims344@gmail.com\",\n\"authPW\": \"42b4c2940fe2efecce851a2d8e9754d0f1cb1d37e3ccaabb060f9ac21900caff\"\n}\n```\nSend the request.\n{F4367860}\n\n7. The server accepts the request and deletes the victim's account, even if it was from the attacker's session.\n{F4367861}\n\n## Impact\n\n**==Allows attackers to delete victim accounts without permission.==**",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4367858,
+      "file_name": "1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/19qfbdb0vjpm4njc99wd01w7x5e9?response-content-disposition=attachment%3B%20filename%3D%221.png%22%3B%20filename%2A%3DUTF-8%27%271.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150138Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b72c0fe8f615284e6ba8c424470af1bd87b6956db3de44cae7eeba6b8baaed2f",
+      "file_size": 101835,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4367860,
+      "file_name": "5.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/y1vsvcrlrd3ojugnr9ju0314bse4?response-content-disposition=attachment%3B%20filename%3D%225.png%22%3B%20filename%2A%3DUTF-8%27%275.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150139Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=558cd33f38a618ea6469b87ef196316fe70102ff3992e3c77edba2f08380f1ac",
+      "file_size": 112898,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4367861,
+      "file_name": "6.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/n1ji5grih5mksqhsi4oeehmhcijj?response-content-disposition=attachment%3B%20filename%3D%226.png%22%3B%20filename%2A%3DUTF-8%27%276.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150139Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ccf3c1de0779f6d21f3d32f30d29e0fbea568d8b73ab233afecb1637b5304d3f",
+      "file_size": 62738,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": "2025-06-28T04:21:24.958Z",
+  "allow_singular_disclosure_after": -27254414.044802137,
+  "singular_disclosure_allowed": true,
+  "vote_count": 232,
+  "voters": [
+    "aboalezz",
+    "oldrashed",
+    "knursoft",
+    "orange303",
+    "mikelly",
+    "muhammad_wageh_",
+    "ragingg",
+    "m4khn0",
+    "rejection",
+    "googlelai",
+    "and 222 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 297507,
+    "asset_type": "URL",
+    "asset_identifier": "accounts.firefox.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 702363,
+      "category": "team",
+      "content": "An IDOR vulnerability was identified in the Firefox Accounts API endpoint `https://api.accounts.firefox.com/v1/account/destroy` that allows an authenticated attacker using SSO (i.e Google login) to delete a user's account using their email address if they are also registered using SSO. The server fails to verify that the session making the deletion request belongs to the account being deleted.\n\n",
+      "updated_at": "2025-06-03T08:30:43.826Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2465541,
+        "username": "frida-k",
+        "name": "Frida",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2022-09-21T23:39:33.826Z",
+        "url": "https://hackerone.com/frida-k",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

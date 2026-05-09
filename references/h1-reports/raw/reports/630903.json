@@ -1,0 +1,192 @@
+{
+  "id": 630903,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82MzA5MDM=",
+  "url": "https://hackerone.com/reports/630903",
+  "title": "Monero Wallet Gui for Windows (Arbitrary Code Execution)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-06-27T19:10:51.047Z",
+  "submitted_at": "2019-06-27T19:10:51.047Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "l00ph0le",
+    "url": "/l00ph0le",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/012/963/cbd75f8c49a36b6f3bdb9d8ac16a57611f6a5975_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-11-18T21:33:55.252Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-11-18T21:33:55.204Z",
+  "team_member_agreed_on_going_public_at": "2019-11-18T21:18:14.976Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Summary:\nThe windows version of the monero-wallet-gui.exe application allows for code injection. The monero-wallet-gui.exe utilizes a precompiled OpenSSL library called libeay32.dll. This OpenSSL library is trying to read a configuration file that doesn’t exist. By default, on windows systems, authenticated users can create under the c:\\ drive. A user with low privileges can create the folder structure and copy a malicious openssl config and .dll files into their path. When the monero-wallet-gui.exe application is executed, the malicious .dll file is also executed. \n\nDescription: \nIf you download Microsoft sys internals process monitor and execute it. Then open the monero-wallet-gui.exe application, you can see the “monero-wallet-gui.exe” binary trying to read a file called openssl.cnf and getting the result “PATH NOT FOUND”. See attached screenshot (FileNotFound.png).\n\nI believe the issue can be resolved by compiling the OpenSSL library using –openssldir parameter and specifying a directory that can only be written too by administrators (i.e. C:\\Program Files, C:\\ProgramData). Currently it looks for the “ssl” directory in the parent directory of the Monero install path. For example, if I download the monero-gui-win-x64-v0.14.0.0.zip file and save it to the c: drive, then extract the file, the install path becomes “C:\\monero-gui-win-x64-v0.14.0.0\\monero-gui-v0.14.0.0”. When monero-wallet-gui.exe is executed, it looks for the openssl.cnf file in “C:\\monero-gui-win-x64-v0.14.0.0\\ssl”, which doesn’t exist.\n\nI’ve included two example exploits for this;\n\nExploit example 1\ncalc.c – source code of my .dll file to execute calc.exe\ncalc.dll – compiled version of the calc.exe library\nopenssl-calc.cnf – example malicious openssl config\n\nExploit example 2\nbackdoor.c – source code my .dll file to create a local administrator, this uses a known uac bypass\nbackdoor.dll – compiled version of the local admin backdoor library\nopenssl-backdoor.cnf - example malicious openssl config\n\nSteps To Reproduce:\nDownload and extract monero-gui-win-x64-v0.14.0.0.zip to c: drive.\n\nExploit 1 – calc.exe – See attached video calc.mp4\n1.\tLogin with a low privileged user (part of Users group)\n2.\tOpen a cmd.exe and issue command: mkdir C:\\monero-gui-win-x64-v0.14.0.0\\ssl\n3.\tCopy calc.dll C:\\monero-gui-win-x64-v0.14.0.0\\ssl\n4.\tCopy openssl-calc.cnf to C:\\monero-gui-win-x64-v0.14.0.0\\ssl\n5.\tRename openssl-calc.cnf to openssl.cnf\n6.\tLogout of low privileged user.\n7.\tLogin with local administrator.\n8.\tLaunch monero-wallet-gui.exe application.\n9.\tCalc.exe with execute.\n\nExploit 2 – create a local admin user (uac bypass) – See attached video backdoor.mp4\n1.\tLogin with a low privileged user (part of Users group)\n2.\tOpen a cmd.exe and issue command: mkdir C:\\monero-gui-win-x64-v0.14.0.0\\ssl\n3.\tCopy backdoor.dll to C:\\monero-gui-win-x64-v0.14.0.0\\ssl \n4.\tCopy openssl-backdoor.cnf .dll to C:\\monero-gui-win-x64-v0.14.0.0\\ssl \n5.\tRename openssl-backdoor.cnf to openssl.cnf\n6.\tLogout of low privileged user.\n7.\tLogin with local administrator.\n8.\tLaunch monero-wallet-gui.exe application.\n9.\tOpen “Computer Management”\n10.\tNavigate to “System Tools” -> “Local Users and Groups” -> “Users”\n11.\tA new user of “backdoor” with a password of “backdoor” was added.\n12.\tRight click on “backdoor” and click “Properties”, then click “Member Of”.\n13.\tThe “backdoor” user is part of the local administrator group.\n\nHow can the system be exploited with this bug?\nDLL Hi-jacking can be used for many nefarious purposes. It can be used by malware to propagate and establish persistence on a workstation. It can be used to privilege escalation in the post exploitation phases of an attack.\n\n## Impact\n\nThe impact is high. Successful exploitation leads to arbitrary code execution on the windows system. There are many actions a nefarious individual could accomplish with this vulnerability. In addition to post-exploitation privilege escalation, another example could be ransomware, or other malware.",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 518002,
+      "file_name": "backdoor-uac.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/002/d1362d0944b1a38a0c63c82fea19f31baac0dc3d/backdoor-uac.c?response-content-disposition=attachment%3B%20filename%3D%22backdoor-uac.c%22%3B%20filename%2A%3DUTF-8%27%27backdoor-uac.c&response-content-type=text%2Fx-c&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9edea3e0773e4b0bfe1851a4181d94a7859b63cc796cec3ada8cf282eff3c855",
+      "file_size": 1403,
+      "type": "text/x-c",
+      "moderated": null
+    },
+    {
+      "id": 518003,
+      "file_name": "backdoor-uac.dll",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/003/b61e142e9b5dd9744b054098277c98b4b2b8bcea/backdoor-uac.dll?response-content-disposition=attachment%3B%20filename%3D%22backdoor-uac.dll%22%3B%20filename%2A%3DUTF-8%27%27backdoor-uac.dll&response-content-type=application%2Fx-dosexec&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b89ab7b9b38c7234fb23f6c4548d0ad27c63a1dc9f89a7bc9c197d32f5d043cd",
+      "file_size": 287795,
+      "type": "application/x-dosexec",
+      "moderated": null
+    },
+    {
+      "id": 518004,
+      "file_name": "calc.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/004/365d8b0d75e2b47a8b4fe358ff5a8258d44acd6e/calc.c?response-content-disposition=attachment%3B%20filename%3D%22calc.c%22%3B%20filename%2A%3DUTF-8%27%27calc.c&response-content-type=text%2Fx-c&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f9a88c5a25b15918bdc24d8a90685f0825838ee29a0a97944fd3e8d83c7e160c",
+      "file_size": 577,
+      "type": "text/x-c",
+      "moderated": null
+    },
+    {
+      "id": 518005,
+      "file_name": "calc.dll",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/005/80b99c82f00fb0239253af748077c63ef1cf1707/calc.dll?response-content-disposition=attachment%3B%20filename%3D%22calc.dll%22%3B%20filename%2A%3DUTF-8%27%27calc.dll&response-content-type=application%2Fx-dosexec&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ab46eb471058933e4f4dd162f289c97b065d71c1000b1394ece61a8815c8e4e6",
+      "file_size": 287283,
+      "type": "application/x-dosexec",
+      "moderated": null
+    },
+    {
+      "id": 518006,
+      "file_name": "backdoor.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/006/a20afc0349797beecc8e61256b3b36ee6594364d/backdoor.mp4?response-content-disposition=attachment%3B%20filename%3D%22backdoor.mp4%22%3B%20filename%2A%3DUTF-8%27%27backdoor.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b84d8fd218e5d7455162b7852602723f86311e7d20b312436c63e90779c57612",
+      "file_size": 4079935,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 518007,
+      "file_name": "calc.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/007/95ec58e0ccb2f911465e5b8d03047ac74c00984f/calc.mp4?response-content-disposition=attachment%3B%20filename%3D%22calc.mp4%22%3B%20filename%2A%3DUTF-8%27%27calc.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=68eebf4aa7839ed7e193a8cd47b752d659a3d8bba45390951041974130a0cfff",
+      "file_size": 2764049,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 518008,
+      "file_name": "FileNotFound.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/008/74beadc3769c7948b9a38ec9214c8889f553f239/FileNotFound.png?response-content-disposition=attachment%3B%20filename%3D%22FileNotFound.png%22%3B%20filename%2A%3DUTF-8%27%27FileNotFound.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1c3c7d44d71994c0091b820717e4cffbeaa7dbd7ab3f622984250daa3dfb8b35",
+      "file_size": 161646,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 518009,
+      "file_name": "openssl-backdoor.cnf",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/009/0b3ecd006bd32869b77258caedf35d00d1270231/openssl-backdoor.cnf?response-content-disposition=attachment%3B%20filename%3D%22openssl-backdoor.cnf%22%3B%20filename%2A%3DUTF-8%27%27openssl-backdoor.cnf&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=50c084751883d567d38617e193c1c0299cbb2083466c1ba1103d7143bea849af",
+      "file_size": 249,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 518010,
+      "file_name": "openssl-calc.cnf",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/518/010/de8112b43d322559f617ffbb4722458cf07b4ce6/openssl-calc.cnf?response-content-disposition=attachment%3B%20filename%3D%22openssl-calc.cnf%22%3B%20filename%2A%3DUTF-8%27%27openssl-calc.cnf&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152046Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=4279a46594c46a38576185684ac44b44fb415fdd285ee66a4767bb81fbd2260d",
+      "file_size": 241,
+      "type": "text/plain",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-12-18T21:18:15.042Z",
+  "allow_singular_disclosure_after": -201636151.5088852,
+  "singular_disclosure_allowed": true,
+  "vote_count": 10,
+  "voters": [
+    "mirchr",
+    "l00ph0le",
+    "itsunixiknowthis",
+    "tess",
+    "bl4de",
+    "term1nal",
+    "cr4xerbik4sh",
+    "serhack_",
+    "who-biz",
+    "ttw79979"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

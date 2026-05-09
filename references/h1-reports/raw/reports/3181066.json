@@ -1,0 +1,148 @@
+{
+  "id": 3181066,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTgxMDY2",
+  "url": "https://hackerone.com/reports/3181066",
+  "title": "Path Traversal Vulnerability in Lila Project",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-06-06T11:16:21.577Z",
+  "submitted_at": "2025-06-06T11:16:21.849Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "immm",
+    "url": "/immm",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jckhzipqjscedstoti5p2cooguaj/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 48242,
+    "url": "https://hackerone.com/lichess",
+    "handle": "lichess",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/CbR2hQEVmv82Z9L1cfqd9SFQ/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/CbR2hQEVmv82Z9L1cfqd9SFQ/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Lichess",
+      "twitter_handle": "",
+      "website": "https://lichess.org",
+      "about": "The free chess server. No paywall, no tracking, no ads. Just the good stuff. Source code: https://lichess.org/source"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-09T11:30:57.294Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-06-09T08:55:11.145Z",
+  "team_member_agreed_on_going_public_at": "2025-06-09T11:30:57.052Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA path traversal vulnerability was discovered in the Lila project that allows an attacker to access arbitrary files on the server by manipulating user-supplied input to traverse outside the intended directory structure. This flaw could potentially expose sensitive files such as application source code, configuration files, or other data not meant for public access.\n\n## Steps To Reproduce:\n[add details for how we can reproduce the issue]\ncode url\nlila-master/conf/routes,line 939\n{F4420388}\npoc\nhttps://lichess.org/assets/../build.sbt\n{F4420380}\nhttps://lichess.org/assets/../.git/config\n{F4420382}\n\n## Supporting Material/References:\n[list any additional material (e.g. screenshots, logs, etc.)]\n\n  * [attachment / reference]\n\n## Impact\n\nThe path traversal vulnerability in the Lila project could lead to:\nArbitrary file read: An attacker could access sensitive files such as:\n.git/config, revealing repository structure and remote URLs\napplication.conf or similar, leaking secrets, DB credentials, or API keys\nServer-side source files, enabling reverse engineering or bug discovery\nInformation disclosure: Internal logic, credentials, deployment details, or admin-only configurations may be exposed.\nPrivilege escalation (indirectly): By reading files related to user tokens or access control, an attacker might craft further exploits.\nRecon for further attacks: Knowledge of internal file structure aids in targeting further vulnerabilities like RCE or IDOR.",
+  "weakness": {
+    "id": 119,
+    "name": "Path Traversal: '.../...//'"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4420380,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/o283jt3c2zgpg6mxta9jcu1mz2uj?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150133Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ad749ad93e0c9ae29e4a6e04c289dc34ed8a886870f1d06d1010782e3e1bc8b5",
+      "file_size": 206748,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4420382,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/48x3fah0a8uxcdottpjlchxo0fna?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150133Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0579feed201315d548e36798fc8af5f8d15ab86bf71613f1b0d69558a09dfe87",
+      "file_size": 241183,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4420388,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9dvp4nyjbt7d4wopw2jmjhswiegi?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150133Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=804109e767b63aafb300523d90fe12505b07182e00e7e40e414fec6f487721f4",
+      "file_size": 317108,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 114,
+  "voters": [
+    "cucumbersalad",
+    "loaymorad",
+    "nimbusedge",
+    "aboalezz",
+    "rejection",
+    "orange303",
+    "g3ksec",
+    "almuntadhar0x01",
+    "yoyomiski",
+    "ezrel",
+    "and 104 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 50174,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/lichess-org/lila",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

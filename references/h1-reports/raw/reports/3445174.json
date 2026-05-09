@@ -1,0 +1,132 @@
+{
+  "id": 3445174,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDQ1MTc0",
+  "url": "https://hackerone.com/reports/3445174",
+  "title": "Path Traversal in file:// protocol allows Arbitrary File Read",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-11-30T00:07:49.564Z",
+  "submitted_at": "2025-11-30T00:07:49.798Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "quello_stanco",
+    "url": "/quello_stanco",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6iy5x2ocom8ch4iwefnjeua9ju79/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-01T07:41:46.133Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-11-30T10:45:30.472Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe `file://` protocol handler in curl does not properly sanitise or block path traversal sequences (`../`). This allows a maliciously crafted `file://` URL to escape the intended directory and access arbitrary files on the filesystem with the permissions of the user running curl.\n\nWhen curl is used as a library by another application (e.g., a web server backend) that processes user-supplied URLs, this can be escalated to a remote, arbitrary file read vulnerability.\n\nNo AI was used to find this issue or generate this report.\n\n## Affected version\nThis was reproduced on the latest master branch, commit `[c3add7130d7d81add205edbbb75fdfd1f38b3c68]`.\n`curl -V` output:\ncurl 8.18.0-DEV (x86_64-pc-linux-gnu) libcurl/8.18.0-DEV OpenSSL/3.5.4 zlib/1.3.1 libpsl/0.21.2\nRelease-Date: [unreleased]\nProtocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns mqtt pop3 pop3s rtsp smb smbs smtp smtps telnet tftp ws wss\nFeatures: alt-svc AsynchDNS HSTS HTTPS-proxy IPv6 Largefile libz NTLM PSL SSL threadsafe TLS-SRP UnixSockets\n\nPlatform: Debian GNU/Linux 13 (trixie ) running on x86_64.\n\n## Steps To Reproduce:\n1.  Clone and build the latest version of curl from the master branch.\n2.  From the project's root directory, run the following command:\n    ```bash\n    ./src/curl \"file:///any/dummy/path/../../../../../../etc/passwd\"\n    ```\n3.  **Expected Result:** curl should fail with an error, stating that the file was not found or that the path is invalid, as it should sanitise the `../` sequences.\n4.  **Actual Result:** curl successfully traverses up the directory tree and prints the contents of the `/etc/passwd` file to standard output.\n\n## Supporting Material/References:\nA screenshot of the terminal output is attached.\n\n## Impact\n\nThis path traversal vulnerability allows for arbitrary file read. While the impact is limited when run directly by a user on the command line, it becomes **High** or **Critical** when libcurl is used by another application that constructs `file://` URLs from untrusted user input.\n\nA remote attacker could abuse this to:\n- Read sensitive configuration files (e.g., `config.php`, `.env`) containing database credentials, API keys, etc.\n- Read application source code to find other vulnerabilities.\n- Read system files like `/etc/passwd`, `/etc/shadow` (if running with sufficient privileges).\n- Read private SSH keys or other sensitive user data.\n\nThis breaks the security boundary that should be enforced by the `file://` handler, turning any application that uses it for local file access into a potential vector for total server information disclosure.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5062021,
+      "file_name": "curl-poc.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/g3bnffgieqz6pstezd0oyrsktibz?response-content-disposition=attachment%3B%20filename%3D%22curl-poc.png%22%3B%20filename%2A%3DUTF-8%27%27curl-poc.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150019Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9c1bad8e7efdb2c5194acf23f3e78295aa0d773f7a33197323035543037523ff",
+      "file_size": 121862,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 15,
+  "voters": [
+    "2026",
+    "kamekame",
+    "cowboycracker7",
+    "xolgriax",
+    "bashsunny101",
+    "guanart",
+    "arizion",
+    "abidashraf851",
+    "kw0lf",
+    "ch1llc0d3",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

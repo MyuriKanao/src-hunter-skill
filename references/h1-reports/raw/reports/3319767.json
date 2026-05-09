@@ -1,0 +1,123 @@
+{
+  "id": 3319767,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzE5NzY3",
+  "url": "https://hackerone.com/reports/3319767",
+  "title": "Incorrect Parsing of IPv6 Zone ID in curl",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-08-29T09:52:14.847Z",
+  "submitted_at": "2025-08-29T09:52:15.041Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "9vvert",
+    "url": "/9vvert",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-09-01T17:00:53.424Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-09-01T14:41:06.312Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I'm Zehui Miao from NISL@THU. During recent research, our team identified a parsing inconsistency in the curl.\n\n### **0x01 Affected components**\n\n#### **1.1 Affected components**\n\n•     **C Curl**\n\n•     **Versions:** tested in 8.4.0\n\n•     **CLAIMS TO FOLLOW: RFC-3986**\n#### **1.2 Attack scenario**\n\nThe threat model illustrated in Figure 1 explains the security risks in web systems caused by inconsistent URL parsing. Attackers initiate requests to web systems by constructing ambiguous URLs. These requests first go through a preprocessor for security checks. Preprocessors typically handle tasks such as permission verification, URL whitelist and blacklist checks, and URL normalization to ensure that the requested access is to authorized resources. However, due to the possibility of preprocessors and executors (such as browsers, API routers, requesters, etc.) using different programming languages or following different specification standards for URL parsing, the same URL string may be parsed into different target resource locations. Specifically, as shown in the figure, the preprocessor may parse the URL into a legitimate resource location A and pass security verification, while the executor parses the same URL into another sensitive resource location B and ultimately executes the actual request targeting sensitive resource B. This parsing discrepancy allows attackers to cleverly bypass the preprocessor's security mechanisms, gaining access to sensitive or unauthorized resources, thus posing potential security threats.\n\n```\n\n---------\n|attacker|\n---------\n    |\n    |  Ambiguous URL\n    V\n------------------ ================>  Resource Location A  ----|\n|  Preprocesser  |_____________ Allow/Deny List                |\n------------------       |_____ Access Control Inspector       V \n    |                   |_____ URL Normalizer            Not Equal\n    |  Ambiguous URL                                                          ^\n    V                                                          |\n------------------ ================>  Resource Location B  ----|\n|  Executor      |_____________ Browser\n------------------       |_____ API Router\n    |                    |_____ Requester\n    |\n    |_________________________________\n    |                                 |\n    X                                 |\n    |                                 |\n    V                                 |\n-------------------------             |\n| Accessible Resource A |             |\n-------------------------             |\n                                      |\n-------------------------             |\n| Sensitive Resource B  | <------------\n-------------------------\n\n```\n\n**Figure 1: Principle of URL semantic gap attack caused by inconsistent URL parsing.**\n\n \n\nThrough our research, we have found that for this attack scenario, URL semantic gap attack may lead to three main types of security vulnerabilities:\n\n1. Server-side request forgery: The attacker bypasses the domain name check of the preprocessor, causing the executor to make requests to the internal network or unauthorized external servers.\n2. Open redirection: The attacker bypasses the domain name whitelist check of the redirection URL, redirecting the browser request to a malicious website.\n3. Access control bypass: The attacker bypasses access control policies based on HTTP request paths to gain unauthorized access to protected resources.\n\n### **0x02 Incorrect Parsing of IPv6 Zone ID**\n\n#### **2.1 Overview of the Issue**\n\nThe IPv6 Zone ID follows after character `%`, which will be encoded to %25 in URL. When parsing a url like `http://[fe80::1%251]`, the correct parsing result is to decode `%25` and get Zone ID `1` rather than `251`.\n\nIn the following table, parsing results of url(perl) and urllib3(python) are correct. The curl seems to discard the Zone ID.\n\n| payload              | curl(c)   | url (perl) | urllib3 (python) |\n| -------------------- | --------- | ---------- | ---------------- |\n| http://[fe80::1%251] | [fe80::1] | fe80::1%1  | [fe80::1%1]      |\n\n\n\n#### **2.2 Definition of this parsing behavior in international standards**\n\n**RFC parsing standard**\n\nAccording to **RFC 3986** , IPv6 addresses are represented in URI (Uniform Resource Identifier) between square brackets `[]` , for example:\n\n```\nhttp://[2001:db8::1]:80/\n```\n\nHowever, RFC 3986 ** does not explicitly support IPv6 Zone IDs ** (i.e. suffixes like `%eth0` ). Instead, it only defines the basic syntax of `IPv6 address` :\n\n```\nIPv6address =                            6( h16 \":\" ) ls32\n             /                       \"::\" 5( h16 \":\" ) ls32\n             / [               h16 ] \"::\" 4( h16 \":\" ) ls32\n             / [ *1( h16 \":\" ) h16 ] \"::\" 3( h16 \":\" ) ls32\n             / [ *2( h16 \":\" ) h16 ] \"::\" 2( h16 \":\" ) ls32\n             / [ *3( h16 \":\" ) h16 ] \"::\"    h16 \":\"   ls32\n             / [ *4( h16 \":\" ) h16 ] \"::\"              ls32\n             / [ *5( h16 \":\" ) h16 ] \"::\"              h16\n             / [ *6( h16 \":\" ) h16 ] \"::\"\n\n```\n\nIn addition, RFC 3986 further clarifies:\n\n> “This syntax does not support IPv6 scoped addressing zone identifiers”\n\n**RFC 6874** later extended support for IPv6 Zone IDs and proposed the following format:\n\n```\nhttp://[fe80::1%25eth0]:80/\n```\n\nAmong them, `%25` is the URL encoding of `%` (percent sign). However, many resolvers do not fully implement this standard, so some resolvers may not correctly parse IPv6 Zone IDs, resulting in parsing failure or direct error.\n\nThe corresponding ABNF normal form is\n\n```\nIP-literal = \"[\" ( IPv6address / IPv6addrz / IPvFuture ) \"]\"\n\nZoneID = 1*( unreserved / pct-encoded )\n\nIPv6addrz = IPv6address \"%25\" ZoneID\n\n```\n\n**RFC 6874** also mentions the ambiguity of ZoneID-Parsing. It's recommended to decode `%25` as `%` to avoid URL Ambiguity Attack.\n\n```\nDue to the lack of defined syntax, web browsers have been\ninconsistent in providing for ZoneIDs.  Many have no support, but\nthere are examples of ad hoc support.  For example, some versions of\nFirefox allowed the use of a ZoneID preceded by a bare \"%\" character,\nbut this feature was removed for consistency with established syntax\n[RFC3986].  As another example, some versions of Internet Explorer\nallow use of a ZoneID preceded by a \"%\" character encoded as \"%25\",\nstill beyond the syntax allowed by the established rules [RFC3986].\nThis syntax extension is in fact used internally in the Windows\noperating system and some of its APIs.\n\nIt is desirable for all browsers to recognise a ZoneID preceded by a\npercent-encoded \"%\".  In the spirit of \"be liberal with what you\naccept\", we also suggest that URI parsers accept bare \"%\" signs when\npossible (i.e., a \"%\" not followed by two valid and meaningful\nhexadecimal characters).  This would make it possible for a user to\ncopy and paste a string such as \"fe80::a%en1\" from the output of a\n\"ping\" command and have it work.  On the other hand, \"%ee1\" would\nneed to be manually rewritten to \"fe80::a%25ee1\" to avoid any risk of\nmisinterpretation.\n\nSuch bare \"%\" signs are for user interface convenience, and need to\nbe turned into properly encoded characters (where \"%25\" encodes \"%\")\nbefore the URI is used in any protocol or HTML document.  However,\nURIs including a ZoneID have no meaning outside the originating node.\nIt would therefore be highly desirable for a browser to remove the\nZoneID from a URI before including that URI in an HTTP request.\n\n```\n\n**WHATWG URL Parsing Standard**\n\nWHATWG URL Living Standard intentionally omits support for zone_id\n\n```\nSupport for <zone_id> is intentionally omitted.\n```\n\n\n\n#### **2.3 Security Threat Scenarios - SSRF Attacks Based on Zone ID**\n\n**Attack scenario**\n\n1. **Authentication phase resolvers** (e.g. for security checks) **do not support IPv6 Zone IDs** , resolve `http://[fe80::1%25eth0]/`\n2. **The resolver in the actual request phase** (e.g. HTTP Client) **supports Zone ID** , successfully resolves the `fe80::1` and sends the request, leading to an SSRF attack, accessing internal resources.\n\n#### **2.4 Mitigation measures**\n\n•     If you need to resolve IPv6 Zone IDs, it is recommended to use an RFC 6874-compatible parser and ensure that the percent encoding is correct.\n\n•     **The WHATWG URL standard does not support IPv6 Zone IDs** , so in web applications, resolvers may refuse to resolve such URLs.\n\n•     **Security risk** : Inconsistent implementation of parsers can lead to SSRF attacks and additional security checks should be performed on the server side.\n\n\nThis vulnerability was jointly discovered by multiple researchers:\n1. Enze Wang(IPASSLAB & Tsinghua University)\n2. Jingcheng Yang (Tsinghua University)\n3. Zehui Miao (Tsinghua University)\n\n## Impact\n\n## Summary:\nBypass the blacklist/whitelist and access the sensitive resources",
+  "weakness": {
+    "id": 184,
+    "name": "Authentication Bypass by Primary Weakness"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 20,
+  "voters": [
+    "k0ns0l",
+    "thalaivar304",
+    "2026",
+    "wefega",
+    "mr-alienx-kurd",
+    "saad0x",
+    "ssfhspropsdsdhet",
+    "giddy_moon",
+    "alix_sy",
+    "irebamiji11",
+    "and 10 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

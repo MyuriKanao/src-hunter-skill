@@ -1,0 +1,151 @@
+{
+  "id": 976603,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85NzY2MDM=",
+  "url": "https://hackerone.com/reports/976603",
+  "title": "Ability to DOS any organization's SSO and open up the door to account takeovers",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-09-08T08:23:34.010Z",
+  "submitted_at": "2020-09-08T08:23:34.039Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cache-money",
+    "url": "/cache-money",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/075/736/f78da6d0fa17c4d39be1f8088656c23763451dc2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22746,
+    "url": "https://hackerone.com/superhuman",
+    "handle": "superhuman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Superhuman (formerly Grammarly)",
+      "twitter_handle": "",
+      "website": "https://superhuman.com/",
+      "about": "Superhuman (formerly Grammarly) unites Grammarly, Superhuman Mail, Coda, and Go with AI to unlock superhuman potential in everyone."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-04-15T17:00:41.212Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-04-15T17:00:41.112Z",
+  "team_member_agreed_on_going_public_at": "2021-03-03T11:47:41.173Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nThere's an interesting issue I've spent quite a few days trying to escalate but can't figure out. The impact at this point is that I can DOS any SSO integration making it so nobody in that organization can login. I can also get users to inadvertently SSO into my attacker organization, and then take over their account from there. For existing accounts this would require a victim to click \"join\", however I think that's likely given the fact that they are SSOing for the first time expecting to join an organization.\n\nThe strange behavior and why I think it *might* be possible to escalate further, is that I can have you authenticate against one SSO instance, but have you get added to a completely separate one. So that means there is some sketchy logic which can potentially allow an attacker to authenticate against their own SSO instance, and get added to someone else's organization. I'm not sure if it's possible to get this with zero user interaction, but I will keep trying and update the report if I figure out a way.\n\nThe bug stems from the fact that you can create an `entityId` identical to that of another organization **except** with a space ` ` at the end. The application logic then prioritizes that new entityId to add the user to after authenticating against the correct one. So if you have `myentity` as the legitimate entity, and an attacker sets their entity to `myentity[SPACE]` (with a space at the end); users attempting to authenticate into the legitimate `myentity` will technically authenticate against it, but then the application attempts to log them into the attacker's organization. The result of this is a DOS since legitimate users can no longer access their organization. The interesting part of the bug is that if the user is deleted from their original organization (or a **new** user attempts to SSO), they will then be authenticating against their original organization, but get added into the attacker's organization. So it seems the SAML Response is checked against a `trim(issuer)`, but when trying to place the user into an organization, the entity with the space is always prioritized.\n\nThe steps below will demonstrate this behavior:\n\n## Steps To Reproduce:\n1. Setup SSO and confirm you can login.\n2. Create a **new** Grammarly business account and use the same `entityId` (Identity Provider Issuer) you used in step 1, except add a space to the end of it. Use a different keypair for this organization as well.\n3. Wait 2 minutes for the change to propagate, then try logging into the same account from step 1, and notice you now get an error.\n4. At this point the victim organization is DOS'd. To confirm the strange behavior discussed above, you can delete that user from the victim organization and attempt to login again. Notice you will now end up getting provisioned to the attacker's organization, even though you signed the SAML Response with the victim organization's private key.\n5. Once you are provisioned into the attacker's organization, the attacker can then change their `entityId` to something brand new, and login to the victim's account using the keypair they own. If this was a converted personal account, you can then access that user's personal documents.\n\n## Impact\n\n- Ability to effectively disable SSO for any organization.\n- Ability to get users provisioned into an attacker's account, which they can then takeover.\n\nThanks,\n-- Tanner",
+  "bounty_amount": "10500.0",
+  "formatted_bounty": "$10,500",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-04-02T11:47:41.274Z",
+  "allow_singular_disclosure_after": -160975652.19510457,
+  "singular_disclosure_allowed": true,
+  "vote_count": 254,
+  "voters": [
+    "arist0phanes",
+    "datsuraku147",
+    "echidonut",
+    "mr-medi",
+    "aboalezz",
+    "tinmo",
+    "falcoxyz",
+    "wi11",
+    "orange303",
+    "n4tur3_",
+    "and 244 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 1366,
+    "asset_type": "URL",
+    "asset_identifier": "www.grammarly.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 28050,
+      "category": "team",
+      "content": "The vulnerability was fixed before SSO became available to Grammarly customers.",
+      "updated_at": "2021-03-03T11:45:13.528Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 397041,
+        "username": "gr_triage",
+        "name": "Vladimir Suslenko",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-11-05T14:48:14.072Z",
+        "url": "https://hackerone.com/gr_triage",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

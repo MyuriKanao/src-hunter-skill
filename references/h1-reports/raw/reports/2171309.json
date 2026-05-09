@@ -1,0 +1,121 @@
+{
+  "id": 2171309,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTcxMzA5",
+  "url": "https://hackerone.com/reports/2171309",
+  "title": "NULL Pointer dereference in idn.c",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "critical",
+  "readable_substate": "Informative",
+  "created_at": "2023-09-19T09:41:20.806Z",
+  "submitted_at": "2023-09-19T09:41:20.922Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "s0urc3_",
+    "url": "/s0urc3_",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/0r8jyqmv99gb5uaizxap4ck84nyt/65551465b0d18d952f306b2d0c5e69ed082a8c9bc5c9b7bec024e5edc01c00a5"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-09-20T12:07:26.974Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-09-20T12:07:26.896Z",
+  "team_member_agreed_on_going_public_at": "2023-09-20T11:45:43.942Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA NULL Pointer dereference vulnerability is present in idn.c source code.\nThis module is responsible of handling international domain name.\nThis issue was found performing manual source code review of Curl which took >20 hours.\n\n## Steps To Reproduce:\nFind below a detailed and commented execution flow / code snippet explanation.\n\n## Impact \nIn some circumstances writing or reading memory is possible, which may lead to code execution. \n\n###  Code Snippet\n```c\nstatic CURLcode idn_decode(const char *input, char **output)\n{\n\nchar *decoded = NULL;\n/* 4. 'decoded' initialized to a null pointer value\t*/\n\nCURLcode result = CURLE_OK;\n#ifdef USE_LIBIDN2\nif(idn2_check_version(IDN2_VERSION)) {\n\t\n/* 5. Assuming the condition is false\t*/\n/* 6. Taking false branch\t*/\n\nint flags = IDN2_NFC_INPUT\n#if IDN2_VERSION_NUMBER >= 0x00140000 | IDN2_NONTRANSITIONAL\n#endif;\nint rc = IDN2_LOOKUP(input, &decoded, flags);\nif(rc != IDN2_OK)\nrc = IDN2_LOOKUP(input, &decoded, IDN2_TRANSITIONAL);\nif(rc != IDN2_OK)\nresult = CURLE_URL_MALFORMAT;\n}\n#elif defined(USE_WIN32_IDN)\nresult = win32_idn_to_ascii(input, &decoded);\n#endif\n\nif(!result)\n/* 7. Taking true branch */\n*output = decoded;\n/* 8. Null pointer value stored to 'decoded'\t*/\nreturn result;\n/* 9. Returning zero (loaded from 'result'), which participates in a condition later */\n\n...\n\n#ifdef USE_IDN\n\nif(!Curl_is_ASCII_name(host->name)) {\n/* 1. Assuming condition is True */\nchar *decoded;\n\n/* 2  Calling idn_decode */\nCURLcode result = idn_decode(host->name, &decoded); \n\n/* 10. Returning from idn_decode*/\nif(!result) \n/* 11. Taking True branch */\n{\n    if(!*decoded) \n    {\n\t/* 12.  Dereference of null pointer (loaded from variable 'decoded') */\n    Curl_idn_free(decoded);\n    return CURLE_URL_MALFORMAT;\n\t}\n\nhost->encalloc = decoded;\nhost->name = host->encalloc;\n}\nelse\n    return result;\n}\n#endif\nreturn CURLE_OK;\n }\n```\n## Remediation\nImplement sanity checks to never dereference null pointer.\n\n## References\n- https://cwe.mitre.org/data/definitions/476.html\n- https://0x00sec.org/t/kernel-exploitation-dereferencing-a-null-pointer/3850\n- https://www.abatchy.com/2018/01/kernel-exploitation-6\n- https://access.redhat.com/articles/20484\n\n## Impact\n\n- Crash or Segmentation Fault: If the decoded pointer is dereferenced when it is still NULL, it will lead to a crash or segmentation fault. This can disrupt the normal operation of the program.\n    - Exploitation Scenario: An attacker can send specially crafted input data to trigger the vulnerable code path, causing the program to crash. While this doesn't directly lead to a security breach, it can be used as part of a larger attack to disrupt a service or application.\n\n- Denial of Service (DoS): A null pointer dereference can be exploited to cause a DoS attack by repeatedly triggering the vulnerable code path, causing the application to crash and become unavailable.\n    - Exploitation Scenario: An attacker could send a high volume of malicious requests that exploit the vulnerability, causing the service to crash repeatedly. This results in a DoS condition, making the service unavailable to legitimate users.\n\n-   Remote Code Execution (Rare): In some cases, null pointer dereferences can potentially be leveraged for remote code execution if the attacker can control the data that leads to the dereference and can influence the program's control flow.\n    *  Exploitation Scenario: An attacker would need to have a deep understanding of the program's memory layout and control flow to craft input that not only triggers the null pointer dereference but also redirects program execution to attacker-controlled code. This scenario is less likely but more severe.",
+  "weakness": {
+    "id": 51,
+    "name": "NULL Pointer Dereference"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 9,
+  "voters": [
+    "k0ns0l",
+    "zy9ard3",
+    "shubham_srt",
+    "kerolesmagdy",
+    "eminfidan",
+    "ilanthiraiyan18",
+    "me_raavan",
+    "osmosisj",
+    "smelly-tech"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

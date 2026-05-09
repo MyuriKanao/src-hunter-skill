@@ -1,0 +1,123 @@
+{
+  "id": 3483902,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDgzOTAy",
+  "url": "https://hackerone.com/reports/3483902",
+  "title": "PROTOCOL-LEVEL: Persistent UDP Amplification and Cache Poisoning via Alt-Svc Logic Flaw",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2026-01-01T11:56:24.128Z",
+  "submitted_at": "2026-01-01T11:56:24.548Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "huntsd",
+    "url": "/huntsd",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-02T21:35:02.283Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-01-02T10:34:02.572Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nA structural logic flaw in the `libcurl` `Alt-Svc` header parser allows attack attributes (specifically `persist` and `max-age`) to \"leak\" from one service definition to another.\n\nWe have successfully chained this logic bug with `curl`'s HTTP/3 (QUIC) support to demonstrate a **Persistent UDP Amplification** attack. An attacker can force a victim's client to cache a malicious UDP route for up to 30 days (`persist=1`), turning the client into an unwilling participant in a distributed denial-of-service (DDoS) attack against arbitrary targets.\n\n## Affected version\nReproduced on: **curl 8.17.0** (and `libcurl` master branch)\nPlatform: **Linux/Generic** (Issue is cross-platform)\n\n## Steps To Reproduce\n1.  **Setup Malicious Server**: Host an HTTP/HTTPS server that returns the following header:\n    `Alt-Svc: h3=\"<VICTIM_IP>:12345\", h2=\":443\"; ma=2592000; persist=1`\n2.  **Trigger (Client Side)**: Run `curl --alt-svc cache.txt https://<ATTACKER_HOST>`\n    -   *Logic Flaw*: `curl` correctly parses `persist=1` for `h2`, but **incorrectly applies it** to `h3` as well due to scope leakage in `lib/altsvc.c`.\n3.  **Verify Persistence**:\n    -   Inspect `cache.txt`. You will see the `h3` entry for `<VICTIM_IP>` has the persistence flag set and a 30-day expiry.\n4.  **Verify Attack**:\n    -   Kill the server/client.\n    -   Run `curl https://<ATTACKER_HOST>` again (simulating a future visit).\n    -   `curl` will immediately send a **1200-byte UDP QUIC Initial packet** to `<VICTIM_IP>:12345`.\n\n## Supporting Material\n-   This utilizes a \"Confused Deputy\" amplification vector (Factor ~30x).\n-   Privacy Impact: The persistence flag allows \"Server-Side Super Cookies\" that track users across network changes.\n\n## Impact\n\n## Summary\nThis vulnerability transforms `libcurl` clients into a **Persistent Botnet** for UDP Amplification attacks.\n\n1.  **DDoS Amplification**: By injecting a malicious QUIC route, an attacker can designate *any* IP address as a target. Every victim who visits the attacker's site once becomes a permanent amplifier, sending heavy UDP traffic to the target on every subsequent visit.\n2.  **Privacy Violation**: The logic bug allows attackers to force `persist=1` on routes that should be ephemeral, enabling long-term user tracking that persists across network changes (bypassing standard anonymity protections).",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "2026",
+    "sh3rif0x",
+    "gaurav_7777",
+    "aleksandr129",
+    "amik_f",
+    "hutterpy",
+    "chirag_soni",
+    "ultramegatron",
+    "pl4nkton_",
+    "frosttech",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

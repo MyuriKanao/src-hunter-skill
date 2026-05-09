@@ -1,0 +1,131 @@
+{
+  "id": 2762462,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNzYyNDYy",
+  "url": "https://hackerone.com/reports/2762462",
+  "title": "Ability to Add and Verify Uncontrolled Mobile Numbers Leading to Account Takeover (ATO)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-10-07T02:52:16.842Z",
+  "submitted_at": "2024-10-07T02:52:17.165Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "trev0ck",
+    "url": "/trev0ck",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/pr7vb1vdw60ae59iskz7v7xe34gc/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 41919,
+    "url": "https://hackerone.com/mtn_group",
+    "handle": "mtn_group",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "MTN Group",
+      "twitter_handle": "",
+      "website": "https://www.mtn.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-03-04T13:30:06.992Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-02-02T13:30:03.141Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nA critical vulnerability was identified in the OTP verification process on the shop.mtn.ng platform, which allows attackers to add and verify mobile numbers that they do not control. By tampering with the OTP verification request, an attacker can link a victim's mobile number to their account. This leads to an Account Takeover (ATO) scenario where the attacker gains full access to the victim's account without owning or controlling the victim's phone number.\n\n## Steps to Reproduce\n\n###  Initiate OTP Request\n- Begin the login or registration process on the platform.\n- Enter a valid mobile number (MSISDN) and request an OTP.\n\n### Capture OTP Verification Request\n- Use a proxy tool like **Burp Suite** or **Caido** to intercept the OTP verification request when submitting the OTP.\n- The intercepted request will look like this\n\n```http\nPOST /mtn_otp/index/verification/ HTTP/2\nHost: shop.mtn.ng\nContent-Type: application/x-www-form-urlencoded\nContent-Length: 53\n\najax=1&action=verifyotp&msisdn=██████&otp=███████\n```\n### Manipulate Server Response\n\n- Upon capturing the request, submit an incorrect OTP to receive the server's response\n\n```json\n{\n  \"status\": 400,\n  \"message\": \"Invalid OTP\",\n  \"msisdn\": \"█████████\",\n  \"success\": false\n}\n```\n\nModify the response in the intercepted traffic to indicate a successful verification\n\n```json\n{\n  \"status\": 200,\n  \"message\": \"success\",\n  \"msisdn\": \"██████████\",\n  \"success\": true\n}\n```\nThis will trick the client into thinking that the OTP was successfully verified, even though the OTP is incorrect.\n\n- The manipulated server response now grants full access to the victim's phone number account. Even though the OTP was incorrect, the altered response bypasses the verification, which could allow the attacker to log in as the target user.\n\n## NOTE I do not own this phone number at all and as you can see it is now linked to my account\n████████\n\n# Root Cause\n\n- The application fails to protect against the manipulation of the OTP verification response. The server does not perform integrity checks on the response sent back to the client, allowing attackers to alter it and bypass OTP verification entirely.\n\n## Impact\n\nAn attacker can exploit this flaw to hijack user accounts by manipulating the OTP verification response. This allows the attacker to\n\n1. Access personal user information such as names, phone numbers, and email addresses.\n2. Modify sensitive account settings like passwords, linked emails, and phone numbers.\n3. Perform unauthorized actions such as transactions or purchases.\n4. Further escalate the attack to other services connected to the victim's account.",
+  "weakness": {
+    "id": 142,
+    "name": "Authentication Bypass Using an Alternate Path or Channel"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2025-03-04T13:30:03.451Z",
+  "allow_singular_disclosure_after": -37243920.4497094,
+  "singular_disclosure_allowed": true,
+  "vote_count": 88,
+  "voters": [
+    "loaymorad",
+    "hicham_rs",
+    "aboalezz",
+    "moroq",
+    "k0ns0l",
+    "almuntadhar0x01",
+    "rocky1696",
+    "mohaned0101",
+    "thalaivar304",
+    "psych0-0",
+    "and 78 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

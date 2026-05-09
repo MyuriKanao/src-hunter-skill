@@ -1,0 +1,116 @@
+{
+  "id": 198494,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xOTg0OTQ=",
+  "url": "https://hackerone.com/reports/198494",
+  "title": "Lack of Controls Allowing for Card and PIN Enumeration Leading to Fraud",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-01-15T02:39:58.133Z",
+  "submitted_at": "2017-01-15T02:39:58.133Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "kylecolson",
+    "url": "/kylecolson",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/130/151/91865ceef70a6e3af12de78f340f873f87eaa00d_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-07-01T02:15:32.468Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-06-01T02:15:26.948Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nThe pages https://www.starbucks.com/account/card/addcard and https://www.starbucks.com/account/card/Balance do not properly enforce security controls to limit POST requests. This bug allows attackers to successfully hijack a loaded Starbucks card and transfer all the funds into their own account. Cards linked with auto-reload features could exponentially increase fraud. \n*NOTE: You will need to pass primary authentication before testing these pages. I have set up a temporary account for this purpose.*\n\n**Card Enumeration:**\nIn a POST request to the above https://www.starbucks.com/account/card/addcard URL, if an attacker sets the Register.MyCard attribute to “FALSE” they can enumerate the 16-digit Card Number without limits. \nAnother important note is all Starbucks locations have unactivated cards at their registers. It is highly possible for a threat actor to obtain a 16-digit card number from the next card in line, and sit on the account until it has been loaded up. Furthermore, in my research I've discovered each card only increments a singular digit in their 16-digit number. Because of this, a threat actor can easily discern which cards are about to be purchased, as well as which cards have been recently purchased.\n{F152532}\n\n**PIN Enumeration:**\nIn a POST request to the second https://www.starbucks.com/account/card/Balance URL, an attacker can check the PIN of a card they’ve already added via the previous /addcard Card Enumeration method. \nIf an attacker already knows the 16-digit card number (via Starbucks stores), with the original POST request to the https://www.starbucks.com/account/card/addcard URL, if an attacker sets the Register.MyCard attribute to “TRUE” they can enumerate the 8-digit PIN number without limits.\nDue to this, an attacker is able to successfully test every PIN number against 16-digit card data.\n{F152533}\n{F152534}\n\n**Fraud/Risk:**\nIf an attacker is able to successfully validate PIN and Card information, they now have full access to all funds in the account. At this point they are able to commit fraudulent purchases and even migrate funds off the account onto their own card. Cards linked with auto-reload features could exponentially increase fraud damages. \n{F152535}\n\n**Documentation:**\nMy test card was used in this demonstration. On the attached image, you can see the card number ending in 4769 was successfully processed. In the second image, you can see the PIN correctly enumerating once the PIN ending in 89 was processed.\n\n**Remediation:**\nMy recommendation is to add velocity checks to both the /addcard and /Balance pages when attempting to add a Starbucks gift card. Additionally, CAPTCHA can be used as another authorization process. \n\nPlease let me know if you need additional information to help triage this bug.\nThanks!\n",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-07-01T02:15:26.977Z",
+  "allow_singular_disclosure_after": -279465342.864757,
+  "singular_disclosure_allowed": true,
+  "vote_count": 18,
+  "voters": [
+    "cdl",
+    "reactors08",
+    "jskiba",
+    "alyssa_herrera",
+    "geeknik",
+    "xyodh",
+    "r3y",
+    "eveeez",
+    "silv3rpoision",
+    "eli",
+    "and 8 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

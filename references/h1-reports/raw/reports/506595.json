@@ -1,0 +1,131 @@
+{
+  "id": 506595,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDY1OTU=",
+  "url": "https://hackerone.com/reports/506595",
+  "title": "CryptoNote: remote node DoS",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-08T03:01:48.309Z",
+  "submitted_at": "2019-03-08T03:01:48.309Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "anonimal",
+    "url": "/anonimal",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/040/857/f23cc3be09a21e17bc43975987c10ba2b6427239_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-07-03T00:20:02.687Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-07-02T23:18:19.808Z",
+  "team_member_agreed_on_going_public_at": "2019-07-03T00:20:02.534Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nRemote node DoS. See patch below.\n\n## Releases Affected:\n\nAll Monero versions, including the recent v0.14.0.2. Possibly all CryptoNote implementations that aren't Zano.\n\n## Steps To Reproduce:\n\nSince this is *currently* a theoretical attack, non-code PoC detailed in the patch below.\n\n## Supporting Material/References:\n\nBased against current `master` `49afbd0c53d29656689f319c7d3543204ead4e59`:\n\n```diff\ncommit 6620d099800d8935596f59834ce389868b2851f0 (HEAD -> cryptonote)\ngpg: Signature made Fri 08 Mar 2019 02:57:58 AM UTC\ngpg:                using RSA key 12186272CD48E2539E2DD29B66A76ECF914409F1\ngpg: using pgp trust model\ngpg: Good signature from \"anonimal <anonimal@getmonero.org>\" [ultimate]\ngpg:                 aka \"anonimal <anonimal@kovri.io>\" [ultimate]\ngpg:                 aka \"anonimal <anonimal@sekreta.org>\" [ultimate]\ngpg: binary signature, digest algorithm SHA256, key algorithm rsa4096\nAuthor: anonimal <anonimal@getmonero.org>\nDate:   Fri Mar 8 02:21:38 2019 +0000\n\n    cryptonote_protocol_handler: prevent potential DoS\n    \n    Essentially, one can send such a large amount of IDs that core exhausts\n    all free memory. This issue can theoretically be exploited using very\n    large CN blockchains, such as Monero.\n    \n    Credit given to CryptoNote author 'cryptozoidberg' for the fix.\n\ndiff --git a/src/cryptonote_protocol/cryptonote_protocol_handler.h b/src/cryptonote_protocol/cryptonote_protocol_handler.h\nindex efd986b53..c9e35d2d9 100644\n--- a/src/cryptonote_protocol/cryptonote_protocol_handler.h\n+++ b/src/cryptonote_protocol/cryptonote_protocol_handler.h\n@@ -52,6 +52,7 @@ PUSH_WARNINGS\n DISABLE_VS_WARNINGS(4355)\n \n #define LOCALHOST_INT 2130706433\n+#define CURRENCY_PROTOCOL_MAX_BLOCKS_REQUEST_COUNT 500\n \n namespace cryptonote\n {\ndiff --git a/src/cryptonote_protocol/cryptonote_protocol_handler.inl b/src/cryptonote_protocol/cryptonote_protocol_handler.inl\nindex c8b43fb91..023d1b457 100644\n--- a/src/cryptonote_protocol/cryptonote_protocol_handler.inl\n+++ b/src/cryptonote_protocol/cryptonote_protocol_handler.inl\n@@ -889,6 +889,16 @@ namespace cryptonote\n   int t_cryptonote_protocol_handler<t_core>::handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context)\n   {\n     MLOG_P2P_MESSAGE(\"Received NOTIFY_REQUEST_GET_OBJECTS (\" << arg.blocks.size() << \" blocks, \" << arg.txs.size() << \" txes)\");\n+\n+    if (arg.blocks.size() > CURRENCY_PROTOCOL_MAX_BLOCKS_REQUEST_COUNT)\n+      {\n+        LOG_ERROR_CCONTEXT(\n+            \"Requested objects count is too big (\"\n+            << arg.blocks.size() << \") expected not more then \"\n+            << CURRENCY_PROTOCOL_MAX_BLOCKS_REQUEST_COUNT);\n+        drop_connection(context, false, false);\n+      }\n+\n     NOTIFY_RESPONSE_GET_OBJECTS::request rsp;\n     if(!m_core.handle_get_objects(arg, rsp, context))\n     {\n```\n\nThis is essentially from https://github.com/hyle-team/zano/blob/master/src/currency_protocol/currency_protocol_handler.inl#L364 and confirmation will be needed that Monero doesn't already mitigate this elsewhere.\n\nI have the above patch in my branch ready for PR but if you want to create your own patch, please give credit to cryptozoidberg and myself (anonimal). Thank you.\n\n## Impact\n\nRemote node DoS.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-08-01T23:18:19.895Z",
+  "allow_singular_disclosure_after": -213638631.63982698,
+  "singular_disclosure_allowed": true,
+  "vote_count": 30,
+  "voters": [
+    "webhak",
+    "mashoud1122",
+    "ali",
+    "sameerphad72",
+    "savitar0x01",
+    "qtros",
+    "codeanddecode",
+    "cr4xerbik4sh",
+    "tiago-danin",
+    "kurovikking",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

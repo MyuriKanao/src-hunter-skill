@@ -1,0 +1,118 @@
+{
+  "id": 566811,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81NjY4MTE=",
+  "url": "https://hackerone.com/reports/566811",
+  "title": "████ - Complete account takeover",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-04T23:06:13.482Z",
+  "submitted_at": "2019-05-04T23:06:13.482Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cablej_dds",
+    "url": "/cablej_dds",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/297/403/7f80f45b8c434ad0da25b685ea053058c6d0a1ce_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-05-11T16:49:56.744Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-12-07T21:13:54.931Z",
+  "team_member_agreed_on_going_public_at": "2020-05-11T16:49:56.673Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n\n███████ ██████████ was updated today (03/04), which includes a backend rewrite. Unfortunately, the new site is insecure and allows a password to be reset given only a username. This allows access to payment records for any DoD employee given only their username, which is commonly known. Further, ███ is used to authenticate to other sites such as ██████. Thus, this allows access to the complete ████████ record and other associated information (despite ████████ stating that ██████████ login is disabled, it still works).\n\n## Impact\n\nTrivial and complete compromise of any/all ████████ ███████ accounts, resulting in exposure and modification of sensitive financial records for all DoD civilian/military personnel. For instance, this exposes partial social security numbers, personal addresses, and pay history, and allows stealing funds by changing direct deposit information. Further, via associated sites (█████), this exposes the ██████ of all military service members.\n\n## Step-by-step Reproduction Instructions\n\n1. Visit https://████████/ and intercept a request to obtain valid cookies.\n2. Make the following request, replacing the cookies with your new cookies if needed:\n\n```\nPOST /api/session/personalsettings/ForgotPasswordChangeRequest HTTP/1.1\nHost: ███\nConnection: close\nContent-Length: 151\nAccept: application/json, text/plain, */*\nOrigin: https://█████████\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36\nContent-Type: application/json\nReferer: https://████████/\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9\nCookie: LastMRH_Session=█████; F5_ST=██████; MRHSession=████████████████████\n\n{\"Username\":\"x\",\"Password\":\"y\",\"IsLimitedAccessAccount\":false,\"HasNagC\":false,\"HasNagF\":false,\"HasNagM\":false,\"HasNagN\":false}\n```\n\n3. Enter any user's username and a new password.\n4. Submit the request. The user's password will be overwritten to the new password, and you may now log in.\n5. Visit https://██████/milconnect/. Select to log in via █████. Despite the message saying it is disabled, edit the form via developer tools to enable both text boxes and the login button. Enter the user's credentials.\n6. The login will be successful, allowing full access to the user's ███.\n\n## Suggested Mitigation/Remediation Actions\n\nEnforce social security number / security questions / email verification.\n\n## Impact\n\n.",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 25,
+  "voters": [
+    "base_64",
+    "mik317",
+    "dastan_9408",
+    "sa1tama0",
+    "jerry1729",
+    "rrivera",
+    "i_sell_to_the_highest_bidder",
+    "testingpepe",
+    "tech101_bro",
+    "holdittight",
+    "and 15 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "id": 603764,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82MDM3NjQ=",
+  "url": "https://hackerone.com/reports/603764",
+  "title": "DOM Based XSS via postMessage at https://inventory.upserve.com/login/",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-06-08T02:00:23.696Z",
+  "submitted_at": "2019-06-08T02:00:23.696Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gamer7112",
+    "url": "/gamer7112",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 21981,
+    "url": "https://hackerone.com/upserve",
+    "handle": "upserve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/021/981/780e51432acea84f3fe52455f0009230a87ee31e_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/021/981/780e51432acea84f3fe52455f0009230a87ee31e_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Upserve ",
+      "twitter_handle": "getupserve",
+      "website": "http://upserve.com",
+      "about": "Upserve offers cloud point of sale for restaurants, actionable analytics, payment processing, and mobile restaurant management."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-06-25T13:56:46.607Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-06-24T18:29:55.006Z",
+  "team_member_agreed_on_going_public_at": "2019-06-25T13:56:46.488Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "#Description\nDOM based XSS is possible at https://inventory.upserve.com/login/ due to insecure origin checking when receiving a postMessage.\n\n#POC\n1. Visit https://hq.upserve.com.████████/upserve_xss.html\n2. Click link\n3. View alert on https://inventory.upserve.com\n\n#Vulnerable Code\n```javascript\nwindow.addEventListener(\"message\", function(e) {\n  if (~e.origin.indexOf(\"https://hq.upserve.com\")) {\n    if (e.data && typeof e.data == \"object\") {\n      try {\n        if (e.data[\"exec\"]) {\n          eval(e.data[\"exec\"]);\n        }\n      } catch (err) {\n        console.log(err);\n      }\n    } else {\n      console.log(\"Non-object passed\");\n    }\n  } else {\n    console.log(\"Incorrect origin: \" + e.origin.toString());\n    return;\n  }\n});\n```\nThe origin check simply determines if \"https://hq.upserve.com\" is anywhere in the origin so an origin like \"https://hq.upserve.com.mydomain.com\" will pass this check just fine.\n\n## Impact\n\nDue to the page being a login page, login credentials could be logged and stolen when a victim goes to login.",
+  "bounty_amount": "2500.0",
+  "formatted_bounty": "$2,500",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-07-24T18:29:55.122Z",
+  "allow_singular_disclosure_after": -214347141.40579337,
+  "singular_disclosure_allowed": true,
+  "vote_count": 170,
+  "voters": [
+    "colonel007",
+    "virenpawar",
+    "webhak",
+    "loaymorad",
+    "maskopatol",
+    "teslatheg0d",
+    "xehle",
+    "yxw21",
+    "akshansh",
+    "sourc7",
+    "and 160 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 32822,
+    "asset_type": "URL",
+    "asset_identifier": "inventory.upserve.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 16956,
+      "category": "team",
+      "content": "Due to incomplete origin validation, DOM-based XSS was possible at https://inventory.upserve.com/login/ when receiving a postMessage.",
+      "updated_at": "2019-06-25T13:56:25.700Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 177914,
+        "username": "upserve-bryan",
+        "name": "Bryan Brannigan",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://upserve.com",
+        "location": "",
+        "created_at": "2017-06-23T12:52:45.774Z",
+        "url": "https://hackerone.com/upserve-bryan",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/177/914/953184670ceb43d71870f5de769683ac4614b579_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/177/914/953184670ceb43d71870f5de769683ac4614b579_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/177/914/953184670ceb43d71870f5de769683ac4614b579_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

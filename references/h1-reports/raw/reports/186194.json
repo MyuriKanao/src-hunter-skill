@@ -1,0 +1,157 @@
+{
+  "id": 186194,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODYxOTQ=",
+  "url": "https://hackerone.com/reports/186194",
+  "title": "State filter in IssuableFinder allows attacker to delete all issues and merge requests",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-28T23:32:53.862Z",
+  "submitted_at": "2016-11-28T23:32:53.862Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2016-9469"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2016-12-06T00:57:18.114Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-06T00:56:29.986Z",
+  "team_member_agreed_on_going_public_at": "2016-12-06T00:57:18.072Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Vulnerability details\nThe state filter in the `IssuableFinder` class has the ability to filter issues and merge requests by state. This filter is implemented by calling `public_send` with unfiltered user input. This allows an attacker to call `delete_all` or `destroy_all`. Because the method is called **before** the project / group scope is applied, it deletes all issues and merge requests of the GitLab instance.\n\n# Proof of concept\nCreate two users and a new project for each of them. It doesn't matter if they're private or not. Now create an issue (or merge request) for each project. Now browse to the Issues overview. When clicking All, you'll be redirected to http://gitlab-instance/root/xxxx/issues?scope=all&state=all. Simply substitude `all` with `delete_all` in the URL and ALL issues will be deleted: http://gitlab-instance/root/xxxx/issues?scope=all&state=delete_all. To delete all merge requests, substitude `issues` with `merge_requests`. When requesting the `delete_all` URL, a 500 internal server error will be shown. This is caused by the `delete_all` method returning a boolean instead of an `ActiveRecord::Relation` class. Do **NOT** call this on the GitLab production site.\n\n# Origin\nThe vulnerability comes from the fact that unsanitized user input is passed into a `public_send` call that is being called on `model.all`. Here's the `execute` method of the `IssuableFinder`:\n\n```ruby\ndef execute\n  items = init_collection\n  items = by_scope(items)\n  items = by_state(items)\n  items = by_group(items)\n  items = by_project(items)\n  items = by_search(items)\n  items = by_milestone(items)\n  items = by_assignee(items)\n  items = by_author(items)\n  items = by_label(items)\n  items = by_due_date(items)\n  sort(items)\nend\n```\n\nNow take a look at the `by_state` method:\n\n```ruby\ndef by_state(items)\n  params[:state] ||= 'all'\n\n  if items.respond_to?(params[:state])\n    items.public_send(params[:state])\n  else\n    items\n  end\nend\n```\n\nThe controllers are passing the `state` parameter without any form of sanitization or validation to the finder. Since you're passing around ActiveRecord relations, `delete_all` can be called early on in the relation chain. Since the scope hasn't been applied (the `by_project` is called later), this will affect all issues and merge requests.\n\n# Remediation\nNever pass unsanitized or unvalidated user input to `public_send` or `send`.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-05T00:56:30.016Z",
+  "allow_singular_disclosure_after": -294762640.5574106,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "michiel",
+    "dilawer",
+    "xsam",
+    "mpz",
+    "eveeez",
+    "alfredsaonoy",
+    "japz",
+    "efernandes",
+    "spetr0x",
+    "martijn",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 3039,
+      "category": "researcher",
+      "content": "Multiple versions of GitLab expose a dangerous method to any authenticated user that could lead to the deletion of all `Issue` and `MergeRequest` objects on a GitLab instance. For GitLab instances with publicly available projects this vulnerability could be exploited by an unauthenticated user. A fix was included in versions 8.14.3, 8.13.8, and 8.12.11, which were released on December 5th 2016 at 3:59 PST. The GitLab versions vulnerable to this are 8.13.0, 8.13.0-ee, 8.13.1, 8.13.1-ee, 8.13.2, 8.13.2-ee, 8.13.3, 8.13.3-ee, 8.13.4, 8.13.4-ee, 8.13.5, 8.13.5-ee, 8.13.6, 8.13.6-ee, 8.13.7, 8.14.0, 8.14.0-ee, 8.14.1, 8.14.2, and 8.14.2-ee.\n\nMore information can be found at https://about.gitlab.com/2016/12/05/cve-2016-9469/.",
+      "updated_at": "2016-12-06T00:55:08.326Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2,
+        "username": "jobert",
+        "name": "Jobert",
+        "bio": "Co-founder of HackerOne. ಠ_ಠ",
+        "cleared": false,
+        "verified": false,
+        "website": "https://hackerone.com",
+        "location": "San Francisco, CA",
+        "created_at": "2013-03-08T01:17:12.256Z",
+        "url": "https://hackerone.com/jobert",
+        "hackerone_triager": false,
+        "hackerone_employee": true,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

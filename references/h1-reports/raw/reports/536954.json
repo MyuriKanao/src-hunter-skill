@@ -1,0 +1,123 @@
+{
+  "id": 536954,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MzY5NTQ=",
+  "url": "https://hackerone.com/reports/536954",
+  "title": "Vulnerability in http-parser & embedded NULL header handling",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-04-12T20:06:48.873Z",
+  "submitted_at": "2019-04-12T20:06:48.873Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "htuch",
+    "url": "/htuch",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-9900"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-02-13T23:41:54.567Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-01-14T23:41:52.691Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Due to a snafu in how security@node.js.org is setup to forward (see https://github.com/envoyproxy/envoy/issues/5155), the following bug report was not made available prior to disclosure. For completeness, I'm providing the original e-mail below. \n\nPlease note that this has been fixed in http-parser since disclosures. I understand that Node has moved away from http-parser, but this might affect Node.JS LTS for earlier versions. See https://github.com/nodejs/http-parser/issues/468 for the fix.\n\nRather than file a full report, I would like to share with Node.JS security WG the following resources:\n\n* Envoy CVE: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-9900\n* Envoy GH issue with CVE details: https://github.com/envoyproxy/envoy/issues/6434\n* http-parser GH issue: https://github.com/nodejs/http-parser/issues/468\n* Other discussion of the handling of this issue: https://github.com/envoyproxy/envoy/issues/5155#issuecomment-481854258\n\nOriginal e-mail\n------------------------\nMIME-Version: 1.0\nDate: Thu, 14 Mar 2019 16:35:20 -0400\nMessage-ID: <CAA4W8ZmaBzTMFU8VdpJzVDM7LXo0o5-WPTdYisGJUF9qsXiPnQ@mail.gmail.com>\nSubject: Vulnerability in http-parser & embedded NULL header handling\nFrom: Harvey Tuch <htuch@google.com>\nTo: security@nodejs.org, ry@tinyclouds.org\nCc: envoy-security@googlegroups.com\nContent-Type: multipart/alternative; boundary=\"0000000000006b3f64058413dc0b\"\n\n--0000000000006b3f64058413dc0b\nContent-Type: text/plain; charset=\"UTF-8\"\n\nHi Node.js Security WG, Ryan,\n\nWe (Envoy security team) have discovered a potential security vulnerability\nrelated to our use of http-parser that we are working to fix, patch and\nissue a security update for Envoy-side following\nhttps://github.com/envoyproxy/envoy/blob/master/SECURITY_RELEASE_PROCESS.md.\n\nWe would like to give you advanced notice of this under embargo, check in\nwith you to see if this might affect Node.js or other http-parser users,\nand potentially coordinate on an http-parser side fix.\n\nEnvoy makes use of http-parser as its HTTP/1 codec on its data plane. Envoy\nhas baked into it today the assumption that its HTTP codecs (http-parser,\nnghttp2) enforce RFC constraints on valid header values (\nhttps://tools.ietf.org/html/rfc7230#section-3.2.6). In particular, we\nexpect that there are no embedded NULLs in header values or keys that are\nplaced in Envoy's HeaderStrings and HeaderMapImpls objects. This is\nparticularly important because we allow two views of a HeaderString, via\nc_str()\n<https://github.com/envoyproxy/envoy/blob/b41ba5925a4e93d22a86c6501d63314ccf0d79f3/include/envoy/http/header_map.h#L115>\n and getStringView()\n<https://github.com/envoyproxy/envoy/blob/b41ba5925a4e93d22a86c6501d63314ccf0d79f3/include/envoy/http/header_map.h#L120>;\nembedded NULLS cause inconsistent views and lengths through these\naccessors. We use a mixture of these in header matching and routing.\n\nOur fuzzers and some recently introduced ASSERTs indicated that embedded\nNULLs were making their way into header values received from http-parser.\nDigging deeper, the errant behavior is due to a bug in how validation of\nheader values is performed by http-parser. You can see this in the\nvalidation logic at\nhttps://github.com/nodejs/http-parser/blob/0d0a24e19eb5ba232d2ea8859aba2a7cc6c42bc4/http_parser.c#L1469\n.\n\nIn particular, only the first character of the header value is validate at\nline 1490. Then the entire header value is accepted via a memchr scan at\nhttps://github.com/nodejs/http-parser/blob/0d0a24e19eb5ba232d2ea8859aba2a7cc6c42bc4/http_parser.c#L1506\n.\n\nThis means that we can have arbitrary embedded NULLs in any HTTP/1.1 header\nvalue today. There are places in Envoy where we use one view of these\nstrings for matching (e.g. route table lookup, authorization) and another\nview for routing and sending to our upstreams.\n\nWe have scored this as 6.5 using CVSS and will work on an Envoy patch to\nreject any header values that contain NULL and issue a point release and\npublic disclosure following\nhttps://github.com/envoyproxy/envoy/blob/master/SECURITY_RELEASE_PROCESS.md\nASAP.\n\nThis issue can/should also be resolved in http-parser by ensuring the\nentire header value is validated as per RFC. We do not plan on doing the\nfix for this prior to our release, but will coordinate with you folks if\nyou are interested in doing so.\n\nPlease advise on how you would like to proceed with this. We are planning\nto get our disclosure/release happening either end-of-week or early next\nweek, but we would like to provide you an opportunity to provide some input\nhere, since this has not been publicly disclosed yet we can provide some\nadditional time if needed.\n\nThanks,\nHarvey (on behalf of Envoy security team)\n\n--0000000000006b3f64058413dc0b\nContent-Type: text/html; charset=\"UTF-8\"\nContent-Transfer-Encoding: quoted-printable\n\n<div dir=3D\"ltr\"><div dir=3D\"ltr\"><div dir=3D\"ltr\">Hi Node.js Security WG, =\nRyan,<div><br></div><div>We (Envoy security team) have discovered a potenti=\nal security vulnerability related to our use of http-parser that we are wor=\nking to fix, patch and issue a security update for Envoy-side following=C2=\n=A0<a href=3D\"https://github.com/envoyproxy/envoy/blob/master/SECURITY_RELE=\nASE_PROCESS.md\">https://github.com/envoyproxy/envoy/blob/master/SECURITY_RE=\nLEASE_PROCESS.md</a>.</div><div><br></div><div>We would like to give you ad=\nvanced notice of this under embargo, check in with you to see if this might=\n affect Node.js or other http-parser users, and potentially coordinate on a=\nn http-parser side fix.</div><div><br></div><div>Envoy makes use of http-pa=\nrser as its HTTP/1 codec on its data plane. Envoy has baked into it today t=\nhe assumption that its HTTP codecs (http-parser, nghttp2) enforce RFC const=\nraints on valid header values (<a href=3D\"https://tools.ietf.org/html/rfc72=\n30#section-3.2.6\" target=3D\"_blank\">https://tools.ietf.org/html/rfc7230#sec=\ntion-3.2.6</a>). In particular, we expect that there are no embedded NULLs =\nin header values or keys that are placed in Envoy&#39;s HeaderStrings and H=\neaderMapImpls objects. This is particularly important because we allow two =\nviews of a HeaderString, via=C2=A0<a href=3D\"https://github.com/envoyproxy/=\nenvoy/blob/b41ba5925a4e93d22a86c6501d63314ccf0d79f3/include/envoy/http/head=\ner_map.h#L115\" target=3D\"_blank\">c_str()</a>=C2=A0and=C2=A0<a href=3D\"https=\n://github.com/envoyproxy/envoy/blob/b41ba5925a4e93d22a86c6501d63314ccf0d79f=\n3/include/envoy/http/header_map.h#L120\" target=3D\"_blank\">getStringView()</=\na>; embedded NULLS cause inconsistent views and lengths through these acces=\nsors. We use a mixture of these in header matching and routing.</div></div>=\n<div><br></div><div>Our fuzzers and some recently introduced ASSERTs indica=\nted that embedded NULLs were making their way into header values received f=\nrom http-parser. Digging deeper, the errant behavior is due to a bug in how=\n validation of header values is performed by http-parser. You can see this =\nin the validation logic at=C2=A0<a href=3D\"https://github.com/nodejs/http-p=\narser/blob/0d0a24e19eb5ba232d2ea8859aba2a7cc6c42bc4/http_parser.c#L1469\" ta=\nrget=3D\"_blank\">https://github.com/nodejs/http-parser/blob/0d0a24e19eb5ba23=\n2d2ea8859aba2a7cc6c42bc4/http_parser.c#L1469</a>.=C2=A0</div><div><br></div=\n><div>In particular, only the first character of the header value is valida=\nte at line 1490. Then the entire header value is accepted via a memchr scan=\n at=C2=A0<a href=3D\"https://github.com/nodejs/http-parser/blob/0d0a24e19eb5=\nba232d2ea8859aba2a7cc6c42bc4/http_parser.c#L1506\" target=3D\"_blank\">https:/=\n/github.com/nodejs/http-parser/blob/0d0a24e19eb5ba232d2ea8859aba2a7cc6c42bc=\n4/http_parser.c#L1506</a>.</div><div><br></div><div>This means that we can =\nhave arbitrary embedded NULLs in any HTTP/1.1 header value today. There are=\n places in Envoy where we use one view of these strings for matching (e.g. =\nroute table lookup, authorization) and another view for routing and sending=\n to our upstreams.<br></div><div><br></div><div>We have scored this as 6.5 =\nusing CVSS and will work on an Envoy patch to reject any header values that=\n contain NULL and issue a point release and public disclosure following=C2=\n=A0<a href=3D\"https://github.com/envoyproxy/envoy/blob/master/SECURITY_RELE=\nASE_PROCESS.md\">https://github.com/envoyproxy/envoy/blob/master/SECURITY_RE=\nLEASE_PROCESS.md</a> ASAP.</div><div><br></div><div>This issue can/should a=\nlso be resolved in http-parser by ensuring the entire header value is valid=\nated as per RFC. We do not plan on doing the fix for this prior to our rele=\nase, but will coordinate with you folks if you are interested in doing so.<=\n/div><div><br></div><div>Please advise on how you would like to proceed wit=\nh this. We are planning to get our disclosure/release happening either end-=\nof-week or early next week, but we would like to provide you an opportunity=\n to provide some input here, since this has not been publicly disclosed yet=\n we can provide some additional time if needed.</div><div><br></div><div>Th=\nanks,</div><div>Harvey (on behalf of Envoy security team)</div><div><br></d=\niv></div></div>\n\n--0000000000006b3f64058413dc0b--\n\n## Impact\n\nThis has a CVSS score of 8.3 for Envoy as a project consuming http-parser. The impact on Node.JS is unclear to me.",
+  "weakness": {
+    "id": 14,
+    "name": "Improper Null Termination"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-02-13T23:41:52.799Z",
+  "allow_singular_disclosure_after": -196702693.7619682,
+  "singular_disclosure_allowed": true,
+  "vote_count": 1,
+  "voters": [
+    "d3nn15"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

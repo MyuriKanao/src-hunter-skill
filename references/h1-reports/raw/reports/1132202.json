@@ -1,0 +1,134 @@
+{
+  "id": 1132202,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTMyMjAy",
+  "url": "https://hackerone.com/reports/1132202",
+  "title": "Post-Auth Stored XSS with User Interaction leads to Remote Code Execution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-03-22T10:39:40.822Z",
+  "submitted_at": "2021-03-22T10:39:40.941Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sonarsource",
+    "url": "/sonarsource",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ek9e0v6c0jrxkoyirgujw9qft5fb/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-06-30T10:55:20.602Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-05-31T10:55:20.360Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nUnsafe usage of the `toastr` library leads to Stored XSS when combined with a validation bypass in the `createRoom` function. Targeting an admin account leads to Remote Code Execution.\n\n**Description:**\nThe frontend uses the `toastr` library to display error messages to the user. However, it is used in an unsafe way which allows XSS when user input is reflected in an API error message. This happens for example when channel info is edited and the channel's name contains invalid characters.\n\nTo abuse this, an attacker can use a validation bypass in [the `createRoom` function](https://github.com/RocketChat/Rocket.Chat/blob/9bbf11ad53d43dc3a5d870d6df4a3022b6de3440/app/lib/server/functions/createRoom.js#L62): the `extraData` parameter is merged with the room object without proper validation, which allows an attacker to override all previous properties such as the name or the owner. The attacker can use this to create a room that contains their XSS payload in the room's name.\n\nTriggering the XSS requires multiple steps of user interaction, because there are few API endpoints that reflect user input back. One of them is [the `rooms.saveRoomSettings` endpoint](https://github.com/RocketChat/Rocket.Chat/blob/9bbf11ad53d43dc3a5d870d6df4a3022b6de3440/app/api/server/v1/rooms.js#L340-L348) which calls [the `saveRoomSettings` method](https://github.com/RocketChat/Rocket.Chat/blob/9bbf11ad53d43dc3a5d870d6df4a3022b6de3440/app/channel-settings/server/methods/saveRoomSettings.js#L223-L322) which in turn uses [the `getValidRoomName` function](https://github.com/RocketChat/Rocket.Chat/blob/9bbf11ad53d43dc3a5d870d6df4a3022b6de3440/app/utils/lib/getValidRoomName.js#L7-L62). This function checks the room's name and reflects the user-provided value back if it is not a valid name.\n\nThe error returned by the API is unsafely handled by passing it to the `toastr` library without escaping it or using the library's `escapeHtml` option. [The `handleError` function](https://github.com/RocketChat/Rocket.Chat/blob/9bbf11ad53d43dc3a5d870d6df4a3022b6de3440/app/utils/client/lib/handleError.js#L7-L33) passes the value to the `toastr` library, it escapes the `details` property but not the `message` and `title` property.\n\nTo gain Remote Code Execution capabilities on the server, an attacker can follow these steps to take over an admin account. The attacker can then use the newly gained admin privileges to create an incoming web hook that has a script. This allows them to execute commands or get a shell on the server, because the script is executed on the server without a security boundary in place (which seems to be intended).\n\n**Note:** This issue is classified as Stored XSS because the payload is stored permanently in the database, but it could be argued that it is Reflected XSS because the payload is reflected by the API which then leads to the unsafe handling and execution of the payload.\n\n## Releases Affected:\nWe tested on 3.12.1, but it is hard to confirm since when Rocket.Chat is vulnerable because there are many parts of the code base involved.\n\n## Steps To Reproduce (from initial installation to vulnerability):\n1. Set up an instance of RocketChat 3.12.1, e.g. by cloning the repo and using Docker Compose:\n  1. `git clone git@github.com:RocketChat/Rocket.Chat.git`\n  1. `cd Rocket.Chat`\n  1. `git checkout tags/3.12.1`\n  1. `docker-compose up -d`\n1. Configure the instance with default settings\n1. Create a normal (non-admin) user with username `attacker` and password `attacker`\n1. Log in as the `attacker` user\n1. Open the browser's developer tools and execute the following line of code: `Meteor.call('createChannel', 'valid-name', [], false, {}, { name: 'edit me <img src onerror=alert(origin)>' })`\n1. Invite the admin to the newly created channel\n1. Log out and log in as an admin\n1. Edit the title of the newly created channel (e.g. change `me` to `you`)\n1. Click the save button\n1. A dialog should pop up that shows the site's origin (e.g. http://localhost:3000), confirming that the XSS payload has been executed (this is only for the demo, the payload can be arbitrary JavaScript code)\n1. (The demo ends here but it is trivial to get RCE capabilities when having access to an admin account, as explained before)\n\n## Supporting Material/References:\nThe attached video shows the exploitation of the vulnerability with the attacker's view on the right and the victim's view (admin) on the left.\n\n## Suggested mitigation\n- Restrict and validate the `extraData` parameter when creating a room\n- Use the `toastr` library with the `escapeHtml` option or sanitize the message and title manually\n- Set a [`Content-Security-Policy` header](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) that prevents payload execution\n  - preventing inline scripts might not be enough here because users can upload files\n  - a [nonce-based CSP](https://content-security-policy.com/nonce/) would fit best\n\n## Disclosure Policy\nAll reported issues are subject to a 90 day disclosure deadline.\nAfter 90 days elapse, parts of the bug report will become visible to the public.\n\nDon't hesitate to ask if you have any questions or need further help with this issue.\n\n## Impact\n\nAn attacker can use this vulnerability to target an admin user and take over their account, which is already a high impact. The attacker can then use certain features that are available to admins in order to gain Remote Code Execution capabilities.\n\nThis gives them complete control over the Rocket.Chat instance and exposes all attached components, e.g. the database or any external system whose credentials are stored within Rocket.Chat settings. An attacker can read, change, or delete all items in the database, impacting confidentiality, integrity, and availability.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1238318,
+      "file_name": "xss.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/gd0es86syzpy0rjtjbtn4e13sdns?response-content-disposition=attachment%3B%20filename%3D%22xss.mp4%22%3B%20filename%2A%3DUTF-8%27%27xss.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151416Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a9357b059e24c5b341a64365778c4d01f66eedf50bc51e52fd559926718e6a36",
+      "file_size": 1708227,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2021-06-30T10:55:20.413Z",
+  "allow_singular_disclosure_after": -153289135.7393382,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "ibring",
+    "soohongkim123",
+    "acka",
+    "ekgaribadmi",
+    "privskl8or"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

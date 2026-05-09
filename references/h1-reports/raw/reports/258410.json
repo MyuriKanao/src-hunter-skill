@@ -1,0 +1,118 @@
+{
+  "id": 258410,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNTg0MTA=",
+  "url": "https://hackerone.com/reports/258410",
+  "title": "Gateway information leakage",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-08-09T20:52:01.353Z",
+  "submitted_at": "2017-08-09T20:52:01.353Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hackerfactor",
+    "url": "/hackerfactor",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/069/990/4826a26d83341c89c50de594442aec041043f7e7_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-07-30T14:42:04.222Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-07-30T14:41:51.559Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nMany DoD systems use BlueCoat gateways. These gateways insert unique BlueCoat ids that permit tracking DoD users and gaining insight into the DoD network architecture when DoD users access the Internet.\n\n**Description:**\nI run a popular web service (FotoForensics.com -- it's around 150,000 in the Alexa list of top web sites).  My public web site is explicitly for research and gets visitors from all over, including from the DoD.  One of the research project collects non-standard HTTP headers.  The BlueCoat HTTP headers immediately stood out as non-standard.\n\nSomeone with a BlueCoat gateway will have headers that look like:\n\n> POST /upload-file.php HTTP/1.1\n> Host: www.fotoforensics.com\n> Content-Length: 70869\n> Cache-Control: max-age=0\n> Origin: http://www.fotoforensics.com\n> Upgrade-Insecure-Requests: 1\n> User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36\n> Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPaSgeQQ5m6kh7aaZ\n> Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\n> Referer: http://www.fotoforensics.com/\n> Accept-Language: en-█████████,en;q=0.8\n> ██████████: ██████ (███) SC\n> Connection: Keep-Alive\n> █████████: █████████\n\n(This example came from a user at the United States Patent and Trademark Office.)\n\nThe id found on the \"██████████\" line is unique to the Bluecoat device; it is not unique to the user. However, if this ID ever shows up at a different network address, then it permits a remote (outside of DoD) system to identify associated network addresses, multiple proxy exits, and potentially non-attributable networks. Similarly, if a single IP address is associated with multiple Bluecoat ids, then it denotes a single exit proxy and identifies the (minimum) number of subnets that use the proxy.\n\nFor example:\n\n> █████████\n> ██████\n> ██████████\n> █████████\n> ████████\n> ██████\n> ██████████\n\nMy server has seen this one IP address associated with 7 different Bluecoat devices.\n\n> ███\n> ████\n> █████████\n> ██████████\n\nThis single bluecoat ID has been linked to four different network addresses.\n\n> ███\n> ████████\n\nThis bluecoat id (████) is interesting because it has been seen on two very different subnets.\n\n> █████████\n> ███\n\nThis bluecoat ID moved locations: it was seen in████ and in/near ███████. (Imagine what it could tell an observer if it were to suddenly appear in █████████...)\n\nI have currently collected 243 bluecoat IDs associated with \"████████\". In addition, I've collected 120 bluecoat IDs from the █████████ Group, 71 ids from the \"Headquarters, ██████████AISC\", and ids from many other government organizations.\n\nFor example:\n> ██████\n> ███\n> █████\n> █████\n> █████\n\nThis one bluecoat id has been observed with both the Department of the Interior and with ██████████GS. The first 3 ip addresses have hostnames that say \"usgs.gov\", but the others either lack hostnames or are from the national parks service (nps.gov). And this one id is from 5 IP addresses that span 4 different subnets.\n\n## Impact\nDoD uses Bluecoat gateways with unique IDs enabled. The unique IDs are supposed to prevent proxy forwarding loops between Bluecoat devices. However, they permit external observers from (1) determining that a Bluecoat device is in use, (2) tracking the device, and (3) gaining insight into the DoD network architecture.\n\nWhen combined with user-agent strings and other distinct and unique identifiers, this combination of ID and IP address permits determining who likely works with whom.\n\n(Let me know if you want the full list for DoD bluecoat devices. And if you want them for other ██████ Gov/Mil groups, let me know.)\n\n## Suggested Mitigation/Remediation Actions\nIt varies by Bluecoat device, but buried in each system's configuration menu is an option to disable the unique ID. These should be disabled everywhere.\n",
+  "weakness": {
+    "id": 46,
+    "name": "Privacy Violation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 43,
+  "voters": [
+    "bb4cc4200b404d13a462df1",
+    "tokyoenigma",
+    "524153",
+    "mik317",
+    "nich",
+    "dastan_9408",
+    "cyberunit",
+    "tiago-danin",
+    "0xm1racle",
+    "priyankvadaliya",
+    "and 33 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

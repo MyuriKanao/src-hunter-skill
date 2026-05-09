@@ -1,0 +1,120 @@
+{
+  "id": 2864414,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yODY0NDE0",
+  "url": "https://hackerone.com/reports/2864414",
+  "title": "Arbitrary File Deletion Vulnerability in curl Source Code via os.unlink()",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2024-11-25T11:43:11.661Z",
+  "submitted_at": "2024-11-25T13:46:14.471Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "aadityaathehacker",
+    "url": "/aadityaathehacker",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-07-07T10:17:31.378Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-07-06T21:18:23.032Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe curl source code's testing scripts contain instances where the os.unlink() function is used to delete files without validating the input file paths. This introduces a risk of arbitrary file deletion when these scripts are executed with malicious or manipulated inputs. Although the vulnerability is present in test scripts, it could lead to unintended consequences if these scripts are used in shared or automated environments.\n\n## Steps To Reproduce:\n\n  1.Clone the curl repository using (https://github.com/curl/curl.git)\n  2.move to tests directory.\n  3.Identify the affected scripts:\n      The following scripts and lines contain vulnerabilities: \n             tests/negtelnetserver.py (Line 366)\n             tests/dictserver.py (Line 183)\n             tests/smbserver.py (Lines 96, 450)\n 4.Simulate malicious input:\n--> Identify the specific script and input options (e.g., options.pidfile) in the affected code.\n--> Modify the options.pidfile or related variable to point to a sensitive system file (e.g., /etc/passwd).\n--> Trigger the script which leads to leading to the deletion of the specified file.\n\n      Edit a script to simulate an attacker-controlled input. For example, in \n              negtelnetserver.py:\n             # Original code:\n                 os.unlink(options.pidfile)\n            # Malicious input simulation:\n                options.pidfile = \"/etc/passwd\"   # Replace this with a critical or sensitive file\n                os.unlink(options.pidfile)\n 5.Run the vulnerable script:\n           Execute the script after modifying the input.\n            python3 negtelnetserver.py\n 6. Observe the results:\n            When script is executed, which is leading to deletion of the specified file. \n\n\n\n## Supporting Material/References:\nCWE-20: Improper Input Validation \nExample: Allowing user-controlled values for options.pidfile without ensuring they refer to a valid file in an allowed directory.\n\nCWE-22: Improper Limitation of a Pathname to a Restricted Directory (Path Traversal)\nExample: An attacker supplies a path like ../../../etc/passwd for deletion.\n\nCWE-732: Incorrect Permission Assignment for Critical Resource\nExample: Allowing os.unlink() to execute on sensitive files.\n\nCWE-552: Files or Directories Accessible to External Parties\nExample: Allowing external parties to set options.pidfile to a sensitive file path.\n\nCWE-610: Externally Controlled Reference to a Resource in Another Sphere\nExample: Allowing the attacker to specify arbitrary file paths for deletion.\n\n## Impact\n\nUnvalidated file paths passed to os.unlink() may allow an attacker to:\nDelete arbitrary files, potentially causing system instability or downtime.\nTarget critical system files for deletion (Ex:logs, configuration files).\nAffect multi-user systems by deleting files belonging to other users.",
+  "weakness": {
+    "id": 107,
+    "name": "Improper Input Validation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 8,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "icecream_23",
+    "bbhunter9",
+    "0xrh4ps00dy",
+    "francophone",
+    "warateru",
+    "adarsh01securityanlayst"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

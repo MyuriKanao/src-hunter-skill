@@ -1,0 +1,160 @@
+{
+  "id": 491473,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80OTE0NzM=",
+  "url": "https://hackerone.com/reports/491473",
+  "title": "Protected tweets exposure through the URL",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-02-05T17:53:21.968Z",
+  "submitted_at": "2019-02-05T17:53:21.968Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "terjanq",
+    "url": "/terjanq",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/353/987/2ae95a623dfabcdb416ac12e999390c60f4e83a6_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61,
+    "url": "https://hackerone.com/x",
+    "handle": "x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "X / xAI",
+      "twitter_handle": "XSecurity",
+      "website": "https://x.com",
+      "about": "X helps you create and share ideas and information instantly, without barriers."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-04-19T16:34:21.228Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-04-02T17:50:02.259Z",
+  "team_member_agreed_on_going_public_at": "2019-04-19T16:34:21.130Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nLeaking sensitive information from protected tweets via a prepared website. This vulnerability could lead to exposure of information such as **credit card numbers**, **bank account numbers**, **phone numbers**, **tokens**, **specific words** or even the **whole phrases** but also the exposure of any additional information such as **mentioned users**, **tweet time frames**, **tweet locations** or  **hashtags**.\n\n## Description\nWhen searching for further **URL exposure** vulnerabilities on Twitter I noticed that a very unsafe URL redirect happens, depending on search results, when a user searches for some tweets. \n\nThe endpoint I found is that:\n> If there are no search results for a query e.g. https://twitter.com/search?q=veryveryunsaferedirect&src=typd the URL changes to https://twitter.com/search?f=tweets&q=secret%20from%3Aterjanq&src=typd and it doesn't when results were found. As can be spotted, the `f=tweets` parameter was added and hence that state can be leaked.\n\nThe detection of the URL change can be achieved in several ways, I will use the technique I already reported to Twitter in https://hackerone.com/reports/491243 and also described in https://terjanq.github.io/Bug-Bounty/Twitter/url-information-disclosure-q67svgtbqarv/index.html.\n\nThanks to *Advanced Search* option the attacker can obtain very detailed information about the victim's tweets when knowing their username even if the tweets are set as private. The full list of available options is as in the image below. \nhttps://i.imgur.com/xJeaixk.png\n\nTo make the *X-Search* attack more effective, the attacker can use logical operators `AND` and `OR` to narrow down the search area. For example, by using phrases like `1001 OR 1002 OR 1003 OR 1004 …` the attacker can use binary-search to extract all four-digit numbers in only few requests. However, I noticed that the limit for the number of words that can be used in the search is limited by 50. Nevertheless, that number is big enough to effectively extract those four-digit numbers -- it would only take around 300 requests to extract all of them and then by combining them in the correct order the whole phrases such as credit card number can be leaked. \n\nIn the Proof of Concept, I have prepared an easy attack abusing this observation for three-digit ones.\n\n## Steps To Reproduce:\n  1. Prepare test twitter accounts and enable the option *Protect your Tweets* in the settings.\n  2. Visit the https://terjanq.github.io/Bug-Bounty/Twitter/protected-tweets-exposure-efvju8i785y1/poc.html and click the button to start the PoC.\n  3. Put phrases you want to find in your tweets and fill the field `from:` with your account's username and submit the form.\n  4. When you are done with the previous step, click on the button `Fetch all 3-digit numbers from tweets` and wait for the timer to stop.\n  5. You should see all the three-digit numbers from your tweets.\n\n*Please note that the exploit can be coded much more efficiently. For example, instead of using one window to make the redirects several can be used to speed it up. Also due to the style it was written in, false-positives can appear when lags occur (it has primitive protection implemented for that case, but it's not perfect)*\n\n## Impact: \nA regular user of Twitter can have **their protected tweets leaked** along with additional information such as **mentioned users**, **tweet time frames**, **tweet locations** etc.\n\n## Supporting Material/References:\nI made a short video demonstrating the PoC in action \nhttps://youtu.be/bSUS4THqssY\n\n*I attached copies of the files required to run the PoC (main file poc.html) but they can also be accessed via https://terjanq.github.io/Bug-Bounty/Twitter/protected-tweets-exposure-efvju8i785y1/*\n\n## Impact\n\nA regular user of Twitter can have **their protected tweets leaked** along with additional information such as **mentioned users**, **tweet time frames**, **tweet locations** etc.",
+  "bounty_amount": "560.0",
+  "formatted_bounty": "$560",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 418502,
+      "file_name": "poc.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/418/502/e8b28f46e3094cc17b9d34d1d1e4cb2b73d121ba/poc.html?response-content-disposition=attachment%3B%20filename%3D%22poc.html%22%3B%20filename%2A%3DUTF-8%27%27poc.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152231Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=989a42cf439a222ab5632f1b513c96353a3f3ceff4a3d6afcd5eb4715c5aed05",
+      "file_size": 637,
+      "type": "text/html",
+      "moderated": null
+    },
+    {
+      "id": 418503,
+      "file_name": "poc.js",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/418/503/bd4a52d26eb0f579978ba608e09cef16f86e15e6/poc.js?response-content-disposition=attachment%3B%20filename%3D%22poc.js%22%3B%20filename%2A%3DUTF-8%27%27poc.js&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152231Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=09e1b35c2501690ef74053fc5fec915dffbaa1edb38e482d272e9f1483ac1262",
+      "file_size": 3194,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 418504,
+      "file_name": "poc_head.js",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/418/504/a9caeb78d4b4723326ed2373d6028938e524629f/poc_head.js?response-content-disposition=attachment%3B%20filename%3D%22poc_head.js%22%3B%20filename%2A%3DUTF-8%27%27poc_head.js&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152231Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=46271da14bb8ca173f9f273683de33514bacb44294e715619883f2d82be06207",
+      "file_size": 3725,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 418505,
+      "file_name": "poc_real.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/418/505/992e45159ca1bdcdaed589b90805696362382534/poc_real.html?response-content-disposition=attachment%3B%20filename%3D%22poc_real.html%22%3B%20filename%2A%3DUTF-8%27%27poc_real.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152231Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a10d50dd15f879e1fc754467ebed2d3e976c815f6a278e6aab0d0aeb0d6c086d",
+      "file_size": 2990,
+      "type": "text/html",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-05-02T17:50:02.333Z",
+  "allow_singular_disclosure_after": -221520749.27421287,
+  "singular_disclosure_allowed": true,
+  "vote_count": 66,
+  "voters": [
+    "mr-medi",
+    "m4khn0",
+    "floerer",
+    "foobar7",
+    "kapytein",
+    "ali",
+    "sameerphad72",
+    "thalaivar304",
+    "lumaro",
+    "mik317",
+    "and 56 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 1062,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.twitter.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

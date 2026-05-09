@@ -1,0 +1,167 @@
+{
+  "id": 1160407,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTYwNDA3",
+  "url": "https://hackerone.com/reports/1160407",
+  "title": "Cache poisoning Denial of Service affecting assets.gitlab-static.net",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-04-10T19:53:30.255Z",
+  "submitted_at": "2021-04-10T19:53:30.325Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "youstin",
+    "url": "/youstin",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/7fa69sqmcecdvsh4bx61usmqg79r/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-12-22T23:36:26.498Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-12-22T23:36:26.383Z",
+  "team_member_agreed_on_going_public_at": "2021-12-03T18:16:33.581Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Summary\n\nHi,\n\nGitlab.com is hosting JS and CSS on `https://assets.gitlab-static.net/` and uses them on gitlab.com/*\nThe static files seem to be stored on a gcp host, which by default accepts the `x-http-method-override` header. Since the CDN is using Varnish to cache files, I was able to combine the GCP behaviour and poison the cache into returning an empty resource, inherenetly causing a denial of service on gitlab.com and all gitlab assets that use the specific cdn. \n\n###  Disclaimer\n\nNo actual denial of service attack was caused troughout my testing. All the testing used cache-busters, meaning it did not affect the live website in any way.\n \n# Steps to reproduce\n\n1. Sending a request such as:\n\n```http\nGET /assets/webpack/commons-pages.admin.sessions-pages.groups.omniauth_callbacks-pages.ldap.omniauth_callbacks-pages.omn-c3aaf8c4.3f9d44ba.chunk.js HTTP/1.1\nHost: assets.gitlab-static.net\nUser-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:87.0) Gecko/20100101 Firefox/87.0\nConnection: close\n```\nwill return the expected js file. \nBy taking a quick look at the response headers, we can see the file is currently cached by varnish because of the following headers:\n```http\nAge: 498\nX-Served-By: cache-dca17752-DCA, cache-osl6520-OSL\nX-Cache: HIT, HIT\nX-Cache-Hits: 1, 1\n```\n2. In order to test cache poisoning without affecting the live website, we can add random query parameters that will act as cache busters. In order to poison a resource, an attacker would send the following request:\n\n```http\nGET /assets/webpack/commons-pages.admin.sessions-pages.groups.omniauth_callbacks-pages.ldap.omniauth_callbacks-pages.omn-c3aaf8c4.3f9d44ba.chunk.js?cb=youstin-xyz HTTP/1.1\nHost: assets.gitlab-static.net\nx-http-method-override: HEAD\n```\n\nThis will return an empty response, as it is expected from a `HEAD` request. However since the `x-http-method-override` header is not included in the cache key and the varnish configuration used does not proccess the `x-http-method-override`, this empty response will also be forwarded to all other users requesting the file, with normal GET requests. \n\n{F1260892}\n\nYou can also confirm the cache can be poisoned by visiting the file in your browser, making sure to include the parameter used as a cachebuster. You should notice the empty repsonse, typical to a HEAD request.\n\nThis vulnerability can be used on files used by the live site even if they are already cached, by making use of the PURGE http method, which clears the cache, allowing for an easily reproducible DoS attack.\n\n## Impact\n\nSince Gitlab does not forbid unauthorized users from using the PURGE http method, which clears the cache, it is possible for an attacker to clear the cache for actual JS or CSS files used on gitlab.com and poison it with an empty response. Doing so will lead to missing JS and CSS files, making gitlab completely unuseable. \nThis vulnerability affects all instances of gitlab where the cdn is used for JS and CSS files.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1260892,
+      "file_name": "Screenshot-20210410223924-532x502.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/c6bhq8c89rrj9ty94x8ixfou71c5?response-content-disposition=attachment%3B%20filename%3D%22Screenshot-20210410223924-532x502.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot-20210410223924-532x502.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151255Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=df93b6256f8f0449c996b4ebe448ade9c807030f4fc9d082fb29435471324d77",
+      "file_size": 71518,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 82,
+  "voters": [
+    "muslimfrompk",
+    "tinmo",
+    "monke",
+    "n1m0",
+    "drsniper",
+    "bombon",
+    "youstin",
+    "alp",
+    "thruster",
+    "arsene_lupin",
+    "and 72 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 117742,
+      "category": "researcher",
+      "content": "For more details about the vulnerability, check out:\nhttps://youst.in/posts/cache-poisoning-at-scale/",
+      "updated_at": "2021-12-22T23:32:28.049Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1059963,
+        "username": "youstin",
+        "name": "iustin",
+        "bio": "17/04/2020",
+        "cleared": true,
+        "verified": true,
+        "website": "https://youst.in",
+        "location": "",
+        "created_at": "2020-04-20T22:22:10.136Z",
+        "url": "https://hackerone.com/youstin",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/7fa69sqmcecdvsh4bx61usmqg79r/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/7fa69sqmcecdvsh4bx61usmqg79r/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/7fa69sqmcecdvsh4bx61usmqg79r/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    }
+  ]
+}

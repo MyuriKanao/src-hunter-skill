@@ -1,0 +1,118 @@
+{
+  "id": 2252307,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjUyMzA3",
+  "url": "https://hackerone.com/reports/2252307",
+  "title": "Buffer overflow and affected url:-https://github.com/curl/curl/blob/master/docs/examples/hsts-preload.c",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2023-11-15T01:23:18.975Z",
+  "submitted_at": "2023-11-15T01:23:19.099Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cyberguardianrd",
+    "url": "/cyberguardianrd",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-11-15T10:10:19.471Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-11-15T09:43:55.911Z",
+  "team_member_agreed_on_going_public_at": "2023-11-15T10:10:19.387Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA buffer overflow, also known as a buffer overrun, occurs when a program or process attempts to write more data to a buffer than the buffer is allocated to hold. This can happen if the program does not properly check the length of the data before writing it to the buffer, or if the program allocates too little space for the buffer.\n\n## Steps To Reproduce:\n[add details for how we can reproduce the issue]\n\n1. The hstsread function in the provided code does not properly check the length of the host string before copying it into the e->name buffer. This could lead to a buffer overflow, allowing an attacker to inject arbitrary code into the application.this could exploited by a malicious domain or website whose url should be long enough to overflow buffer as it's using strcpy function \nCondition a malicious preload host is required to exploit this if it's meet government can use it for zero click attack\n\nRecommendation:\n\nThe hstsread function should be modified to check the length of the host string before copying it into the e->name buffer. If the string is too long, the function should return an error code\n\n## Supporting Material/References:\n[list any additional material (e.g. screenshots, logs, etc.)]\n\n  * [attachment / reference]\n\nAffected url:-https://github.com/curl/curl/blob/master/docs/examples/hsts-preload.c\nHere is the vulnerable code if attacker or government manipulate developer to add a very long domain name in  hsts_preload then this will result remote code execution \n\n\n\n#include <stdio.h>\n#include <string.h>\n#include <curl/curl.h>\n\nstruct entry {\n  const char *name;\n  const char *exp;\n};\n\nstatic const struct entry preload_hosts[] = {\n  { \"example.com\", \"20370320 01:02:03\" },\n  { \"curl.se\",     \"20370320 03:02:01\" },\n  { NULL, NULL } /* end of list marker */\n};\n\nstruct state {\n  int index;\n};\n\n/* \"read\" is from the point of the library, it wants data from us. One domain\n   entry per invoke. */\nstatic CURLSTScode hstsread(CURL *easy, struct curl_hstsentry *e,\n                            void *userp)\n{\n  const char *host;\n  const char *expire;\n  struct state *s = (struct state *)userp;\n  (void)easy;\n  host = preload_hosts[s->index].name;\n  expire = preload_hosts[s->index++].exp;\n\n  if(host && (strlen(host) < e->namelen)) {\n    strcpy(e->name, host);\n    e->includeSubDomains = 0;\n    strcpy(e->expire, expire);\n    fprintf(stderr, \"HSTS preload '%s' until '%s'\\n\", host, expire);\n  }\n  else\n    return CURLSTS_DONE;\n  return CURLSTS_OK;\n}\n\nstatic CURLSTScode hstswrite(CURL *easy, struct curl_hstsentry *e,\n                             struct curl_index *i, void *userp)\n{\n  (void)easy;\n  (void)userp; /* we have no custom input */\n  printf(\"[%u/%u] %s %s\\n\", (unsigned int)i->index, (unsigned int)i->total,\n         e->name, e->expire);\n  return CURLSTS_OK;\n}\n\nint main(void)\n{\n  CURL *curl;\n  CURLcode res;\n\n  curl = curl_easy_init();\n  if(curl) {\n    struct state st = {0};\n\n    /* enable HSTS for this handle */\n    curl_easy_setopt(curl, CURLOPT_HSTS_CTRL, (long)CURLHSTS_ENABLE);\n\n    /* function to call at first to populate the cache before the transfer */\n    curl_easy_setopt(curl, CURLOPT_HSTSREADFUNCTION, hstsread);\n    curl_easy_setopt(curl, CURLOPT_HSTSREADDATA, &st);\n\n    /* function to call after transfer to store the new state of the HSTS\n       cache */\n    curl_easy_setopt(curl, CURLOPT_HSTSWRITEFUNCTION, hstswrite);\n    curl_easy_setopt(curl, CURLOPT_HSTSWRITEDATA, NULL);\n\n    /* use the domain with HTTP but due to the preload, it should do the\n       transfer using HTTPS */\n    curl_easy_setopt(curl, CURLOPT_URL, \"http://curl.se\");\n\n    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);\n\n    /* Perform the request, res will get the return code */\n    res = curl_easy_perform(curl);\n    /* Check for errors */\n    if(res != CURLE_OK)\n      fprintf(stderr, \"curl_easy_perform() failed: %s\\n\",\n              curl_easy_strerror(res));\n\n    /* always cleanup */\n    curl_easy_cleanup(curl);\n  }\n  return 0;\n}\n\n## Impact\n\nAn attacker could exploit this vulnerability to inject arbitrary code into the application. This could allow the attacker to take control of the application and perform actions on behalf of the user.",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 21,
+  "voters": [
+    "candy_b",
+    "madware",
+    "cyberguardianrd",
+    "traviano",
+    "bineurale",
+    "lsc1818_sucessfullyesnnn",
+    "ktill",
+    "sirocram",
+    "mdmr42rm",
+    "kush412",
+    "and 11 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

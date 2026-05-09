@@ -1,0 +1,120 @@
+{
+  "id": 1031437,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDMxNDM3",
+  "url": "https://hackerone.com/reports/1031437",
+  "title": "https://██████ vulnerable to CVE-2020-3187 - Unauthenticated arbitrary file deletion in Cisco ASA/FTD",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-11-11T09:18:46.258Z",
+  "submitted_at": "2020-11-11T09:18:46.285Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "themastersunil",
+    "url": "/themastersunil",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/3g8UkpBYZ6kwTzbNBHiVa7Nd/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-3187"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-23T17:58:49.254Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-18T15:25:04.940Z",
+  "team_member_agreed_on_going_public_at": "2020-11-23T17:58:49.154Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi @U.S. Dept Of Defense, I found a host <https://██████> which is running on the web services interface of Cisco ASA/FTD and it is vulnerable to CVE-2020-3187 - Unauthenticated arbitrary file deletion in Cisco ASA/FTD. An attacker could exploit this vulnerability by sending a crafted HTTP request containing directory traversal character sequences. An exploit could allow the attacker to view or delete arbitrary files on the targeted system. When the device is reloaded after the exploitation of this vulnerability, any files that were deleted are restored. The attacker can only view and delete files within the web services file system.\n\n**Proof of Concept:**\n\nNow we know that in CVE-2020-3187 - Unauthenticated arbitrary file deletion in Cisco ASA/FTD. This allow the attacker to view or delete arbitrary files on the targeted system\nIn this we can delete the files. For example the logo file present on the server at <https://████████/+CSCOU+/csco_logo.gif> can be deleted by the following steps.\n\nThis can be done by sending a curl request as : curl -H \"Cookie: token=../+CSCOU+/csco_logo.gif\" <https://███/+CSCOE+/session_password.html>\n\n 1. To delete this just hit the following command on your terminals.\n     `curl -H “Cookie: token=../+CSCOU+/csco_logo.gif” https://█████████/+CSCOE+/session_password.html`\n\n     If that did not work because sometimes logo.gif/png has permission issues so try this <https://█████/+CSCOE+/blank.html>\n\n 2. You can also delete the file \"`/+CSCOE+/blank.html`\" (an empty HTML file), as it might be a problem with the permission of the custom logo file sometimes logo.gif has permission issue so we might not be able to delete but we can delete other files\n\nWarning : This can lead to a denial of service (DOS) on the VPN by deleting the lua source code files from the file system, which will break the WebVPN interface until the device is rebooted.\n\nNow i haven't deleted the logo file because i didn't wanted to cause any damage so i used another method which can help us confirming that target is vulnerable to this without causing damage and for that just check if `/+CSCOE+/session_password.html` endpoint exists, and it gives \"200 OK\" status, then it should be vulnerable because this affected endpoint has been removed from the patched versions.\n\nI sent a curl request to check and it gave 200 ok as shown below:\n`/+CSCOE+/session_password.html -> 200 = Vulnerable`\n`/+CSCOE+/session_password.html -> 404 = Patched`\n\n**Mitigation/Remediation Actions:**\n\nUpgrade the ASA software version per the referenced advisory. This advisory is available at the following link:\n<https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-asaftd-path-JE3azWw43>\n\n**Reference:**\n\n<https://twitter.com/aboul3la/status/1286809567989575685>\n<https://medium.com/@parasarora06/hunting-for-cve-2020-3187-2020-3452-9f0dcc66f4d8>\n<https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-asaftd-path-JE3azWw43>\n<http://packetstormsecurity.com/files/158648/Cisco-Adaptive-Security-Appliance-Software-9.7-Arbitrary-File-Deletion.html>\n\n## Impact\n\nHigh - This vulnerability allows the attacker to delete files within the web services file system.",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "wargsec",
+    "0xelkomy",
+    "themastersunil",
+    "dastan_9408",
+    "t3chn0phil3",
+    "h1-qualys-scan",
+    "subish88",
+    "seven_corps",
+    "cryptoblade",
+    "farmerted",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

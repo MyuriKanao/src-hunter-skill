@@ -1,0 +1,143 @@
+{
+  "id": 1436142,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDM2MTQy",
+  "url": "https://hackerone.com/reports/1436142",
+  "title": "New XSS vector in ReaderMode with %READER-TITLE-NONCE%",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-12-26T06:59:17.564Z",
+  "submitted_at": "2021-12-26T06:59:17.690Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nishimunea",
+    "url": "/nishimunea",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/JR7WgikKhgk1DcwtUvQfmtpu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15688,
+    "url": "https://hackerone.com/brave",
+    "handle": "brave",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Brave Software",
+      "twitter_handle": "brave",
+      "website": "https://brave.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-06-22T05:51:33.965Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-06-22T05:51:33.893Z",
+  "team_member_agreed_on_going_public_at": "2023-06-22T05:42:48.967Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nPreviously, script execution in ReaderMode pages was prohibited by CSP. However, three months ago, [this commit](https://github.com/brave/brave-ios/pull/4209/files#diff-eaeef15a290e9e5e9bcaae784f18d874f8c932dfa3de416a5820eccd6b2d8cfbR54) partially relaxed the CSP and scripts with `nonce-%READER-TITLE-NONCE%` are now allowed to be executed. This relaxation of the CSP rule can be exploited for XSS attacks on ReaderMode pages.\n\nHere, the attack vector is `%READER-CREDITS%` which is also [included in the ReaderMode HTML template](https://github.com/brave/brave-ios/blob/6f667506228eeff77daf4df7c9dddae22eb0ad1b/Client/Frontend/Reader/Reader.html#L18). The `%READER-CREDITS%` is replaced with the value of the `<meta name=\"author\">` tag in the original page, but then the HTML tags are not escaped. So, when the following meta tag is embedded in the original page and the page is displayed in ReaderMode, [this Swift code](https://github.com/brave/brave-ios/blob/6f667506228eeff77daf4df7c9dddae22eb0ad1b/Client/Frontend/Reader/ReaderModeUtils.swift#L30)  replaces `%READER-TITLE-NONCE%` with the correct nonce value.\n```\n<meta name=\"author\" content=\"Evil &lt;script nonce=%READER-TITLE-NONCE%&gt;alert(document.location);&lt;/script&gt;!--\">\n```\n\nAs a result, the malicious script will be executed on a page `http://localhost:6571/reader-mode?uri={uri}&uuidkey={value}`.\nIn Brave, all readalized pages are hosted on `http://localhost:6571`. Therefore, through this XSS, any cross-origin pages, that has been converted to ReaderMode, can be stolen by embedding an iframe and reading out them. Also, please find that the `uuidkey` is included in the URL query string. By obtaining this key, the attacker can gain access to Brave's privileged pages.\n\n## Products affected: \n\n * Brave iOS 1.31.1 and higher (including the latest Nightly)\n\n## Steps To Reproduce:\n\n * Show https://csrf.jp/2021/brave/author_xss.php\n * Push reader mode button on the address bar\n * An alert dialog is shown\n\n## Supporting Material/References:\n\n * See the screenshot of the alert dialog when the bug is reproduced.\n\n## Impact\n\n* Any cross-origin pages, that has been converted to ReaderMode, can be stolen\n* Attacker can gain access to Brave's privileged pages",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1559218,
+      "file_name": "screenshot_alert_dialog_on_reader_view.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/8jlif8jjvbe7x3cijd4z902nok9z?response-content-disposition=attachment%3B%20filename%3D%22screenshot_alert_dialog_on_reader_view.png%22%3B%20filename%2A%3DUTF-8%27%27screenshot_alert_dialog_on_reader_view.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150709Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5e1dc586e39d01d8ba3199fd22506c4aeac0f599387a0673059c7c358e0a0f84",
+      "file_size": 216433,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 72,
+  "voters": [
+    "abdelrhmanuzaki",
+    "rogue_1",
+    "neeythann",
+    "zy9ard3",
+    "shreyaschavhan",
+    "ritsuy",
+    "address_below0",
+    "thalaivar304",
+    "h4x0r_dz",
+    "f_m",
+    "and 62 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 16463,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/brave/brave-ios",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

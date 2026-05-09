@@ -1,0 +1,160 @@
+{
+  "id": 1350653,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzUwNjUz",
+  "url": "https://hackerone.com/reports/1350653",
+  "title": "Remote kernel heap overflow",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-09-24T18:00:21.125Z",
+  "submitted_at": "2021-09-24T18:00:21.219Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "m00nbsd",
+    "url": "/m00nbsd",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [
+    "CVE-2022-29867"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-05-11T18:09:35.428Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-01-15T09:32:40.131Z",
+  "team_member_agreed_on_going_public_at": "2022-05-11T18:09:35.299Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 85,
+  "voters": [
+    "alganad",
+    "superpan",
+    "mirchr",
+    "acedone",
+    "n1m0",
+    "similardisaster",
+    "palaziv",
+    "mrhavit",
+    "thruster",
+    "zy9ard3",
+    "and 75 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.4,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 40736,
+    "asset_type": "HARDWARE",
+    "asset_identifier": "PlayStation 4",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 151208,
+      "category": "team",
+      "content": "# Summary\n\nThe PlayStation has a kernel PPPoE driver, that originates from NetBSD. This driver has a kernel heap overflow vulnerability, that an attacker can remotely trigger over the LAN, with the ability to control both the contents that are overflown and their sizes.\n\n# Technical Details\n\n## PPPoE Protocol\n\nIn short, the PlayStation (PS) will:\n\n 1. Send a PADI packet.\n 2. Expect to receive a PADO packet.\n 3. Send a PADR packet.\n 4. Expect to receive a PADS packet.\n\n## The Vulnerability\n\nI determined that the PS' PPPoE driver originates from NetBSD. In that PPPoE driver, there is a vulnerability in the way PADR packets are allocated:\n\n```c\nstatic int\npppoe_send_padr(struct pppoe_softc *sc)\n{\n\t[...]\n\n\t/* Compute packet length. */\n\tlen = sizeof(struct pppoetag);\n\tif (sc->sc_service_name != NULL) {\n\t\tl1 = strlen(sc->sc_service_name);\n\t\tlen += l1;\n\t}\n\tif (sc->sc_ac_cookie_len > 0) {\n\t\tlen += sizeof(struct pppoetag) + sc->sc_ac_cookie_len;\n\t}\n\tif (sc->sc_relay_sid_len > 0) {\n\t\tlen += sizeof(struct pppoetag) + sc->sc_relay_sid_len;\n\t}\n\tlen += sizeof(struct pppoetag) + sizeof(sc->sc_id);\n\tif (sc->sc_sppp.pp_if.if_mtu > PPPOE_MAXMTU) {\n\t\tlen += sizeof(struct pppoetag) + 2;\n\t}\n\n\t/* Allocate packet. */\n\tm0 = pppoe_get_mbuf(len + PPPOE_HEADERLEN);\n\tif (m0 == NULL)\n\t\treturn ENOBUFS;\n\n\t/* Fill in packet. */\n\t[...]\n}\n\nstatic struct mbuf *\npppoe_get_mbuf(size_t len)\n{\n\tstruct mbuf *m;\n\n\tMGETHDR(m, M_DONTWAIT, MT_DATA);\n\tif (m == NULL)\n\t\treturn NULL;\n\tif (len + sizeof(struct ether_header) > MHLEN) {\n\t\tMCLGET(m, M_DONTWAIT);\n\t\tif ((m->m_flags & M_EXT) == 0) {\n\t\t\tm_free(m);\n\t\t\treturn NULL;\n\t\t}\n\t}\n\tm->m_data += sizeof(struct ether_header);\n\tm->m_len = len;\n\tm->m_pkthdr.len = len;\n\tm_reset_rcvif(m);\n\n\treturn m;\n}\n```\n\nThe flow is:\n\n - `pppoe_send_padr()`:\n   - It wants to send a PADR packet.\n   - It computes the packet length, and calls `pppoe_get_mbuf()`.\n - `pppoe_get_mbuf()`:\n   - If the length is larger than `MHLEN`, it allocates an mbuf cluster, of size `MCLBYTES`=2048.\n   - It returns that mbuf cluster.\n - `pppoe_send_padr()`:\n   - It fills in the mbuf cluster.\n\nThe vulnerability here is that the packet length could actually be bigger than `MCLBYTES`, in which case the filling of the packet will overflow the mbuf cluster.\n\n## Constraints\n\nTo have a length that is larger than `MCLBYTES`, the `sc_ac_cookie_len` and `sc_relay_sid_len` values need to be large enough.\n\nBoth of these values are actually extracted from PADO packets that the PS previously received: they are the lengths of the `ACCOOKIE` and `RELAYSID` tags that were embedded in the PADO packets. The attacker can control these lengths.\n\nThere is a constraint on the MTU: given that the PS' maximum MTU is 1500, the attacker cannot directly send just one PADO packet with sizes larger than `MCLBYTES`. To work around that constraint, the attacker just has to send two PADO packets, one with a big `ACCOOKIE` tag, and another with a big `RELAYSID` tag. After the second packet, the PS will send a PADR packet combining both big tags, which will overflow the mbuf cluster with the contents of the second tag.\n\n## Attack Scenario\n\n 1. The PS sends a PADI.\n 2. The attacker sends a PADO, with a `ACCOOKIE` tag whose size is 1400 bytes.\n 3. The PS sends a PADR. This one is fine, there is no overflow here.\n 4. The PS waits for a PADS packet.\n 5. The PS times out, and resends a PADI.\n 6. The attacker sends a PADO, with a `RELAYSID` tag whose size is 1400 bytes.\n 7. The PS Sends a PADR. The overflow occurs here: the PS tries to embed the two tags (1400x2=2800 bytes) into a 2048-byte mbuf cluster.\n\n## Setup / PoC / Discussion\n\n - Enable PPPoE on the PS:\n   - `Settings` -> `Network` -> `Set Up Internet Connection` -> `Use a LAN Cable` -> `Custom`\n   - IP Address Settings: `PPPoE`\n   - Enter whatever in the two User/Password fields, click `Next`\n   - DNS Settings: `Automatic`\n   - MTU Settings: set `1500`\n   - Proxy Server: `Do Not Use`\n - Connect a Linux laptop to the PS with an Ethernet cable.\n - On the Linux laptop:\n   - `cc -o poc poc.c -Wall`\n   - `sudo ifconfig eth0 mtu 8000`\n   - `sudo ./poc eth0`\n - On the PS: click `Test Internet Connection`. This will initiate the PPPoE connection.\n\nTo see what happens:\n\n - Open WireShark on the Linux laptop, and look at the packets that are being exchanged with the PS. You can see that the PS sends 2844-byte PADR packets.\n - Actual exploitation/introspection will require a debugger, which I do not have. :'(\n - ███████\n\n## Impact\n\nPossible RCE. I did my tests only on a friend's PS4, but I suspect that the PS5 is affected as well.\n",
+      "updated_at": "2022-05-11T18:09:29.946Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 808144,
+        "username": "sazerac",
+        "name": "",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-11-04T18:47:31.464Z",
+        "url": "https://hackerone.com/sazerac",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/gQTXoDMPk8o4ishytS5YrFDz/20fc426031f09e5347054871ae4e3af2478fd2b3d5e8a321468ecf6f2da5ac20",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/gQTXoDMPk8o4ishytS5YrFDz/2b223a072c4b1b7ace4bb8e4a654ece8bf9e85dd759228c02857631ab0893a4b",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/gQTXoDMPk8o4ishytS5YrFDz/c03c144aff954b5f0f23d3bd8c235102a72528777fe4cb0d26990b4ccaa02fdc"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

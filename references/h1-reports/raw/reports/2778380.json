@@ -1,0 +1,118 @@
+{
+  "id": 2778380,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNzc4Mzgw",
+  "url": "https://hackerone.com/reports/2778380",
+  "title": "Unauthenticated LFI (Local File Inclusion) using the symbol `!` At the target `https://████/`",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-10-12T04:22:23.689Z",
+  "submitted_at": "2024-10-12T04:22:23.795Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "todayisnew-",
+    "url": "/todayisnew-",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8u81k05jovwoksdumbpfapimnmsj/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-10-25T16:03:24.555Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-10-17T19:14:24.615Z",
+  "team_member_agreed_on_going_public_at": "2024-10-25T16:03:24.415Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi `DOD` Team,\n\n# Summary:\n\n* When accessing the endpoint on https://██████████/jolokia/exec/com.sun.management:type=DiagnosticCommand/compilerDirectivesAdd/ it is possible to path traversal on the machine and reading local files by using `!` at every new directory injected allowing an attacker to read local files with even being Unauthenticated leads to a catastrophic impact on the main server.\n\n# Steps to reproduce:\n\n**1. Read the listed users on the instance ---> `/etc/passwd`:**\n\n* https://███/jolokia/exec/com.sun.management:type=DiagnosticCommand/compilerDirectivesAdd/!/etc!/passwd\n\n**2. Read Crontab jobs on the instance ---> `/etc/crontab`:**\n\n* https://████/jolokia/exec/com.sun.management:type=DiagnosticCommand/compilerDirectivesAdd/!/etc!/crontab\n\n\n# PoC Video:\n\n* ████\n\n\n# Mitigation/Fix:\n\n* Sanitize user input and don't trust user inputs that come for your server in a `GET` method after the endpoint `/compilerDirectivesAdd/{Attackers_Coming_From_Here_To_Read_Local_Files}`, it would be better to maintain a whitelist of acceptable filenames and use a unique corresponding identifier to access the file. Then any request containing an invalid identifier can just be rejected. Additionally, you could also sanitize any path traversal characters that may be present in any `GET` request.\n\n## Impact\n\nAn attacker could read local files on the web server that they would normally not have access to, such as the application source code or configuration files containing sensitive information on how the website is configured, etc...\n\nBest Regards,\nYoussef\n",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 69,
+  "voters": [
+    "orange303",
+    "tinmo",
+    "todayisnew-",
+    "zxwo",
+    "thalaivar304",
+    "hajjaj0x",
+    "hprince",
+    "ahmed_xyz",
+    "jmo740",
+    "ayux",
+    "and 59 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

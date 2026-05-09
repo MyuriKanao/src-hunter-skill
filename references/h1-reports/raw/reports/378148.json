@@ -1,0 +1,120 @@
+{
+  "id": 378148,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNzgxNDg=",
+  "url": "https://hackerone.com/reports/378148",
+  "title": "Vulnerability in project import leads to arbitrary command execution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-07-06T12:23:45.888Z",
+  "submitted_at": "2018-07-06T12:23:45.888Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "saltyyolk",
+    "url": "/saltyyolk",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/252/596/b03010470e2928f744f71fb5c1685806f1878341_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-08-22T09:56:02.386Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-08-19T15:29:36.471Z",
+  "team_member_agreed_on_going_public_at": "2018-08-22T09:56:02.034Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nA filename regular expression could be bypassed and enable the attacker to create a symbolic link in Gitlab upload directory by importing a specially crafted Gitlab export. Further more, Gitlab is designed to not delete project upload directory currently. So, the attacker could delete the imported project and then upload another specially crafted Gitlab export to a project with the same name, which leads to path traversal/arbitrary file upload and finally enables the attacker to be able to get a shell with the permission of the system gitlab user.\n\n**Description:**\n1. how to create a symbolic link in the upload directory\ncode in `file_importer.rb` uses `%r{.*/\\.{1,2}$}` to except `.` and `..` in the extracted project import directory tree, and check everything else that does not match this regex and delete all symlinks. However, we can easily construct a symlink with the name `.\\nevil` in the tarball that matches this regex perfectly. Therefore, it will not be removed by function `remove_symlinks!` in the same file, and finally uploaded to `/var/opt/gitlab/gitlab-rails/uploads/nyangawa/myrepo/.\\nevil -> /var/opt/gitlab` (assume we import the project to `nyangawa/myrepo` and the symlink points to `/var/opt/gitlab`)\n\n2. how to use the uploaded symbolic link to get shell access\nFirst delete the `nyangawa/myrepo` project we just created. For some reasons the upload directory of this project does not get purged. Then we import another tarball which has, for example, `uploads/.\\neviil/.ssh/authorized_keys` in it. And the content of this file is my ssh public key. Then import this tarball to create project `nyangawa/myrepo` again.\n\n3. after all\nthe uploaded `authorized_keys` is copied to `/var/opt/gitlab/gitlab-rails/uploads/nyangawa/myrepo/.\\nevil/.ssh/authorized_keys` of the victim's filesystem but unfortunately, this path redirects to `/var/opt/gitlab/.ssh/authorized_keys`. Then I can login to the victim server by ssh with Gitlab's system username.\n\n\nFor step 2 and 3, there're some other approaches to get command executed since we can already upload any file to the victim's file system controlled by Gitlab.\n\n\n## Steps To Reproduce:\n\nAs I stated in description. I can upload the 2 PoC tarballs if you ask.\n\n## Impact\n\n1. An attacker can upload arbitrary file to the victim's file system\n1. Data of other users could be override\n1. An attacker can get a system shell by overwrite specific files.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-09-18T15:29:36.596Z",
+  "allow_singular_disclosure_after": -241055652.1148286,
+  "singular_disclosure_allowed": true,
+  "vote_count": 32,
+  "voters": [
+    "irvinlim",
+    "n1m0",
+    "cdl",
+    "ramsexy",
+    "base_64",
+    "bull",
+    "orange",
+    "jobert",
+    "ali",
+    "bl4de",
+    "and 22 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

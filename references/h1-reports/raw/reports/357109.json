@@ -1,0 +1,160 @@
+{
+  "id": 357109,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTcxMDk=",
+  "url": "https://hackerone.com/reports/357109",
+  "title": "[simplehttpserver] List any file in the folder by using path traversal.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-05-24T17:10:48.144Z",
+  "submitted_at": "2018-05-24T17:10:48.144Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "n0n4me",
+    "url": "/n0n4me",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/144/764/a3bb052bcdd3066df57629dca299648b74664b41_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3787"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-08-30T04:39:27.163Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-08-30T04:39:26.972Z",
+  "team_member_agreed_on_going_public_at": "2018-08-29T09:33:59.419Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report Path Traversal in simplehttpserver. It allows to list any file in another folder of web root.\n\n# Module\n\n**module name:** simplehttpserver\n**version:** 0.1.1\n**npm page:** `https://www.npmjs.com/package/simplehttpserver`\n\n## Module Description\n\n'simpehttpserver' is an simple imitation of python's SimpleHTTPServer and is intended for testing, development and debugging purposes\n\n## Module Stats\n\n[444] downloads in the last week\n\n# Vulnerability\n\n## Vulnerability Description\n\nsimpehttpserver is simply get the path name of url and add it to the web root. it means if you input ../, it will happy add it to web root and you can list the folder you choose. But the trick is web browser or curl are also to try rebuild the url containing ../. I used the burp to make a raw url and send it to server.\n\n## Steps To Reproduce:\n\ninstall `simplehttpserver`\n`$ npm install simplehttpserver -g`\n\nstart program\n`$ simplehttpserver ./`\n\nstart burpsuite and enter the url contain ../. you should see the files in the folder.\n{F301226}\n\n## Patch\n\nfilter .. in the path name.\n\n## Supporting Material/References:\n\nConfiguration I've used to find this vulnerability:\n\n- kali linux 4.15.0\n- nodejs v8.11.2\n- npm 6.1.0\n- Burpsuite community\n\n# Wrap up\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nThis vulnerability allows malicious user to list file in the folder. This might expose vectors to attack system with Remote Code Execution, reveals files with usernames and passwords and many other possibilites.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 301226,
+      "file_name": "1._POC_simplehttpserver.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/301/226/9181d7ba9afda13cd6c92603e513ddfb2718f249/1._POC_simplehttpserver.png?response-content-disposition=attachment%3B%20filename%3D%221._POC_simplehttpserver.png%22%3B%20filename%2A%3DUTF-8%27%271._POC_simplehttpserver.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ47IOYM63%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152343Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDt2pA4ORu3j0CnLrZYnzP7XaKVG5cS2f1fRngACU%2BRxwIhAJl%2B7iyrsT%2FdqYckJm%2Bhwl1NQsxE1ueuI6aZrMAGNEVLKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzHCvj93uC1lWI8jxEqjgXcaT8fA1L7puv03BEbg7O%2FavEjl5VCXCy1JMvsOut%2FATGv02GosQIBWE2YIkJKviW5mg1kja1MqinC1hQ%2F7vXE%2Fjds67JmvLr3ZK8L0jidDBdciEgxht%2Bj7tC5Z6zRSwQxn0mgPH%2BqPNEPtGXc22tmX75lDDll2NPZLkLYaWMTj160Czo3NrAp0%2Fa5rGUWcEy8baUsZt3M0IKccDlq1vt8TrdWsE7i%2B1NcOd3UzU%2BZlUXrUOZQ3Zwz9HTNfYnMSt%2FntJQI42E5g%2BwGGzIb1rElIWUCER7r6x%2BoLu5jkSCXyF2O%2B0TwF223DavlygkX0%2FqR9X5z%2FayyB5MWdk%2FCAtvA8xxvglEvbBQj49rZmF5Pi8wgIm3vuJWM7y%2FxzIKURdCBpXTswKNGbyQOqbw5oS0GLGsXdh8kd9hB0t45msp7laAMVZvqC0juMNMZJGyS3uAcJSfhcI%2BEpihuYegvnXTznkATcGgWY7VXkI2y0Lpw%2B93nHN%2FlHf4zL8PP9HHFUbqi9uiph7w851lZObeobq1d5Lprz5ek1K%2B0iwIpa1QOo%2Blj1PDIqBDT%2F%2FbAHv6DdjaOqiuh2FyM%2B9cn6DrtPT6oxPxcBYJqqw%2BcMdHKf3ievZghquEx1RuSxPgt8b4wkGVrsl3OeZo%2BtRYC4pPa2WqH0T9YOsyA3NSgB0GfmwSWJPtTyc8MY00GJSTesBDzI4IzsEfkTUQH4yOnp8P7nPnlKUpBXQJCyFkEljbujArgtsp2QqSEv%2FdoEQ9lG5XJ5SRAO5DOEAgnlXKUUS00%2BVDZynj8QxF289AAlDmygKWaLmu2KYjHnA%2F8duyKoGHUF5i%2FxGyDnKqDBPSGsAv%2FUxGl6rlTNPt53H7z6NPKAV4wiur8zwY6sAHVoAM%2FsIovelBN3G6gVkybeN69BViaGwJEmuQWnwEWOp3XLL3k%2FbJ3GZ%2FWBYzwxHRLW3Rnhs6LHF%2FRLrXacPt8vRHFfJZHJlJQjccTZrfwOm0w%2Falri2nQaPMkEWsStlHrCspb8v0pIsD8CK2x5GisZz%2BUzx7Bye0X4%2BPuoU3OySBJ4qQEHZ9aMOtl%2FwgsJPLZ48DTccfQN2ytGIUk9xHJnooEFJNHqn2ayiSJGguFZQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=64ddc47f346ba79cbba5631364c50fcba5c99342e07386e7f899bd17236a32c8",
+      "file_size": 220224,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-09-28T09:33:59.574Z",
+  "allow_singular_disclosure_after": -240212984.1339102,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "jokebookservice1",
+    "lightangel1412",
+    "sameerphad72",
+    "bl4de",
+    "apapedulimu",
+    "eveeez",
+    "cryptographer",
+    "jamesjack124",
+    "olumakoo",
+    "reaper_1212",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 5780,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "simplehttpserver",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 10057,
+      "category": "team",
+      "content": "Vulnerability was reported and the package maintainer fixed the issue.",
+      "updated_at": "2018-08-29T10:04:59.663Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 303678,
+        "username": "e_lexy",
+        "name": "Alex Knol",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2018-07-05T17:24:33.527Z",
+        "url": "https://hackerone.com/e_lexy",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

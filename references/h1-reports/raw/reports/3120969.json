@@ -1,0 +1,123 @@
+{
+  "id": 3120969,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTIwOTY5",
+  "url": "https://hackerone.com/reports/3120969",
+  "title": "[High] MITM via Insecure CA Path Handling in cURL (--capath, CURLOPT_CAPATH) (CWE-494: Download of Code Without Integrity Check)",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-05-01T05:57:31.566Z",
+  "submitted_at": "2025-05-01T05:57:31.765Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "oicus",
+    "url": "/oicus",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2022-32221"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-30T18:55:20.079Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-06-28T12:24:13.714Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe --capath option in cURL and CURLOPT_CAPATH in libcurl accept any directory path without validation. If an attacker provides a custom CA path containing a fake root certificate, cURL will trust malicious HTTPS endpoints signed with that fake root. This allows for full Man-in-the-Middle (MITM) attacks and silent decryption of HTTPS traffic without user warnings.\n\n## Affected version\nAffected Asset:\n\nComponent: cURL CLI and libcurl\nVersions: 7.82.0 to 8.4.0\nPlatform: All OS (Linux, macOS, Windows)\n\n\n## Steps To Reproduce:\nWorks across OS, no user interaction required, and reproducible without root.\n1.Create Fake Root CA:\n openssl req -x509 -newkey rsa:2048 -nodes \\\n  -keyout fake.key -out fake.crt \\\n  -subj \"/CN=FakeMITMRoot\" -days 365\n\n2.Prepare a directory:\nmkdir -p /tmp/fake-ca\ncp fake.crt /tmp/fake-ca\n\n3.Run vulnerable cURL command:\ncurl --capath /tmp/fake-ca https://example.com\n\n4.If the server’s TLS certificate was signed by this fake CA, cURL connects successfully and exposes decrypted HTTPS data.\nEnvironment Tested:\n\ncurl 7.85.0 (x86_64-pc-linux-gnu) libcurl/7.85.0 OpenSSL/3.0.2\n\n## Supporting Material/References:\nReferences:\n\nCWE-494: https://cwe.mitre.org/data/definitions/494.html\nSimilar CVE: CVE-2022-32221\ncURL Docs: https://curl.se/docs/manpage.html\n\nRecommendation:\n\nAdd a whitelist or allowlist of trusted CA directories (e.g., /etc/ssl/certs/, /usr/share/ca-certificates/).\nWarn users if non-standard --capath is used.\nConsider validating contents with signed manifests or checksum hashes.\n\nDisclosure Policy:\n\nPoC and full exploit details available upon request.\nI adhere to a 90-day responsible disclosure timeline.\n\n## Impact\n\n| Vector               | Risk Description                                                                 |\n\n| MITM & Decryption    | Attacker silently decrypts HTTPS (credentials, tokens, sessions).                |\n| Silent Exploitation  | No TLS warning shown, making the attack stealthy.                                |\n| Cross-Platform Abuse | Affects Linux, Windows, macOS, containers, and CI/CD tools using `libcurl`.      |\n| Supply Chain Attack  | Tools and apps that dynamically set `CURLOPT_CAPATH` can be abused automatically.|",
+  "weakness": {
+    "id": 133,
+    "name": "Reliance on Untrusted Inputs in a Security Decision"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 9,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "imokenpi",
+    "ryel",
+    "wszhhx",
+    "bilalhacker302",
+    "0xagent0",
+    "dansoappiah",
+    "ng7"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

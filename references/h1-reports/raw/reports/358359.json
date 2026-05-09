@@ -1,0 +1,121 @@
+{
+  "id": 358359,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTgzNTk=",
+  "url": "https://hackerone.com/reports/358359",
+  "title": "Privilage escalation with malicious .npmrc",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2018-05-28T16:58:49.235Z",
+  "submitted_at": "2018-05-28T16:58:49.235Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ginden",
+    "url": "/ginden",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-06-30T14:34:57.891Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-06-30T14:34:57.785Z",
+  "team_member_agreed_on_going_public_at": "2018-06-16T13:59:19.103Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello.\n\nI'm forwarding to you my conversation with npm staff regarding security issue. It allows to escalate to root privilages of victim using either:\n\na) basic social engineering - convincing victim to run npm in attacker-controlled folder (eg. repository), including such innocent ones like \"npm help\" or \"npm whoami\"  \nb) low-privilage process with access to writing files  \n\nI believe that impact of this bug can be high, if someone is able to hijack well-positioned tutorial.\n\nMichał Wadas  \n\n  \n\n---------- Forwarded message ----------  \n\n\n**Jon Lamendola** (npm)\n\nMay 22, 12:19 PDT\n\nHello Michal,\n\nWe're reviewing the impact of changing this behavior and still discussing internally how we might move forward. We understand that it's a risk, but it is also a feature that people use, so we need to fully understand the consequences of making major changes to it before we do. Unfortunately, this can take some time to analyze.\n\nIn the meantime, you can alias npm to something like npm --onload-script=\"\" \"$@\" for a temporary workaround.\n\nThanks again for reporting this to us.\n\n**Michał Wadas**\n\nMay 21, 07:05 PDT\n\nHi.\n\nIs there any update on this?\n\n**Michał Wadas**\n\nApr 26, 16:32 PDT\n\nJust noticed - if attacker can control .npmrc (either by writing it from low-privilage script or tricking user into using sudo npm in infected folder), he can set user flag in .npmrc too.\n\n**Jon Lamendola** (npm)\n\nApr 26, 11:36 PDT\n\nHello Michal,\n\nThanks for reporting this to us. I agree, this is a legitimate concern, and I will pass this on to the npm CLI team for discussion.\n\n**Michał Wadas**\n\nApr 26, 09:54 PDT\n\nSource of issue:\n\n* onload-script is run with privilages of user running npm, in npm process.  \n* User can be unaware of .npmrc behaviour\n\nI have pin-pointed it to line 236 in lib/npm.js file in master tree.\nAttack scenario:\n\n* Attacker tricks victim into running \"sudo npm\" in folder (or descendant of folder) with malicious .npmrc\n** This can be achieved in many ways - eg. by writing to $HOME/.npmrc from low-privilaged application or tricking victim to open infected directory  \n** Example: tutorial asks user to clone git repository, configure it and then run \"sudo npm i -g eslint\"  \n** Example 2: attacker publish malicious code to npm. Code writes to $HOME/.npmrc. Then, attacker can just wait for anyone running sudo npm.\n* Then npm runs arbitrary Node.js script with arbitrary permissions\n\nProposed actions:\n\n* Ignore onload-script when run as super user  \n* Ask for confirmation before running onload-script  \n* Run onload-script in separate process with lower privilages (it's already supported for other scripts in npm - [https://docs.npmjs.com/misc/<wbr>scripts#user</wbr>](https://docs.npmjs.com/misc/scripts#user) )\n\nThese actions should limit scope of attack.\n\nQuick survey in group of Polish programmer showed that around ~30% of npm users use sudo npm\n\nAll versions of npm between 3.10 and 6.0 are confirmed to be vulnerable.\n\nThanks for your attention,  \nMichał Wadas\n\n## Impact\n\nAttacker can reliably run arbitrary code with user privilages if he is able to write to .npmrc.\n\nIf user use \"sudo npm\" in folder with malicious .npmrc, attacker can run arbitrary code with root privilages.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 3,
+  "voters": [
+    "apapedulimu",
+    "wragg-s",
+    "0x08"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

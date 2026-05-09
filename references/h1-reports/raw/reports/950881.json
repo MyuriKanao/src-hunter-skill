@@ -1,0 +1,129 @@
+{
+  "id": 950881,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85NTA4ODE=",
+  "url": "https://hackerone.com/reports/950881",
+  "title": "IDOR when editing email leads to Account Takeover on Atavist",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-08-04T14:08:41.810Z",
+  "submitted_at": "2020-08-04T14:08:42.754Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bugra",
+    "url": "/bugra",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/343/105/470c1fd0c4915f1fa9e9376053d0c1ba8af260b7_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 111,
+    "url": "https://hackerone.com/automattic",
+    "handle": "automattic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Automattic",
+      "twitter_handle": "",
+      "website": "https://automattic.com",
+      "about": "WordPress.com, WooCommerce, WordPress VIP, Jetpack, Beeper, Texts, Akismet, Gravatar, Crowdsignal, Tumblr and more!"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-18T14:21:14.912Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-18T02:57:40.032Z",
+  "team_member_agreed_on_going_public_at": "2020-11-18T14:21:14.806Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nHi team,\nI created an account on Atavist and checked my settings page.\nI can change my email at https://magazine.atavist.com/cms/reader/account with this request :\n\n{F936117}\n\nAnd as you can see, there is a `id` parameter on request data. It's our user ID, and it's vulnerable for IDOR. So we can change any user's email address.\n\nAlso user IDs are sequential so an attacker can change all accounts' email.\n\n## Steps To Reproduce:\n\n  1.Go to https://magazine.atavist.com/login and Login to your account\n  1. Go to https://magazine.atavist.com/cms/reader/account and open your proxy program \n  1. Change the email and click `Save`\n  1. In request, change the ID to your test account's ID\n  1. Forward the request\n  1. Now you can reset victim's password via https://magazine.atavist.com/forgot\n\n## Impact\n\nAccount Takeover without user interaction\n\nThanks,\nBugra",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 936117,
+      "file_name": "request.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/LJpbxiVQA22NkYCc7LH7cJ8e?response-content-disposition=attachment%3B%20filename%3D%22request.PNG%22%3B%20filename%2A%3DUTF-8%27%27request.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSGAEI4RK%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151653Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQCSD%2FPjPDVe1eeNkPPAD%2Bk0DdPa3c110Hf5n5NLkL28uAIhAOvetlU3QlhnR7TdyJ9RS5Jr8LBzpFA%2FuRFoLa3tPP1hKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzZUaY6gDTyaLxuf3MqjwWEoQ7vpUAzBTpX4KMmwMKarHDJZGfuEh8vIN86CHR4RAyMCB8CvNQwPdX95bpZFxfVn4Hin6ko4E4zMNrBlofPZ4J8vHkxkUnzFqMkNQLVMOMomFdWGoBswDyqoLkU3KNWbjh37k2C2nMzaJQh9pBqfidoKzH3hoapalZg8O3vWQ8rc1w7jaIaagTNR5stpgdsXT6xcefocikcPPnxS8uf2Or7jdqWRdPtbO4ioSoQ5ezUBCTb4t8DiEJhFmM%2BHH%2F0OUNxymiCWvR67lK3TNE7WE%2FeHP9G%2FIL5Qu2z8jK1hUvWU9f8YtjdtCaQuNm4tU7aQOrwD6TCOvYBGlMgznBreHVV5nqbetejZJEuX2OJ09X3MTU6nf04wDzD2qO6RYeWAZnmjidFdHtc3JwvbrjXdMoF5K1dTQpbOFW3ghWFd%2B8hscmVXBsbEHelxj1uHUaHAw2rCB4f9lC0trvqnM9JCAyJPstgf4RjY1T6Rc%2BFvSsrrJln3o80qoZLgTusUV%2F%2BWx8w4zlFu5Y%2Bn8SekqRUm1OqEffi525YSjmfQaLybOKm01K0R%2FpKI513q9eqq8tH1cwWH29UCWjbPxI%2F7hJA55Nz6DeAxplorcFc%2FzIiVhczo%2Bibkg880uPKNmhvey3nsA3kxXHvwW6cwbecEcXPjDIBOSz9MbReIkTNH9AD9zDefJSEhL1BRNtVrIerKPZLur%2B9Yj90xinBNa3woyyuiFsEHvl7jijqsOy9%2FNj4gxecl%2FJghoHZ5HBmWrMmXC5Yek0CA7u3n4dO1mby8CdBzTFEYv1E9jzjgBE5fxk%2BLAENQJSw1RSpz5BW3d1eL4lG5UcGGCpElYt5%2F4o0ztwvMW21evbq%2Bh0TtJkznOEWMM6U%2Fc8GOrABK3l928F6wdaGUie7N8id3oDy9xPpGu2dY7RMZlB%2FEu67joF2b536zeIT3pXYb%2FNRxOOOdLoaNTvOSrHOQMJ2fkvT%2FnkSN8fv6F1taX3uyI9pZ4KnzjAjNKC8Rs8Afd6M5fMLpJoD5jWuq4pdBfen8zrTNwbZDsCUwKm4NZ70bspKkbWIVXvr5O8x%2FejsP1iungs5wZ7sLR20NcHf9VWx1hAISD3O2%2BvGi2R7Lvz5i%2B4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=668436d1f17fe21eda93c2ace5f5dc2a0ee2675dc644fe4bab48723d88cd3aee",
+      "file_size": 50421,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-12-18T02:57:40.117Z",
+  "allow_singular_disclosure_after": -170079553.45421785,
+  "singular_disclosure_allowed": true,
+  "vote_count": 48,
+  "voters": [
+    "loaymorad",
+    "viperblitzz",
+    "8910jq",
+    "taha",
+    "xploiterr",
+    "bombon",
+    "mashoud1122",
+    "0-chrollo-0",
+    "mirhat",
+    "tess",
+    "and 38 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

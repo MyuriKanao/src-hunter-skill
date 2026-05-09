@@ -1,0 +1,127 @@
+{
+  "id": 781664,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83ODE2NjQ=",
+  "url": "https://hackerone.com/reports/781664",
+  "title": "Several simple remote code execution in pdf-image",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-01-23T17:10:09.549Z",
+  "submitted_at": "2020-01-23T17:10:09.549Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gabriel-kimiaie",
+    "url": "/gabriel-kimiaie",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8WtiMMWx91cvzq3PwcWLA5bk/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8132"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-02-24T08:00:21.436Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-02-24T08:00:21.251Z",
+  "team_member_agreed_on_going_public_at": "2020-02-24T07:57:24.759Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report \"A simple remote code execution\" in \"pdf-image\".\nIt allows \"a remote attacker to execute arbitrary code when several functions of the PDFImage class are called and the class loaded from user-input value\".\n\n# Module\n\n**module name:** pdf-image\n**version:** latest\n**npm page:** `https://www.npmjs.com/package/pdf-image`\n\n## Module Description\n\nProvides an interface to convert PDF's pages to png files in Node.js by using ImageMagick.\n\n## Module Stats\n\n[1] weekly downloads: 8,691\n\n# Vulnerability\n\n## Vulnerability Description\n\nHello there ! I understand this bug isn't eligible for a bounty. I am reporting it either way. I've found several code execution in the pdf-image class, I tested one of them. They are simple and of course come from the child_process.exec call with lack of escaping. I tested one of them.\n\n## Steps To Reproduce:\n\nvar PDFImage = require(\"pdf-image\").PDFImage;\n\nvar pdfImage = new PDFImage('\"; sleep 500 #\"');\npdfImage.getInfo();\n\nYou can also exploit the vulnerability by submitting  backticks (example payload: `ls;sleep 5` which will be executed even though you're double-quoting the input.\n\n## Patch\nYou can take example on your command-exists npm class:\nvar isUsingWindows = process.platform == 'win32'\nvar cleanInput = function(s) {\n  if (/[^A-Za-z0-9_\\/:=-]/.test(s)) {\n    s = \"'\"+s.replace(/'/g,\"'\\\\''\")+\"'\";\n    s = s.replace(/^(?:'')+/g, '') // unduplicate single-quote at the beginning\n      .replace(/\\\\'''/g, \"\\\\'\" ); // remove non-escaped single-quote if there are enclosed between 2 escaped\n  }\n  return s;\n}\n\nif (isUsingWindows) {\n  cleanInput = function(s) {\n    var isPathName = /[\\\\]/.test(s);\n    if (isPathName) {\n      var dirname = '\"' + path.dirname(s) + '\"';\n      var basename = '\"' + path.basename(s) + '\"';\n      return dirname + ':' + basename;\n    }\n    return '\"' + s + '\"';\n  }\n}\n## Supporting Material/References:\n\nhttps://github.com/mooz/node-pdf-image/blob/master/index.js#L27\n\n- Linux / centOS\n- v6.17.1\n- 3.10.10 \n- N/A\n- Own sample script\n\n# Wrap up\n\n> Select Y or N for the following statements:\n\n- I contacted the maintainer to let them know: [Y/N] N\n- I opened an issue in the related repository: [Y/N] N\n\nThanks!\n\n## Impact\n\nBad code relying on that class can feel foul to RCE.",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-03-25T07:57:24.977Z",
+  "allow_singular_disclosure_after": -193216955.1342927,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "a_d_a_m",
+    "lumbridge",
+    "hakhakx",
+    "b69fb2ebda43240ece9dbeb",
+    "mathematiker37",
+    "kkugelblitzz1017",
+    "darktower",
+    "praprajapati524",
+    "istals",
+    "0x1b-co",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 9600,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "pdf-image",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "id": 535436,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MzU0MzY=",
+  "url": "https://hackerone.com/reports/535436",
+  "title": "Lack or Origin check leads to Cross-Site Websocket Hijacking (CSWSH)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-04-11T09:12:31.491Z",
+  "submitted_at": "2019-04-11T09:12:31.491Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "fisher",
+    "url": "/fisher",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uo3ug6bbqe6hqyw5aiw7v4cqzt0/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22746,
+    "url": "https://hackerone.com/superhuman",
+    "handle": "superhuman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Superhuman (formerly Grammarly)",
+      "twitter_handle": "",
+      "website": "https://superhuman.com/",
+      "about": "Superhuman (formerly Grammarly) unites Grammarly, Superhuman Mail, Coda, and Go with AI to unlock superhuman potential in everyone."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-01-04T00:48:46.320Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-01-02T19:49:51.272Z",
+  "team_member_agreed_on_going_public_at": "2020-01-04T00:48:46.196Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "800.0",
+  "formatted_bounty": "$800",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-02-01T19:49:51.331Z",
+  "allow_singular_disclosure_after": -197753465.0920465,
+  "singular_disclosure_allowed": true,
+  "vote_count": 133,
+  "voters": [
+    "0xcyborg",
+    "loaymorad",
+    "nytr0gen",
+    "a_d_a_m",
+    "samengmg",
+    "thaivu",
+    "c4rrilat0rr",
+    "fqdn",
+    "sourc7",
+    "foobar7",
+    "and 123 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 949634,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "https://coda.io/*",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 19547,
+      "category": "team",
+      "content": "# Summary\n\n@fisher discovered a CSRF-related vulnerability in Coda docs by which an attacked could craft a convincing page that would make modifications to a specific document without the victim knowing. This is due to the inherent nature of Websockets not being secure by default. Although a fully-working proof of concept was not provided, the Coda security team swiftly patched the vulnerability and rewarded a bounty for the creative attack.\n\n# Original Report from Researcher\n\n## Summary:\n\nIt was discovered that when opening a WebSocket channel the Origin header is not checked by the server, leaving the application exposed to a Cross-Site Websocket Hijacking attack (CSWSH).\n\n## Background\n\nThe problem was first dubbed by Christian Schneider in his blog. Because WebSockets are not restricted by the browser's Same Origin Policy (SOP), if no defensive mechanisms are in place, an attacker can initiate a WebSocket communication from a malicious page targeting the vulnerable wss endpoint - ending up with the ability to communicate two-way with the server.\n\nThe most common defensive mechanisms are:\n\n- Checking the Origin header in the first/handshake request (where the Cookie is sent), before issuing a 101 Switching Protocols\n- Sending a CSRF token in every WS message\n\n\n## Steps To Reproduce:\n\nWe can check this very easily by using a custom extension e.g. Simple Websocket Client\n\n1. After installing an extension like the above, login in https://coda.io and open or create a new document while proxying requests through Burp\n2. Burp has a WebSocket history under Proxy, next to HTTP History. Select any of the URL's used, e.g: https://coda.io/documentsCollab/<docId>/collab/?params=PARAMS&connectionId=CONNECTIONID&EIO=3&transport=websocket\n3. Open the extension and use this URL(substitute https for wss) and press open:Immediately we connect and receive a message from the server, which confirms the lack of Origin check.\nAlthough the URL might first look like undecipherable to an attacker, the params parameter just holds a base64 value of the document ID:\n{\"documentId\":\"DOCID\"}\n\nSince the document ID is sufficiently long, an attack scenario is:\n\n- User (admin) invites attacker to collaborate on a document (view only)\n- Attacker now knows the document ID. He prepares a CSWSH payload and embeds it in a malicious webpage and sends the link to the victim\n- Victim opens the malicious page and is Cross Site Websocket Hijacked. The payload could e.g. delete or alter the contents of the document, introducing fake content\n\n## Impact\n\nThe most serious impact scenario is the attacker forcing the victim to do any operation available within the WebSockets communication (basically a CSRF). He can also read sensitive information (since the WS communication is full duplex).",
+      "updated_at": "2020-01-04T00:50:35.243Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 561809,
+        "username": "oleg-coda",
+        "name": "Oleg Vaskevich",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-03-28T17:31:55.716Z",
+        "url": "https://hackerone.com/oleg-coda",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/561/809/39ffee8055ead9b37a3d212d0388be75aa4a2f4d_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/561/809/39ffee8055ead9b37a3d212d0388be75aa4a2f4d_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/561/809/39ffee8055ead9b37a3d212d0388be75aa4a2f4d_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

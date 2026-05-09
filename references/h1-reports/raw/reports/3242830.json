@@ -1,0 +1,114 @@
+{
+  "id": 3242830,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjQyODMw",
+  "url": "https://hackerone.com/reports/3242830",
+  "title": "Critical PII Data Exposure in ORDER_ERROR_LOG",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-07-09T13:49:44.847Z",
+  "submitted_at": "2025-07-09T13:50:23.790Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "xenion_",
+    "url": "/xenion_",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/pjqmsruyoe9654r2k3rq4mk2txvt/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-12T19:44:34.035Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-09-03T19:16:42.438Z",
+  "team_member_agreed_on_going_public_at": "2026-01-12T19:44:33.846Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "A critical security vulnerability has been identified in the application's error logging system where the ORDER_ERROR_LOG file contains complete database insertion statements that expose Personally Identifiable Information (PII) of customers in plain text format.\n\n#### Root Cause\n\nThe application's error handling mechanism is logging full SQL INSERT statements when database operations fail. These statements contain complete customer records including sensitive personal information that should never be stored in log files.\n\nWhat Data is ExposedThe logs contain complete customer records including:\nFull names\nEmail addresses\nPhone numbers\nHome addresses\nCustomer IDs\nTransaction amounts\n....\n\nsimple of data \n```\nINSERT INTO dli.dli_customer_data VALUES (\n                dli_customer_data_sequence.NEXTVAL,\n                SYSDATE,\n                ████████,\n                ███,\n                ██████████,\n                ████,\n                ██████,\n                ██████,\n                █████████,\n                █████████,\n                ███████,\n                █████,\n                ███,\n                █████,\n                ███,\n                ████████,\n                ████,\n                ██████████,\n                'Surface',\n                '14.00',\n                '15.4',\n                '17.5')\n\n```\n███████\n████\n\n## Impact\n\nUnintended Data Persistence: Customer PII persists in log files beyond intended retention periods\nExpanded Attack Surface: Log files become high-value targets containing concentrated PII\nCompliance Violations: Direct violation of data minimization principles required by privacy regulations\nAudit Trail Contamination: Security logs contain sensitive data that complicates forensic analysis\n\n## System Host(s)\ndlielc.edu\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n1. Access the ORDER_ERROR_LOG file   ███████\n2. Review the contents for database INSERT statements.  `INSERT INTO dli.dli_customer_data VALUES (`\n3. Observe exposed customer data\n```\n  INSERT INTO dli.dli_customer_data VALUES (\n                dli_customer_data_sequence.NEXTVAL,\n                SYSDATE,\n                █████████,\n                ██████,\n                ███████,\n                'FPO',\n                'AP',\n                ██████████,\n                ████████,\n                ███,\n                ██████████,\n                'FPO',\n                'AP',\n                ███████,\n                ████████,\n                █████,\n                ██████,\n                ██████,\n                'Air',\n                '480.00',\n                ████████,\n                '600')\n\n```\n\n## Suggested Mitigation/Remediation Actions\nImplement data sanitization in error logging to prevent PII exposure.\n\n",
+  "weakness": {
+    "id": 33,
+    "name": "Cleartext Storage of Sensitive Information"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "loaymorad",
+    "mohaned0101",
+    "sisi0x",
+    "xenion_",
+    "pabloalaniz",
+    "darknet_bot",
+    "eckzdf"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

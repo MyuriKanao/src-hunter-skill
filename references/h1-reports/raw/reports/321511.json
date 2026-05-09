@@ -1,0 +1,148 @@
+{
+  "id": 321511,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjE1MTE=",
+  "url": "https://hackerone.com/reports/321511",
+  "title": "It's possible to put SDX orderbook into invalid state and execute trades at arbitrary price",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-03T05:43:51.105Z",
+  "submitted_at": "2018-03-03T05:43:51.105Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nebolsin",
+    "url": "/nebolsin",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/247/142/ec23e8e63bd7fb443f3ea3b01d7c4092c50a248d_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 20287,
+    "url": "https://hackerone.com/stellar",
+    "handle": "stellar",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ULGxmU4deMmgF8BMsZ5EqRaZ/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ULGxmU4deMmgF8BMsZ5EqRaZ/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Stellar.org",
+      "twitter_handle": "stellarorg",
+      "website": "https://www.stellar.org",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-10-14T14:56:53.085Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-14T14:56:37.423Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "stellar-core improperly handles creation of a buy offer which crosses existing sell offers (immediate execution) but can only be filled partially due to a trustline limit on the source account. This makes it possible to create a valid offer to buy any custom asset at higher price than existing sell offers. If counter is not native, it's also possible to create a sell offer lower than existing bids.\n\nSteps to reproduce\n-------------------\n1. Choose any asset ABC with non-empty orderbook ABC-XLM\n2. Create and fund account `H`, then set a trustline for ABC with limit 1\n3. Choose arbitrary price `P` higher than existing best ask price `Pa`\n4. Prepare the tx to sell `P` XLM for ABC  at price P and then increase the trustline limit to 2, sign it with H secret key and send to the network.\n\n```\nTransaction(\n  source = H, \n  operations = [\n    manageOffer(selling=XLM, buying=ABC, amount=P, price=P, offerId=0),\n    changeTrust(asset=ABC, limit=2)\n  ]\n)\n```\n\nAccount `H` will receive 1 ABC balance and an offer to sell `(P - Pa)` XLM for ABC will be created at price P.\n\nOrder book is now in invalid state and contains crossing offers, so `max(bidPrice) > min(askPrice)`. Next offer to sell ABC for XLM with price lower than P will claim our offer and result in a trade at  price P.\n\nExamples\n----------\n\nF268790: Invalid bid created by exploiting this vulnerability. Account with a trustline for BUG asset (balance=500, limit=501) posted an offer to sell 100XLM to buy BUG at price 100 XLM per BUG. Result: account bought 1 BUG from the best ask at 9 XLM per BUG, and an offer to sell the remaining 91XLM at price 100 was saved into the orderbook.\n\nF268791: Real case on a public network on MOBI-XLM traiding pair happened to some user (this is where I noticed the anomaly in trade history and started investigation). Relevant ledgers 16494494 - 16494512.\n\n## Impact\n\nAttacker could exploit this behaviour to mess up the orderbook, trade history and chart for any trading pair on Stellar Distributed Exchange. \n\nFor example, it's possible (and very easy) to create a bot which will constantly create an bid at arbitrary high price P and immediately sell into this bid from another account, making last ticker price always equal P, despite that there're sell offers at a lower price. \n\nThis will make OHLC chart analysis useless because high price will be P on every tick. It could also confuse other market participants by creating the impression that P is the fair price for the asset.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 268790,
+      "file_name": "SDX_invalid_bid_.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/268/790/1d92b432ea679f3aa66661477beb787cc162e3dd/SDX_invalid_bid_.png?response-content-disposition=attachment%3B%20filename%3D%22SDX_invalid_bid_.png%22%3B%20filename%2A%3DUTF-8%27%27SDX_invalid_bid_.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152353Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=52e5afc1af3b4b1a22173b2a3736c9bf0e6d06ec0a716a2efc1012f1c0165f9d",
+      "file_size": 100062,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 268791,
+      "file_name": "MOBI-XLM_trade_history.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/268/791/c5bde109009b12c2b203f8b6b819b9cca3664c19/MOBI-XLM_trade_history.png?response-content-disposition=attachment%3B%20filename%3D%22MOBI-XLM_trade_history.png%22%3B%20filename%2A%3DUTF-8%27%27MOBI-XLM_trade_history.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152353Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2ce33ad585d06cf8c91d67a48bf98448d7562e82090022546ec1b0bb23b46a49",
+      "file_size": 162762,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-10-14T14:56:37.541Z",
+  "allow_singular_disclosure_after": -238811236.1673546,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "7odamoo",
+    "ali",
+    "mohaned0101",
+    "thalaivar304",
+    "apapedulimu",
+    "khizer47",
+    "cryptographer",
+    "japz",
+    "notahackman",
+    "koolcana",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "low",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

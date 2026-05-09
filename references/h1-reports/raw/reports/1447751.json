@@ -1,0 +1,153 @@
+{
+  "id": 1447751,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDQ3NzUx",
+  "url": "https://hackerone.com/reports/1447751",
+  "title": "Firebase Database Takeover in https://pulseradio.mtn.co.ug/",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-01-12T10:02:04.829Z",
+  "submitted_at": "2022-01-12T10:02:04.917Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "shuvam321",
+    "url": "/shuvam321",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 41919,
+    "url": "https://hackerone.com/mtn_group",
+    "handle": "mtn_group",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "MTN Group",
+      "twitter_handle": "",
+      "website": "https://www.mtn.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-12-01T10:52:59.962Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-11-01T10:52:58.827Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nDuring my test , in one of the subdomain of mtn.co.ug I found firebase configuration disclosed in the source code along with apiKey and database URL . \n\nExploiting this vulnerability attacker is able to upload malicious data in the firebase account of pulseradio.mtn.co.ug and see database over there .\n\n## Steps To Reproduce:\n\nPOC :  https://mtn-pulse-uganda.firebaseio.com/poc.json\n\n1. Go to URL below and view the source code of website .\n\nview-source:https://pulseradio.mtn.co.ug/wp-content/themes/mtn-pulse-reskin/zero-rate/firebase-config.js\n\nThere you will see following sensitive data .\n\n$(document).ready(function() {\n\t\t\t// Your web app's Firebase configuration\n\t\t\tvar firebaseConfig = {\n\t\t\t\tapiKey: \"AIzaSyCRrABG3_Sc7xHar70hFyjHjEOJ071rbJ4\",\n\t\t\t\tauthDomain: \"mtn-pulse-uganda.firebaseapp.com\",\n\t\t\t\tdatabaseURL: \"https://mtn-pulse-uganda.firebaseio.com\",\n\t\t\t\tprojectId: \"mtn-pulse-uganda\",\n\t\t\t\tstorageBucket: \"mtn-pulse-uganda.appspot.com\",\n\t\t\t\tmessagingSenderId: \"242450689592\",\n\t\t\t\tappId: \"1:242450689592:web:bdd1173378d94d733800cd\",\n\t\t\t\tmeasurementId: \"G-KHPT64LJ5L\"\n\t\t\t};\n\n\n2. Now lets upload some data in firebase database  . Send the following curl request . Your data will be uploaded to firebase .\n\n\n curl \"https://mtn-pulse-uganda.firebaseio.com/poc1.json\" -XPUT -d '{\"attacker\":\"maliciousdata\"}'\n\n3. Your data will be uploaded to https://mtn-pulse-uganda.firebaseio.com/poc1.json\n\n\n\nReferences:\nThere are guidelines available by Firebase to resolve the insecurities and misconfiguration, please follow this link:\nhttps://firebase.google.com/docs/database/security/resolve-insecurities\n\n## Impact\n\nThis is quite serious because by using this database attacker can use this for malicious purposes and also an attacker can track this database if mtn uses it for future perspective and at that time it will be much easier for the attacker to steal the data from this repository and later it will harm the reputation of the mtn.co.ug .\n\nSo please immediately change the rule of the database to private so that nobody can able to access it outside.",
+  "weakness": {
+    "id": 101,
+    "name": "Insecure Storage of Sensitive Information"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1576525,
+      "file_name": "Screenshot_from_2022-01-12_04-56-44.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/cwlhq9yrn3v58is0iqy4t8xy77n0?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_from_2022-01-12_04-56-44.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_from_2022-01-12_04-56-44.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150849Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a6925bc1ab35a2de56ae1eec5d6ef43c3ff17dd4528c56f211d99e49f75bccb6",
+      "file_size": 51644,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1576535,
+      "file_name": "vokoscreenNG-2022-01-12_04-55-42.mkv",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/n6joa4t5mz5o4m0tyb51m909fjjc?response-content-disposition=attachment%3B%20filename%3D%22vokoscreenNG-2022-01-12_04-55-42.mkv%22%3B%20filename%2A%3DUTF-8%27%27vokoscreenNG-2022-01-12_04-55-42.mkv&response-content-type=video%2Fx-matroska&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150849Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=711e9902fc568af19a687fafe9c6d706eef6412d78fe8b7c4705e488008f7207",
+      "file_size": 1525843,
+      "type": "video/x-matroska",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2022-12-01T10:52:58.869Z",
+  "allow_singular_disclosure_after": -108447350.98511906,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "he4am",
+    "loaymorad",
+    "roland_hack",
+    "zy9ard3",
+    "shuvam321",
+    "shubham_srt",
+    "aspirator",
+    "killua0x1",
+    "shivammusic",
+    "lawanzy",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 34324,
+    "asset_type": "URL",
+    "asset_identifier": "mtn.co.ug",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

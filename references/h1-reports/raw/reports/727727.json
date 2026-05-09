@@ -1,0 +1,182 @@
+{
+  "id": 727727,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83Mjc3Mjc=",
+  "url": "https://hackerone.com/reports/727727",
+  "title": "Path traversal in filename in LINE Mac client",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-11-02T02:32:37.617Z",
+  "submitted_at": "2019-11-02T02:32:37.617Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hackerontwowheels",
+    "url": "/hackerontwowheels",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/3f4n44j7d5781pc2sg8zzpl4y29z/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13343,
+    "url": "https://hackerone.com/line",
+    "handle": "line",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/nfgd330erfzkfvdi70dv3txlgpah/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/nfgd330erfzkfvdi70dv3txlgpah/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "LY Corporation",
+      "twitter_handle": "",
+      "website": "https://line.me",
+      "about": "LINE Security Bug Bounty Program"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-07-31T09:32:26.796Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-03-25T13:58:38.703Z",
+  "team_member_agreed_on_going_public_at": "2020-07-31T09:32:26.623Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 173,
+  "voters": [
+    "kristoferent",
+    "orange303",
+    "slingx",
+    "korniltsev",
+    "m4khn0",
+    "hackerontwowheels",
+    "n0x496n",
+    "mashoud1122",
+    "foobar7",
+    "poneglyph",
+    "and 163 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 40229,
+    "asset_type": "APPLE_STORE_APP_ID",
+    "asset_identifier": "539883307",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 23865,
+      "category": "team",
+      "content": "Initially, @hackerontwowheels and @renekroka discovered that by using a path traversal payload combined with `#` to block out the file extension, arbitrary, pre-installed applications could be executed. It was not possible to provide additional arguments to these applications, however. \n\nThe payload used for OS X Yosemite was: `..%2f..%2f..%2f..%2f..%2f..%2f..%2fApplications%2fCalculator.app#.zip`, which would execute the calculator app. \nRunning commands with parameters, was not possible (Example: `/Applications/iTerm.app ls -al`).\n\nAfterwards, the reporters also identified an issue where they could achieve code execution, given that gatekeeper was disabled, by chaining the upload of an executable file through \"Keep\" (a file storage service in the LINE App), then trigger the execution using the previous path traversal vulnerability. The filetype had to be a .terminal file, due to it not being on the blacklist, as Keep normally filters executables and restricts sharing of these types of files in order to avoid this type of issue.\n\nThe complete chain looked like this:\n1. Upload malicious .terminal file to Keep\n2. Share .terminal file with victim from Keep\n3. Victim downloads shared file\n4. Send malicious .zip file with path traversal vulnerability\n5. Victim clicks .zip file\n6. Code is executed (if Gatekeeper is turned off)\n",
+      "updated_at": "2020-07-31T08:39:52.080Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 635803,
+        "username": "p_p",
+        "name": "Robin",
+        "bio": "I used to manage the LINE Bug Bounty program. This account is now inactive! If there is anything, please contact me through Twitter.",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-06-05T03:33:10.847Z",
+        "url": "https://hackerone.com/p_p",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/635/803/f09a40d90bc39c3099bf22e83e21b6ec71bf3f58_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/635/803/f09a40d90bc39c3099bf22e83e21b6ec71bf3f58_original.jpeg/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/635/803/f09a40d90bc39c3099bf22e83e21b6ec71bf3f58_original.jpeg/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    },
+    {
+      "id": 20865,
+      "category": "researcher",
+      "content": "Through a logic error in file name parsing, it was possible for a malicious actor to send a specially crafted zip file to a target user, which when opened in the MAC App would execute any application or executable in ~/Downloads. Furthermore, we discovered two ways to bypass the file upload restrictions where we could send any file extension to users, for example ``.terminal`` files.  Using both logic errors, it was possible for an attacker to send a malicious executable, and then a malformed zipped file to execute the previous executable bypassing all file transfer restrictions and gaining code execution on unsuspecting users. ",
+      "updated_at": "2020-03-25T13:57:20.298Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 53853,
+        "username": "hackerontwowheels",
+        "name": "hackerOnTwoWheels",
+        "bio": "I  like to hack stuff and ride bikes.",
+        "cleared": true,
+        "verified": true,
+        "website": "https://ugwst.com",
+        "location": "USA",
+        "created_at": "2016-02-02T03:04:01.459Z",
+        "url": "https://hackerone.com/hackerontwowheels",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/3f4n44j7d5781pc2sg8zzpl4y29z/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/3f4n44j7d5781pc2sg8zzpl4y29z/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/3f4n44j7d5781pc2sg8zzpl4y29z/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "id": 386334,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zODYzMzQ=",
+  "url": "https://hackerone.com/reports/386334",
+  "title": "CSS Injection on /embed/ via bgcolor parameter leaks user's CSRF token and allows for XSS ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-07-24T18:02:24.808Z",
+  "submitted_at": "2018-07-24T18:02:24.808Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nahamsec",
+    "url": "/nahamsec",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fbbne6p2au4kay4h5dr63g12wtd0/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 30475,
+    "url": "https://hackerone.com/chaturbate",
+    "handle": "chaturbate",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/030/475/178c32f60a890eb06ce5d698d44b3eafa35ccf8c_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/030/475/178c32f60a890eb06ce5d698d44b3eafa35ccf8c_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Chaturbate",
+      "twitter_handle": "chaturbate",
+      "website": "https://chaturbate.com",
+      "about": "The largest online adult cam site"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-09-19T23:37:20.507Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-19T23:37:20.402Z",
+  "team_member_agreed_on_going_public_at": "2018-09-19T22:14:50.094Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi there,\n\nThere's a CSS injection here: https://chaturbate.com/embed/admin/?bgcolor=%7D*%7Bbackground:red&tour=nvfS&disable_sound=0&campaign=iNSGX \n\n```\n  body, div#main, div.content, div.block, div.section {margin: 0px; padding: 0px;}\n  body {min-width:800px;}\n  div.content {width: 100%;}\n  \n  body {background: }*{background:red;}\n\n```\n\nThis allows an attacker to enumerate the CSRF token. Once the CSRF token is enumerated, we can \n\n#POC \n1. Go to `http://d0nut.pythonanywhere.com/demo/token_stealing/7GTt5qD1LD273WYkJyaR/reset`\n2. Now go to `http://d0nut.pythonanywhere.com/demo/token_stealing/7GTt5qD1LD273WYkJyaR` and let it do it's magic :) \n\n{F324052}\n\nThere are numerous endpoints like `POST /choose_broadcaster_chat_color` where it returns `Content-Type: text/html; charset=utf-8` that could potentially allow a hacker to combine the two for XSS (I haven't gotten that far yet)\n\n\n **Do you mind asking your HackerOne contact to allow collaboration on your program, so I can invite another researcher that helped me exploit this fully?**\n\nThanks,\nBen\n\n## Impact\n\n#",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 324052,
+      "file_name": "cssi.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/324/052/12fe6a245e909fd538ad30b99e60f337163ab0ce/cssi.gif?response-content-disposition=attachment%3B%20filename%3D%22cssi.gif%22%3B%20filename%2A%3DUTF-8%27%27cssi.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152333Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2fa774c38941f9d3cba0bc3e14fe1af1211684aef1d7f1a2af8f4f7a77b21433",
+      "file_size": 37615828,
+      "type": "image/gif",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-10-19T22:14:50.225Z",
+  "allow_singular_disclosure_after": -238352922.89095375,
+  "singular_disclosure_allowed": true,
+  "vote_count": 41,
+  "voters": [
+    "wargsec",
+    "mashoud1122",
+    "mheranco",
+    "shailesh4594",
+    "ali",
+    "teuvokas",
+    "spam404",
+    "psaux",
+    "aryan2808",
+    "ahiezer",
+    "and 31 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 11722,
+    "asset_type": "URL",
+    "asset_identifier": "chaturbate.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

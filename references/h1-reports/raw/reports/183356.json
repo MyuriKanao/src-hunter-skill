@@ -1,0 +1,174 @@
+{
+  "id": 183356,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODMzNTY=",
+  "url": "https://hackerone.com/reports/183356",
+  "title": "Segfault and/or potential unwanted (byte)code execution with \"break\" and \"||=\" inside a loop",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-18T19:23:38.371Z",
+  "submitted_at": "2016-11-18T19:23:38.371Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "dkasak",
+    "url": "/dkasak",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/122/858/df3e45a00fd0f5e53ef7dc7f9b12168cbde93200_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-16T21:42:19.613Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-16T21:42:19.549Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T20:19:59.882Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Introduction\n============\n\nCertain invalid inputs (invalid Ruby programs) crash mruby and mruby_engine (including the parent MRI VM). The programs always involve the `||=` operator, loops and the `break` keyword.\n\nProof of Concept\n================\n\ncrash.rb\n--------\n\n    A ||= break while break\n\n1. Save the above code as crash.rb\n2. Run either:\n    a) mruby crash.rb\n    b) sandbox crash.rb\n3. Both cause a segmentation fault.\n\nDiscussion\n==========\n\nEverything below assumes the latest master of the mruby repository as of Nov 18th, which is commit `0ff3ae1fbaed62010c54c43235e29cdc85da2f78`.\n\nThe above crashing example isn't the only one that we've managed to produce but is the minimal one so far. An infinite family of programs is able to exploit this bug to crash the interpreter, execute spurious bytecode that wasn't generated for the current program or even set the machine instruction pointer to some junk value (making this a limited form of unwated code execution, even though the executed code isn't arbitrary).\n\nThe generated AST and bytecode for the crashing case is as follows:\n\n    mruby 1.2.0 (2015-11-17)\n    00001 NODE_SCOPE:\n    00001   NODE_BEGIN:\n    00001     NODE_WHILE:\n    00001       cond:\n    00001         NODE_BREAK:\n    00001       body:\n    00001         NODE_OP_ASGN:\n    00001           lhs:\n    00001             NODE_CONST A\n    00001           op='||' (666)\n    00001           NODE_BREAK:\n    irep 0x16b2970 nregs=2 nlocals=1 pools=0 syms=1 reps=0\n    file: crash.rb\n        1 000 OP_JMP    010\n        1 001 OP_ONERR  005\n        1 002 OP_GETCONST       R1      :A\n        1 003 OP_POPERR 1\n        1 004 OP_JMP    007\n        1 005 OP_RESCUE R1\n        1 006 OP_LOADF  R1\n        1 007 OP_JMPIF  R1      010\n        1 008 OP_JMP    008\n        1 009 OP_SETCONST       :A      R1\n        1 010 OP_JMP    018\n        1 011 OP_JMPIF  R1      001\n        1 012 OP_LOADNIL        R1\n        1 013 OP_STOP\n\nThe odd thing to notice here is that the `OP_JMP` at 010 jumps beyond the last instruction. This is what leads to a potential execution of spurious bytecode since there may be valid opcodes beyond the end of the `iseq` array of the current `irep` (and indeed, we've seen this happen).\n\nFurthermore, the index of the instruction onto which the invalid `OP_JMP` jumps to is equal I + A where I is the index of the instruction the `OP_JMP` at 000 jumps to (in this case 010) and A is the index of an `OP_JMP` instruction located prior to the invalid one (so in this case 010 + 008 = 018). Since each additional `break` inserted into the code inserts an additional `OP_JMP` instruction, this implies that the argument of the invalid `OP_JMP` can be increased almost without bounds (limited only by memory consumption and/or the maximum argument to `OP_JMP` instructions, which is `0xffff >> 1` = 32767).\n\nAs an example, the code:\n\nlarger.rb\n---------\n\n    A ||= break break break break while break\n\nYields the following bytecode:\n\nfile: larger.rb\n    1 000 OP_JMP        013\n    1 001 OP_ONERR      005\n    1 002 OP_GETCONST   R1      :A\n    1 003 OP_POPERR     1\n    1 004 OP_JMP        007\n    1 005 OP_RESCUE     R1\n    1 006 OP_LOADF      R1\n    1 007 OP_JMPIF      R1      013\n    1 008 OP_JMP        008\n    1 009 OP_JMP        017\n    1 010 OP_JMP        019\n    1 011 OP_JMP        021\n    1 012 OP_SETCONST   :A      R1\n    1 013 OP_JMP        024\n    1 014 OP_JMPIF      R1      001\n    1 015 OP_LOADNIL    R1\n    1 016 OP_STOP\n\nAfter the jump is made, the memory location might contain a valid mruby instruction or even something with an opcode larger than the number of opcodes contained in the `optable` in `vm.c`. Since the code in `mrb_vm_exec` jumps to addresses contained in the `optable`, indexed by the opcode number, this leads to a limited form of unwanted code execution, since memory locations after the `optable` may contain pointers to executable code by accident.\n\nIt is interesting to note that a very similar program doesn't cause a crash:\n\nnon-crash.rb\n------------\n\n    a ||= break while break\n\nThe only difference from the crashing case is the use of a lowercase variable name instead of an uppercase (so a non-constant, in Ruby terms).\n\nAnother non-crashing case is the following:\n\nnon-crash-other.rb\n------------------\n\n    A &&= break while break\n\nThe only difference here is the use of another assignment operator — `&&`, instead of `||`.\n\nThis gives us a hint as to where the problem is. The invalid jump length is ultimately set during code generation for the `NODE_WHILE` node of the AST in `codegen.c`, line 1426. Specifically, the jump lengths are adjusted *after* the loop is generated, on line 1438 of the same file, during the call of the function `loop_pop()`.\n\nWhen this function is executed in the debugger when run on the `crash.rb` case, it may be noticed that the `s->loop` variable, which contains the loop context, contains two loops inside one another instead of only one: a `LOOP_NORMAL` (which is generated by the `while`) and a `LOOP_RESCUE`. The latter is generated during code generation for `NODE_OP_ASGN`, starting at line 1724 of `codegen.c`. Here we encounter this interesting special case:\n\n      if ((len == 2 && name[0] == '|' && name[1] == '|') &&\n          ((intptr_t)tree->car->car == NODE_CONST ||\n           (intptr_t)tree->car->car == NODE_CVAR)) {\n\nThis explains why the problem only happens only when using the `||=` operator on Ruby constants. It is here that an additional `LOOP_RESCUE` loop context is created, and it is using this context that is used later on by `loop_pop`/`dispatch_linked` to generate the final arguments to the jump instructions.\n\nSince this \"loop\" is generated simply to catch potential `NameError` exceptions generated when an unexisting constant is reference, it seems that this loop context shouldn't escape the generation of the code for the assignment operator.\n\nSolution\n========\n\nTherefore, the solution we chose was to pop this loop context after the assignment code is generated. This makes the `loop_pop`/`dispatch_linked` function calls inside the `while` code generation operate on the loop context for the `while` loop instead and fixes the generated jump.\n\nundef-constant-or-assign.patch\n------------------------------\n    diff --git a/mrbgems/mruby-compiler/core/codegen.c b/mrbgems/mruby-compiler/core/codegen.c\n    index 9b064b8..bbe0f51 100644\n    --- a/mrbgems/mruby-compiler/core/codegen.c\n    +++ b/mrbgems/mruby-compiler/core/codegen.c\n    @@ -1746,6 +1746,7 @@ codegen(codegen_scope *s, node *tree, int val)\n            genop(s, MKOP_A(OP_RESCUE, exc));\n            genop(s, MKOP_A(OP_LOADF, exc));\n            dispatch(s, noexc);\n    +        loop_pop(s, val);\n        }\n        else if ((intptr_t)tree->car->car == NODE_CALL) {\n            node *n = tree->car->cdr;\n\nWith the above patch, we were unable to crash the VM through this bug nor generated any more jumps with invalid jump lengths. Furthermore, all tests pass successfully.",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 135418,
+      "file_name": "crash.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/135/418/5b0b6db63343807f26bc0a8af00c4eb4796cc2c7/crash.rb?response-content-disposition=attachment%3B%20filename%3D%22crash.rb%22%3B%20filename%2A%3DUTF-8%27%27crash.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152710Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=129624a1a6bef2970921b1cb19ba5d444e66ea44ef33662039122ffdeca671ef",
+      "file_size": 24,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 135419,
+      "file_name": "non-crash.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/135/419/931d06873f618e8ef6196bb8168d2b1390a0daff/non-crash.rb?response-content-disposition=attachment%3B%20filename%3D%22non-crash.rb%22%3B%20filename%2A%3DUTF-8%27%27non-crash.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152710Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f47fed0ee9afc36c8fd3acb066304a967598d8bbbc8f3185fd8cb38029b7737f",
+      "file_size": 24,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 135421,
+      "file_name": "larger.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/135/421/b09071e66595cade8bf9295ecbfff8718a8ed0ab/larger.rb?response-content-disposition=attachment%3B%20filename%3D%22larger.rb%22%3B%20filename%2A%3DUTF-8%27%27larger.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152710Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=fbe0ce5107db551d957ad0fbf6f6ce7f052baa70a00d8dd2f00e7d0442edb812",
+      "file_size": 42,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 135422,
+      "file_name": "undef-constant-or-assign.patch",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/135/422/80e871a09fccd7a0da2a76bc479534942cd33482/undef-constant-or-assign.patch?response-content-disposition=attachment%3B%20filename%3D%22undef-constant-or-assign.patch%22%3B%20filename%2A%3DUTF-8%27%27undef-constant-or-assign.patch&response-content-type=text%2Fx-diff&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152710Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3e14052dd410c6df0f1fb4a928d9e5e7a63c606eefe76c7f2ab78c1e9f98c75b",
+      "file_size": 520,
+      "type": "text/x-diff",
+      "moderated": null
+    },
+    {
+      "id": 135424,
+      "file_name": "non-crash-other.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/135/424/b2403c2db2348d2acb06e849b2bb62199e432f3b/non-crash-other.rb?response-content-disposition=attachment%3B%20filename%3D%22non-crash-other.rb%22%3B%20filename%2A%3DUTF-8%27%27non-crash-other.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152710Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=923d9a15e6893dab317a9955d506772259cfeee03800458e24e337508b27280a",
+      "file_size": 24,
+      "type": "text/plain",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-01-15T20:19:59.914Z",
+  "allow_singular_disclosure_after": -293828830.6819153,
+  "singular_disclosure_allowed": true,
+  "vote_count": 13,
+  "voters": [
+    "dkasak",
+    "dgaletic",
+    "mpz",
+    "eveeez",
+    "ak1t4",
+    "linkks",
+    "japz",
+    "spetr0x",
+    "scept1c",
+    "xcom",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

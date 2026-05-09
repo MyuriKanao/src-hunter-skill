@@ -1,0 +1,154 @@
+{
+  "id": 47280,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NzI4MA==",
+  "url": "https://hackerone.com/reports/47280",
+  "title": "JSON keys are not properly escaped",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2015-02-10T01:00:04.032Z",
+  "submitted_at": "2015-02-10T01:00:04.032Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "einstein_",
+    "url": "/einstein_",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22,
+    "url": "https://hackerone.com/rails",
+    "handle": "rails",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby on Rails",
+      "twitter_handle": "rails",
+      "website": "http://rubyonrails.org/security",
+      "about": "Web development that doesn't hurt."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2015-3226"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2015-06-16T19:38:34.244Z",
+  "bug_reporter_agreed_on_going_public_at": "2015-06-16T19:38:33.941Z",
+  "team_member_agreed_on_going_public_at": "2015-06-16T19:17:21.898Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Rails does not escape hash keys properly in `to_json` when generating json.\r\n\r\nValues are escaped as expected\r\n```ruby\r\nirb(main):001:0> {\"a\"=>\"<>\"}.to_json\r\n=> \"{\\\"a\\\":\\\"\\\\u003c\\\\u003e\\\"}\"\r\n```\r\n\r\nHowever keys are not:\r\n```ruby\r\nirb(main):002:0> {\"<>\"=>\"a\"}.to_json\r\n=> \"{\\\"<>\\\":\\\"a\\\"}\"\r\n```\r\n\r\nThis is because the `json` gem calls `.to_s` on the keys [here](https://github.com/flori/json/blob/259dee6c9bdda08ed0c1fc2e69bfbb2d377faba0/ext/json/ext/generator/generator.c#L738) which transforms the `EscapedString` back into a simple `String` so it doesn't go through the escaping process that values go through [here](https://github.com/EiNSTeiN-/rails/blob/3820788e4c2825dd77c779ba5b3bc29689e04e1d/activesupport/lib/active_support/json/encoding.rb#L54-L60).\r\n\r\n**Security consideration**: this issue is a vector for XSS when an arbitrary value is used as a key and reflected in a javascript tag. Consider this piece of code:\r\n```ruby\r\njavascript_tag \"var json=#{params.to_json}\"\r\n```\r\nWhen params is something like `{\"</script><script>alert(1)//\"=>\"xss\"}` then `<>` are not escaped as they should and the javascript tag looks like this:\r\n```html\r\n<script>\r\n//<![CDATA[\r\nvar json={\"</script><script>alert(1)//\":\"xss\"}\r\n//]]>\r\n</script>\r\n```\r\nThe `</script>` inside the json object will terminate the opening script tag because it has precedence over everything else, and `alert(1)` is executed.\r\n\r\nI believe this issue also applies to 4.2-stable and master.\r\n\r\nNote that I opened a PR for a related issue in the json gem (https://github.com/flori/json/pull/235) which occurs when `ActiveSupport.escape_html_entities_in_json = false` because the forward slash is never escaped (neither in rails nor in the json gem). It might be worth fixing this in rails as well.",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2015-07-16T19:17:22.246Z",
+  "allow_singular_disclosure_after": -341266068.30086,
+  "singular_disclosure_allowed": true,
+  "vote_count": 8,
+  "voters": [
+    "jensec",
+    "eveeez",
+    "khizer47",
+    "cr4xerbik4sh",
+    "cryptographer",
+    "shivammusic",
+    "spetr0x",
+    "destinedtohack"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.2,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 166,
+      "category": "team",
+      "content": "XSS Vulnerability in ActiveSupport::JSON.encode \n\nThere is an XSS vulnerability in the ActiveSupport::JSON.encode method in Ruby on Rails. \nThis vulnerability has been assigned the CVE identifier CVE-2015-3226. \n\nVersions Affected:  3.0.x, 3.1.x, 3.2.x, 4.1.x, 4.2.x. \nNot affected:       4.0.x. \nFixed Versions:     4.2.2, 4.1.11 \n\nImpact \n------ \nWhen a `Hash` containing user-controlled data is encode as JSON (either through \n`Hash#to_json` or `ActiveSupport::JSON.encode`), Rails does not perform adequate \nescaping that matches the guarantee implied by the `escape_html_entities_in_json` \noption (which is enabled by default). If this resulting JSON string is subsequently \ninserted directly into an HTML page, the page will be vulnerable to XSS attacks. \n\nFor example, the following code snippet is vulnerable to this attack: \n\n    <%= javascript_tag \"var data = #{user_supplied_data.to_json};\" %> \n\nSimilarly, the following is also vulnerable: \n\n    <script> \n      var data = <%= ActiveSupport::JSON.encode(user_supplied_data).html_safe %>; \n    </script> \n\nAll applications that renders JSON-encoded strings that contains user-controlled \ndata in their views should either upgrade to one of the FIXED versions or use \nthe suggested workaround immediately. \n\nReleases \n-------- \nThe FIXED releases are available at the normal locations. \n\nWorkarounds \n----------- \nTo work around this problem add an initializer with the following code: \n\n    module ActiveSupport \n      module JSON \n        module Encoding \n          private \n          class EscapedString \n            def to_s \n              self \n            end \n          end \n        end \n      end \n    end \n\nPatches \n------- \nTo aid users who aren't able to upgrade immediately we have provided patches for the two \nsupported release series.  They are in git-am format and consist of a single changeset. \n\n* 4-1-to_json_xss.patch - Patch for 4.1 series \n* 4-2-to_json_xss.patch - Patch for 4.2 series \n\nPlease note that only the 4.1.x and 4.2.x series are supported at present. \nUsers of earlier unsupported releases are advised to upgrade as soon as possible as we cannot \nguarantee the continued availability of security fixes for unsupported releases. \n\nCredits \n------- \n\nThanks to Francois Chagnon of Shopify for reporting the vulnerability to us, and working \nwith us on a fix. \n",
+      "updated_at": "2015-06-17T20:46:08.154Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 20,
+        "username": "arice",
+        "name": " e",
+        "bio": "hackerone | internet bug bounty",
+        "cleared": false,
+        "verified": false,
+        "website": "https://twitter.com/senorarroz",
+        "location": "",
+        "created_at": "2013-06-18T19:55:34.230Z",
+        "url": "https://hackerone.com/arice",
+        "hackerone_triager": false,
+        "hackerone_employee": true,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/020/83152cb2d070f3f6a63c1b61bae47257722b5ad2_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/020/83152cb2d070f3f6a63c1b61bae47257722b5ad2_original.jpeg/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/000/020/83152cb2d070f3f6a63c1b61bae47257722b5ad2_original.jpeg/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

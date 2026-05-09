@@ -1,0 +1,131 @@
+{
+  "id": 592803,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81OTI4MDM=",
+  "url": "https://hackerone.com/reports/592803",
+  "title": "Gaining unlimited bonus points on websites with WooCommerce Points and Rewards",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-30T19:01:09.141Z",
+  "submitted_at": "2019-05-30T19:01:09.141Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "kolyasapphire",
+    "url": "/kolyasapphire",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/078/769/6b236586a3c592c1da679ba4fe7d11e271e53351_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 111,
+    "url": "https://hackerone.com/automattic",
+    "handle": "automattic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Automattic",
+      "twitter_handle": "",
+      "website": "https://automattic.com",
+      "about": "WordPress.com, WooCommerce, WordPress VIP, Jetpack, Beeper, Texts, Akismet, Gravatar, Crowdsignal, Tumblr and more!"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-07-05T23:43:54.225Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-06-05T23:43:53.325Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "In WooCommerce Points and Rewards plugin there is an assumption that Processing order status is only for paid orders.\n\nHowever, this assumption is wrong for payment gateway Cash On Delivery, which immediately changes order status to Processing on all new orders. Plugin then increases bonus points for the order total which are immediately available to spend.\n\nThe problematic code is in class-wc-points-rewards-order.php in function maybe_update_points which gets triggered by following actions:\n```\nwoocommerce_order_status_processing\nwoocommerce_order_status_completed\nwoocommerce_order_status_on-hold \n```\n\nThe code itself is on lines 50-58:\n```\npublic function maybe_update_points( $order_id ) {\n\t\t$order = wc_get_order( $order_id );\n\n\t\t$this->maybe_deduct_redeemed_points( $order_id );\n\n\t\tif ( 'on-hold' !== $order->get_status() ) {\n\t\t\t$this->add_points_earned( $order_id );\n\t\t}\n\t}\n```\n\nThe solution is to either increase points only on completed orders or to add an extra check if status is processing and payment method is not cash on delivery.\n\nExample solution, change code to:\n```\npublic function maybe_update_points( $order_id ) {\n\t\t$order = wc_get_order( $order_id );\n\n\t\t$this->maybe_deduct_redeemed_points( $order_id );\n\n\t\tif ( $order->get_status() !== 'on-hold' && $order->get_status() !== 'processing'  ) {\n\t\t\t$this->add_points_earned( $order_id );\n\t\t}\n\t}\n```\n\n## Impact\n\nAn attacker can gain an unlimited amount of bonus points and spend them on next orders. The only requirements are WooCommerce Points and Rewards enabled on the website and payment gateway Cash On Delivery enabled, both are very common. Cash on delivery is a core WooCommerce payment gateway. Points and Rewards is easily identified by bonus messages on product pages and on checkout. This bug works on the latest plugin version. The only limit on spending bonus points is defined in plugin settings (eg maximum 50% point redemption).",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-07-05T23:43:53.411Z",
+  "allow_singular_disclosure_after": -215970361.1974555,
+  "singular_disclosure_allowed": true,
+  "vote_count": 23,
+  "voters": [
+    "tess",
+    "sameerphad72",
+    "mohaned0101",
+    "thalaivar304",
+    "4w3",
+    "m7mdharoun",
+    "cr4xerbik4sh",
+    "cryptographer",
+    "raguljr",
+    "0xm1racle",
+    "and 13 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

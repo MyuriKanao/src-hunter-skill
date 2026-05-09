@@ -1,0 +1,171 @@
+{
+  "id": 333419,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzM0MTk=",
+  "url": "https://hackerone.com/reports/333419",
+  "title": "TURN server allows TCP and UDP proxying to internal network, localhost and meta-data services",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-04-04T14:05:47.045Z",
+  "submitted_at": "2018-04-04T14:05:47.045Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sandrogauci",
+    "url": "/sandrogauci",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/h1r9ltrlx7r5drucw3cbori5g2mx/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 69,
+    "url": "https://hackerone.com/slack",
+    "handle": "slack",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/069/683fee312381bc46cadc7ea1950abc87944d12c3_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/069/683fee312381bc46cadc7ea1950abc87944d12c3_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Slack",
+      "twitter_handle": "slackhq",
+      "website": "https://slack.com",
+      "about": "All your team communication in one place, instantly searchable, and available wherever you go."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-03-12T00:15:42.616Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-03-04T15:29:16.799Z",
+  "team_member_agreed_on_going_public_at": "2020-03-12T00:15:42.520Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The TURN servers used by Slack allow TCP connections and UDP packets to be proxied to the internal network. This gives an attacker the ability to scan and interact with internal systems.\n\nThe attacker may proxy TCP connections to the internal network by setting the `XOR-PEER-ADDRESS` of the TURN connect message (method `0x000A`, <https://tools.ietf.org/html/rfc6062#section-4.3>) to a private IPv4 address.\n\nUDP packets may be proxied by setting the `XOR-PEER-ADDRESS` to a private IP in the TURN send message indication (method `0x0006`, <https://tools.ietf.org/html/rfc5766#section-10>).\n\nPlease check the attached report for additional details.\n\n## Impact\n\nBy abusing this feature an attacker will be able to read and potentially modify sensitive information in Slack's internal infrastructure. Typically, this security vulnerability has at least the same impact as an SSRF. However it is considered more useful from an attacker's point of view since attacks are not restricted to HTTP.\n\nThe hacker selected the **Server-Side Request Forgery (SSRF)** weakness. This vulnerability type requires contextual information from the hacker. They provided the following answers:\n\n**Can internal services be reached bypassing network access control?**\nYes\n\n**What internal services were accessible?**\nMetadata, localhost, network services on the `10.0.0.0/8`\n\n**Security Impact**\nBy abusing this feature an attacker will be able to read and potentially modify sensitive information in Slack's internal infrastructure. Typically, this security vulnerability has at least the same impact as an SSRF. However it is considered more useful from an attacker's point of view since attacks are not restricted to HTTP.\n\nNote: vulnerability is not SSRF but open TURN proxy - this was the closest I could choose.\n\n",
+  "bounty_amount": "3500.0",
+  "formatted_bounty": "$3,500",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 281909,
+      "file_name": "turn_tcp_proxy_response.pcapng",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/281/909/12b59b02efea4597e38df4cef8e1e5fbed5626b8/turn_tcp_proxy_response.pcapng?response-content-disposition=attachment%3B%20filename%3D%22turn_tcp_proxy_response.pcapng%22%3B%20filename%2A%3DUTF-8%27%27turn_tcp_proxy_response.pcapng&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151946Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c44c18592ba71766523897dd85d1cbee121f05021301460626409b2294437aba",
+      "file_size": 25836,
+      "type": "application/octet-stream",
+      "moderated": null
+    },
+    {
+      "id": 281910,
+      "file_name": "report.md",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/281/910/a779d7e33466d343711ad1563838bd16159f961a/report.md?response-content-disposition=attachment%3B%20filename%3D%22report.md%22%3B%20filename%2A%3DUTF-8%27%27report.md&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151946Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=fe7b88843eebd499e0f6f4ad0a9bd8fe3b9f064f1540fa2ddb46070a164430d6",
+      "file_size": 8865,
+      "type": "text/html",
+      "moderated": null
+    },
+    {
+      "id": 281911,
+      "file_name": "turn_udp(53)_proxy_response.pcapng",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/281/911/a9efd5adface6b8b48ecf74e21e7087cbd66b999/turn_udp%2853%29_proxy_response.pcapng?response-content-disposition=attachment%3B%20filename%3D%22turn_udp%252853%2529_proxy_response.pcapng%22%3B%20filename%2A%3DUTF-8%27%27turn_udp%252853%2529_proxy_response.pcapng&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151946Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=26d3cf48fed4e417ab4d84d8f6c5abd549222fc16bb9542de72dede232270180",
+      "file_size": 1784,
+      "type": "application/octet-stream",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-04-03T15:29:16.859Z",
+  "allow_singular_disclosure_after": -192412229.64380932,
+  "singular_disclosure_allowed": true,
+  "vote_count": 320,
+  "voters": [
+    "rapiddns",
+    "sandrogauci",
+    "bleg",
+    "urinaori",
+    "loaymorad",
+    "sebd",
+    "orange303",
+    "jeti",
+    "tinmo",
+    "billm",
+    "and 310 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 20683,
+      "category": "researcher",
+      "content": "TURN server allowed proxying of TCP connections and UDP packets to internal Slack network and meta-data services on AWS.",
+      "updated_at": "2020-03-12T07:08:47.876Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 58642,
+        "username": "sandrogauci",
+        "name": "Sandro Gauci",
+        "bio": "CEO at Enable Security",
+        "cleared": false,
+        "verified": false,
+        "website": "https://www.enablesecurity.com",
+        "location": "",
+        "created_at": "2016-03-01T07:39:14.591Z",
+        "url": "https://hackerone.com/sandrogauci",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/h1r9ltrlx7r5drucw3cbori5g2mx/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/h1r9ltrlx7r5drucw3cbori5g2mx/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/h1r9ltrlx7r5drucw3cbori5g2mx/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

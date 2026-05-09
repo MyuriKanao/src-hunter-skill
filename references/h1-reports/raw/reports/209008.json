@@ -1,0 +1,161 @@
+{
+  "id": 209008,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMDkwMDg=",
+  "url": "https://hackerone.com/reports/209008",
+  "title": "Authentication Bypass - Chaining two vulnerabilities leads to account takeover at en.instagram-brand.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-02-26T02:41:50.008Z",
+  "submitted_at": "2017-02-26T02:41:50.008Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "saurabhb",
+    "url": "/saurabhb",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/guv3fgchgdb2dk1xb6ldsp78lkaf/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 111,
+    "url": "https://hackerone.com/automattic",
+    "handle": "automattic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Automattic",
+      "twitter_handle": "",
+      "website": "https://automattic.com",
+      "about": "WordPress.com, WooCommerce, WordPress VIP, Jetpack, Beeper, Texts, Akismet, Gravatar, Crowdsignal, Tumblr and more!"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-06-22T14:12:38.392Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-05-23T14:12:37.712Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Product / URL**\nhttps://en.instagram-brand.com/wp-json/brc/v1/login/\n\n**Description and Impact**\nAn attacker can perform account takeover by leveraging following two vulnerabilities:\n\nAuth Bypass = Username Enumeration + Login Brute Force\n\n\n\nA. Username Enumeration:\n-------------------------------\n\nFor the site https://en.instagram-brand.com/, it is made sure that a malicious user cannot enumerate usernames of the users by implementing CAPTCHAs at Sign Up (https://en.instagram-brand.com/register/signup) and Forgot Password (https://en.instagram-brand.com/register/signin) pages.\nThis is made the site secure.\nBut I have found a way to bypass this protection. The endpoint: https://en.instagram-brand.com/wp-json/brc/v1/resend-verify has absolutely no rate limiting, thus a malicious user can take its advantage to enumerate usernames.\n\n**Another thing of concern is that, if a valid username is found, then the Instagram site sends an account verification link to that email. Even if the account is previously verified !! And if those victims try to login, then they can't. The site asks to first verify their account by clicking on the account activation links !!**\n\nAn attacker can harvest the usernames and abuse this functionality to bother the victims.\n\n**Following is the analysis:**\n1) The endpoint to which the actual request goes - https://en.instagram-brand.com/wp-json/brc/v1/resend-verify\n2) The total number of requests/attempts you were able to make - 1001 (you can do it infinite)\n3) The time in which you made those requests/attempts - 10 minutes\n4) Some demonstration that you weren't actually just silently locked out -Refer the attached exploit.\n\n**Exploit Developed:**\n1. Save the files email.txt and InstagramBrandEnumerationExploit.rb in a folder.\n2. Run the exploit like this: ruby InstagramBrandEnumerationExploit.rb\n3. Observe in the console that the right emails are disclosed within seconds.\n\n\n**Reproduction Instructions / Proof of Concept**\n1. Sign Up using any email address.\n2. Attach a local intercepting proxy.\n3. After signing up, a resend email button will appear.\n4. Click on it and intercept the request.\n5. For the parameter, 'email' in the request body, put your payloads i.e. email addresses to need to be enumerated.\n6. Send the request.\n7. Observe the response. It is verbose and states clearly if the user exists or not.\n8. Now try to login using any of the victim's email.\n9. Observe that the web app does not let you login.\n\n**The HTTP Request is:**\n\n`POST /wp-json/brc/v1/resend-verify HTTP/1.1\nHost: en.instagram-brand.com\nUser-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate, br\nX-WP-Nonce: 30436dbdab\nContent-Type: application/x-www-form-urlencoded\nReferer: https://en.instagram-brand.com/register/signup\nContent-Length: 29\nCookie: pll_language=en; _ga=GA1.2.2112289023.1486871994; _gat=1\nConnection: keep-alive`\n\n`email=<your email here>`\n\n\n\n\nB. Login Brute Force\n-----------------------\n\nThe endpoint https://en.instagram-brand.com/wp-json/brc/v1/login/ does not have any rate limiting. This still allows an attacker to make the following number of guesses from one single system single threaded : 100 per min, 6,000 per hour, 1,44,000 per day or 43,20,000/month. No additional protection mechanism such as Captcha (pre-auth) or account lockout requiring additional email/phone verification (pre- or post-auth) were identified at any time. I could make 1020 attempts in 10 minutes.\n\n**Solution:**\nImplement a Captcha after a reasonable number of failed login attempts against one account at the application-layer. The Captcha should not only be shown to offending IP addresses, but to anyone who attempts to login to the account under attack. Another option is to enable an account lockout policy which effectively locks down an account that has been attacked (e.g. after 20 failed consecutive logins) and requires out-of-band validation by the real account owner (e.g. email, mobile) before becoming accessible again.\n\n\n**Reproduction Instructions / Proof of Concept**\nI have developed an exploit in Ruby to demonstrate this attack. \nIts usage:\n1. Save the InstagramBrandLoginBruteForce.rb in any folder.\n2. Have a long list of passwords in passlist.txt file and keep it in the same folder.\n3. On line number 7, enter the name of the victim's email who you want to target. This can also come from username enumeration list fetched from the exploit InstagramBrandEnumerationExploit.rb\n4. Using cmd, navigate to that folder and run it like this: ruby InstagramBrandLoginBruteForce.rb\n5. Observe the results.\n\n\n**Additional Note:**\nI have used single threading for these attacks, but these can be more powerful if multi threading is used.",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 164169,
+      "file_name": "emails.txt",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/164/169/a8a0218626004f41642c65e317726684c8cc35dd/emails.txt?response-content-disposition=attachment%3B%20filename%3D%22emails.txt%22%3B%20filename%2A%3DUTF-8%27%27emails.txt&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152216Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a0cf0b278c907b316352ccf7daa0fead02d908a517e22a3318529b7ae22c6c46",
+      "file_size": 248,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 164170,
+      "file_name": "InstagramBrandBruteForceResults1.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/164/170/839265f3c3f9c20cf3256354515c9bd1cc8f0d12/InstagramBrandBruteForceResults1.PNG?response-content-disposition=attachment%3B%20filename%3D%22InstagramBrandBruteForceResults1.PNG%22%3B%20filename%2A%3DUTF-8%27%27InstagramBrandBruteForceResults1.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152216Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=61228a6331a2e67d10a72f3a97498997b437f5e44d16f91d28252c6d391c44fa",
+      "file_size": 20849,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 164171,
+      "file_name": "InstagramBrandLoginBruteForce.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/164/171/b45274cfcb3fa4640db090c5ae57ac692298f928/InstagramBrandLoginBruteForce.rb?response-content-disposition=attachment%3B%20filename%3D%22InstagramBrandLoginBruteForce.rb%22%3B%20filename%2A%3DUTF-8%27%27InstagramBrandLoginBruteForce.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152216Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b31b652588b8a498da8b4984abbbecf639a23f0081640af993f6ec5054532599",
+      "file_size": 1781,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 164172,
+      "file_name": "InstagramBrandEnumerationExploit.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/164/172/b684eaefabe5e10793782a5b2c002b4301d5b03a/InstagramBrandEnumerationExploit.rb?response-content-disposition=attachment%3B%20filename%3D%22InstagramBrandEnumerationExploit.rb%22%3B%20filename%2A%3DUTF-8%27%27InstagramBrandEnumerationExploit.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152216Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1bbf40beeca3ff2d9a56cb7983f5c72b41f8466f56b778c8dabb5e0b3133face",
+      "file_size": 1878,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 164173,
+      "file_name": "InstagramBrandUsernameEnumeration.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/164/173/60f2a5c0b90acd848cf40012dcfc28fc4b1c4225/InstagramBrandUsernameEnumeration.png?response-content-disposition=attachment%3B%20filename%3D%22InstagramBrandUsernameEnumeration.png%22%3B%20filename%2A%3DUTF-8%27%27InstagramBrandUsernameEnumeration.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152216Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9e58a8f57d36b25cd9c453aabb727b15746aa88755bc8a12d8b888adc78c46a4",
+      "file_size": 142500,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-06-22T14:12:37.808Z",
+  "allow_singular_disclosure_after": -217127378.76356575,
+  "singular_disclosure_allowed": true,
+  "vote_count": 38,
+  "voters": [
+    "he4am",
+    "loaymorad",
+    "drtrace",
+    "base_64",
+    "ali",
+    "shubham_srt",
+    "2026",
+    "pr0f0x01",
+    "aporlorxl23",
+    "lumbridge",
+    "and 28 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

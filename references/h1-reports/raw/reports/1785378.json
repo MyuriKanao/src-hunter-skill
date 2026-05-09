@@ -1,0 +1,138 @@
+{
+  "id": 1785378,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNzg1Mzc4",
+  "url": "https://hackerone.com/reports/1785378",
+  "title": "Double evaluation in .bash_prompt of dotfiles allows a malicious repository to execute arbitrary commands",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-11-28T03:59:20.682Z",
+  "submitted_at": "2022-11-28T04:31:43.121Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ryotak",
+    "url": "/ryotak",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/Nb79aqy3v6SyMh8rwZZh43cu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 162,
+    "url": "https://hackerone.com/iandunn-projects",
+    "handle": "iandunn-projects",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jo328q250pb9uztc4p1zivborzwy/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/jo328q250pb9uztc4p1zivborzwy/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ian Dunn",
+      "twitter_handle": "",
+      "website": "",
+      "about": "I'm a WordPress developer who maintains several small open source projects."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-12-01T04:00:35.979Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-12-01T04:00:35.911Z",
+  "team_member_agreed_on_going_public_at": "2022-11-30T17:12:54.713Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nDue to the improper usage of the `PS1` environment variable in [`.bash_prompt` of dotfiles](https://github.com/iandunn/dotfiles/blob/16a432681077362f263cb926737ad5cca5df6307/.bash_prompt), a malicious repository can execute arbitrary commands when changed the current directory to it.\n\n## Description\nThe `PS1` environment variable of bash supports command substitutions. For example, setting `PS1` to `$(echo hello)` executes `echo hello` each time the prompt is displayed.\n\nBecause [`.bash_prompt` of dotfiles](https://github.com/iandunn/dotfiles/blob/16a432681077362f263cb926737ad5cca5df6307/.bash_prompt) uses the following code to display the VCS information, if any outputs of these commands contain command substitution syntaxes, it'll be evaluated while printing the prompt.\n\n[`.bash_prompt` line 264-266](https://github.com/iandunn/dotfiles/blob/16a432681077362f263cb926737ad5cca5df6307/.bash_prompt#L264-L266)\n``` bash\n\texport PS1=\"\\n${command_mark}${color_user_host}\\u${color_reset} @ ${color_user_host}$hostname${color_reset} in ${color_folder}\\w${color_reset} \\\n\t$(vcs_prompt) \\\n\t\\n> \"\n```\n\nSince `vcs_prompt` contains the information of Git or SVN, a malicious repository with a crafted branch name can execute arbitrary commands.\n\n[`.bash_prompt` line 241-254](https://github.com/iandunn/dotfiles/blob/16a432681077362f263cb926737ad5cca5df6307/.bash_prompt#L241-L254)\n``` bash\nfunction vcs_prompt {\n\tGIT_PROMPT=$(git_status)\n\tSVN_PROMPT=$(svn_status)\n\n\tif [[ -n $GIT_PROMPT ]]; then\n\t\techo -n \"\\n$GIT_PROMPT\"\n\n\t\tif [[ -n $SVN_PROMPT ]]; then\n\t\t\techo -n \", $SVN_PROMPT\"\n\t\tfi\n\telif [[ -n $SVN_PROMPT ]]; then\n\t\techo \"\\n$SVN_PROMPT\"\n\tfi\n}\n```\n\n## Steps to reproduce\n1. Set up dotfiles. (For the minimal setup, I used {F2051541} to set up `.bash_prompt`.)\n2. Create a git repository with a crafted name: `git init -b '$(touch${IFS}/tmp/pwned)' repo`\n3. Enter the repository: `cd repo`\n4. Confirm that `touch /tmp/pwned` is executed.\n\n{F2051546}\n\n## Impact\nAn attacker can execute arbitrary commands by tricking the victim into entering a malicious directory.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2051541,
+      "file_name": "setup.sh",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/wympyptozt7rr81nzqjnqhlc1hb5?response-content-disposition=attachment%3B%20filename%3D%22setup.sh%22%3B%20filename%2A%3DUTF-8%27%27setup.sh&response-content-type=application%2Fx-sh&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150849Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3372655ed15bc77ce9bb0d736cc12939c82ba95344eaec18e92137e7779172cb",
+      "file_size": 187,
+      "type": "application/x-sh",
+      "moderated": null
+    },
+    {
+      "id": 2051546,
+      "file_name": "2022-11-28_13-27-48.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/a4mrqaj58mm4k6934lzis619xaid?response-content-disposition=attachment%3B%20filename%3D%222022-11-28_13-27-48.mp4%22%3B%20filename%2A%3DUTF-8%27%272022-11-28_13-27-48.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150849Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=03b379c1a1e5acbb0ff6f93c1a92307c26dc3ce1d645d4142764c15d4eeee877",
+      "file_size": 386495,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2022-12-30T17:12:54.843Z",
+  "allow_singular_disclosure_after": -105918955.01972252,
+  "singular_disclosure_allowed": true,
+  "vote_count": 47,
+  "voters": [
+    "nopurposeinlife",
+    "jumpydata",
+    "similardisaster",
+    "hg_real",
+    "foobar7",
+    "zy9ard3",
+    "shreyaschavhan",
+    "address_below0",
+    "polem4rch",
+    "mehdisadir",
+    "and 37 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2358,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "GitHub repositories",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

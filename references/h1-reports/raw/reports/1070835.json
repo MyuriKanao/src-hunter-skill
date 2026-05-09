@@ -1,0 +1,160 @@
+{
+  "id": 1070835,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDcwODM1",
+  "url": "https://hackerone.com/reports/1070835",
+  "title": "CS:GO Server -> Client RCE through OOB access in CSVCMsg_SplitScreen + Info leak in HTTP download",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-01-04T00:22:02.658Z",
+  "submitted_at": "2021-01-04T00:22:02.744Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "simonscannell",
+    "url": "/simonscannell",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/HvE5FGgP56eXFMNMr4rwmunu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-05-17T22:01:21.010Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-05-14T14:19:02.471Z",
+  "team_member_agreed_on_going_public_at": "2021-05-17T22:01:20.822Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "7500.0",
+  "formatted_bounty": "$7,500",
+  "weakness": {
+    "id": 8,
+    "name": "Out-of-bounds Read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 66,
+  "voters": [
+    "mtib",
+    "tolga",
+    "bombon",
+    "redhotchilihacker_",
+    "gamer7112",
+    "mvc",
+    "ali",
+    "simonscannell",
+    "bl4de",
+    "akashhamal0x01",
+    "and 56 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1286,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "csgo.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 53309,
+      "category": "team",
+      "content": "Title:         CS:GO Server -> Client RCE through OOB access in CSVCMsg_SplitScreen + Info leak in HTTP download\nScope:         csgo.exe\nWeakness:      Out-of-bounds Read\nSeverity:      Critical (9.6)\nLink:          https://hackerone.com/reports/1070835\nDate:          2021-01-04 00:22:02 +0000\nBy:            @simonscannell\n\nDetails:\nWe managed to write an extremely reliable exploit for CS:GO on Windows by chaining  an OOB access that leads to RIP control and an Info leak. This report consists of two  critical bugs. The memory leak was initially reported in #1064367, where the other bug  in the same report was a duplicate and the OOB access in #1064809. Altough #1064809 is still open as an explot was expected, we still wanted to make a new report where both bugs are in one place, as they are both two completely unique bugs.\n\nHere is a PoC video of the exploit in action:\n\n{F1143323}\n\n\n# Vulnerability details\n\n## Bug #1: Information leak through HTTP downloads\n\nDuring vulnerability research, we found out that CS:GO dedicated servers can host custom map and game modes, all of which depend on custom files. Game client's can connect to these servers and download these files dynamically. Usually, a CS:GO server maintainer would create a list of required files and write them into a `.res` file, which has the same name as the map the server is running on. We found this feature highly interesting, as it involves interaction with yet another untrusted server.\n\nAfter reversing the code that actually handles the HTTP download on the client side on Linux, we found out that it was handled by curl and the logic seems to be the following:\n\n1. Create a CURL object and set all necessary options (URL, timeout, User-Agent etc)\n2. Register a callback that is called for every HTTP header the server sends\n3. Register a callback that is called when the data of the body of the HTTP response is received\n\nThis logic can be seen in the following screenshot:\n\n{F1143263}\n\nAfter looking at the code that implements the callbacks, we found that the following logic applies:\n\n1. The header callback looks for the `Content-Length` header and uses its value to allocate a buffer to fit the file into. It does so through a case-sensitive string search.\n2. The write callback then writes the data that is received into the buffer\n3. After the download finished, it is written to the destination file.\n\nHere is a screenshot showing how a case-sensitive search is implemented and how it is used to allocate a buffer:\n\n{F1143269}\n\nThe bug that occurs here is that if two `Content-Length` headers are sent, but one is written with uppercase characters (`Content-Length`) and the other header with all lower case characters `content-length`, then the CS:GO code will reocognize only the first and allocate a buffer with whatever size is within the field. The second header is however missed by the CS:GO code but not by curl. Here is an example HTTP response to demonstrate this:\n\n\n```\nHTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 1337\ncontent-length: 0\nConnection: closed\n```\n\nIf such a response is received, a buffer of size **1337** is allocated. However, the second `Content-Length` header tells the HTTP client, in this case curl, that no data will follow. This means that no data is ever actually written into the file buffer. The next bug is that CS:GO does not check if the data that has been received matches the size of the buffer. It will still write the allocated buffer into a file. However, since no data has been written, an attacker controlled size of uninitalized Heap memory is written to the file. \n\nAn attacker can then use the `NETMsg_File` message to have the client upload the just created file containing uninitialized memory. The attacker is then able to view memory contents of the user's process that have been freed before. In our case, we parsed the file and searched for pointers that we used to break ASLR in the client's game process and further exploit the client.\n\n\n## Bug #2: OOB access in CSVCMsg_SplitScreen\n\nThe source engine supports splitscreen users in games. We noticed this fact when looking through the available protobuf messages for CS:GO clients when we spotted the following message:\n\n```\nmessage CSVCMsg_SplitScreen {\n    optional .ESplitScreenMessageType type = 1 [default = MSG_SPLITSCREEN_ADDUSER];\n    optional int32 slot = 2;\n    optional int32 player_index = 3;\n}\n```\n\nThis message was interesting to us, as it contained an index. As it turns out, it is not the `player_index` but the `slot` field that is used as an array index into a statically sized, global array based in `engine.dll`.\n\nThe following screenshot must be understood with the context in mind that `ecx` points to a global array in the `.data` section of `engine.dll`. `edx` is controlled by an attacker and corresponds to the `slot` field. There are no checks made on this value:\n\n{F1143270}\n\nAs can be seen, a pointer to some object, probably an object representating a split screen user is fetched from the array. The first byte of the object is then tested for a NULL byte.\n\nif the first byte of whatever the object is pointing to is 0, the function continues execution and arrives at a section that is highly interesting to an attacker:\n\n{F1143272}\n\nKeep in mind that `ebx` was a value that was derived through an OOB access and could be attacker controlled.\n\nWhat we see here is that  a vtable is dereferenced at offset **8** from `ebx`. This vtable is then used to jump to a dynamic location. \n\nThis means that if an attacker can control the contents of  what `ebx` points to, he can point to a fake vtable under his control and ultimately control the Program Counter and thus gains the ability to execute code remotely.\n\n\n# Exploitation\n\nWith these two powerful bugs at hand, we went ahead and wrote an exploit. The exploitation strategy was to use the info leak to break ASLR and obtain the base address of the `engine.dll` file in memory. From there, we could use the OOB access to hijack the `eip` register and make it point somewhere useful in `engine.dll` and execute a ROP chain.\n\n\n## Breaking ASLR\n\nBreaking ASLR happens in two steps:\n\n1. Allocate and deallocate an object containing a pointer to `engine.dll` thousands of times on the heap.\n2. Have the client write multiple files of uninitialized memory of the same size as the object created in the previous step to disk and upload it to the server. By abusing known behavior of the Windows Heap allocator and of the objects, it is extremely likely that one of the objects containing a pointer to `engine.dll` can be found in the file.  \n\nDuring testing, this exploit fails around 2/100 times.\n\nWe found that the message `CSVCMsg_SendTable` can be sent a variable amount of times to the client, where each message allocates a buffer of a variable number of `sendprop_t` objects on the heap. As it turned out, this object contains a function pointer into `engine.dll`. It's definition is shown here:\n\n```\nmessage CSVCMsg_SendTable\n{\n\tmessage sendprop_t\n\t{\n\t\toptional int32 type = 1;\t\t\t\t// SendPropType\n\t\toptional string var_name = 2;\n\t\toptional int32 flags = 3;\n\t\toptional int32 priority = 4;\n\t\toptional string dt_name = 5;\t\t\t// if pProp->m_Type == DPT_DataTable || IsExcludeProp\n\t\toptional int32 num_elements = 6;\t\t// else if pProp->m_Type == DPT_Array\n\t\toptional float low_value = 7;\t\t\t// else ...\n\t\toptional float high_value = 8;\t\t\t// \t\t...\n\t\toptional int32 num_bits = 9;\t\t\t//\t\t...\n\t};\n\n\toptional bool is_end = 1;\n\toptional string net_table_name = 2;\n\toptional bool needs_decoder = 3;\n\trepeated sendprop_t props = 4;\n}\n```\n\nWe created this message and sent it `256` times with some unique values, as demonstrated here:\n\n```Python\ndef spray_send_table(s, addr, nprops):\n    table = nmsg.CSVCMsg_SendTable()\n    table.is_end = False\n    table.net_table_name = \"abctable\"\n    table.needs_decoder = False\n\n    for i in range(nprops):\n        prop = table.props.add()\n        prop.type = 0x1337ee00\n        prop.var_name = \"abc\"\n        prop.flags = 0\n        prop.priority = 0\n        prop.dt_name = \"whatever\"\n        prop.num_elements = 0\n        prop.low_value = 0.0\n        prop.high_value = 0.0\n        prop.num_bits = 0x00ff00ff\n\n    tosend = prepare_payload(table, 9)\n    s.sendto(tosend, addr)\n```\n\nThe reason for these unique values is that we can search them for them in the files the client uploads, which contain uninitialized memory. If we find these values, we can be sure that a `sendprop_t` object, along with a function pointer has been included in the info leak files.\n\nHere is the corresponding code that parses the uninitialized memory sent by a client:\n\n```Python\nfor i in range(len(data) - 0x54):\n        vtable_ptr = struct.unpack('<I', data[i:i+4])[0]\n        table_type = struct.unpack('<I', data[i+8:i+12])[0]\n        table_nbits = struct.unpack('<I', data[i+12:i+16])[0]\n        if table_type == 0x1337ee00 and table_nbits == 0x00ff00ff:\n            engine_base = vtable_ptr - OFFSET_VTABLE \n```\n\nBy simply subtracting the offset of the vtable within `engine.dll`, it was possible to leak the client's `engine.dll` base address in memory.\n\n## Hijacking RIP\n\nWe mentioned that the second bug, an OOB access can be used to control a pointer. Since the array where the OOB access occurs in is a global variable and located within the `.data` section of `engine.dll`, we thought that it would be best to search for a controlled value within this `.dll` file to make the pointer, contained within `ebx` as shown previously, point to an attacker-controlled fake object containing a fake vtable.\n\nAs it turns out, one of the mechanisms through which server and client setup a game are `convars`. These `convars` contain information such as the URL from which to download files from or any other configuration settings of a server or client.\n\nThey are sent through the `CMsg_CVars` message\n\n```\nmessage CMsg_CVars\n{\n\tmessage CVar\n\t{\n\t\toptional string name = 1;\n\t\toptional string value = 2;\n\t\toptional uint32 dictionary_name = 3;\t\t// In order to save on connect packet size convars that are known will have their dictionary name index sent here\n\t}\n\n\trepeated CVar cvars = 1;\n}\n\nmessage CNETMsg_SetConVar\n{\n\toptional CMsg_CVars convars = 1;\n}\n```\n\nAs can be seen here, a variable amount of `convar`s is sent to the client by the server, each containing  a controlled name and value field. These `convars` are global objects, located within `engine.dll`. When a server sends a `convar`, the string value is copied to the heap and a pointer to it saved within the global `convar`'s object.\n\nThis means that if our exploit setup a fake object by crafting a string value containing a fake object and vtable, a pointer to it is stored at a known offset within the global binary.\n\nHere is an illustration showing the chain of pointers that is going to happen:\n\n{F1143293}\n\nThe illustration shows how the splitscreen array OOB is used to interpret the pointer to the string value of a `convar` as an object. The fake object's vtable pointer points back into `engine.dll` into another convar. The `convar`s turned out to be a very powerful gadget, as they could take both string and integer values and store them each into their object's memory. \n\nWith this target memory layout in mind, let's look at the code that dereferences the fake object to vtable to `eip` again:\n\n{F1143272}\n\nKeep in mind, `ebx`, if the `slot` field is set accordingly, contains the pointer to the controlled string  value of a `convar`. It then dereferences it at offset **8** and moves the result into `eax`. This corresponds to the fake vtable pointer pointing back at the convar in the illustration. `eax` is then dereferenced at offset `0xAC`. By setting up another convar with an integer value, we can control the result of this pointer dereference which is then `call`'d and thus arbitrary RIP control is gained.\n\nSince all offsets are known, this step of the exploit chain is 100% reliable.\n\n## ROP\n\nWe then utilized a technique called `ROP`chaining to setup a an attacker controlled stack and finally execute the `ShellExecuteA()` Windows standard library function to execute arbitrary system commands. In our case, we simply spawned a calculator.\n\n\n# Reproduction\n\nAttached is a `poc.zip` file containing all required files to launch the PoC exploit. Unpack it into a directory and activate its Python3 virtual environment via the command (on Windows' cmd):\n\n```\n.\\poc_env\\Scripts\\activate\n```\n\nThen execute the script through `python .\\poc.py`\n\nThen, on Windows, start the CS:GO game and activate the developer console:\n\n1. Start the game and within the game settings enable the developer console. Game-> Enable Develoepr Console-> yes\n2. Then, within the settings go to Mouse / Keyboard-> UI keys -> Toggle Developer Consoleand set it to your preferred key\n\nFinally, open the developer console and connect to the fake server via the command:\n\n`connect YOUR_IP:1337`\n\nReplace `YOUR_IP` with your local LAN IP (192.*)\n\nA calculator should be opened. If the exploit fails for some reason, just try again. Please do not hesitate to point out exploit failures or questions on reproduction. We have tested the exploit highly successfully against 3 different Windows 10 machines.\n\n## Impact\n\nThis exploit allows an attacker in control of a malicious CS:GO server to execute arbitrary code, including malware, on any client that connects to the server. An attacker could steal Steam credentials or take over the machine and use it for further malicious purposes. These two vulnerabilities can be exploited extremely reliable on both Windows and Linux clients.\n\n",
+      "updated_at": "2021-05-17T22:01:06.606Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 300268,
+        "username": "mcjohn",
+        "name": "mcjohn",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2018-06-30T00:26:54.841Z",
+        "url": "https://hackerone.com/mcjohn",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "id": 1245762,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjQ1NzYy",
+  "url": "https://hackerone.com/reports/1245762",
+  "title": "Account Takeover via SMS Authentication Flow ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-06-27T15:45:27.660Z",
+  "submitted_at": "2021-06-27T15:45:27.780Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "yetanotherhacker",
+    "url": "/yetanotherhacker",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 28545,
+    "url": "https://hackerone.com/zenly",
+    "handle": "zenly",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fejdhan217zjloubmj19c0phf2vc/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/fejdhan217zjloubmj19c0phf2vc/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Zenly",
+      "twitter_handle": "zenly",
+      "website": "https://zen.ly",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-01-12T10:08:30.046Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-01-05T17:13:50.057Z",
+  "team_member_agreed_on_going_public_at": "2022-01-12T10:08:29.911Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nDuring the **authentication** flow, an SMS is sent to the user in order to validate the session and proceed to the user account. The way Zenly API handles this flow is by:\n1. Calling the `/SessionCreate` endpoint with the mobile phone number of the user.\n2. A session for the user is created and a session token is returned, but no operations with this session are possible until the verification is complete.\n3. An SMS message is sent to the user, containing a verification code.\n4. Calling the `/SessionVerify` endpoint with both the session token and the verification code received by SMS.\n5. Once this request is successfully completed, the session token becomes valid and the user is now logged in.\nAfter the first call to `/SessionCreate`, subsequent calls will return ==the same session token==, until a call to `/SessionVerify` is made with a valid verification code. \n\n## Steps To Reproduce:\nTo reproduce this issue, an environment that enables intercepting and decoding network requests is required. Once this environment is set up, we are able to gain visibility over network activity.\nBy following a typical login flow, we can gain knowledge of the network requests that are involved. The flow starts by requesting the mobile phone number from the user. Once the user inputs their phone number, they will be prompted for a verification code that is sent through SMS.\n{F1355357}\nAt this moment, before entering the verification code, a request to `/SessionCreate` is launched. Note that this request (on the left) contains the mobile phone number of the user, and the response (on the right) to this request contains a **session token**, as shown below.\n███████\nNow, if an attacker also sends a request to `/SessionCreate` with the mobile phone number of the legitimate user, they will obtain the same session token. The response to this request, initiated by the attacker, is shown below:\n█████████\n**Note:** In this example, the attacker called `/SessionCreate` after the legitimate user. However, the attacker could also have called `/SessionCreate` before the legitimate user. This would have caused Zenly (on the side of the legitimate user) to obtain **the same session token that the attacker obtained**.\nAt this moment, the legitimate user will receive an SMS message containing a verification code. The authentication flow is finished (meaning the session token will become valid) once the user inputs this code in their Zenly application. However, once the user does this, the attacker will also end up with a valid session token in their hands (**since it is the same token**).\nThe attacker can then use this token to impersonate the legitimate user, executing any request to the Zenly API with it. The attacker can also, at any time, check if the session token is valid by launching a request to `/Me`, an endpoint that returns information about the current session. If the verification code has not yet been entered by the legitimate user, requests to `/Me` will return a 401 Unauthorized response. Once the code is entered, requests to `/Me` will return session information (such as phone number and user identifier), as shown below:\n████\nOnce the attacker knows the session is valid, they can launch requests to `███████`, `██████` or `████` instead, thus **gaining access to notifications, geolocation, and conversations** of the legitimate user and their friends. \n\n## Suggested Mitigation:\nIn order to mitigate this issue, the following steps could be taken:\n-\tSession tokens should be unique for each call to `/SessionCreate`.\n-\tA new SMS code should be sent on every call to `/SessionCreate`.\n-\tPrevious SMS codes should be invalidated once a new one is sent.\n-\tApply rate-limiting to both `/SessionCreate` and `/SessionVerify` endpoints.\n\n## Impact\n\nAn attacker can take over a user account by abusing the `/SessionCreate endpoint`, which will consistently return the same session token (although not yet valid) for the same user. Once the legitimate user validates the SMS code for that session token, the session will become valid for both the legitimate user and the attacker.\nThe main point of this issue is that the attacker needs to obtain a session token before the legitimate user calls the `/SessionVerify` endpoint. This can be done either before or after the legitimate user calls the `/SessionCreate endpoint`. \nAllowing both the legitimate user and an attacker to have the same session token will give an advantage to the attacker. The verification code sent through SMS will remain valid for the same amount of time that the session token is valid, and it will not be regenerated within that time period, meaning that if the legitimate user inputs this code in the application (triggering a call to `/SessionVerify`), the session token that both the legitimate user and the attacker hold will become valid. This means that the attacker now has a valid session for the account of the legitimate user, even though the attacker never knew the verification code.\nOn the other hand, even if the attacker wasn’t able to obtain the session token (through a call to `/SessionCreate`) before the legitimate user, this attack is still possible while the legitimate user doesn’t input the correct verification code in the application, although this scenario would be less likely since the time window for carrying out this attack can be rather short.\n**Once the attacker has a valid session for the account of the legitimate user, they can access their location, notifications, conversations, and friends’ information just like the legitimate user could.**",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1355357,
+      "file_name": "Picture7.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/6yp9j1c7uykpw447bn55wldwsllh?response-content-disposition=attachment%3B%20filename%3D%22Picture7.png%22%3B%20filename%2A%3DUTF-8%27%27Picture7.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151306Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8391f4c81975d3cd20479dc186b6595e2676194eb7f334c0c7b5201666de8583",
+      "file_size": 43003,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2022-02-04T17:13:50.133Z",
+  "allow_singular_disclosure_after": -134344755.90748733,
+  "singular_disclosure_allowed": true,
+  "vote_count": 92,
+  "voters": [
+    "th3hidd3nmist",
+    "tinmo",
+    "antoniusblock",
+    "drsniper",
+    "alp",
+    "error",
+    "thruster",
+    "foobar7",
+    "shreyaschavhan",
+    "yassinek3ch",
+    "and 82 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18486,
+    "asset_type": "URL",
+    "asset_identifier": "rpc.znly.co",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 119962,
+      "category": "team",
+      "content": "An attacker could have taken over a future user account by abusing the session creation endpoint, which was consistently returning the same session token (although not yet valid) for the same user. \nOnce the legitimate user validates the SMS code for that session token, the session would have become valid for both the legitimate user and the attacker.\n",
+      "updated_at": "2022-01-12T09:52:55.915Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 466928,
+        "username": "spud",
+        "name": "spud",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-01-14T17:31:59.167Z",
+        "url": "https://hackerone.com/spud",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/8oh8szgckzyde0syfm692lalzqg2/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef?response-content-disposition=inline%3B%20filename%3D%22shoie_otomo2.jpg%22%3B%20filename%2A%3DUTF-8%27%27shoie_otomo2.jpg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151306Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=114dba75abf63d8f7a5721805d8555937dca054d0bd2b5523820faa3b08a3655",
+          "medium": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/8oh8szgckzyde0syfm692lalzqg2/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a?response-content-disposition=inline%3B%20filename%3D%22shoie_otomo2.jpg%22%3B%20filename%2A%3DUTF-8%27%27shoie_otomo2.jpg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151306Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=761146ef70e72ab3e1db0fb88e90b88597b4de0eea03b8b32e4c417343d7ec14",
+          "xtralarge": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/8oh8szgckzyde0syfm692lalzqg2/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586?response-content-disposition=inline%3B%20filename%3D%22shoie_otomo2.jpg%22%3B%20filename%2A%3DUTF-8%27%27shoie_otomo2.jpg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151306Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=886943e8110133b5fff8d29d3370e88b9334e2dfaf7699edbf21ff71d988497a"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

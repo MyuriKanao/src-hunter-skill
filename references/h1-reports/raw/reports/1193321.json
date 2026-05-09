@@ -1,0 +1,140 @@
+{
+  "id": 1193321,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTkzMzIx",
+  "url": "https://hackerone.com/reports/1193321",
+  "title": "Scoped apptokens can be changed by that very apptoken",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-05-12T11:09:51.926Z",
+  "submitted_at": "2021-05-12T11:09:52.009Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rtod",
+    "url": "/rtod",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13291,
+    "url": "https://hackerone.com/nextcloud",
+    "handle": "nextcloud",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Nextcloud",
+      "twitter_handle": "nextclouders",
+      "website": "https://nextcloud.com",
+      "about": "Access, share and protect your files, calendars, contacts, communication & more at home and in your enterprise."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2021-32688"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-07-15T19:10:01.824Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-06-15T19:09:55.053Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I noticed that there is the possibility to limit apptokens to not be able to access the filesystem.\n\n1. Create a new apptoken in `https://server/settings/user/security`\n2. Click the .. of your new apptoken and make it not allowed to access the filesystem\n3. Log out\n4. Navigate to `https://server/remote.php/dav` and login with your username + apptoken\n5. Navigate again to `https://server/settings/user/security`\n6. You won't be able to access the apptoken data\n7. Obtain the CSRF token\n8. Send a PUT request to `https://server/settings/personal/authtokens/ID` chaging the scope\n\nNow the ID you do not know. However even on a decent sized system it is not hard to iterate this as there is no rate limiting or throttling at all.\nAnd voila. You have filesystem access.\n\nYou could also remove other apptokens of the same user (if you'd want).\n\n## Impact\n\nLeaked scoped tokens could be used to gain full access to all your data. Defeating the whole purpose of scoped tokens.\n\nI recommend.\n\n1. Only allow tokens that result from a real login (so user+pass+2fa) to modify/delete tokens\n2. Do not allow the current token in use to edit itself",
+  "bounty_amount": "1000.0",
+  "formatted_bounty": "$1,000",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-07-15T19:09:55.167Z",
+  "allow_singular_disclosure_after": -151963465.84690487,
+  "singular_disclosure_allowed": true,
+  "vote_count": 39,
+  "voters": [
+    "menicas",
+    "osman1337",
+    "fqdn",
+    "shreyaschavhan",
+    "run_win",
+    "mohaned0101",
+    "cafecito",
+    "akashhamal0x01",
+    "iamrjarpan",
+    "ibring",
+    "and 29 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.7,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "high",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 13,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "nextcloud/server",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

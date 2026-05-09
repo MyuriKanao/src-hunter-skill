@@ -1,0 +1,161 @@
+{
+  "id": 534794,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MzQ3OTQ=",
+  "url": "https://hackerone.com/reports/534794",
+  "title": "Importing GitLab project archives can replace uploads of other users",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-04-11T00:14:26.525Z",
+  "submitted_at": "2019-04-11T00:14:26.525Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ajxchapman",
+    "url": "/ajxchapman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ey3f0qnxrppswp9im09fgv2kaecf/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-5469"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-12-11T10:39:45.788Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-12-11T10:29:02.847Z",
+  "team_member_agreed_on_going_public_at": "2019-12-11T10:39:45.682Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\nImporting a modified exported GitLab project archive can overwrite uploads for other users.  If the `secret` and `file name` of an upload are known (these can be easily identified for any uploads to public repositories), any user can import a new project which overwrites the served content of the upload with arbitrary content.\n\nThis issue could be abused to backdoor project compiled binaries, allowing the spread of malware.\n\nI have not performed a full risk assessment or root cause analysis of this issue at this time. I wanted to get the issue reported to GitLab asap after discovery. If you require any further details or information please let me know.\n\n### Steps to reproduce\nSee the video below for an example of this issue:\n{F466353}\n\nThe video shows the following steps:\n1. As user `root` (on the left hand side of the video), create a new project\n1. Upload a file to the project (e.g. by creating a new issue)\n1. Take note of the file `secret` and `file name` of the original upload\n1. Craft a GitLab project export tar.gz with the replacement upload file with a path equal to the original upload `secret` and `file name`, e.g. `./uploads/ed5ab56bc85699117ba230eb799fd3bf/indi.jpg` (See {F466355} attached)\n1. As user `test` (on the right hand side of the video) create a new project, importing the crafted tar.gz from the above step\n1. As the user `root` refresh your view of the upload file, and note that it has been modified\n\nThis example was demonstrated against the official GitLab docker image from https://hub.docker.com/r/gitlab/gitlab-ce/.\n\n### Impact\nAny upload type can be replaced using this method, if the `secret` and `file name` are known (these can be easily identified for any uploads to public repositories). An attacker could abuse this to backdoor project compiled binaries, allowing the spread of malware.\n\n\n\n### Examples\nSee the attached project files:\n1. Origin project export {F466356}\n1. Modified project export used to change the upload file {F466355}\n\n### What is the current *bug* behavior?\nImporting a project as any user can modify the served upload files of other users.\n\n### What is the expected *correct* behavior?\nImporting a project should not be able to modify the served upload files of other users.\n\n### Relevant logs and/or screenshots\nSee the following `/var/log/gitlab/gitlab-rails/production.log` entry:\n```log\nStarted GET \"/root/new_project/uploads/ed5ab56bc85699117ba230eb799fd3bf/indi.jpg\" for 127.0.0.1 at 2019-04-10 23:07:12 +0000\nProcessing by Projects::UploadsController#show as HTML\n  Parameters: {\"namespace_id\"=>\"root\", \"project_id\"=>\"new_project\", \"secret\"=>\"[FILTERED]\", \"filename\"=>\"indi.jpg\"}\nSent file /opt/gitlab/embedded/service/gitlab-rails/public/uploads/test/modified_project/ed5ab56bc85699117ba230eb799fd3bf/indi.jpg (0.2ms)\n```\nNote that the request was for the `/root/new_project/uploads/ed5ab56bc85699117ba230eb799fd3bf/indi.jpg` file, however the file from the `test/modified_project` was  served.\n\n### Output of checks\n#### Results of GitLab environment info\nGitLab docker environment:\n```sh\n docker images gitlab/gitlab-ce\nREPOSITORY          TAG                 IMAGE ID            CREATED             SIZE\ngitlab/gitlab-ce    latest              7a65562fb501        6 days ago          1.78GB\n```\n\ngitlab-rake gitlab:env:info\n```sh\nSystem information\nSystem:\nCurrent User:   git\nUsing RVM:      no\nRuby Version:   2.5.3p105\nGem Version:    2.7.6\nBundler Version:1.16.6\nRake Version:   12.3.2\nRedis Version:  3.2.12\nGit Version:    2.18.1\nSidekiq Version:5.2.5\nGo Version:     unknown\n\nGitLab information\nVersion:        11.9.6\nRevision:       14bac95\nDirectory:      /opt/gitlab/embedded/service/gitlab-rails\nDB Adapter:     postgresql\nURL:            http://gitlab.example.com\nHTTP Clone URL: http://gitlab.example.com/some-group/some-project.git\nSSH Clone URL:  git@gitlab.example.com:some-group/some-project.git\nUsing LDAP:     no\nUsing Omniauth: yes\nOmniauth Providers:\n\nGitLab Shell\nVersion:        8.7.1\nRepository storage paths:\n- default:      /var/opt/gitlab/git-data/repositories\nGitLab Shell path:              /opt/gitlab/embedded/service/gitlab-shell\nGit:            /opt/gitlab/embedded/bin/git\n```\n\n## Impact\n\nAny upload type can be replaced using this method, if the `secret` and `file name` are known (these can be easily identified for any uploads to public repositories). An attacker could abuse this to backdoor project compiled binaries, allowing the spread of malware.\n\nI have not performed a full risk assessment or root cause analysis of this issue at this time. I wanted to get the issue reported to GitLab asap after discovery.",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 466353,
+      "file_name": "gitlab_uploads.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/466/353/73cbe9e36796c3feca98394c08a4e5c24c7044da/gitlab_uploads.mp4?response-content-disposition=attachment%3B%20filename%3D%22gitlab_uploads.mp4%22%3B%20filename%2A%3DUTF-8%27%27gitlab_uploads.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152036Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=25f5d79e9a733d706f459b2b958686a5df84a61387bcfdb1667f9f62c4920e15",
+      "file_size": 7758136,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 466355,
+      "file_name": "modified.tar.gz",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/466/355/5e7d022fe8ae1b9445f17d0f11dace197eb4944d/modified.tar.gz?response-content-disposition=attachment%3B%20filename%3D%22modified.tar.gz%22%3B%20filename%2A%3DUTF-8%27%27modified.tar.gz&response-content-type=application%2Fgzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152036Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=334c6ccdd10d4f25c9cae7d594afa8b294d5b785af62f61ed1384d5b1686edf2",
+      "file_size": 117871,
+      "type": "application/gzip",
+      "moderated": null
+    },
+    {
+      "id": 466356,
+      "file_name": "2019-04-10_23-56-482_root_new_project_export.tar.gz",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/466/356/57fd9ab8e8d95d4adf5a1777e589d43043707733/2019-04-10_23-56-482_root_new_project_export.tar.gz?response-content-disposition=attachment%3B%20filename%3D%222019-04-10_23-56-482_root_new_project_export.tar.gz%22%3B%20filename%2A%3DUTF-8%27%272019-04-10_23-56-482_root_new_project_export.tar.gz&response-content-type=application%2Fgzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152036Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7b509d655cf28961a9a5f8715265a5a9f25cf7cb3860a56691735f2c9f11d82f",
+      "file_size": 532154,
+      "type": "application/gzip",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 146,
+  "voters": [
+    "tinmo",
+    "pitspile",
+    "sky003",
+    "djcater",
+    "orange303",
+    "feedadad",
+    "n1m0",
+    "jr0ch17",
+    "0xwintermute",
+    "samengmg",
+    "and 136 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

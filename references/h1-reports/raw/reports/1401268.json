@@ -1,0 +1,138 @@
+{
+  "id": 1401268,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDAxMjY4",
+  "url": "https://hackerone.com/reports/1401268",
+  "title": "Persistent CSS injection with ’marked’ markdown parser in Rocket.Chat",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-11-16T07:39:30.627Z",
+  "submitted_at": "2021-11-16T07:39:30.727Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "danieljpp",
+    "url": "/danieljpp",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [
+    "CVE-2022-35251"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-09-22T16:00:42.349Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2022-09-22T12:27:54.950Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-10-22T12:27:55.043Z",
+  "allow_singular_disclosure_after": -111897709.66883378,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "shreyaschavhan",
+    "saqib98",
+    "shivammusic"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 194891,
+      "category": "team",
+      "content": "\n**Summary:** Rocket.Chat offers two different markdown parsers out of the box: the ’orginal’ one and the ’marked’ one. Both markdown parsers offer a different set of features with different re- strictions. Due to more loose restrictions in the ’marked’ parser, a persistent CSS injection in the web interface of Rocket.Chat is possible.\n\n**Description:** Due to style injection in the complete chat window, an adversary is able to manipulate not only the style of it, but will also be able to block functionality as well as hijacking the content of targeted users. Hence the payloads are stored in messages, it is a persistent attack vector, which will trigger as soon as the message gets viewed.\n\n## Releases Affected:\n\n  * 4.1.0 with 'marked' parser\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n(Add details for how we can reproduce the issue)\n\n  1. Setup a new installation of Rocket.Chat\n  2. Enable the 'marked' parser in the admin settings under 'Message' > 'Markdown' > 'Markdown Parser'\n  3. Create a second user account with username `usertest` and a channel containing both accounts\n  4 . Send some messages between both accounts\n  5. Send \n```html\n<div style=\"position: fixed; top: 6px; right: 0px; height: 50px; width: 400px; background: rgb(255,0,0); z-index: 3\">foobar</div>\n```\nThis should block the top right channel settings with a red box.\n  6. Send\n```html\nfoo\n<style >\n[data-username=\"usertest\"] div div p{\n    background: rgba(255, 0, 0, 0.2);\n    font-size: 0;\n}\n[data-username=\"usertest\"] div div p::after{ font-size: initial;\n    content: \"hacked\";\n}\n</style>\n```\nas admin user and observe, that the messages of 'usertest' are overwritten with the content 'hacked'. (It can be done vice versa when replacing 'usertest' in the payload with the admins username).\n\n## Supporting Material/References:\n\n ### Root Cause\n\nThe implementation of the ’marked’ render removes html encoding of the message right before rendering it in `app/markdown/lib/parser/marked/marked.js` line 98.\n\n```js\n\tmessage.html = _marked(unescapeHTML(message.html), {\n\t\tgfm,\n\t\ttables,\n\t\tbreaks,\n\t\tpedantic,\n\t\tsmartLists,\n\t\tsmartypants,\n\t\trenderer,\n\t\thighlight,\n\t});\n\n\tconst window = getGlobalWindow();\n\tconst DomPurify = createDOMPurify(window);\n\tmessage.html = DomPurify.sanitize(message.html, { ADD_ATTR: ['target'] });\n```\n\nDue to the unscape, the user will be able to inject custom HTML elements. Since `DomPurify.sanitize` will only sanitize XSS relevant elements and properties, the malicious HTML with the CSS injection will be set into the user’s message.\n\n\n## Suggested mitigation\n\nTo avoid the style injection, but still allow the usage of custom tags, DomPurify.sanitize could be configured to also remove style elements and attributes. Another way to mitigate the issue would be to not unescape the html before rendering it with ’marked’ to therefore prohibit the user to use custom HTML in their messages.\n\n## Impact\n\nAn attacker can block the user from certain functionalities as well as render the chat window unusable (e.g. with a rotation of the complete html body) after the user enters a channel. Another impact of the issue is the authenticity and integrity of messages. Since an adversary will be able to manipulate or hide arbitrary user messages, the authenticity and integrity is not given anymore. These attack vectors are stored in messages, which will make them available for every new user entering the channel.\n\n## Fix\n\nFixed in 5.0>\n",
+      "updated_at": "2022-09-22T12:27:45.409Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1989106,
+        "username": "mrd0d",
+        "name": "Offsec team engineer",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2021-09-27T20:52:41.370Z",
+        "url": "https://hackerone.com/mrd0d",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/j9d22b8d3wdw2lskn3dviwszwnze/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67?response-content-disposition=inline%3B%20filename%3D%22Ghost%20Boy.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Ghost%2520Boy.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150944Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=acdf2077765ff84c74ecf1012bc0e27051ff02db205a0e1dc7e246f5c4ff7883",
+          "medium": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/j9d22b8d3wdw2lskn3dviwszwnze/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea?response-content-disposition=inline%3B%20filename%3D%22Ghost%20Boy.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Ghost%2520Boy.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150944Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b1b0cb4391b7fd10a85b85219f4f1a646c8ba6d5b1309158b3c214ee7a843ba8",
+          "xtralarge": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/variants/j9d22b8d3wdw2lskn3dviwszwnze/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc?response-content-disposition=inline%3B%20filename%3D%22Ghost%20Boy.jpeg%22%3B%20filename%2A%3DUTF-8%27%27Ghost%2520Boy.jpeg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150944Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=74caa1afb1b820316101d6e9001a82afcb47531d4990c5eed087d14837a27172"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "id": 1180252,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTgwMjUy",
+  "url": "https://hackerone.com/reports/1180252",
+  "title": "Buffer overrun in Steam SILK voice decoder",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-04-29T18:33:33.428Z",
+  "submitted_at": "2021-04-29T18:33:33.502Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "slidybat",
+    "url": "/slidybat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/321/945/c0b45757c343821a68011afe1b229344a41aa9dd_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-09-13T17:56:19.395Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-09-12T11:41:09.058Z",
+  "team_member_agreed_on_going_public_at": "2021-09-13T17:56:19.195Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "#Vulnerability\nThe SteamWorks SDK has a function available named [DecompressVoice()](https://partner.steamgames.com/doc/api/ISteamUser#DecompressVoice), which takes as input some compressed voice data, and returns the raw audio data.\n\nThe format for the input voice data is as follows:\n```\n8 bytes - steamid\n1 byte - payload type\n2 bytes - payload size\n<payload data>\n4 bytes - CRC checksum\n```\n\nThere are numerous payload types available, including Opus PLC, Opus, SILK, Raw and Silence. The bug being considered here is specific to the SILK decoder.\n\nThe pseudo-code for the SILK decoder is:\n```cpp\nunsigned int VoiceEncoder_SILK::Decode( const char* pPayloadData, size_t nPayloadSize, char* pDestBuffer, size_t nDestBufferSize )\n{\n\tm_decControl.API_sampleRate = m_nSampleRate;\n\tint nSamplesInFrame = 20 * m_nSampleRate / 1000;\n\tint nBytesInFrame = 2 * nSamplesInFrame;\n\t\n\tconst char* pPayloadCurr = pPayloadData;\n\tconst char* pPayloadEnd = pPayloadData + pPayloadSize;\n\t\n\tchar* pDestCurr = pDestBuffer;\n\tchar* pDestEnd = pDestBuffer + nDestBufferSize;\n\t\n\twhile ( pPayloadCurr < pPayloadEnd )\n\t{\n\t\tunsigned short nSize = *(short*)pPayloadCurr;\n\t\tpPayloadCurr += 2;\n\t\tif ( nSize == 0xFFFF )\n\t\t{\n\t\t\treturn ( pDestCurr - pDestBuffer ) / 2;\n\t\t}\n\t\t\n\t\tif ( nSize )\n\t\t{\n\t\t\t//  [1] Make sure we're not reading past end of our input\n\t\t\tif ( pPayloadCurr + nSize > pPayloadEnd )\n\t\t\t\tbreak;\n\t\t\t\n\t\t\t//  [2] Make sure we have enough room in output for a full frame\n\t\t\tif ( pDestCurr + 2 * nBytesInFrame > pDestEnd )\n\t\t\t\tbreak;\n\t\t\t\n\t\t\t// Zero out the frame\n\t\t\tmemset( pDestCurr, 0, nBytesInFrame );\n\t\t\t\n\t\t\tdo\n\t\t\t{\n\t\t\t\tunsigned short nDecodedSamples = ( pDestCurr - pDestBuffer ) / 2;\n\t\t\t\tSKP_Silk_SDK_Decode( m_pDecoder, &m_decControl, 0, pPayloadCurr, nSize, pDestCurr, &nDecodedSamples );\n\t\t\t\t\n\t\t\t\tpPayloadCurr += nSize;\n\t\t\t\tpDestCurr += 2 * nDecodedSamples;\n\t\t\t\t\n\t\t\t\tAssert( m_decControl.moreInternalDecoderFrames == 0 ); // [3] We shouldn't get this condition in normal contexts\n\t\t\t}\n\t\t\twhile ( m_decControl.moreInternalDecoderFrames );\n\t\t}\n\t\telse\n\t\t{\n\t\t\tpDestCurr += nBytesInFrame;\n\t\t}\n\t}\n\t\n\treturn ( pDestCurr - pDestBuffer ) / 2;\n}\n```\n\nSome important things to note:\n - At `[1]`, a bounds check is performed to ensure we don't read outside the bounds of the input buffer\n - At `[2]`, a bounds check is performed to ensure we don't write outside the bounds of the output buffer\n - At `[3]`, an assert is performed that `m_decControl.moreInternalDecoderFrames == 0`, however, without running with a debugger attached, this assertion is ignored.\n\nThe bug has to do with the do/while loop with `m_decControl.moreInternalDecoderFrames`. Inside the loop, `pPayloadCurr` and `pDestCurr` are both incremented, but the bounds checks at `[1]` and `[2]` aren't repeated.\n\nThis means that if `m_decControl.moreInternalDecoderFrames` is true, then we can increment `pDestCurr` past the end of the destination buffer, and overwrite stack data.\n\n#Exploiting the vulnerability\nFor the PoC, I chose to show this bug working in CS:GO, but any service that also uses the DecompressVoice function is also vulnerable. We can use this bug to crash Steam/CS:GO for any players on the server that our voices are transmitted to.\n\nNote that the PoC simply overwrites the stack with garbage data which leads to a crash, however it is entirely possible for an attacker to overwrite the return pointer on the stack with meaningful data that results in RCE. Doing so requires quite a lot of setup work with the payload to get SILK to decode it to a valid ROP chain, so I simply went with the crash for an easier PoC.\n\nOne of the challenges to getting this working is to keep the payload size small. CS:GO has a rate-limit on voice data, so the entire voice packet must be kept under 512 bytes.\n\nTo accomplish this, we can build a voice payload that does this:\n -  First, set `nSize` in the payload to 0 multiple times to get `pDestCurr` closer to `pDestEnd` (just over 1 frame away).\n - Next, trigger a call to `SKP_Silk_SDK_Decode` that also sets `m_decControl.moreInternalDecoderFrames` to true. At this point, `pDestCurr` will be incremented by 1 frame, and there will now be less than 1 frame of room in the dest buffer.\n - Trigger another call to `SKP_Silk_SDK_Decode`. Since `m_decControl.moreInternalDecoderFrames` is true, no bounds check is performed. This time there isn't enough room for a frame in the dest buffer and the decode function will overwrite the stack past `pDestBuffer`.\n\nAttached is a compiled version of a public cheat ([CSGOSimple](https://github.com/spirthack/CSGOSimple)) that adds a console command (`send_voice_packet`) to send the voice payloads from a file to the server.\n\nA file that implements this payload is attached as `voice_payload`, which can be fed to the `send_voice_packet` command to replicate the PoC.\n*NOTE*: Unrelated for replicating the PoC, but this payload is missing the SteamID/CRC data mentioned above. It is expected to be passed into `CP2PVoiceSingleton::DecompressVoice()` directly, or have the SteamID/CRC added before calling it.\n\n#Replication steps\n1) Start CS:GO on device A with `-insecure` launch param and join a server (any empty vanilla server will do, I have one at `s1.slidyb.at` if needed).\n2) Extract CSGOSimple.zip from the attachments onto device A and run `injector.exe`. Ensure that it has injected into the CS:GO process successfully by checking if the `send_voice_packet` command exists.\n3) Start CS:GO on device B and join the same server.\n4) Run `send_voice_packet path\\to\\voice_payload` in the CS:GO console on device A, where `path\\to\\voice_payload` is the absolute path to the `voice_payload` file without the `C:`. For example, if the file as at `C:\\Users\\me\\Desktop\\voice_payload`, then you would use the command `send_voice_packet Users\\me\\Desktop\\voice_payload`.\n5) Steam and CS:GO should both crash on device B.\n\n## Impact\n\nThis bug affects any service using the SteamWorks DecompressVoice function, which includes Steam itself and most Source engine titles. It can be used on any other client that can hear voice data from the attacker, including on official Valve matchmaking servers in Source games.\n\nIn the best case, it is possible for an attacker to utilize the bug as a DoS to crash other clients, and in the worst case it can lead to RCE by using ROP.",
+  "bounty_amount": "7500.0",
+  "formatted_bounty": "$7,500",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1283375,
+      "file_name": "voice_payload",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/4zw9f61eo7g0uz3ck89pvmxx1p9c?response-content-disposition=attachment%3B%20filename%3D%22voice_payload%22%3B%20filename%2A%3DUTF-8%27%27voice_payload&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVNV4E25D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151325Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIE960VllZtNC%2FbUPA0vV%2FxLVgvvK71RIGviKisKlxfVtAiBr0qGGKK6SWddIJhbbA9j4qbsXWcMBgOHpuLgrg%2FW2Hyq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMqb1%2BrAXzixLF%2BjnvKo8F76IyRZgBGCRdHV1hMUR0jT3xf1xlLq%2Bqx1%2BorvjV6eTVieENOmrgUaUrinJIYPLWg2YZUW%2B5l8a38y%2FEZcGzcqYuSE%2BI4QLJFyns2org4rDi0OYXY4bffY1nBT2wKcb6OHfMEn4Bvtv9RuyNeSvGPwt2Gbc4d2n8og9ytXeXESQ5Mjlhng8ZAUeY5DNRhZxXVDA0cVvk2SMa6HKesuby%2FpYqWjPsPIJPniLE6T9MaJuIgyp6z5AzhESyvHtKB9yVOTfpT5Mv3uErEVYDWHDHePLArcvChHf6AynHQorHldA1lcKWBwipmOmvAILOREawkibTIZrrTLLV%2BkcT6cy98OILJ4R4sAVmV3ZAN3Gp9IPBCReeJRcZddalv%2F7h9x%2BPWN6lm%2BOTnvV0crwvhL%2FjHeoQViPPcVSnUUWQ1GeTveb4gY%2BNLKZ8RdClQBwvugU3d1smsDzAs0qgr523sptcl0LNzc07CjyMVEDPzy3fu%2FH0GqpiM3%2B4cgQWgTipFSaHK9tMkaff3wlMZfo41kbd1JwLWCQYRLXcslzmKOq2lPSSOZml2x84pzFAqvNVPuF%2BKd7Thj33i2Vheshkv82bmHCV7IZbQO%2FwrPS8q3gAIkMkr60p1VLvGWaOkmxnwqBrdudoP3VqAirVW1Di%2FtjtueplXj0QV3oqLUpX4iPqgzwOq8UIRmyg%2FD4vUZlrVj%2BrBNUzzZVbo3ryjuLd0nfm50s2vSYwffmsQFgTBMcrch3RiNwzgfJ6%2FZYok9HRM%2F4avHOWbRfu4w2UUEJR8pMqNiuegCco0W1fcSh5MPzPm%2FTKFrlrZu%2BbrR6WTMIa9bLwEOS2KpqsWUdQcScGNA9LyN1bN3Ee%2Feufc%2FEgxorsljCfjv3PBjqyAZfYEPjougdmjiACVMNjwoba5DF0McHETZHiK3QwZYUKAaHfv9fvOjaowSD5nGhz%2BIa9jJMsfjotcGV4vqGge%2BC%2FlWdaHZPTF98TAD7fL7mIhKoOTncumT0G3dat6%2B%2BAq82gTgRhrUytPJfIfzXRGxrdUNdYQ1U%2Bu1IkaxsFTi2eNxOLCNQUrnmb43%2ByGo8Cira8h6aRRo%2FgvoBf%2BjEisaDt3OdtNhDd4%2F7uMhwIvEhTfgg%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=51daaf0881ee9f4f032eeee3cb84c0d711766c261f152df61258f05fb14181a7",
+      "file_size": 452,
+      "type": "application/octet-stream",
+      "moderated": null
+    },
+    {
+      "id": 1283381,
+      "file_name": "CSGOSimple.zip",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/ft1ddkbfo3e88fivyh7u697ttohz?response-content-disposition=attachment%3B%20filename%3D%22CSGOSimple.zip%22%3B%20filename%2A%3DUTF-8%27%27CSGOSimple.zip&response-content-type=application%2Fzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVNV4E25D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151325Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCIE960VllZtNC%2FbUPA0vV%2FxLVgvvK71RIGviKisKlxfVtAiBr0qGGKK6SWddIJhbbA9j4qbsXWcMBgOHpuLgrg%2FW2Hyq7BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMqb1%2BrAXzixLF%2BjnvKo8F76IyRZgBGCRdHV1hMUR0jT3xf1xlLq%2Bqx1%2BorvjV6eTVieENOmrgUaUrinJIYPLWg2YZUW%2B5l8a38y%2FEZcGzcqYuSE%2BI4QLJFyns2org4rDi0OYXY4bffY1nBT2wKcb6OHfMEn4Bvtv9RuyNeSvGPwt2Gbc4d2n8og9ytXeXESQ5Mjlhng8ZAUeY5DNRhZxXVDA0cVvk2SMa6HKesuby%2FpYqWjPsPIJPniLE6T9MaJuIgyp6z5AzhESyvHtKB9yVOTfpT5Mv3uErEVYDWHDHePLArcvChHf6AynHQorHldA1lcKWBwipmOmvAILOREawkibTIZrrTLLV%2BkcT6cy98OILJ4R4sAVmV3ZAN3Gp9IPBCReeJRcZddalv%2F7h9x%2BPWN6lm%2BOTnvV0crwvhL%2FjHeoQViPPcVSnUUWQ1GeTveb4gY%2BNLKZ8RdClQBwvugU3d1smsDzAs0qgr523sptcl0LNzc07CjyMVEDPzy3fu%2FH0GqpiM3%2B4cgQWgTipFSaHK9tMkaff3wlMZfo41kbd1JwLWCQYRLXcslzmKOq2lPSSOZml2x84pzFAqvNVPuF%2BKd7Thj33i2Vheshkv82bmHCV7IZbQO%2FwrPS8q3gAIkMkr60p1VLvGWaOkmxnwqBrdudoP3VqAirVW1Di%2FtjtueplXj0QV3oqLUpX4iPqgzwOq8UIRmyg%2FD4vUZlrVj%2BrBNUzzZVbo3ryjuLd0nfm50s2vSYwffmsQFgTBMcrch3RiNwzgfJ6%2FZYok9HRM%2F4avHOWbRfu4w2UUEJR8pMqNiuegCco0W1fcSh5MPzPm%2FTKFrlrZu%2BbrR6WTMIa9bLwEOS2KpqsWUdQcScGNA9LyN1bN3Ee%2Feufc%2FEgxorsljCfjv3PBjqyAZfYEPjougdmjiACVMNjwoba5DF0McHETZHiK3QwZYUKAaHfv9fvOjaowSD5nGhz%2BIa9jJMsfjotcGV4vqGge%2BC%2FlWdaHZPTF98TAD7fL7mIhKoOTncumT0G3dat6%2B%2BAq82gTgRhrUytPJfIfzXRGxrdUNdYQ1U%2Bu1IkaxsFTi2eNxOLCNQUrnmb43%2ByGo8Cira8h6aRRo%2FgvoBf%2BjEisaDt3OdtNhDd4%2F7uMhwIvEhTfgg%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=38276a41ff2c25ee016ac68541c323c582ce63524ac39213581aa529d333d7e5",
+      "file_size": 921249,
+      "type": "application/zip",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 192,
+  "voters": [
+    "matheus_garbelini",
+    "ahmed0x59",
+    "teapotd",
+    "hexpwn",
+    "orange303",
+    "n1m0",
+    "jarij",
+    "w31rd0",
+    "ajxchapman",
+    "alp",
+    "and 182 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1285,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "steam.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

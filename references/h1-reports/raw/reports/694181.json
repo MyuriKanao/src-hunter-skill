@@ -1,0 +1,147 @@
+{
+  "id": 694181,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82OTQxODE=",
+  "url": "https://hackerone.com/reports/694181",
+  "title": "Worker container escape lead to arbitrary file reading in host machine",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-09-13T02:39:39.780Z",
+  "submitted_at": "2019-09-13T02:39:39.780Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "testanull",
+    "url": "/testanull",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/SF93KjfUXeXdWWFga4q3gwCa/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 27264,
+    "url": "https://hackerone.com/semmle",
+    "handle": "semmle",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/027/264/8af1325fdaccc38beab4451ba68ace24623b248c_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/027/264/8af1325fdaccc38beab4451ba68ace24623b248c_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Semmle",
+      "twitter_handle": "semmle",
+      "website": "https://semmle.com",
+      "about": "Semmle's engineering analytics platform helps leading technology companies and open-source developers build secure, reliable software."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-10-16T12:34:13.387Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-09-16T12:34:10.864Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nBecause lack of security, attacker will be able to remove original log file and replace it will a symlink to other file, \nAfter finishing job, host machine copy file from docker container.\nBecause the original log file has been removed, the host machine will copy the symlink file.\nBut the problem is it doesn't copy the linked file in container, it copys the linked file in the HOST MACHINE.\n\n## Steps To Reproduce:\nThe attack is very simple, just remove the original build.log file and replace with a symlink file,\nI used this configuration to read the ``/etc/passwd``:\n```extraction:\n  cpp:\n    after_prepare:\n      - rm -rf /opt/out/snapshot/log/build.log && ln -s /etc/passwd /opt/out/snapshot/log/build.log\n```\n\n## PoC\nContent of ``/etc/passwd`` is attached below\n\n## Impact\n\nGive attacker ability to explore the host machine, expose more sensitive informations from it.",
+  "bounty_amount": "2000.0",
+  "formatted_bounty": "$2,000",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 581696,
+      "file_name": "docker_escape_read_file.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/EfxGZDPwSnU2WP2e27Uec2r4?response-content-disposition=attachment%3B%20filename%3D%22docker_escape_read_file.PNG%22%3B%20filename%2A%3DUTF-8%27%27docker_escape_read_file.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ67Q454RD%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152100Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIDtXcDbsITyubLlf593vt%2FiIngL2ph63k3rm2elXhN9dAiEAjcfRmTRdgXWnUwAjH1sh0V7DpuxH1iTMW3gkaWoiYsUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDGcgYqCxGZUSWO3InCqPBW2cEBdfs650DuHtgUmPqb0RQesQC%2Bup7S0WCgkwZAtat3oMJNUPpDzv2xw6sRjkDQqFKkgk%2FDCbmvTackJiGlMXBzl%2BFLjNFBIaQThGzxidlvSbdIVldAIXDfFoDkendH11HUy7B%2BAoGekq8A6juMeEi%2BhwIQ2BG7Ui91ry%2BftcffGIQQpq0lcR3%2BWAadbM73VF%2FCMZUmnnhjhwIRaXbI%2FXn5U9W8NxBQZuiKNfV%2Bk7fJsUNr5u9ymW0V2aUDf8MyyAfYQ1iuLy9Kzy5EI0kR8mZS4YpmAXSQPBRqiJ%2Bx29z7OzTodxFmYsUxkJOFNo%2FFP0N2O7UlWKQA0eIMe9CsLR56qHPi4a0u1QKnCOSg6UuH94Bj6Sb4KReMdVx9lSreIVW1x9xJGdPuKaWnYktRd%2BV3Frvm9zer4vr6LbBdHUQkjX%2BxOXtrT5YdXQSNHFlrdrsw8cUCrRgE9ej7wH%2BU%2FMFOgKIziEKE3dnpCglOwrLwdh1xQ8eWLPLGqOJd0JBQd2iJqY8mHEieOVJCItyO%2B%2FwcxhIPkT4olizcFxzLSzAvVjtP5WQb3axPXlaoqWjtIj7w%2FIjG07W9gj4x%2BMz8964LNHR4QrsVxbrKQUdZ%2Fgxea36qIYCAbz%2BHGe53eHlm75uLCkm3SeOxRGVn0T1PmpmM7r94C7MldKlb4qzPRfLD44wOp4DpR%2F%2BkldcO5T3wLxnyyuARGwIaBGH1bC7nYKsNSTlVayNp6ulSDwPJ1rPb%2FbtrNK4kIaTFWQ7nZd4YkHv7mQILYLby8LMzl0FvGlTMhk%2FYqsCHbtRvbzGhy8YhcEnWPNE6e%2BEmSEovhkjBQqr%2BcFgeQ95MlRNTkn7bTaaxvGk5nmvs%2FPLe56Dsww7pv9zwY6sQEOMnxNmWWwPE6Oq0dzjJYh7rBFsJwVRzrQA2Z171f2SUb1KUQfiMfX%2FYAo3QnY0hVoDyZjDYokCXUQZgXlEtBJBNhrjIq67ktM8p0yXm3I8oHUzYnIXr250rdZAFpja8%2FUi%2F4bHcXhInw6XNZMdCFn9p32T8kWz97%2BUHoLAGgMTjAhya4EEsNoTzfPazXTC3RSQ7FYEpCpBC3bo8ReFqvsQusDUA38B7FEF5TvNRSjRU8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1716133718e3a7d0139e9f7ce139b17d0dec34ef7fd94f72f70cf30edd90291a",
+      "file_size": 87863,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-10-16T12:34:10.928Z",
+  "allow_singular_disclosure_after": -207110809.34016088,
+  "singular_disclosure_allowed": true,
+  "vote_count": 111,
+  "voters": [
+    "qdoan95",
+    "base_64",
+    "lemonoftroy",
+    "kapytein",
+    "ali",
+    "sameerphad72",
+    "chulian",
+    "spam404",
+    "s_p_q_r",
+    "testanull",
+    "and 101 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 8552,
+    "asset_type": "URL",
+    "asset_identifier": "lgtm-com.pentesting.semmle.net",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

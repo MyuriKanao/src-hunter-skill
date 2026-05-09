@@ -1,0 +1,127 @@
+{
+  "id": 888021,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84ODgwMjE=",
+  "url": "https://hackerone.com/reports/888021",
+  "title": "[wappalyzer] ReDoS allows an attacker to completely break Wappalyzer",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-31T19:35:19.899Z",
+  "submitted_at": "2020-05-31T19:35:19.899Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "vrechson",
+    "url": "/vrechson",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/pvFrRNnKKM9SX9RKT54arH4P/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-06-18T18:01:28.187Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-06-18T18:01:28.133Z",
+  "team_member_agreed_on_going_public_at": "2020-06-18T11:03:20.314Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE! Thanks for submitting a report! Please replace *all* the [square] sections below with the pertinent details. Remember, the more detail you provide, the easier it is for us to triage and respond quickly, so be sure to take your time filling out the report!\n\nI would like to report [VULNERABILITY] in [MODULE]\nIt allows [DESCRIBE THE IMPACT OF THE VULNERABILITY - E.G READ ARBITRARY FILES, READ DATA FROM DATABASE ETC]\n\n# Module\n\n**module name:** `Wappalyzer`\n**version:** 6.0.2\n**npm page:** `https://www.npmjs.com/package/wappalyzer`\n\n## Module Description\n\n> Wappalyzer identifies technologies on websites.\n\n## Module Stats\n\n> Weekly downloads: 1,290\n> 88 issues\n> 16 pull requests\n> last publish: 3 days ago\n\n# Vulnerability\n\nReDoS  (Catastrophic backtracking)\n\n## Vulnerability Description\n> An attacker can make wappalyzer (all drivers, like browser extension and cli) stop working due to ReDoS in one of it's services regex . \n\n## Steps To Reproduce:\n\n1. Create a web page with the following tag:\n`<script src='//c.c..j..c.c..j..c.c..j..c.c..j..c.c..j..c.c..j..c.c..j..c.c..j..jskhtlcnipmos.cdnjs.cdnjs.dnjs.cdnjs.cloudflar.jsjs.cloudf'></script>`\n2. Now open this page using wappalyzer extension in browser or it's cli\n3. Wappalyzer will stop answering and it's CPU percentage will start to  increase to high levels\n\n## Patch\n\n In order to test this issue, you can see that the problem resides in this line https://github.com/AliasIO/wappalyzer/blob/master/src/apps.json#L11644 of wappalyzer application. When this regex test the input shown, it takes process the application indefinitely, making it stop working. Running it in browser extension completely crash the extension in all tabs, and in cli/node version the execution takes forever.\n\nTo patch this issue, the current regex must be changed to a more restrict one in this piece: `(?:[^\\\\/]+\\\\.)*`\n\n## Supporting Material/References:\n\n> State all technical information about the stack where the vulnerability was found\n\n- OS: Archlinux -  Linux 5.6.13-arch1-1 #1 SMP PREEMPT Thu, 14 May 2020 06:52:53 +0000 x86_64 GNU/Linux\n- Node version: v12.16.3\n- NPM version: 6.14.5\n- Firefox: 76.0.1 (64-bit) - Mozilla Firefox for Arch Linux - archlinux - 1.0\n- ReScuE was used to test for ReDoS (https://github.com/2bdenny/ReScue)\n\n# Wrap up\n\n> Select Y or N for the following statements:\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nAn attacker can make wappalyzer stop working in it's pages, or pages in which he has injection and make user CPU starts to throttle",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 850179,
+      "file_name": "poc.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/s3XpwjyknxfzugrN2V5WMWw2?response-content-disposition=attachment%3B%20filename%3D%22poc.html%22%3B%20filename%2A%3DUTF-8%27%27poc.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151851Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=4be6bd8c78d152452dca051f22bc9da6f0719f48a2c4b25d2fefce24cb120235",
+      "file_size": 221,
+      "type": "text/html",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-07-18T11:03:20.404Z",
+  "allow_singular_disclosure_after": -183269731.078297,
+  "singular_disclosure_allowed": true,
+  "vote_count": 4,
+  "voters": [
+    "caioluders",
+    "vrechson",
+    "brahim_boufakri01",
+    "42eyes"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

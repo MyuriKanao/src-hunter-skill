@@ -1,0 +1,127 @@
+{
+  "id": 228825,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjg4MjU=",
+  "url": "https://hackerone.com/reports/228825",
+  "title": "(Authenticated) RCE by bypassing of the .htaccess blacklist",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-05-16T13:42:57.976Z",
+  "submitted_at": "2017-05-16T13:42:57.976Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "icewind1991",
+    "url": "/icewind1991",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/107/400/e3b3c7296f065943af1d48f6f64756e1a36ad4d6_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13291,
+    "url": "https://hackerone.com/nextcloud",
+    "handle": "nextcloud",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Nextcloud",
+      "twitter_handle": "nextclouders",
+      "website": "https://nextcloud.com",
+      "about": "Access, share and protect your files, calendars, contacts, communication & more at home and in your enterprise."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-03-01T11:02:56.685Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-01-31T11:02:52.395Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "`Storage::copyFromStorage` doesn't check the content of a folder it copies against the list of blacklisted files.\nMeaning that if a user has access to an external storage (inc. fed. shares) that contains a .htaccess file, he can move the .htaccess file to the local data directory.\n\nThe attack works on any nextcloud/owncloud since federated sharing was introduced that uses apache and has the data directory inside the webroot (as is default)\n\nSteps to reproduce:\n- Setup an evil instance (nc1) that has the file blacklist disabled (Filesystem.php line 616)\n- create a folder 'sharefolder/attack' in nc1 with the following files\n  - .htaccess configured to \"allow from all\"\n  - attack.php with the desired attack\n- Setup a non-evil instance (nc2) (or pick an existing nc instance that you want to attack)\n- Federated share 'sharefolder' from nc1 to nc2\n- In nc2, move 'sharefolder/attack' to 'attack' (outside the share)\n- navigate to http://nc2/data/userid/files/attack/attack.php",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-03-01T11:02:52.456Z",
+  "allow_singular_disclosure_after": -195279434.1473839,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "a_d_a_m",
+    "sameerphad72",
+    "andreystepanov",
+    "kenkem49",
+    "poodletips",
+    "lamhacker",
+    "exp___"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

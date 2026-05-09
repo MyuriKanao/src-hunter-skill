@@ -1,0 +1,118 @@
+{
+  "id": 3259610,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjU5NjEw",
+  "url": "https://hackerone.com/reports/3259610",
+  "title": "Unauthenticated Users Can Access Other Users’ Bug Report Attachments via Broken Access Control",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-07-18T11:01:16.198Z",
+  "submitted_at": "2025-07-18T11:01:16.307Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "azraeldeathangel",
+    "url": "/azraeldeathangel",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-12T19:51:30.558Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-08-12T12:27:04.149Z",
+  "team_member_agreed_on_going_public_at": "2026-01-12T19:51:30.420Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The `/BugReport/Admin/Attachment/{id}` endpoint exposes attachments linked to private bug reports.\nBy manipulating the numeric ID in the URL, it’s possible to access attachments belonging to other users, including sensitive bug reports, without proper authorization checks.\n\nThis vulnerability works **even when unauthenticated**, meaning anyone who knows or guesses valid IDs can retrieve attachments.\nThis is a classic **Insecure Direct Object Reference (IDOR)**, where the application fails to enforce access control on a direct object reference (the ID).\n\n## References\n- [OWASP Top Ten 2021 – A01:2021 Broken Access Control](https://owasp.org/Top10/A01_2021-Broken_Access_Control/)\n- [CWE-639: Authorization Bypass Through User-Controlled Key](https://cwe.mitre.org/data/definitions/639.html)\n- [OWASP IDOR Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html)\n\n## Impact\n\nThis vulnerability allows an attacker to access attachments from private bug reports submitted by other users by simply manipulating the ID parameter in the request. Since the endpoint lacks proper authorization checks and even responds when unauthenticated, sensitive internal information, such as unpatched security issues, confidential business data, or personally identifiable information, could be fully exposed. This significantly increases the risk of targeted attacks, information leaks, and reputational damage to the organization.\n\n## System Host(s)\n███████\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n1. Log in with any valid user account.\n2. Capture the request when viewing a bug report attachment:\n```\nGET /BugReport/Admin/Attachment/1568600 HTTP/1.1\n\nHost: █████████\n\nCookie: ████\n```\n\n\n3. Remove the entire `Cookie` header from the above request, so it looks like:\n```\nGET /BugReport/Admin/Attachment/1568600 HTTP/1.1\n\nHost: █████████\n```\n4. Send the modified request without any authentication cookies.  \n5. Observe that the server responds with the file contents of the bug report attachment.\n\n**Result:** Any unauthenticated user can view attachments of any bug report by enumerating or guessing valid IDs.\n\n## Suggested Mitigation/Remediation Actions\n- Implement strict authorization checks on the `/BugReport/Admin/Attachment/{id}` endpoint to verify that the requesting user has permission to access the specified attachment.  \n- Ensure that unauthenticated requests cannot retrieve any sensitive resources by enforcing authentication at this endpoint.  \n- Use indirect references (e.g., random UUIDs or tokens) instead of sequential numeric IDs to reduce the risk of enumeration.  \n- Apply the principle of least privilege: users should only be able to access resources they are explicitly authorized to view.  \n- Add proper logging and monitoring for unauthorized access attempts to detect potential exploitation early.  \n- Consider rate limiting to prevent mass enumeration of IDs.\n\n",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "m4khn0",
+    "mohaned0101",
+    "sisi0x",
+    "captin-shanks",
+    "zenithscan91",
+    "inzamulsepoy",
+    "cryostic",
+    "t3chnocr4tx",
+    "alex2003",
+    "night_dive",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

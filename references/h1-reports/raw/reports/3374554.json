@@ -1,0 +1,123 @@
+{
+  "id": 3374554,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzc0NTU0",
+  "url": "https://hackerone.com/reports/3374554",
+  "title": "Apple SecTrust legacy path accepts untrusted certificates on pre-10.14 macOS/iOS when built with USE_APPLE_SECTRUST",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2025-10-07T15:37:18.589Z",
+  "submitted_at": "2025-10-07T15:37:19.499Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "giant_anteater",
+    "url": "/giant_anteater",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-10-09T06:22:03.208Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-10-08T07:39:12.823Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nWhen libcurl is built with USE_APPLE_SECTRUST and runs on Apple OS versions that lack SecTrustEvaluateWithError (macOS <10.14 / iOS <12), the legacy verification path miscompares OSStatus to SecTrustResultType and never checks the SecTrust result. This can cause untrusted certificates to be accepted.\n\n[Statement clarifying if an AI was used to find the issue or generate the report]\nThis report was prepared with assistance from an AI code analysis tool; the core diagnosis and scope were validated by a combination of classical software, manual inspection of the code, and AI.\n\n## Affected version\nReproduced on current master (as of 2025‑10‑07). Affects builds that enable `USE_APPLE_SECTRUST` and run on macOS <10.14 / iOS <12. The defect is in `lib/vtls/apple.c` and is independent of the TLS backend choice (it is reached via OpenSSL or GnuTLS when the native CA store is used).\n\n## Steps To Reproduce:\n\n### Code Verification (Any modern macOS):\n\n1. Inspect the vulnerable code in `lib/vtls/apple.c` lines 263-275\n2. Observe the type confusion: `status` (OSStatus) is compared to `kSecTrustResultType` enum values\n3. Create test program demonstrating the logic bug (see verification artifacts)\n4. Create untrusted certificate and verify system curl rejects it\n\n### Runtime Exploitation (Requires macOS <10.14 or iOS <12):\n\n**Note:** This requires an actual legacy system. Building with \n`-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13` on modern macOS will NOT trigger \nthe bug at runtime due to `__builtin_available` checks.\n\n1. On a system running macOS 10.13.6 (High Sierra) or earlier, build curl:\n   ```\n   cmake -DUSE_APPLE_SECTRUST=ON -DCURL_USE_OPENSSL=ON \\\n         -DCMAKE_BUILD_TYPE=Release ..\n   ```\n\n2. Create untrusted certificates (as described)\n\n3. Start test server: `openssl s_server -accept 8443 -www -key leaf.key -cert leaf.pem`\n\n4. Test: `./src/curl -v https://localhost:8443/`\n   - **Expected secure behavior:** Connection rejected\n   - **Actual buggy behavior:** Connection succeeds\n\n### Alternative Verification Without Legacy Hardware:\n\nSince the bug is a clear logic error (comparing wrong variable), it can be \nconfirmed through:\n- Static code analysis (lines 270-271 compare `status` instead of `sec_result`)\n- Logic demonstration (status=0 never equals kSecTrustResultUnspecified=4)\n- The fact that `result` remains `CURLE_OK` when the conditions fail\n\n## Supporting Material/References:\n\nProblematic code (legacy fallback uses SecTrustEvaluate; compares `status` to SecTrustResultType instead of checking `sec_result`):\n\n```263:275:lib/vtls/apple.c\n#ifndef REQUIRES_SecTrustEvaluateWithError\nSecTrustResultType sec_result;\nstatus = SecTrustEvaluate(trust, &sec_result);\n\nif(status != noErr) {\n  failf(data, \"Apple SecTrust verification failed: error %i\", (int)status);\n}\nelse if((status == kSecTrustResultUnspecified) ||\n        (status == kSecTrustResultProceed)) {\n  /* \"unspecified\" means system-trusted with no explicit user setting */\n  result = CURLE_OK;\n}\n#endif /* REQUIRES_SecTrustEvaluateWithError */\n```\n\nCorrect modern code path (only available on 10.14+/iOS 12+):\n```238:240:lib/vtls/apple.c\nresult = SecTrustEvaluateWithError(trust, &error) ?\n         CURLE_OK : CURLE_PEER_FAILED_VERIFICATION;\n```\n\nBehavioral gates where Apple SecTrust verification is invoked:\n- OpenSSL:\n```5165:5177:lib/vtls/openssl.c\nif(!verified &&\n   conn_config->verifypeer && ssl_config->native_ca_store &&\n   (ossl_verify == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)) {\n  result = ossl_apple_verify(..., &verified);\n  ...\n}\n```\n- GnuTLS:\n```1666:1676:lib/vtls/gtls.c\nif(!verified && ssl_config->native_ca_store &&\n   (verify_status & GNUTLS_CERT_SIGNER_NOT_FOUND)) {\n  result = glts_apple_verify(..., &verified);\n  ...\n}\n```\n```\n\n## Impact\n\n## Summary:\nOn affected configurations (USE_APPLE_SECTRUST builds running on pre‑10.14 Apple OS with native CA verification engaged), an attacker can bypass TLS certificate validation. This enables Man‑in‑the‑Middle interception, compromising confidentiality and integrity of HTTPS and other TLS‑protected transfers.\n\nScope caveats:\n- Feature is compile‑time gated (`USE_APPLE_SECTRUST`) and off by default in CMake.\n- Runtime reachability depends on backend conditions (OpenSSL “unable to get local issuer certificate” or GnuTLS “signer not found”).\n- The bug only affects older Apple OS versions that lack `SecTrustEvaluateWithError`; modern Apple OS uses the correct code path.",
+  "weakness": {
+    "id": 28,
+    "name": "Improper Certificate Validation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 30,
+  "voters": [
+    "k0ns0l",
+    "raslanco",
+    "thalaivar304",
+    "jmo740",
+    "2026",
+    "mrdesoky0",
+    "wefega",
+    "lolidkmyname",
+    "tiago-danin",
+    "go8ombiz",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

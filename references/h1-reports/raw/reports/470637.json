@@ -1,0 +1,149 @@
+{
+  "id": 470637,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NzA2Mzc=",
+  "url": "https://hackerone.com/reports/470637",
+  "title": "User-assisted RCE in Slack for macOS (from official site) due to improper quarantine meta-attribute handling for downloaded files",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-12-21T16:40:13.889Z",
+  "submitted_at": "2018-12-21T16:40:13.889Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "metnew",
+    "url": "/metnew",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jdthvavflc07lpt5x37qarrub1jt/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 69,
+    "url": "https://hackerone.com/slack",
+    "handle": "slack",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/069/683fee312381bc46cadc7ea1950abc87944d12c3_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/069/683fee312381bc46cadc7ea1950abc87944d12c3_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Slack",
+      "twitter_handle": "slackhq",
+      "website": "https://slack.com",
+      "about": "All your team communication in one place, instantly searchable, and available wherever you go."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-09-14T22:28:54.831Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-08-15T22:28:47.516Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\n### **GateKeeper/Quarantine bypass for downloaded files**\n\nLack of `com.apple.quarantine` meta-attribute for downloaded files allows a remote attacker to send an executable file that won't be checked by Gatekeeper .\n\n### File opening **doesn't trigger native alerts** from GateKeeper/Quarantine\n\n> Downloaded executable files lack `com.apple.quarantine` meta-attribute => no alerts about launching an executable from the web will appear.\n\n### Code execution after opening\n\nOpening a downloaded `.terminal` file in Slack via \"Shift + Click\"  (or in Finder) immediately leads to running attacker's code on a target device.\n\n### `.terminal` file\n\n1. Opening leads to command execution.\n2. Looks safe - XML file.\n3. Downloaded `.terminal` file **couldn't be opened** if application sets quarantine meta-attribute properly. However, Slack (Direct Download) doesn't do that.\n\n## Attack scenario\n\n1. Attacker sends `exploit.terminal` to the victim. File looks like a plaintext file in preview.\n2. Victim opens `exploit.terminal` file via \"Shift + Click\" (or via Finder)\n3. No alert from Gatekeeper about unsigned executable\n4. No alert about running executable file downloaded from the web\n5. Shell commands from `exploit.terminal` get executed with user-level privileges.\n\n## Version\n\nDecribed scenario is reproducible in Slack 3.3.3 Direct Download.\nSlack from AppStore has correct quarantine rules and isn't vulnerable.\n\n## Additional details\n\n`exploit.terminal` attached + Screencast attached.\n\n### Quarantine\nmacOS is build in such way that OS will ask user before opening any downloaded and potentially launchable (in default setup) files. This rule applies to `.terminal` files too.\n\n### TL;DR: \n- no quarantine -> `exploit.terminal` is launchable in 1 click without warning a user with popups\n- quarantine -> no immediate launch for all files (2 popups) +  no RCE is possible if GateKeeper level set to \"AppStore only\"\n\n## Impact\n\n## Impact\n\nAttacker could send a crafted `.terminal` file to the victim, which will be executed immediately after opening this file via \"Open\" button or in Finder. \n\nThe attack scenario requires a certain level of user interaction. \nBut the file looks safe and the victim doesn't expect that it'll be launched immediately\n\n### Additional Impact\n\nGateKeeper bypass allows running arbitrary apps in environments hardened with Gatekeeper settings set to \"AppStore only\".",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 395678,
+      "file_name": "exploit.terminal",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/678/34c72fe6b0d27f75e47310b7ace699d1f16e835c/exploit.terminal?response-content-disposition=attachment%3B%20filename%3D%22exploit.terminal%22%3B%20filename%2A%3DUTF-8%27%27exploit.terminal&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152141Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=687e82617f0792af458f80802b5cd7f49520dbd4fc12575ca0b48b267a94bbe3",
+      "file_size": 461,
+      "type": "application/xml",
+      "moderated": null
+    },
+    {
+      "id": 395679,
+      "file_name": "______________2018-12-21___6.36.02___.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/395/679/6a694f47fdbaa8bedf6b80179a69a801f04f7059/______________2018-12-21___6.36.02___.mov?response-content-disposition=attachment%3B%20filename%3D%22______________2018-12-21___6.36.02___.mov%22%3B%20filename%2A%3DUTF-8%27%27______________2018-12-21___6.36.02___.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ2DY4H25O%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152141Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJHMEUCIG9yhZR9vjsR83vOLEoykJ5LJsORryjdyGKJrTbmavSQAiEAnhcdB0Z9W5bgdzvh46Qn1Ruheg8EMD5dIZOwCQO58vgqugUI5f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP73MDBtMB3W3Ne%2BLSqOBU2HOaeT6OFNptgdxfPkXEQM6zk5bHGPyxD4Hq5%2BjZqD8qcO5NxSMIyO3WTHSm3wMRhnxlwNuPmlu0zmzFkiuOMaNvcCZKCxwdxrRQTYFj1N6rMeu2ilEZzVtVzhtzVp9Nw0gVfRIlxXmg%2FSsFjgQYzrnCZDlEIZ43nMU%2F%2BJ%2FVOUwyuslQeiyHgNxuSyrSxeMy6zIeDMHY%2FfYmw6DeyF7mclVw9lsDGWPB9YWtU476cFFcj9jLU58jTIUaOy9mCWJpNxvdl1b2idGslDyNHdtYyP2bb6kdZrpCqWzVnYR8xdkiZTPNTxz%2Fmt0Ub8dz89NtL1O%2BWquHg18DrNm5M7M6k097r6AyQTvpvL2LqUS83cLwxJiw7q0nBTFkx4wTqTSY1OiBVK2QgT5Dtym%2B%2F05MP0UvQU39rV%2BQE1HgeooX2CTc3cjqisuGq%2Bi5NcaOccJg5sOg%2BrATrFr0jg6N8DCD9D3xM2mRJEvOW%2BbFn3q7U4RhqTFM4XrdoIuQ%2F1xowof9HHDotyrkQeaFh3oygY8OYlwZc4XJsLy6%2FFBr23PuGMpzE42xyJ%2Bc30pu%2B8D1W36kly22lO9aD%2BzErldqgCa7xFSYxE3RANsBqnSrVUPETqNE0Rwt4wGr9wikHFjjvxV%2BWc6QqCieR6z8sTVzZ6O4xuugXvqHaOeZArcPfkjwh%2B0XGHJlV3u3ZnjHznxyfnxXKIcYuUJNk3rKe9ciYqpig5f58mdJmfSTVH0LF5n71GnLJtGE%2F6yq84FScRndOzr9JZhc98uzjbmwjVvbx908dUdUhM1i7C3a0JI8F1oNlmNoWxh%2BumQO9yldr1zQjuh78Bgc%2FPfXnD0b6hs3kVFdBwrjvRZu7bgwscHVfRrDCDyPzPBjqxARPsVz7Un9VRzaef5HdaW7ZyMa6ZSdenpMmEkvxfmh1amPMpgXyeg%2FH4dJhQTc8i8azoU73JtR5oMh%2BtWokq0ateop8nN%2BC%2FWh%2BfGGPPTtyEL9Zmmc2HRZLq1NvHSN9%2Bsp9djujA%2FyNQn%2FGOL5kR1UEVKlZpFU9VG7FRfLKVOGwXAblpofuOYEMCgd%2BrUMQ88BrPHEJC6jgARhHEN%2BQYb6Nhnvw3E7r7frWRR0JdF8RY8A%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ff71a769c862cbb56fea9c76c3f31fc1e44c5475b41c1fad3ec7d4f23c55e4fd",
+      "file_size": 4650936,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-09-14T22:28:47.581Z",
+  "allow_singular_disclosure_after": -209839974.03001374,
+  "singular_disclosure_allowed": true,
+  "vote_count": 96,
+  "voters": [
+    "tinmo",
+    "checkm50",
+    "base_64",
+    "ali",
+    "sameerphad72",
+    "dm98",
+    "metnew",
+    "spam404",
+    "dhakal_ananda",
+    "aryan2808",
+    "and 86 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.3,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "high",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 15516,
+    "asset_type": "URL",
+    "asset_identifier": "slack.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

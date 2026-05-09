@@ -1,0 +1,149 @@
+{
+  "id": 243156,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNDMxNTY=",
+  "url": "https://hackerone.com/reports/243156",
+  "title": "Installing a crafted gem package may create or overwrite files",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-06-26T09:14:48.920Z",
+  "submitted_at": "2017-06-26T09:14:48.920Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mame",
+    "url": "/mame",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8vhoh1hyan61xovrmfhy7kmi4gib/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 8212,
+    "url": "https://hackerone.com/rubygems",
+    "handle": "rubygems",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/008/212/e65eca09896d23bc029c08d3147a79a48ec1ee2f_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/008/212/e65eca09896d23bc029c08d3147a79a48ec1ee2f_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "RubyGems",
+      "twitter_handle": "rubygems_status",
+      "website": "https://rubygems.org",
+      "about": "RubyGems.org is the Ruby community’s gem hosting service."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0901"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-08-31T23:18:39.368Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2017-08-28T16:42:06.012Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "There is no check for `name` field in `metadata.gz`.  By assigning a maliciously crafted string like `../../../../../any/where` to the field, an attacker can create an arbitrary file out of the directory of the gem, or even replace an existing file with a malicious file.\n\n## Proof of Concept 1: Create a file anywhere\n\nThis PoC attempts to create a file `/tmp/malicious-0/BOOOOM`.\n\n1) Download the attached file `malicious.gem`.\n2) Run `gem install malicious.gem --no-doc`.\n3) `/tmp/malicious-0/BOOOOM` should be created.\n\n`malicious.gem` assigns `../../../../../../../../../../tmp/malicious` as `name` field.  This attack is relatively weak since the path must include a directory named `<name>-<version>`, such as `malicious-0`.  Still, there are many chances that cause a catastrophe.  For example, think of replacing a file in `/etc/dbus-1/`.\n\n## Proof of Concept 2: Replace `rackup` command\n\nThis PoC attempts to replace `gems/rack-2.0.3/bin/rackup` with a malicious file.\n\n1) Download the attached file `replace-rackup.gem`.\n2) Run `gem install rack -v 2.0.3`.\n3) Run `gem install replace-rackup.gem --no-doc`.\n4) Run `rackup`.  It will emit just `BOOOOM!`.\n\n`replace-rackup.gem` assigns `../gems/rack` as `name` field, and contains a malicious file `bin/rackup`.  This is really exploitable for attackers.\n\n## Note\n\nFor how to create the malicious gems, see the attached file `src.tar.gz`.\n\nIn my opinion, **this attack is much more dangerous** than the issues I reported recently.  I hope you could fix this issue ASAP.",
+  "bounty_amount": "1000.0",
+  "formatted_bounty": "$1,000",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 197576,
+      "file_name": "src.tar.gz",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/197/576/f644ee200cb7c42b92d5167f60cdaafff78895dc/src.tar.gz?response-content-disposition=attachment%3B%20filename%3D%22src.tar.gz%22%3B%20filename%2A%3DUTF-8%27%27src.tar.gz&response-content-type=application%2Fgzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152535Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7bd93a6c93e47958736d7d3c973ba48dbe170d5a6aa362821ae41f744972bfe9",
+      "file_size": 1330,
+      "type": "application/gzip",
+      "moderated": null
+    },
+    {
+      "id": 197577,
+      "file_name": "create-file.gem",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/197/577/ed0a95dae139d74ceb75725ea0c65945a535e719/create-file.gem?response-content-disposition=attachment%3B%20filename%3D%22create-file.gem%22%3B%20filename%2A%3DUTF-8%27%27create-file.gem&response-content-type=application%2Fx-tar&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152535Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a38a4d66ac242d5798e32720ce9c3cbf2573ab6796ed95e11dab7c7d78e13419",
+      "file_size": 10240,
+      "type": "application/x-tar",
+      "moderated": null
+    },
+    {
+      "id": 197578,
+      "file_name": "replace-rackup.gem",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/197/578/36ab22bc7882a9d315d2944830191bf7c6ade6b0/replace-rackup.gem?response-content-disposition=attachment%3B%20filename%3D%22replace-rackup.gem%22%3B%20filename%2A%3DUTF-8%27%27replace-rackup.gem&response-content-type=application%2Fx-tar&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152535Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2b0a97ab76650ed96949feed791103b2be1c0a6b1077539e688cb00f621f4892",
+      "file_size": 10240,
+      "type": "application/x-tar",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-09-27T16:42:06.080Z",
+  "allow_singular_disclosure_after": -271809809.45549804,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "bl4de",
+    "fa1rlight",
+    "bobo_ka",
+    "bugdiscloseguys",
+    "ysx",
+    "eveeez",
+    "c12316651",
+    "ykw1337",
+    "martijn",
+    "deije",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

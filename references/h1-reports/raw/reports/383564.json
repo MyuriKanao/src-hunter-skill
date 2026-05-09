@@ -1,0 +1,120 @@
+{
+  "id": 383564,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zODM1NjQ=",
+  "url": "https://hackerone.com/reports/383564",
+  "title": "Subdomain takeover on svcgatewaydevus.starbucks.com and svcgatewayloadus.starbucks.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-07-19T03:32:35.559Z",
+  "submitted_at": "2018-07-19T03:32:35.559Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "blurbdust",
+    "url": "/blurbdust",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-07-23T17:45:05.475Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-07-20T22:44:18.838Z",
+  "team_member_agreed_on_going_public_at": "2018-07-23T17:45:05.318Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\n\nThis is fairly close to [this report](https://hackerone.com/reports/325336) however these are different subdomains than the one in the report.\n\nThis can be pretty serious since I can server virtually anything I want. In the 45 minutes I've held the domain I have served to 341 unique IP addresses. \n\nTwo starbucks.com subdomains are pointed to Azure with an unclaimed CNAME record. Anyone would be able to serve content on these subdomains.\n\n##svcgatewayloadus.starbucks.com\n```\n;; Server: 1.1.1.1:53\n;; Size: 191\n;; Unix time: 1531965036\n;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 3697\n;; flags: qr rd ra ; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 0\n\n;; QUESTION SECTION:\nsvcgatewayloadus.starbucks.com. IN A\n\n;; ANSWER SECTION:\nsvcgatewayloadus.starbucks.com. 600 IN CNAME s00197tmp0crdfulload0.trafficmanager.net.\n\n;; AUTHORITY SECTION:\ntrafficmanager.net. 30 IN SOA tm1.msft.net. hostmaster.trafficmanager.net. 2003080800 900 300 2419200 30\n\n```\n\n##svcgatewaydevus.starbucks.com\n```\n;; Server: 9.9.9.9:53\n;; Size: 156\n;; Unix time: 1531965036\n;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 47788\n;; flags: qr rd ra ; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 0\n\n;; QUESTION SECTION:\nsvcgatewaydevus.starbucks.com. IN A                                                                                                                                                            \n\n;; ANSWER SECTION:\nsvcgatewaydevus.starbucks.com. 600 IN CNAME s00197tmp0crdfuldev0.trafficmanager.net.                                                                                                           \n\n;; AUTHORITY SECTION:\ntrafficmanager.net. 30 IN SOA tm1.msft.net. hostmaster.trafficmanager.net. 2003080800 900 300 2419200 30\n```\n\n#PoC:\nhttp://svcgatewayloadus.starbucks.com/\nhttp://svcgatewaydevus.starbucks.com/\n\n##Mitigation:\nRemove the CNAME record from the starbucks.com DNS zone\nClaim it in Azure once I release it\n\n## Impact\n\nSubdomain takeover can be used for several purposes:\n\n* Malware\n* Phishing / Spear phishing\n* XSS\n* Authentication bypass",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-08-19T22:44:19.018Z",
+  "allow_singular_disclosure_after": -243621961.84292477,
+  "singular_disclosure_allowed": true,
+  "vote_count": 35,
+  "voters": [
+    "kashsec",
+    "bogdantc",
+    "muon4",
+    "ali",
+    "metawolf",
+    "spam404",
+    "aryan2808",
+    "mik317",
+    "flashdisk",
+    "harrymg",
+    "and 25 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

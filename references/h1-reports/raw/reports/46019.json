@@ -1,0 +1,155 @@
+{
+  "id": 46019,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NjAxOQ==",
+  "url": "https://hackerone.com/reports/46019",
+  "title": "Explicit, dynamic render path: Dir. Trav + RCE",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2015-02-01T14:34:27.187Z",
+  "submitted_at": "2015-02-01T14:34:27.187Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "forced-request",
+    "url": "/forced-request",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22,
+    "url": "https://hackerone.com/rails",
+    "handle": "rails",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby on Rails",
+      "twitter_handle": "rails",
+      "website": "http://rubyonrails.org/security",
+      "about": "Web development that doesn't hurt."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-02-12T18:52:10.202Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-02-12T18:52:10.012Z",
+  "team_member_agreed_on_going_public_at": "2016-02-12T18:17:37.202Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "500.0",
+  "formatted_bounty": "$500",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2016-03-13T18:17:37.377Z",
+  "allow_singular_disclosure_after": -320447248.31495637,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "jensec",
+    "sw33tlie",
+    "sp1d3rs",
+    "r3y",
+    "eveeez",
+    "khizer47",
+    "cr4xerbik4sh",
+    "cryptographer",
+    "shivammusic"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 1338,
+      "category": "team",
+      "content": "Possible Information Leak Vulnerability in Action View\n\nThere is a possible directory traversal and information leak vulnerability in\nAction View. This vulnerability has been assigned the CVE identifier\nCVE-2016-0752.\n\nVersions Affected:  All.\nNot affected:       None.\nFixed Versions:     5.0.0.beta1.1, 4.2.5.1, 4.1.14.1, 3.2.22.1\n\nImpact\n------\nApplications that pass unverified user input to the `render` method in a\ncontroller may be vulnerable to an information leak vulnerability.\n\nImpacted code will look something like this:\n\n```ruby\ndef index\n  render params[:id]\nend\n```\n\nCarefully crafted requests can cause the above code to render files from\nunexpected places like outside the application's view directory, and can\npossibly escalate this to a remote code execution attack.\n\nAll users running an affected release should either upgrade or use one of the\nworkarounds immediately.\n\nReleases\n--------\nThe FIXED releases are available at the normal locations.\n\nWorkarounds\n-----------\nA workaround to this issue is to not pass arbitrary user input to the `render`\nmethod.  Instead, verify that data before passing it to the `render` method.\n\nFor example, change this:\n\n```ruby\ndef index\n  render params[:id]\nend\n```\n\nTo this:\n\n```ruby\ndef index\n  render verify_template(params[:id])\nend\n\nprivate\ndef verify_template(name)\n  # add verification logic particular to your application here\nend\n```\n\nPatches\n-------\nTo aid users who aren't able to upgrade immediately we have provided patches for\nthe two supported release series. They are in git-am format and consist of a\nsingle changeset.\n\n* 3-2-render_data_leak.patch - Patch for 3.2 series\n* 4-1-render_data_leak.patch - Patch for 4.1 series\n* 4-2-render_data_leak.patch - Patch for 4.2 series\n* 5-0-render_data_leak.patch - Patch for 5.0 series\n\nPlease note that only the 4.1.x and 4.2.x series are supported at present. Users\nof earlier unsupported releases are advised to upgrade as soon as possible as we\ncannot guarantee the continued availability of security fixes for unsupported\nreleases.\n\nCredits\n-------\nThanks John Poulin for reporting this!",
+      "updated_at": "2016-02-12T18:17:27.249Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 4981,
+        "username": "rafaelfranca",
+        "name": "Rafael França",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "",
+        "location": "",
+        "created_at": "2014-04-14T22:32:11.816Z",
+        "url": "https://hackerone.com/rafaelfranca",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/004/981/dd3b6bb41f9c33e3448ebbc47303f5a135f25105_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/004/981/dd3b6bb41f9c33e3448ebbc47303f5a135f25105_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/004/981/dd3b6bb41f9c33e3448ebbc47303f5a135f25105_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

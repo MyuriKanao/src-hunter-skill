@@ -1,0 +1,134 @@
+{
+  "id": 3425308,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDI1MzA4",
+  "url": "https://hackerone.com/reports/3425308",
+  "title": "Economic DoS (Griefing) on IBC Relayers via `memo` Callback Gas Exploitation",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-11-14T09:04:22.910Z",
+  "submitted_at": "2025-11-14T09:04:23.111Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tychebe",
+    "url": "/tychebe",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 24626,
+    "url": "https://hackerone.com/cosmos",
+    "handle": "cosmos",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/l8innmct0qu74b6xv2jzvh5lk5ap/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/l8innmct0qu74b6xv2jzvh5lk5ap/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Cosmos",
+      "twitter_handle": "cosmos",
+      "website": "https://cosmoslabs.io",
+      "about": "The Internet of Blockchains."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-18T20:50:41.257Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-11-17T17:19:15.599Z",
+  "team_member_agreed_on_going_public_at": "2025-12-18T20:50:40.667Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary of Impact**\n\nThis vulnerability allows an attacker to bypass the relayer's simulation defense and force permissionless relayers to execute computationally expensive, but 'successful', transactions via the `memo` callback feature.\n    \nThis creates an asymmetric economic attack where the relayer's cost (e.g., ~1,000,000 gas) vastly exceeds their profit leading to financial losses.\n    \nRelayers will be forced to stop servicing the affected IBC channel to avoid bankruptcy, causing a Denial of Service (DoS) for all applications relying on that channel's callbacks.\n    \n\n**Steps to Reproduce**\n\n1.   **Identify the Callback Gas Limit:** An attacker first inspects the chain's application setup file (e.g., `app/app.go`) to find the hardcoded gas limit for the IBC Callbacks middleware.\n        \n2.   I have confirmed this value is set to **1,000,000 gas** in the main application configuration.\n        \n3.   **Deploy a Malicious 'Gas Burner' Contract:** The attacker deploys an EVM smart contract that performs computationally expensive operations (e.g., loops, hashing) designed to consume just under the limit (e.g., **990,000 gas**) and then **return 'success'**.\n        \n4.   This contract must _not_ fail with 'Out of Gas' (OOG).\n        \n5.   **Send an IBC Packet with Malicious Memo:** The attacker sends a standard IBC packet (e.g., `MsgTransfer`) and includes a `memo` field specifying the address of the 'Gas Burner' contract as the source callback.\n        \n6.   **Relayer Simulation is Bypassed:** A relayer bot picks up the acknowledgment (`MsgAcknowledgement`) for this packet and runs a simulation.\n        \n7.   Because the callback consumes 990,000 gas (which is less than the 1,000,000 limit) and returns 'success', the simulation _passes_, falsely identifying the transaction as safe.\n        \n8.   **Relayer Incurs Financial Loss:** The relayer broadcasts the 'successful' transaction. The chain executes it, including the 990,000 gas callback.\n        \n9.   The relayer must pay the full gas cost (~1,000,000 gas) but only receives their standard fee (which is 0 if ICS-29 is not used, or ~300,000 gas if it is).\n        \n10.   **Result (Griefing):** The attacker can repeat this process, draining the relayer's funds at minimal cost, forcing the relayer to abandon the channel.\n        \n\n**Mitigation**\n\n-    **1. Reduce the Gas Limit:** The simplest mitigation is to drastically reduce the hardcoded `DefaultGasLimitForCallback` in `app/app.go` from 1,000,000 to a value much closer to a standard relayer's profit margin.\n    \n-    **2. Implement Dynamic Gas (Better):** A more robust solution is to require the _sender_ of the original packet to explicitly define (and pay for) the maximum gas their callback will use, similar to ICS-29 fees.\n    \n-    **3. Smarter Simulation:** Relayer clients could be updated to not only check for 'success' but also to _report the total gas consumed_ by the simulation. Relayers could then set a local policy to reject 'successful' transactions that consume an unprofitable amount of gas.\n\n**Reference**\n\n-    **ICS-29 Fee Middleware:** Understanding how relayers are _supposed_ to be paid (and why their profit is often 0 or very low) is key to this economic exploit.\n    \n-    **Blockchain Griefing Attacks:** This is a classic example of a griefing attack, where the attacker's goal is not direct profit, but to cause financial harm to another party to disrupt the network. [Source: scsfg.io - Smart Contract Security Field Guide]\n\n## Impact\n\n-    **Immediate Relayer Bankruptcy:** Any permissionless relayer servicing this chain's callback-enabled channels will be rapidly drained of funds and forced to shut down.\n    \n-    **Total Channel DoS:** When relayers stop servicing the channel, all cross-chain applications that depend on IBC callbacks (e.g., cross-chain DeFi, NFT transfers) will cease to function, effectively freezing assets and operations.\n    \n-    **Loss of Trust:** This attack breaks the fundamental economic incentive for the decentralized relayer network, demonstrating that the chain is economically unsafe to service and undermining trust in the entire IBC ecosystem connected to this chain.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 16,
+  "voters": [
+    "mohaned0101",
+    "thalaivar304",
+    "jmo740",
+    "2026",
+    "011alsanosi",
+    "bronze_pickaxe",
+    "nullbie",
+    "hamz7naser",
+    "efccweb3",
+    "abdouux",
+    "and 6 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 945571,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "www.github.com/cosmos/evm",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

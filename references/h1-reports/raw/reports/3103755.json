@@ -1,0 +1,134 @@
+{
+  "id": 3103755,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTAzNzU1",
+  "url": "https://hackerone.com/reports/3103755",
+  "title": "Privilege Escalation in Edit and Create Secret Endpoints Leads to Unauthorized Secret Modification",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-04-22T06:51:55.223Z",
+  "submitted_at": "2025-04-22T06:51:55.633Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0xsom3a",
+    "url": "/0xsom3a",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ivo65tc82z431fq66znypq5rfbmd/d9608719404e30c49e414fbca7e2d3d8dc654375a8a3b677600d18e6f5492ad0"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 96398,
+    "url": "https://hackerone.com/dust",
+    "handle": "dust",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/g9pcp90s23rz0kq1duus45xaaov9/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/g9pcp90s23rz0kq1duus45xaaov9/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Dust",
+      "twitter_handle": "dust4ai",
+      "website": "http://dust.tt",
+      "about": "Dust is building an enterprise agent operating system, allowing teams to augment internal workflows with easy-to-customise and context-aware AI."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-04-24T06:43:15.062Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-04-22T13:15:48.870Z",
+  "team_member_agreed_on_going_public_at": "2025-04-24T06:43:14.836Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "#Summary\n\nA user with the **Builder** role — a role that is **not expected** to manage secrets — can:\n\n- ✅ **List all existing secret names** in the workspace.\n- ✅ **Create new secrets**.\n- ✅ **Overwrite existing secrets** simply by using the same name.\n\nThis behavior **violates permission boundaries** and  leads to **privilege escalation**, **tampering with app configurations**, or **unauthorized access to sensitive data**.\n\n---\n\n# Steps to Reproduce\n\n##Step-1 :  Get All Secret Names in the Workspace\n\nAs a **Builder**, send a `GET` request to the secrets endpoint to enumerate all existing secret names.\n\n```http\nGET /api/w/[workspace_id]/dust_app_secrets HTTP/2  \nHost: dust.tt  \nCookie: [appSession]\n```\n\nThis returns a list of secrets with their `id`, `name`, `created_at`, etc. — but without showing the secret `value`.\n\n```json\n{\n  \"secrets\": [\n    { \"name\": \"NAME-1\", \"value\": \"•••••••\" },\n    { \"name\": \"NAME-2\", \"value\": \"•••••••\" }\n  ]\n}\n\n```\n\n\n##**Step-2 :** Create or Overwrite a Secret\n\nNow, send a `POST` request to create a new secret.\n\n\n```json\nPOST /api/w/[workspace_id]/dust_app_secrets HTTP/2  \nHost: dust.tt  \nContent-Type: application/json  \nCookie: [appSession]\n\n{\n  \"name\": \"NAME-1\",\n  \"value\": \"malicious-value\"\n}\n```\n\n#### Behavior:\n- If the `name` used in the request **already exists** in the workspace (as returned from step 1), the system will **overwrite the existing secret's value**.\n- If the `name` is **new**, a new secret will be created.\n\n-  No error or warning is shown — overwrite happens silently.\n\n---\n\n#POC Video:\n\n██████\n\n\n---\n\n# Expected Behavior\n\nThe **Builder** role should:\n\n-  Not be able to access the list of secret names.\n-  Not be able to create or update any secrets.\n\n---\n\n# Suggested Fix\n\n- Enforce strict permission checks on all secret-related endpoints.\n- Ensure only users with elevated roles (e.g., Admin, Owner) can list, create, or update secrets.\n\n## Impact\n\nThis vulnerability allows users with the **Builder** role to:\n\n-  Discover all secret names in the workspace.\n-  Tamper with or overwrite secrets used by other users or apps.\n-  Create new secrets and potentially trick other users into using them.\n-  Escalate privileges by modifying secrets used in sensitive flows (e.g., API keys, tokens, credentials).\n\nThis could lead to:\n\n- Configuration manipulation  \n- Account compromise  \n- Supply chain attacks on internal tooling  \n- Loss of integrity of secret data",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 82,
+  "voters": [
+    "z3k0",
+    "0o00",
+    "loaymorad",
+    "bewgsy",
+    "k3s3l7",
+    "raslanco",
+    "captn0sharky1",
+    "dukrov",
+    "mohaned0101",
+    "sisi0x",
+    "and 72 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "low",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 839746,
+    "asset_type": "URL",
+    "asset_identifier": "https://dust.tt",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

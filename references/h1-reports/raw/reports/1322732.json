@@ -1,0 +1,117 @@
+{
+  "id": 1322732,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzIyNzMy",
+  "url": "https://hackerone.com/reports/1322732",
+  "title": "Cache Posioning leading to denial of service at `█████████` - Bypass fix from report #1198434\t",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-08-29T14:50:58.876Z",
+  "submitted_at": "2021-08-29T14:50:58.926Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "brumens",
+    "url": "/brumens",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/x93y4mon7o5qcsy8yvqxgt27ykcb/65551465b0d18d952f306b2d0c5e69ed082a8c9bc5c9b7bec024e5edc01c00a5"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-10-13T22:15:38.530Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-09-30T13:25:58.744Z",
+  "team_member_agreed_on_going_public_at": "2021-10-13T22:15:38.410Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "#Vulnerability Cache Posioning (CPDoS)\n**C**ache **P**osioning **D**enial **O**f **S**ervice (CPDoS) [1] is taking advantage of 301 redirects by storing an false value of either domain, port or header that effect the response in any way. This makes the cache server store the false value and later delivery it to all users that view the domain page.\nThis vulnerability is in fact an Cache poisoning [2] in the ground which makes it possible to not harm the system in any way when testing. This is because it's possible to add random URL path to the domain that make only that path exploited under x time.\nAn attacker will use intruder to update the cache server every x sec, min or hours to make the domain down.\n\n#Summary\nThe vulnerability was discovered when  was retesting the vulnerability and discovered that the domain still was vulnerable for cache poisoning. I did some tests and I was able to re poisoning the domains cache server again in different paths. It looks like the fix from report *#1198434* only fixed one path in the domain but other paths remain vulnerable.\n\n# Proof of concept\n*Can be used as step by step if you like*\n\n█████████\n\nSupported link\n[1] https://cpdos.org/ - \"What is CPDoS?\", Vulnerability explained\n[2] https://portswigger.net/research/responsible-denial-of-service-with-web-cache-poisoning - \"Responsible denial of service with web cache poisoning\", James Kettle\n\nBest regards,\nBrumens\n\n## Impact\n\nAn attacker is able to crash most of the paths related to the domain.\n\n## System Host(s)\n████\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n**WARNING!** Do not send the request until the step to send the request comes. Otherwise you can by mistage crash the whole domain.\n1. Open an browser that is connected to Burp suite\n2. Visit: https://██████████/██████████ (*More path are vulnerable but this is an example*)\n3. Intercept the request with Burp suite and add it to the repeater.\n**IMPORTEN** Add an random parameter at the end as example: &CPDoS=1 in the url bar at *Repeater*. (*See image at step 4.*)\n4. Add an nonexcisting port at the host header domain. Ex: 1234 Your request raw data should look like below:\n█████ \nIf an random paramter is added at the end AND the port is added to the host header. You can now send the request in Burp suite repeater tab. The data will look similary to:\n\n5. You will see an 301 that do redirect and reflect the port you gave inside the request.\nIn the request raw data. Delete the port number inside the host header.\nSend the request now one more time. You will see the port you added before is still reflecting in the 301 redirect code. This indicates that it's now cache poisoned and the domain path is down. Try visit the url and you can see you won't be able to load it.\n\n## Suggested Mitigation/Remediation Actions\nConfigure the cache server on all paths and locations on the domain.\n\n",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 10,
+  "voters": [
+    "0-chrollo-0",
+    "shubham_srt",
+    "pacmanx",
+    "sa1tama0",
+    "conficker9",
+    "z3nm4st3r",
+    "nasit_hacker",
+    "mrshipagan",
+    "rodney1z1122",
+    "memes1125"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

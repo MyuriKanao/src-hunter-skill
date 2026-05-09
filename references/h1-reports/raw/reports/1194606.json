@@ -1,0 +1,140 @@
+{
+  "id": 1194606,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTk0NjA2",
+  "url": "https://hackerone.com/reports/1194606",
+  "title": "Virtual Data Room / Hide download on collabora is easy to bypass",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-05-12T18:27:06.034Z",
+  "submitted_at": "2021-05-12T18:27:06.135Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rtod",
+    "url": "/rtod",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13291,
+    "url": "https://hackerone.com/nextcloud",
+    "handle": "nextcloud",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Nextcloud",
+      "twitter_handle": "nextclouders",
+      "website": "https://nextcloud.com",
+      "about": "Access, share and protect your files, calendars, contacts, communication & more at home and in your enterprise."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2021-32748"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-08-07T14:28:34.326Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-07-08T14:28:23.814Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "So, let me start with saying I'm not sure if this is a security issue or if it is by design. The reason I'm reporting it here is since Nextcloud promotes this Virtual Data Room a lot.\n\nhttps://nextcloud.com/blog/nextcloud-announces-virtual-data-room-solution-for-ultimate-protection-of-data-during-sensitive-dealmaking/\nhttps://nextcloud.com/virtual-data-room/\n\nAnd let me just quote: \"configure Secure View ensure the users can still read and (when shared with editing rights) modify documents, while the documents are watermarked when on screen.\"\n\n\"With secure view, our online office solutions can be configured to open PDF files, images and text files, making these files available in a watermark-protected way, while downloads and other apps are disabled using File Access Control. This setup is useful when data has to be protected from leaking but still has to be made available for review, as in a virtual data room scenario.\"\n\nBoth of these claims are false. \n\nMinimal proof of concept.\n\n1. Setup Nextcloud with Collabora\n2. Setup sercure view & file access control to disallow the download of the files\n3. Share a document, lets say `vdr.odt` by public link and mark as hide download\n4. Copy the link\n\nNow the point here is that anybody you send the link will only see the watermarked file. Not being able to download or copy data. And of course making a picture of these things is useless as it shows the watermark.\n\n5. attacker opens their network tab in the developer tools\n6. attacker opens the link\n7. attacker filters on WOPISRC\n8. Attacker finds a link like\n\n```\nwss://collabora.server/https%3A%2F%2Fserver%2Findex.php%2Fapps%2Frichdocuments%2Fwopi%2Ffiles%2F1234_abcd%3Faccess_token%3efgh%26access_token_ttl%3D0/ws?WOPISrc=https%3A%2F%2Fserver%2Findex.php%2Fapps%2Frichdocuments%2Fwopi%2Ffiles%2F1234_abcd&compat=/ws\n```\n\nAs far as I understand the WOPI spec this is us sending the collabora server the WOPI endpoint they have to call. Which in this case is\n\n`https://server/index.php/apps/richdocument/wopi/files/1234_abcd`\nThe `1234_abcd` seems to be the `fileid` and the `instance id`\n\nAnd the access token is also there in the url. In this case `efgh`.\n\nNow if an attacker just does the following curl command\n\n```\ncurl https://server/index.php/apps/richdocument/wopi/files/1234_abcd?access_token=efgh -o stolen.odt\n```\n\nYou will see that they have the unwatermarked version of the data. This is even easier than copying everything over or making photographs.\n\n## Impact\n\nYour Virtual Data Room is inherently broken. And the claims you make on your website are at best misleading.\nHowever as said I'm not sure if this may be intentional as the feature is called hide download in the UI.\n\nIn any case. Maybe a good idea would be to have a secret configured on both collabora and the Nextcloud host. Which gets send. So that in case of hide download a client that doesn't know the secret token can't download the file.\n\nI do not have access to a setup with Only Office. But I believe that to be vulnerable to a similar attack.",
+  "bounty_amount": "150.0",
+  "formatted_bounty": "$150",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-08-07T14:28:23.904Z",
+  "allow_singular_disclosure_after": -149993147.15098712,
+  "singular_disclosure_allowed": true,
+  "vote_count": 14,
+  "voters": [
+    "bl4de",
+    "mohaned0101",
+    "akashhamal0x01",
+    "h4x0r_dz",
+    "cryptographer",
+    "prashantjadon",
+    "eliot070",
+    "iamcoolcat",
+    "ion95in",
+    "userinput",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.7,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 68219,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "nextcloud/richdocuments",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

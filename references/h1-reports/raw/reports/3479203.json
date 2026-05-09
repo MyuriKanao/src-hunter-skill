@@ -1,0 +1,123 @@
+{
+  "id": 3479203,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDc5MjAz",
+  "url": "https://hackerone.com/reports/3479203",
+  "title": "HTTP/3 Protocol Smuggling and Header Injection via CRLF in QPACK value conversion",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "critical",
+  "readable_substate": "Informative",
+  "created_at": "2025-12-26T17:04:41.707Z",
+  "submitted_at": "2025-12-26T17:04:41.933Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0x0000nosfu",
+    "url": "/0x0000nosfu",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/u86i1odx8g7htedn9ok0q6l46wwv/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-27T22:06:14.553Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-12-27T10:03:53.866Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "A fundamental design flaw exists in how libcurl handles HTTP/3 (QUIC) response headers across all supported backends (ngtcp2, quiche, openssl-quic). The vulnerability stems from the unsafe transcoding of binary QPACK headers (HTTP/3) into the textual HTTP/1.1 format used internally by\n  curl's pipeline.\n\n  Specifically, libcurl fails to validate or sanitize header values received from the QUIC stack. If a malicious HTTP/3 server sends a header value containing Carriage Return (\\r, 0x0D) and Line Feed (\\n, 0x0A) characters, libcurl blindly concatenates them into its internal buffer. This\n  buffer is then passed downstream to the client application as a single \"header line\", which effectively contains multiple injected headers or even a smuggled response body.\n\n  This creates a Protocol Desynchronization vulnerability. While curl's internal state machine (cookies/HSTS) parses only the first line, any downstream application, proxy, or WAF relying on libcurl to fetch content will process the injected payload as valid HTTP headers or body content.\n  This leads to massive Cache Poisoning, Session Fixation, and Security Bypass scenarios.\n\n  Technical Analysis (Root Cause)\n\n  The vulnerability resides in the callback functions responsible for receiving decoded headers from the underlying QUIC libraries.\n\n  Location:\n   * lib/vquic/curl_ngtcp2.c: Function cb_h3_recv_header\n   * lib/vquic/curl_quiche.c: Function cb_each_header\n   * lib/vquic/curl_osslq.c: Function cb_h3_recv_header\n\n  Vulnerable Logic (Example from `curl_ngtcp2.c`):\n  When nghttp3 delivers a header name (h3name) and value (h3val), libcurl reconstructs a text line into ctx->scratch.\n\n    1 /* curl_ngtcp2.c around line 1780 */\n    2 /* store as an HTTP1-style header */\n    3 curlx_dyn_reset(&ctx->scratch);\n    4 result = curlx_dyn_addn(&ctx->scratch, (const char *)h3name.base, h3name.len);\n    5 if(!result)\n    6   result = curlx_dyn_addn(&ctx->scratch, STRCONST(\": \"));\n    7 if(!result)\n    8   /* VULNERABILITY: h3val.base contains raw bytes from the network.\n    9      If it contains \\r\\n, they are appended directly. */\n   10   result = curlx_dyn_addn(&ctx->scratch, (const char *)h3val.base, h3val.len);\n   11 if(!result)\n   12   result = curlx_dyn_addn(&ctx->scratch, STRCONST(\"\\r\\n\"));\n   13 \n   14 /* The corrupted buffer is then passed to the write handler */\n   15 if(!result)\n   16   h3_xfer_write_resp_hd(cf, data, stream, curlx_dyn_ptr(&ctx->scratch), ...);\n\n  The Chain of Trust Failure:\n   1. Transport: HTTP/3 allows any binary sequence in QPACK values (RFC 9114).\n   2. Translation: libcurl translates this to HTTP/1.1 style \"Name: Value\\r\\n\".\n   3. Delivery: Curl_client_write delivers this raw buffer to the application via CURLOPT_HEADERFUNCTION.\n   4. Exploit: The application receives Name: Value\\r\\nInjected-Header: Evil\\r\\n. Standard HTTP parsers read this as two distinct headers.\n\n  Affected version\n  Current master branch and all versions with HTTP/3 support enabled.\n\n  Steps To Reproduce\n\n  To demonstrate this vulnerability without requiring you to set up a complex custom HTTP/3 server capable of malformed QPACK encoding, I have provided a \"Simulation Patch\". This patch modifies libcurl to simulate the reception of a malicious header from a server. This proves that if a\n  server sends such data, libcurl fails to filter it.\n\n  1. Build curl with HTTP/3 support (e.g., using ngtcp2)\n  Ensure you have a build environment ready.\n\n  2. Apply the Simulation Patch\n  Apply the following diff to lib/vquic/curl_ngtcp2.c. This forces curl to simulate an attack where the server sends a Server header containing a CRLF injection.\n\n    1 diff --git a/lib/vquic/curl_ngtcp2.c b/lib/vquic/curl_ngtcp2.c\n    2 index XXXXXXX..XXXXXXX 100644\n    3 --- a/lib/vquic/curl_ngtcp2.c\n    4 +++ b/lib/vquic/curl_ngtcp2.c\n    5 @@ -1780,6 +1780,16 @@ static int cb_h3_recv_header(nghttp3_conn *conn, int64_t stream_id,\n    6      result = curlx_dyn_addn(&ctx->scratch, STRCONST(\": \"));\n    7      if(!result)\n    8        result = curlx_dyn_addn(&ctx->scratch,\n    9                                (const char *)h3val.base, h3val.len);\n   10 +\n   11 +    /* POC SIMULATION: If the server sends a \"server\" header,\n   12 +       we simulate a malicious CRLF injection appended to it. */\n   13 +    if(h3name.len == 6 && !strncmp((char*)h3name.base, \"server\", 6)) {\n   14 +        const char *injection = \"\\r\\nSet-Cookie: session=HACKED_BY_CRLF\";\n   15 +        result = curlx_dyn_addn(&ctx->scratch, injection, strlen(injection));\n   16 +    }\n   17 +\n   18      if(!result)\n   19        result = curlx_dyn_addn(&ctx->scratch, STRCONST(\"\\r\\n\"));\n   20      if(!result)\n\n  3. Recompile curl\n   1 make\n\n  4. Run the exploit\n  Run curl against any valid HTTP/3 server (e.g., google.com or cloudflare-quic.com). The patch will simulate the malicious payload coming from that server.\n\n   1 ./src/curl --http3 -v -I https://www.google.com/\n\n  5. Observe the Critical Output\n  Look at the headers received. You will see:\n\n   1 HTTP/3 200\n   2 ...\n   3 server: gws\n   4 Set-Cookie: session=HACKED_BY_CRLF\n   5 ...\n\n  Analysis:\n  The Set-Cookie header appears on a new line. To any downstream parser (including curl's own -I output display, and any application using libcurl), this is a valid, separate cookie. The logic in curl failed to detect that this \"header\" was actually part of the server header's value.\n\n  Supporting Material/References\n   * RFC 9114 (HTTP/3): Defines that field values are sequences of bytes, placing the burden of sanitization on the implementation converting to text.\n   * RFC 7230 (HTTP/1.1): Strictly forbids CR/LF in header values to prevent splitting.\n\n## Impact\n\nThis vulnerability has a critical impact on the ecosystem of applications using libcurl with HTTP/3.\n\n   1. WAF & Gateway Bypass: Security gateways using libcurl to inspect traffic can be bypassed. An attacker can hide malicious headers (like Content-Security-Policy: unsafe-inline or Transfer-Encoding: chunked) inside a benign header. The Gateway validates the benign header, but the\n      browser/client behind it processes the injected malicious header.\n\n   2. Massive Cache Poisoning: By injecting Transfer-Encoding or Content-Length, an attacker can desynchronize the connection (Request Smuggling). This allows them to poison the cache of a reverse proxy serving thousands of users, serving malicious content for legitimate URLs.\n\n   3. Session Fixation / Hijacking: As demonstrated in the PoC, an attacker can inject Set-Cookie headers. Even if the application logic tries to filter headers, it will likely process the injected line as a valid new header, allowing session fixation attacks on the client side.\n\n   4. Pollution of `curl_easy_header` API: Applications using the structured headers API to copy headers from one request to another will unwittingly propagate the malicious payload, spreading the attack deeper into internal networks.\n\n  This is a textbook HTTP Protocol Smuggling vector enabled by the library's failure to sanitize cross-protocol data translation.\n\nThis vulnerability allows HTTP Protocol Smuggling at the library level.\n   1. Cache Poisoning: If libcurl is used in a reverse proxy or gateway, injected headers (like Transfer-Encoding or Content-Length) can desynchronize the connection, causing the cache to serve malicious content to subsequent users.\n   2. Session Fixation: Attackers can force Set-Cookie headers onto the client application, even if the application logic attempts to filter headers based on keys.\n   3. Security Bypass: WAFs or security scanners using libcurl to inspect headers can be blinded or tricked by hiding malicious payloads behind benign headers.",
+  "weakness": {
+    "id": 69,
+    "name": "CRLF Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 23,
+  "voters": [
+    "2026",
+    "0x0000nosfu",
+    "i-amlogan",
+    "pl4nkton_",
+    "sk8lynnhal",
+    "junkieguk",
+    "haydar98",
+    "talatin",
+    "authphantom",
+    "h3lpd3sk404",
+    "and 13 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

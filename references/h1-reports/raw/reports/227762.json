@@ -1,0 +1,112 @@
+{
+  "id": 227762,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjc3NjI=",
+  "url": "https://hackerone.com/reports/227762",
+  "title": "Heap Overflow in fiber_switch triggered from Fiber.transfer",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-05-11T18:53:52.394Z",
+  "submitted_at": "2017-05-11T18:53:52.394Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "avisaven",
+    "url": "/avisaven",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-05-30T14:37:06.630Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-05-30T02:26:25.564Z",
+  "team_member_agreed_on_going_public_at": "2017-05-30T14:37:06.530Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "It appears as if my recommendations were ignored in the GitHub issue, so I've repeated the issue here.\n\n# PoC\n\n\tFiber.new{}.transfer(\n\t\t0,0,0,0,0,0,0,0,0,0,\n\t\t0,0,0,0,0,0,0,0,0,0,\n\t\t0,0,0,0,0,0,0,0,0,0,\n\t\t0,0,0,0,0,0,0,0,0,0,\n\t\t0,0,0,0,0,0,0,0,0,0,\n\t\t0,0,0,0,0,0,0,0,0,0,\n\t\t0,0,0,0,0)\n\n# Explanation\nThe cause of this is that in mrbgems/mruby-fiber/src/fiber.c the stack Fiber stack is initialized lines 90-96 to a default of 64 (FIBER_STACK_INIT_SIZE), however in fiber_switch lines 191-198, if the Fiber's status is currently MRB_FIBER_CREATED, then it will copy the arguments provided from fiber_transfer irregardless of whether or not there are more arguments than 64 (the PoC doesn't need ~127 arguments, anything 64 or above will work!). The quick fix would be to make sure that theres not more than 64 arguments passed to fiber_transfer.\n\n# Solution\n\n\tdiff --git a/mrbgems/mruby-fiber/src/fiber.c b/mrbgems/mruby-fiber/src/fiber.c\n\tindex bd1d09d4..2d0fc39a 100644\n\t--- a/mrbgems/mruby-fiber/src/fiber.c\n\t+++ b/mrbgems/mruby-fiber/src/fiber.c\n\t@@ -188,6 +188,9 @@ fiber_switch(mrb_state *mrb, mrb_value self, mrb_int len, const mrb_value *a, mr\n\t   mrb->c->status = resume ? MRB_FIBER_RESUMED : MRB_FIBER_TRANSFERRED;\n\t   c->prev = resume ? mrb->c : (c->prev ? c->prev : mrb->root_c);\n\t   if (c->status == MRB_FIBER_CREATED) {\n\t+    if (len >= FIBER_STACK_INIT_SIZE) {\n\t+      mrb_raise(mrb, E_FIBER_ERROR, \"too many arguments to fiber\");\n\t+    }\n\t     mrb_value *b = c->stack+1;\n\t     mrb_value *e = b + len;",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-06-29T02:26:25.621Z",
+  "allow_singular_disclosure_after": -279637184.91026574,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "eveeez",
+    "0xspade",
+    "spetr0x"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

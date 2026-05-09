@@ -1,0 +1,131 @@
+{
+  "id": 1628209,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjI4MjA5",
+  "url": "https://hackerone.com/reports/1628209",
+  "title": "SSRF in Functional Administrative Support Tool pdf generator (████) [HtUS]",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-07-06T14:31:26.363Z",
+  "submitted_at": "2022-07-06T14:31:26.439Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "codeprivate",
+    "url": "/codeprivate",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/o2dA5gEvRUHtCkpZwAqo3y4p/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-09-14T21:00:36.641Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-08-18T11:10:54.239Z",
+  "team_member_agreed_on_going_public_at": "2022-09-14T21:00:36.518Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nI found that it is possible to inject a javascript payload during the PDF form creation process, which is then executed by the checklist application server.\n\n## Vulnerable Software: Functional Administrative Support Tool (FAST) v1.0\n\n## Intro: \n\n██████████\n\nAdministrative clerks create a dynamic action items by guiding a███ through targeted questions designed to draw out required administrative actions that are required and trigger of additional processes that need to be completed.\n\nAfter completing the question and answer process ( point 3. Get Action Items ) the application offers 2 options: Send the report by Email or print (See PDF).\n\nWhen the user clicks on (View PDF) they are redirected to the URL:███████/print/checklist/fast_session_XXXXXX.pdf . This is where the user will have access to his PDF form generated dynamically by the███ system.\n\nnote: XXXXXX is the \"session\" assigned by the system to identify a form.\n\n## Steps To Reproduce:\n1. Go to███/ and select \"BEGIN NEW SESSION\", enter a MCC code Ex. \"h99\" and SUBMIT\n2. with burp suite on, select a process, and fill in the data randomly up to point 3. (EDIPI code is a 10 chars long number. Ex. 0123456789) - click CONTINUE\n\n3. in point 3, (Get Action Items) click on PRINT (VIEW PDF) - A window will open with the dynamically generated PDF exposing the data that we complete.\n\n4. observe in burp suite the last request made to /api/save/ proceed to right click and send to \"Repeater\"\n\n5. modify value \"name\" of the json object \"globalInfo\" by the payload:\n\n`</script><script>document.write('<iframe src=\\\"http://███/latest/meta-data/iam/security-credentials/EC2CloudWatchRole\\\" width=1000px height=1000px>')</script>`\n\nand click Send request. If everything went well, the server responds \"status ok\"\n\n6. Refresh form URL. Ex.████████/print/checklist/fast_session_XXXXXX.pdf\n\nfor this PoC. AWS secretkeys were accessed:\n\n`{  \"Code\" : \"Success\",  \"LastUpdated\" : \"2022-07-06T02:57:53Z\",  \"Type\" : \"AWS-HMAC\",  \"AccessKeyId\" : \"███\",  \"SecretAccessKey\" : \"████\",  \"Token\" :\"██████\",  \"Expiration\" : \"2022-07-06T09:04:49Z\"}`\n\n## Supporting Material/References:\n\n* https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/\n* https://docs.google.com/presentation/d/1JdIjHHPsFSgLbaJcHmMkE904jmwPM4xdhEuwhy2ebvo/htmlpresent\n* https://hackerone.com/reports/508459\n* https://hackerone.com/reports/53088\n\n## Impact\n\nAn attacker can inject malicious javascript payloads in the PDF generation process and executed by the checklist application server. An attacker could use this to Steal  credentials or other sensitive information from ████ AWS Instance.",
+  "bounty_amount": "4000.0",
+  "formatted_bounty": "$4,000",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 45,
+  "voters": [
+    "cxzer0",
+    "cucumbersalad",
+    "defenderwww",
+    "haxor31337",
+    "zy9ard3",
+    "shreyaschavhan",
+    "red_darkin",
+    "dilawer",
+    "bugster",
+    "demon1c",
+    "and 35 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.4,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

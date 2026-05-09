@@ -1,0 +1,120 @@
+{
+  "id": 187536,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODc1MzY=",
+  "url": "https://hackerone.com/reports/187536",
+  "title": "Null pointer derefence due to bug in codegen with negation without using value",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-12-02T00:29:52.654Z",
+  "submitted_at": "2016-12-02T00:29:52.654Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "haquaman",
+    "url": "/haquaman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/646/07cbfc394d4d3432eb95cf9735f225ea803090bb_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-17T20:08:23.151Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-17T20:08:23.081Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T20:12:14.755Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Crash file is:\n\n```\np *case\n  when nil\n    -0\n    nil\nend\n```\n\n```\n$ ./dev/bin/mruby crash.rb\ncrash.rb:1:3: '*' interpreted as argument prefix\nSegmentation fault: 11\n```\n\n```\n$ lldb ./dev/bin/mruby crash.rb\n(lldb) target create \"./dev/bin/mruby\"\nCurrent executable set to './dev/bin/mruby' (x86_64).\n(lldb) settings set -- target.run-args  \"crash.rb\"\n(lldb) r\nProcess 5638 launched: './dev/bin/mruby' (x86_64)\ncrash.rb:1:3: '*' interpreted as argument prefix\nProcess 5638 stopped\n* thread #1: tid = 0x85b9d00, 0x000000010000278b mruby`ary_concat + 27, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x18)\n    frame #0: 0x000000010000278b mruby`ary_concat + 27\nmruby`ary_concat:\n->  0x10000278b <+27>: movl   0x18(%rdx), %ecx\n    0x10000278e <+30>: addl   -0x1c(%rbp), %ecx\n    0x100002791 <+33>: movl   %ecx, -0x20(%rbp)\n    0x100002794 <+36>: movq   -0x8(%rbp), %rdi\n(lldb) bt\n* thread #1: tid = 0x85b9d00, 0x000000010000278b mruby`ary_concat + 27, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x18)\n  * frame #0: 0x000000010000278b mruby`ary_concat + 27\n    frame #1: 0x0000000100002766 mruby`mrb_ary_concat + 70\n    frame #2: 0x000000010004451f mruby`mrb_vm_exec + 25439\n    frame #3: 0x000000010003e1a7 mruby`mrb_vm_run + 135\n    frame #4: 0x0000000100046604 mruby`mrb_top_run + 100\n    frame #5: 0x0000000100071adf mruby`load_exec + 1183\n    frame #6: 0x0000000100071623 mruby`mrb_load_file_cxt + 67\n    frame #7: 0x00000001000017d8 mruby`main + 904\n    frame #8: 0x00007fff8a9db5ad libdyld.dylib`start + 1\n(lldb) register read\nGeneral Purpose Registers:\n       rax = 0x000000010100f030\n       rbx = 0x0000000000000000\n       rcx = 0x0000000000000000\n       rdx = 0x0000000000000000\n       rdi = 0x0000000100300390\n       rsi = 0x0000000000000000\n       rbp = 0x00007fff5fbfca00\n       rsp = 0x00007fff5fbfc9e0\n        r8 = 0x0000000000000000\n        r9 = 0x000000000000010e\n       r10 = 0x0000000000000002\n       r11 = 0x0000000000f83160\n       r12 = 0x0000000000000000\n       r13 = 0x0000000000000000\n       r14 = 0x0000000000000000\n       r15 = 0x0000000000000000\n       rip = 0x000000010000278b  mruby`ary_concat + 27\n    rflags = 0x0000000000010202\n        cs = 0x000000000000002b\n        fs = 0x0000000000000000\n        gs = 0x0000000000000000\n\n(lldb) q\nQuitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y\n\n```\n\n```\n$ ./bin/sandbox crash.rb\n./bin/sandbox:20: [BUG] Segmentation fault at 0x00000000000018\nruby 2.3.0p0 (2015-12-25 revision 53290) [x86_64-darwin15]\n\n-- Crash Report log information --------------------------------------------\n   See Crash Report log file under the one of following:\n     * ~/Library/Logs/CrashReporter\n     * /Library/Logs/CrashReporter\n     * ~/Library/Logs/DiagnosticReports\n     * /Library/Logs/DiagnosticReports\n   for more details.\nDon't forget to include the above Crash Report log file in bug reports.\n\n-- Control frame information -----------------------------------------------\nc:0003 p:---- s:0011 e:000010 CFUNC  :sandbox_eval\nc:0002 p:0214 s:0006 E:001c70 EVAL   ./bin/sandbox:20 [FINISH]\nc:0001 p:0000 s:0002 E:001b60 (none) [FINISH]\n\n-- Ruby level backtrace information ----------------------------------------\n./bin/sandbox:20:in `<main>'\n./bin/sandbox:20:in `sandbox_eval'\n\n-- Machine register context ------------------------------------------------\n rax: 0x0000000104c7c120 rbx: 0x0000000104cd3c28 rcx: 0x0000000000000003\n rdx: 0x0000000104c7c120 rdi: 0x0000000104c74440 rsi: 0x0000000000000000\n rbp: 0x00007fff5b9daf50 rsp: 0x00007fff5b9daf20  r8: 0x0000000000000000\n  r9: 0x0000000104c75d60 r10: 0x0000000104c86a88 r11: 0x0000000000000020\n r12: 0x0000000104c74460 r13: 0x0000000000000000 r14: 0x0000000000000000\n r15: 0x0000000000000000 rip: 0x0000000104b4e97d rfl: 0x0000000000010206\n\n-- C level backtrace information -------------------------------------------\n0   ruby                                0x00000001043c15d4 rb_vm_bugreport + 388\n1   ruby                                0x0000000104263023 rb_bug_context + 483\n2   ruby                                0x0000000104336653 sigsegv + 83\n3   libsystem_platform.dylib            0x00007fff9826d52a _sigtramp + 26\n4   mruby_engine.bundle                 0x0000000104b4e97d mrb_ary_concat + 29\n5   ???                                 0x0000000104c74440 0x0 + 4375135296\n\n-- Other runtime information -----------------------------------------------\n\n* Loaded script: ./bin/sandbox\n\n* Loaded features:\n\n    0 enumerator.so\n    1 thread.rb\n    2 rational.so\n    3 complex.so\n<snip various gems>\n  185 /Users/<snip>/mruby-engine/lib/mruby_engine/mruby_engine.bundle\n  186 /Users/<snip>/mruby-engine/lib/mruby_engine.rb\n\n[NOTE]\nYou may have encountered a bug in the Ruby interpreter or extension libraries.\nBug reports are welcome.\nFor details: http://www.ruby-lang.org/bugreport.html\n\nAbort trap: 6\n\n```\n\nPatch to fix is:\n\n```\ndiff --git a/mrbgems/mruby-compiler/core/codegen.c b/mrbgems/mruby-compiler/core/codegen.c\nindex 553baa1..5ddf988 100644\n--- a/mrbgems/mruby-compiler/core/codegen.c\n+++ b/mrbgems/mruby-compiler/core/codegen.c\n@@ -2256,7 +2256,7 @@ codegen(codegen_scope *s, node *tree, int val)\n             }\n             genop(s, co);\n           }\n-          push();\n+          if (val) push();\n         }\n         break;\n \n```\n\nHope that helps!\n\nCheers,\n\nHugh",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-15T20:12:14.806Z",
+  "allow_singular_disclosure_after": -293829275.9675226,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "madrobot",
+    "eveeez",
+    "khizer47",
+    "c12316651",
+    "japz",
+    "spetr0x",
+    "scept1c",
+    "hackerjuan",
+    "xcom"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

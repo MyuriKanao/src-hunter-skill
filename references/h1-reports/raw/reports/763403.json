@@ -1,0 +1,160 @@
+{
+  "id": 763403,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83NjM0MDM=",
+  "url": "https://hackerone.com/reports/763403",
+  "title": "[GoldSrc] RCE via malformed BSP file",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-12-23T05:19:15.998Z",
+  "submitted_at": "2019-12-23T05:19:15.998Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gamer7112",
+    "url": "/gamer7112",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-08-19T03:29:14.573Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-08-19T03:23:03.110Z",
+  "team_member_agreed_on_going_public_at": "2020-08-19T03:29:14.461Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "450.0",
+  "formatted_bounty": "$450",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 24,
+  "voters": [
+    "gamer7112",
+    "mvc",
+    "spam404",
+    "romesful",
+    "zeroxyele",
+    "0xwise",
+    "idiablos",
+    "sa1tama0",
+    "leskander",
+    "sparksmith",
+    "and 14 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1289,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "hl.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 24089,
+      "category": "team",
+      "content": "#Description\nRCE can be achieved via a malformed BSP file due to the lack of length validation when copying data from the BSP file into a stack based buffer.\n\n#POC\n1. Place the attached BSP {F666628} in the maps directory of the chosen GoldSrc game (czero/maps, cstrike/maps, tfc/maps, etc..)\n2. Launch the game and bring up the console with ~\n3. Type in `map de_RCE` and press enter\n4. View calc pop\n\n#Vulnerable Code\nWithin the following function, `COM_FileBase` copies data from `pszWadFile` into `wadName` without any length validation which leads to a buffer overflow.\n\n```cpp\nqboolean TEX_InitFromWad(char *path)\n{\n\tchar *pszWadFile;\n\tFileHandle_t texfile;\n\tchar szTmpPath[1024];\n\tchar wadName[260];\n\tchar wadPath[260];\n\twadinfo_t header;\n\n\tQ_strncpy(szTmpPath, path, 1022);\n\tszTmpPath[1022] = 0;\n\tif (!Q_strchr(szTmpPath, ';'))\n\t\tQ_strcat(szTmpPath, \";\");\n\tfor (pszWadFile = strtok(szTmpPath, \";\"); pszWadFile; pszWadFile = strtok(NULL, \";\"))\n\t{\n\t\tForwardSlashes(pszWadFile);\n\t\tCOM_FileBase(pszWadFile, wadName);//Vulnerable Function\n\t\tQ_snprintf(wadPath, 0x100u, \"%s\", wadName);\n\t\tCOM_DefaultExtension(wadPath, \".wad\");\n\n\t\tif (Q_strstr(wadName, \"pldecal\") || Q_strstr(wadName, \"tempdecal\"))\n\t\t\tcontinue;\n\n\t\ttexfile = FS_Open(wadPath, \"rb\");\n\t\ttexfiles[nTexFiles++] = texfile;\n\t\tif (!texfile)\n\t\t\tSys_Error(\"%s: couldn't open %s\\n\", __func__, wadPath);\n\n\t\tCon_DPrintf(\"Using WAD File: %s\\n\", wadPath);\n\t\tSafeRead(texfile, &header, 12);\n\t\tif (Q_strncmp(header.identification, \"WAD2\", 4) && Q_strncmp(header.identification, \"WAD3\", 4))\n\t\t\tSys_Error(\"%s: %s isn't a wadfile\", __func__, wadPath);\n\n\t\theader.numlumps = LittleLong(header.numlumps);\n\t\theader.infotableofs = LittleLong(header.infotableofs);\n\t\tFS_Seek(texfile, header.infotableofs, FILESYSTEM_SEEK_HEAD);\n\t\tlumpinfo = (texlumpinfo_t *)Mem_Realloc(lumpinfo, sizeof(texlumpinfo_t) * (header.numlumps + nTexLumps));\n\n\t\tfor (int i = 0; i < header.numlumps; i++, nTexLumps++)\n\t\t{\n\t\t\tSafeRead(texfile, &lumpinfo[nTexLumps], sizeof(lumpinfo_t));\n\t\t\tCleanupName(lumpinfo[nTexLumps].lump.name, lumpinfo[nTexLumps].lump.name);\n\t\t\tlumpinfo[nTexLumps].lump.filepos = LittleLong(lumpinfo[nTexLumps].lump.filepos);\n\t\t\tlumpinfo[nTexLumps].lump.disksize = LittleLong(lumpinfo[nTexLumps].lump.disksize);\n\t\t\tlumpinfo[nTexLumps].iTexFile = nTexFiles - 1;\n\t\t}\n\n\t}\n\tqsort(lumpinfo, nTexLumps, sizeof(texlumpinfo_t), lump_sorter);\n\treturn 1;\n}\n```\n\n## Impact\n\nRCE can be used to execute any arbitrary code that an attacker could want to execute on any victim of choice.\n",
+      "updated_at": "2020-08-19T03:28:38.637Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 279011,
+        "username": "mikela",
+        "name": "Mike L",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-05-17T22:06:50.780Z",
+        "url": "https://hackerone.com/mikela",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

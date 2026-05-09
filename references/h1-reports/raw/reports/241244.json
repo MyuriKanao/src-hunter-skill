@@ -1,0 +1,115 @@
+{
+  "id": 241244,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNDEyNDQ=",
+  "url": "https://hackerone.com/reports/241244",
+  "title": "Spring security configuration allows agent sessions to be hijacked",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-06-19T00:48:58.888Z",
+  "submitted_at": "2017-06-19T00:48:58.888Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "4cad",
+    "url": "/4cad",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/164/214/9c771a1b02e8d394ddd437b845191e13beb0ccc7_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13559,
+    "url": "https://hackerone.com/gocd",
+    "handle": "gocd",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/013/559/870f3bcab332d087cde7b75fe2922e93615e3f78_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/013/559/870f3bcab332d087cde7b75fe2922e93615e3f78_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GoCD",
+      "twitter_handle": "",
+      "website": "https://github.com/gocd/gocd",
+      "about": "Open-source continuous delivery server specializing in advanced workflow modeling and visualization"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-07-31T19:35:11.411Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-07-01T19:35:10.729Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Summary\n=======\nIf agents have successfully logged in, then unauthenticated requests to /go/agent-websocket or /go/remoting/* will randomly succeed sometimes.\n\nDescription\n========\n\nThe deprecated X509ProcessingFilter apparently does not work without a HttpSessionContextIntegrationFilter earlier on the chain. After a successful authentication it sets a thread-local security context that never gets cleared - meaning that future requests on /go/remoting or /go/agent-websocket will successfully authenticate if they randomly happen to be processed by one of the threads which has a valid security context.\n\nSteps to Reproduce\n=======\n1) Start up a server.\n2) Run the following command a bunch of times. It should always return a 403 Forbidden\n\n \"curl http://localhost:8153/go/remoting/api/admin/config.xml | grep -B 2 Error\"\n\n3) Start up an agent, and wait about two minutes\n4) Repeat the command from step 2. It should occasionally return a 500 Server Error. This happens when the request was successfully authenticated, and then fails in the GoCD code that is handling the request.\n\nIf the server has any artifacts, the URL from step (2) can be changed to a path to that URL. In this case it will sometimes return 403 Forbidden, and sometimes return the artifact itself. \n\nRisk\n========\n\nThis allows an attacker without any credentials to read all artifacts or even upload artifacts (combined with #240198 they could use this to execute a stored XSS). While preparing this ticket, I was able to successfully upload a stored XSS file without any credentials by submitting a bunch of POST requests to http://localhost:8153/go/remoting/files/up42/1/up42_stage/1/up42_job/attack_unauthenticated.html\n\nThis is also really easy to discover - I stumbled across it when I noticed some requests were randomly being denied as unauthorized. It turns out all of my requests should have been unauthorized!\n\nRecommended Fix\n========\nAdd httpSessionContextIntegrationFilter immediately before x509ProcessingFilter in the acegi-security.xml file, for the /remoting/ and /agent-websocket/ entries.\n\nThis fixes it because the httpSessionContextIntegrationFilter clears the thread-local security context after each request, thus fixing the problem. \n",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-07-31T19:35:10.818Z",
+  "allow_singular_disclosure_after": -245274904.0538871,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "loaymorad",
+    "ali",
+    "yashrs",
+    "apapedulimu",
+    "cryptographer",
+    "destinedtohack"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

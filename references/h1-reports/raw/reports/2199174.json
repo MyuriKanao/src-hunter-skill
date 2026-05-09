@@ -1,0 +1,123 @@
+{
+  "id": 2199174,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTk5MTc0",
+  "url": "https://hackerone.com/reports/2199174",
+  "title": "[Critical] Curl CVE-2023-38545 vulnerability code changes are disclosed on the internet",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2023-10-10T04:25:20.591Z",
+  "submitted_at": "2023-10-10T04:25:20.745Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "shelldoit",
+    "url": "/shelldoit",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-10-16T12:32:27.535Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2023-10-10T21:44:52.825Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nCurl CVE-2023-38545 vulnerability code changes are disclosed on the internet\n\n## Steps To Reproduce:\nTo replicate the issue, I have searched in the Bard about this vulnerability. It disclosed what this vulnerability is about, code changes made for this fix, who made these changes, commit details etc even though this information is not released yet on the internet. In addition to it, I was able to easily craft the exploit based on the information available. Remove this information from the internet ASAP!!!!\n\nVulnerability information:\n\nThe vulnerability is caused by an integer overflow in the curl_easy_setopt() function.\nThe vulnerability can be exploited by an attacker to execute arbitrary code on a vulnerable system.\nThe vulnerability is fixed in curl 8.4.0 and higher.\n\nCode fixes:\nThe following code changes fixed CVE-2023-38545 in curl:\n\nC\n/*\n * CVE-2023-38545: Integer overflow in curl_easy_setopt()\n *\n * This vulnerability could be exploited to cause a denial-of-service attack or\n * to execute arbitrary code on the victim's system.\n *\n * The following code changes fix this vulnerability by checking the value of the\n * timeout argument before passing it to the internal curl function.\n */\n\n#include \"curl.h\"\n\n/*\n * curl_easy_setopt()\n *\n * Sets an option value for a curl handle.\n *\n * @param handle The curl handle.\n * @param option The option to set.\n * @param param The value to set the option to.\n *\n * @return CURLE_OK on success, or a curl error code on failure.\n */\n\nCURLcode curl_easy_setopt(CURL *handle, CURLoption option, ...)\n{\n  va_list param;\n  CURLcode ret;\n\n  va_start(param, option);\n\n  switch (option) {\n    case CURLOPT_TIMEOUT: {\n      long timeout = va_arg(param, long);\n\n      /* Check for integer overflow. */\n      if (timeout < 0 || timeout > LONG_MAX) {\n        va_end(param);\n        return CURLE_BAD_FUNCTION_ARGUMENT;\n      }\n\n      ret = curl_easy_setopt_timeout(handle, timeout);\n      break;\n    }\n\n    default:\n      ret = curl_easy_setopt_custom(handle, option, param);\n      break;\n  }\n\n  va_end(param);\n\n  return ret;\n}\nUse code with caution. Learn more\nThese code changes were made in commit 9414975, which was released in curl version 8.4.0.\n\n\nWho made these changes and commit details:\nThe code changes to fix CVE-2023-38545 were made by Dxxxxl Sxxxxg, the maintainer of curl. The changes were made in commit 9414975, which was released in curl version 8.4.0.\n\nDxxxxl Sxxxxg is a Swedish computer programmer and the creator and maintainer of curl. He has been working on curl for over 20 years and is considered to be one of the leading experts on web transfer protocols.\n\n## Impact\n\nDisclosing undisclosed vulnerability code can have a number of negative implications, including:\n\nPutting users at risk. Once a vulnerability is disclosed publicly, attackers can start exploiting it. This can put users of the affected software at risk of data breaches, malware infections, and other attacks.\nDamaging the vendor's reputation. Vendors take pride in the security of their products and services. Disclosing a vulnerability publicly can damage the vendor's reputation and lead to lost customers.\nMaking it more difficult for the vendor to fix the vulnerability. If a vulnerability is disclosed publicly before the vendor has a chance to fix it, it can make it more difficult for the vendor to coordinate a patch release. This can leave users vulnerable to attacks for longer.\nEncouraging other attackers to find and disclose vulnerabilities. When attackers see that they can get attention and recognition by disclosing vulnerabilities, they are more likely to look for them. This can lead to an increase in the number of vulnerabilities that are disclosed publicly.",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 18,
+  "voters": [
+    "rachid_aym",
+    "m0chan",
+    "balerion",
+    "mk7120",
+    "xlord91",
+    "unknown_feature",
+    "shubham_srt",
+    "jimbob",
+    "eminfidan",
+    "chriszo111",
+    "and 8 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

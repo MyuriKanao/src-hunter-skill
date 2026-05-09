@@ -1,0 +1,133 @@
+{
+  "id": 703138,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83MDMxMzg=",
+  "url": "https://hackerone.com/reports/703138",
+  "title": "[yarn] yarn.lock integrity & hash check logic is broken",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-09-27T19:51:27.138Z",
+  "submitted_at": "2019-09-27T19:51:27.138Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chalker",
+    "url": "/chalker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-15608"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-02-26T13:46:41.721Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-01-27T13:46:32.514Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a vulnerability in `yarn`.\n\nIt allows to pollute yarn cache via a crafted `yarn.lock` file and place a malicious package into cache under any name/version, bypassing both integrity and hash checks in `yarn.lock` so that any future installs of that package will install the fake version (regardless of integrity and hashes).\n\n# Module\n\n**module name:** `yarn`\n**version:** 1.7.3 (`latest` tag)\n**npm page:** `https://www.npmjs.com/package/yarn`\n\n## Module Description\n\n> Fast, reliable, and secure dependency management.\n\n## Module Stats\n\n`187 702` downloads in the last day\n`998 482` downloads in the last week\n`4 214 949` downloads in the last month\n\n# Vulnerability\n\n## Vulnerability Description\n\nIn short: integrity check logic _and_ hash check logic seems broken.\n\n* Integrity/hash checks seem to be performed when placing a package to cache, not when a package is taken out of the cache. It’s a bit tricky though.\n\n* It is easy to get installs pass with both hash and integrity simultaneously mismatching in yarn.lock, without any manual intervention apart from calling yarn on crafted lockfiles (to pollute cache).\n\nSo, more details on what is happening:\n\n1. When the package is downloaded, only integrity is checked.\n   The package is saved into cache with its sha1 hash. sha1 hash is not checked.\n\n2. When the package is taken out of cache, it’s taken by name + version + sha1 hash.\n   Integrity is not checked (completely ignored).\n\n3. When one pollutes a cache by specifying incorrect hash in yarn.lock\n   (but correct integrity), that hash is trusted and goes into cache.\n\n4. After that, installing yarn.lock files with both that specific incorrect hash\n   and any integrity just pass, until yarn cache is cleared.\n\n5. Removing node_modules does not help, only clearing yarn cache helps.\n\nWhile that might seem just moderately dangerous at the first glance (integrity needs to match once), there is a larger problem with that:\n\nIt is very simple to trick yarn into putting an *completely unrelated package* into cache, including a different package or even a tgz file that is not even coming from npm registry. And integrity is not checked afterwards.\n\n## Steps To Reproduce:\n\nCode to reproduce is shared with Yarn maintainers via https://github.com/ChALkeR/yarnbug2.\n\nIt used the following logic:\n\n(1). Create a `yarn.lock` file by installing the _payload_ package or tgz file, e.g.:\n```\n  \"dependencies\": {\n   \"ponyhooves\": \"^1.0.1\"\n  }\n```\n```\nponyhooves@^1.0.1:\n  version \"1.0.1\"\n  resolved \"https://registry.yarnpkg.com/ponyhooves/-/ponyhooves-1.0.1.tgz#e57c9c3e976d570f97f229356ca5d6ee13efd358\"\n  integrity sha1-5XycPpdtVw+X8ik1bKXW7hPv01g=\n```\n\n(2). Replace the package name, version, and hash with _target_ package. Leave integrity intact.\n  \n```\n  \"dependencies\": {\n    \"express\": \"4.11.1\"\n  }\n```\n```\nexpress@4.11.1:\n  version \"4.11.1\"\n  resolved \"https://registry.yarnpkg.com/ponyhooves/-/ponyhooves-1.0.1.tgz#36d04dd27aa1667634e987529767f9c99de7903f\"\n  integrity sha1-5XycPpdtVw+X8ik1bKXW7hPv01g=\n```\n  \n(3). Installing this yarn.lock will pollute `express@4.1.11` package in yarn cache (if it is not already present there). Any future installs of `express@4.1.11` will resolve to this payload package -- hashes match with express, and integrity check is ignored.\n\n## Workaround\n\n`yarn cache clean` before installs.\n\n## Patch\n\n* Cache should check both hash and integrity on initial install (not just integrity). That is not a sufficient fix though (sha1 is weak).\n* Cache should take integrity into account, so that if integrity in`yarn.lock` mismatches integrity of the archive that was placed in cache, install should error or ignore the cached version.\n\n## Supporting Material/References:\n\n- Node.js v12.11.0\n- npm v6.11.3\n\n# Wrap up\n\n- I contacted the maintainer to let them know: Y\n- I opened an issue in the related repository: N\n\nI am sponsored by [Exodus](https://exodus.io) to perform security research.\n\n## Impact\n\nPollute local yarn cache with malicious packages and bypass hash/integrity checks.\n\nIt is even possible to execute `postinstall` this way even if the original malicious package has been installed with `yarn --ignore-scripts`.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-02-26T13:46:32.624Z",
+  "allow_singular_disclosure_after": -195615203.84345216,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "a_d_a_m",
+    "mohaned0101",
+    "thalaivar304",
+    "zimmer75",
+    "abudahab",
+    "rom_hack"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

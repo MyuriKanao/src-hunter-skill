@@ -1,0 +1,160 @@
+{
+  "id": 584603,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81ODQ2MDM=",
+  "url": "https://hackerone.com/reports/584603",
+  "title": "RCE on CS:GO client using unsanitized entity ID in EntityMsg message",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-19T17:49:21.166Z",
+  "submitted_at": "2019-05-19T17:49:21.166Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "teapotd",
+    "url": "/teapotd",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ucwmma3yecv6fgt4n7daxt7owvh6/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-05-27T16:54:18.221Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-05-04T05:04:37.779Z",
+  "team_member_agreed_on_going_public_at": "2021-05-27T16:54:18.030Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "9000.0",
+  "formatted_bounty": "$9,000",
+  "weakness": {
+    "id": 8,
+    "name": "Out-of-bounds Read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 208,
+  "voters": [
+    "aagat_sh",
+    "drauschkolb",
+    "jorgectf",
+    "fr1nge",
+    "taha",
+    "arm4nd0",
+    "orange303",
+    "battle_angel",
+    "fqdn",
+    "mr-k0anti",
+    "and 198 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1286,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "csgo.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 56475,
+      "category": "team",
+      "content": "Title:         RCE on CS:GO client using unsanitized entity ID in EntityMsg message\nScope:         csgo.exe\nWeakness:      Out-of-bounds Read\nSeverity:      Critical (9.6)\nLink:          https://hackerone.com/reports/584603\nDate:          2019-05-19 17:49:21 +0000\nBy:            @chaynik\n\nDetails:\nVulnerability\n-------------\n\n`CSVCMsg_EntityMsg` message is used by server to notify client about generic actions regarding entities. The message is described using the following Protocol Buffer:\n\n```\nmessage CSVCMsg_EntityMsg {\n    optional int32 ent_index = 1;\n    optional int32 class_id = 2;\n    optional bytes ent_data = 3;\n}\n```\n\nThe pseudocode of function handling this message:\n\n```cpp\nvoid ProcessEntityMessage(CSVCMsg_EntityMsg *msg) {\n    IClientNetworkable *entity = entitylist->GetClientNetworkable(msg->ent_index);\n    if (entity) {\n        ...\n        entity->ReceiveMessage(...);\n        ...\n    }\n    ...\n}\n```\n\nNeither handler nor `GetClientNetworkable` check if entity index is valid - an arbitrary integer can be passed. This can lead to memory access outside of entity list and then to virtual function call on invalid object. By careful manipulation it can be used to divert control flow to attacker's payload.\n\nExploitation\n------------\n\nThe exploit is based on assumption that `client_panorama.dll` base address is known to the attacker. It can be procured using additional memory disclousure vulnerability, like #581774. Alternatively, in case of distributed attack guessing address may be viable (32-bit ASLR has low entropy).\n\nThe first stage is to find a variable with known address that can be controlled by server. For example, I chose to use map name because its copy is stored in a global variable somewhere in `client_panorama.dll`. Note that it's expected behavior and not a vulnerability.\n\nThen I crafted a payload containing ROP chain and fake `IClientNetworkable` object. The payload is sent to server as map name. Obviously, map name is a string and cannot contain null characters, but there's easy way to bypass this limitation by overwriting it several times.\n\nThe final step is to use the vulnerability to trick client into executing virtual function on the fake object. Entity list is a statically allocated array inside `client_panorama.dll`, so the offset to the payload is constant. An appropriate entity index is calculated from the offset and message is sent.\n\nThe ROP chain goal is to run Calculator app. Luckily, `client_panorama.dll` imports `IProcessUtils` interface from `tier0.dll` which can be used to start processes. It simplifies ROP chain considerably.\n\nProof of Concept\n----------------\n\nThe PoC script is demonstrating RCE capability on CS:GO client for Windows (version 13696, 2019-05-16 stable release).\n\n1. Download attached script: F492694\n2. Start CS:GO client\n3. Use a debugger to get the base address of `client_panorama.dll` and set `CLIENT_BASE` variable in downloaded script\n4. Run attached Python 3 script (possibly on another host)  \n**Note:** If you run this script on the same host as client you might need to change the default `PORT` (because for some reason CS:GO client uses it).\n5. Connect to the malicious server and wait for `calc.exe` to pop up\n\n{F492696}\n\nSimilarly as in #470520, Steam browser protocol can be used to launch an attack from web browser:\n\n1. Follow steps 1-4 as above\n2. Download attached HTML file (F492697) and set IP in iframe URL to malicious server\n3. Open downloaded HTML file and wait for `calc.exe` to pop up\n\n{F492695}\n\n## Impact\n\nAn attacker can execute arbitrary code on the computer of anyone who attempts to connect to the server. After succesful exploitation an attacker can gain control over victim's computer and do whatever they want.\n\nThe connection to the server can be initiated manually by the victim or automatically using Steam browser protocol on malicious web site.\n\nThe likelihood of victim joining the server via in-game server browser can be greatly improved by faking high player count and further social engineering. Many players sort server list by player amount.\n\nIn case of an attack from web browser many users don't need to click `Open steam` and this method requires no further interaction from user - connection will be initiated without confirmation (even CS:GO client will be started if it's not running).\n\n",
+      "updated_at": "2021-05-27T16:54:08.186Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 300268,
+        "username": "mcjohn",
+        "name": "mcjohn",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2018-06-30T00:26:54.841Z",
+        "url": "https://hackerone.com/mcjohn",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

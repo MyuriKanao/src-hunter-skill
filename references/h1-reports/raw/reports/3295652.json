@@ -1,0 +1,123 @@
+{
+  "id": 3295652,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjk1NjUy",
+  "url": "https://hackerone.com/reports/3295652",
+  "title": "Insecure WebSocket Usage in curl Documentation and Examples (CWE-319: Cleartext Transmission of Sensitive Information)",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-08-12T08:31:46.469Z",
+  "submitted_at": "2025-08-12T08:31:46.773Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "spectre-1",
+    "url": "/spectre-1",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/rn73sjb3roaxd9xkv095k2szed44/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-08-12T08:47:43.093Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-08-12T08:35:55.742Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The curl source repository contains official documentation and example code that demonstrate WebSocket connections using the insecure ws:// protocol instead of the secure wss://. This misleading guidance may encourage developers to implement cleartext WebSocket endpoints, exposing users and infrastructure to eavesdropping, MITM (Man-in-the-Middle) attacks, and session hijacking. Failing to promote secure defaults in a popular open-source project creates systemic risks for downstream adopters.\n\nThis report and its analysis were enhanced and generated using an AI assistant to ensure a comprehensive security review and reproducibility.\nAffected version\n\nVerified on the curl master branch as of August 2025. Insecure usage appears in historical releases as well. Example tested version:\n\ncurl 8.1.2 (x86_64-pc-linux-gnu) libcurl/8.1.2 OpenSSL/3.0.7 zlib/1.2.13 brotli/1.0.9 zstd/1.5.2 libidn2/2.3.4 nghttp2/1.51.0\nRelease-Date: 2023-06-12\nProtocols: dict file ftp ftps gopher gophers http https imap imaps mqtt pop3 pop3s rtmp rtsp smb smbs smtp smtps telnet tftp ws wss\nPlatform: Linux 5.15.0-83-generic x86_64\n\nSteps To Reproduce:\n\n    Clone or download the curl GitHub repository.\n    Search for insecure WebSocket URIs by running:\n        grep -rn 'ws://' ./docs/ ./examples/\n    Review the documentation (docs/WEBSOCKETS.md, etc.) and example code (e.g., examples/websocket-client.c) to confirm insecure ws:// references are present and no explicit security warning is provided.\n    Validate that instructions or sample code do not require, prefer, or warn about secure WebSocket (wss://) usage.\n\nSupporting Material/References:\n\n    File: docs/WEBSOCKETS.md (e.g., line 15: curl \"ws://echo.websocket.org\")\n    File: examples/websocket-client.c (e.g., line 42: #define WS_URL \"ws://test.websocket.org\")\n    Manual and Semgrep findings for insecure protocol patterns\n    curl/curl GitHub repository\n\n## Impact\n\n## Summary:\nBy demonstrating and failing to warn against insecure WebSocket usage (ws://), curl's documentation may lead developers to implement applications that transmit data over unencrypted channels. This enables attackers to:\n\n    Eavesdrop on user data in transit\n    Hijack sessions or inject malicious payloads\n    Perform MiTM attacks against production services and infrastructure\n\nFor a widely adopted open source tool, propagating insecure defaults has downstream and supply chain impact, potentially affecting thousands of projects. Severity is High, and the most relevant CWE is CWE-319: Cleartext Transmission of Sensitive Information.",
+  "weakness": {
+    "id": 34,
+    "name": "Cleartext Transmission of Sensitive Information"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "huseyin_tuc",
+    "corrupted_bytes",
+    "k0ns0l",
+    "anonxr",
+    "thalaivar304",
+    "2026",
+    "sin99xx",
+    "mai91",
+    "mmaguire1992",
+    "cybtriplea1",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

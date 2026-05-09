@@ -1,0 +1,144 @@
+{
+  "id": 811502,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84MTE1MDI=",
+  "url": "https://hackerone.com/reports/811502",
+  "title": "Node.js: TLS session reuse can lead to hostname verification bypass",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-03-05T17:30:12.121Z",
+  "submitted_at": "2020-03-05T17:30:12.121Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "fwilhelm",
+    "url": "/fwilhelm",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8172"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-06-03T06:55:54.149Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-06-03T06:55:54.061Z",
+  "team_member_agreed_on_going_public_at": "2020-06-02T19:56:09.884Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The Node.js TLS library supports client side reuse of TLS sessions when multiple connections to the same server are opened.\n\nCode that wants to use this feature can listen for the 'session' event (https://nodejs.org/api/tls.html#tls_event_session) on a tls.TLSSocket to get notified of newly created TLS sessions. The documentation for this event explicitly mentions that the passed sessions \"can be used immediately or later\".\n\nThe problem with this design is that 'session' events are triggered even if verification of the server certificate hostname in onConnectSecure fails. (https://github.com/nodejs/node/blob/b1d4c13430c92e94920f0c8c9ba1295c075c9e89/lib/_tls_wrap.js#L1502):\n\nonConnectSecure is triggered by the OpenSSL info callback (with the flag SSL_CB_HANDSHAKE_DONE) after a TLS handshake. The 'session' event is triggered by OpenSSLs get_session_cb, which can happen before the info callback in TLS 1.2 and after in TLS 1.3 and which is triggered regardless of the result of onConnectSecure.\n\nThis means that sessions where the server presented an invalid certificate, or one with a wrong hostname, will trigger the session event and can end up being reused or stored in a cache.\n\nThat behavior is insecure, because resumed sessions will not be subjected to another hostname verification check as long as they are CA signed:\n\n// Verify that server's identity matches it's certificate's names\n// Unless server has resumed our existing session\nif (!verifyError && !this.isSessionReused()) {\n    const hostname = options.servername ||\n                   options.host ||\n                   (options.socket && options.socket._host) ||\n                   'localhost';\n    const cert = this.getPeerCertificate(true);\n    verifyError = options.checkServerIdentity(hostname, cert);\n}\n\n\nIn practice, this means that the immediate reuse described in the API documentation is always insecure and that session caches are at risk of storing insecure sessions. The most important implementation of a session cache is in the https library (https://github.com/nodejs/node/blob/b1d4c13430c92e94920f0c8c9ba1295c075c9e89/lib/https.js#L130): New sessions are stored in the cache when the ‘session’ event is triggered and are evicted once a tls socket is closed with an error. \n\n if (options._agentKey) {\n    // Cache new session for reuse\n    socket.on('session', (session) => {\n      this._cacheSession(options._agentKey, session);\n    });\n\n    // Evict session on error\n    socket.once('close', (err) => {\n      if (err)\n        this._evictSession(options._agentKey);\n    });\n  }\n\nThis opens a small race window where an invalid session can be used by other HTTPs requests to the same host. The attached proof-of-concept wins the race reliably against a local server using a setImmediate() callback, but there are probably other ways this could be exploited in real world applications. I also did not fully investigate if there is a way to trigger the socket ‘close’ event with no error which would skip the session eviction and turn this into a 100% reliable bypass.\n\n\nThe POC requires a target server with a valid CA signed certificate (for an arbitrary hostname) and support for TLS resumption. I’ve attached a minimal golang https server that worked for me.\n\n[fwilhelm@fwilhelm node]$ ../node/node-v13.9.0-linux-x64/bin/node poc.js\n[!] First request failed:Host: nodejs.org. is not in the cert's altnames: DNS:loca.host\n[x] Starting second request\n[x] Dumping globalAgent._sessionCache.map:\n{\n  'nodejs.org:8444:::::::::::::::::TLSv1_2_method:': <Buffer 30 82 06 2f 02 01 01 02 02 03 04 04 02 13 01 04 20 cd b7 17 84 ac 9f 31 6f 1c cc 73 de 31 05 eb dc 60 62 df c7 c5 d5 8c b4 75 cc a7 28 1f d9 c0 22 04 ... 1537 more bytes>\n}\n[!] Bypassed hostname verification. Server response: 200\n{\n  date: 'Thu, 05 Mar 2020 17:08:24 GMT',\n  'content-length': '29',\n  'content-type': 'text/plain; charset=utf-8',\n  connection: 'close'\n}\n\n\nThis bug is subject to a 90 day disclosure deadline. After 90 days elapse,\nthe bug report will become visible to the public. The scheduled disclosure\ndate is 2020-06-03. Disclosure at an earlier date is also possible if\nagreed upon by all parties.\n\n## Impact\n\nMitM of TLS connections",
+  "weakness": {
+    "id": 30,
+    "name": "Man-in-the-Middle"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 738445,
+      "file_name": "poc.js",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/uqAkxkaS455TMvyuZDZsFsbj?response-content-disposition=attachment%3B%20filename%3D%22poc.js%22%3B%20filename%2A%3DUTF-8%27%27poc.js&response-content-type=text%2Fx-csrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151830Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=84f06aed8567d1bbaeca6d60e4e8f19f72b34987f0f7988568be79d3ce12741c",
+      "file_size": 1306,
+      "type": "text/x-csrc",
+      "moderated": null
+    },
+    {
+      "id": 738446,
+      "file_name": "server.go",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/iui2p9QppaMricghDmnBsbs3?response-content-disposition=attachment%3B%20filename%3D%22server.go%22%3B%20filename%2A%3DUTF-8%27%27server.go&response-content-type=text%2Fx-go&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ3VOAJ5JJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151830Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIDYMp37QsBNBxu1nn5awX6pl44hrWPc81aYLjOudT7CWAiEA3xmCbKgPpokj11LVwvXsNyDmj3zGNjdVHHqLd29MlWIqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDFqnOI1hiucLvRgH%2BiqOBQEQXNq0tP%2Fqj8fScUTljgfvPSnT0BjJ1GS0AP0%2FMZiWQDTH%2BtdmOtEyA%2FWuAN9UJNatey1lUN3QlzYtLeF8L3bfLrHq86a0tbaqA8iCypAICC6BRLTyHwtz4ONL9jm6QEhOIiIElq4oVqFAVIhrQgCKghK0uQbf6xmwu2VciG8nywi4V14Rj1vOTeyvvh%2BWCRLonHV5xL2NY5kTbQinf2U48n2iGjzb1H3%2FcgoIDP9vKW2Q5A16vJELiMtKs2GBQFmr3S6FEalHjsC5bzhZsMED%2FXPnzTuN464ZdREHeocqG4jRx5x4LBzQ3F0a9PiV3vpMF6Kgp1KhCqBrCIHoB%2FoE0SM8JbRgEWW9rev0ku1JqfSfNAZnq2IJX38lkSBCi1tL%2BHeRzngNQlI0yM3YV967VAclhSFsa5cMX0e%2FjyBmjeMWIPMcdHZ2mzdM9Fa9SMdTDdAA3X0CfLr9ihAf48l0DA03R3cfr8U8uWCuymunj94xR6CWYkxoSQNdX8ymoItqYEVfSx84etz%2BfeBYG5VrZKQunM7wjjiJ%2FEKNmOKrfcg9HRsq2YyI3Woc0cKbZ%2FeBUOVdKjr8UtzhmosPoR%2BhHIJKF8XhPJvtGTJh6bxXniIe4RxlhAUU0Fnu28C79yktJF9TQNczdl%2F70NbgfJbK5Lhrr0qcg2Eb8X%2FImXWZLtP4Gu%2BLB2ECGIyrOI3yKKAsfQPQpoCL9jvKWDV5KuU4ueAtzBUxcA3ImPnPXNDPZe0ILs5LYhbKsJtfMwLFV%2BmRJWAXXWVKok3QE%2FOS6x4Ts%2B7emSF0Pm8ibXQL18SALBmNCFOMdHLlM%2B0yXdZL9bHYRpiMhSdyIEgRiRh%2BBm%2B663GJQukdgPbX37Ps0jDy7%2FzPBjqxAZh2UdjJYISEAf8m2DpheYNBlFoysBS8uq6btSNnbeUoOWlDLQmOLSLKvS6JbLp7NCJwRdiIuDHz8wIuDsEV4ZLtIq5RNrnuBOndf00a1jAb3ETW5JoqbXVlc5zqt3l6oMyfDXcGa6YsAKDYeeT7yQhfCZLtVyafdKlswCAEXFdTeeYTFQuv80dJYdprYIiSh%2BxUyxNujNp0BS%2FvU8LxXhzUWUs1Wlne0GGOn8I6gKHyMg%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f218b7b97a7ea299a16d65d61bd04c66df7a6946fc2e7d09dc7634eb12a3d02a",
+      "file_size": 566,
+      "type": "text/x-go",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-07-02T19:56:09.965Z",
+  "allow_singular_disclosure_after": -184620140.78356552,
+  "singular_disclosure_allowed": true,
+  "vote_count": 29,
+  "voters": [
+    "brahim_boufakri01",
+    "pr0f0x01",
+    "demonia",
+    "khizer47",
+    "prinzhorn",
+    "hakivvi",
+    "dhiral",
+    "b69fb2ebda43240ece9dbeb",
+    "ba1219c9231f1b4b03e84b4",
+    "wh0th3h3llam1",
+    "and 19 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

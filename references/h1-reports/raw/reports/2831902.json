@@ -1,0 +1,136 @@
+{
+  "id": 2831902,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yODMxOTAy",
+  "url": "https://hackerone.com/reports/2831902",
+  "title": "[CRITICAL] 0-Click Account Takeover via Password Reset [AUTH-3243] /orchestrator/v1/password_reset/start",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-11-10T14:56:28.099Z",
+  "submitted_at": "2024-11-10T14:56:28.557Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "db3wy",
+    "url": "/db3wy",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jj5v1aoiywul7hn26yus0vymfrwl/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 32674,
+    "url": "https://hackerone.com/remitly",
+    "handle": "remitly",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/032/674/1ad0956252615807740f983f7e8d1073e22cceaf_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/032/674/1ad0956252615807740f983f7e8d1073e22cceaf_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Remitly",
+      "twitter_handle": "remitly",
+      "website": "https://www.remitly.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-07-21T22:23:32.299Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-06-21T22:23:20.503Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA 0-click Account Takeover vulnerability was identified in the password reset functionality of the target website. This flaw allows an attacker to reset the victim's password without any interaction or consent from the victim, leading to a complete compromise of the victim's account.\n\n\n## Operating System\nWINDOWS\n\n\n## do you use a vpn? if so which one?\nNO\n## Browser\nFIRFOX FOR ATTACKER\nBurp Browser for victim\n\n\n## Steps To Reproduce:\n1-----Go to the Password Reset Page:\n\n2-----Navigate to the \"Forgot Password\" or \"Reset Password\" section on the website.\n         Initiate Password Reset for Both the Victim and the Attacker Account:\n\n3----Enter the victim's email address in the password reset form.\n       Also, enter your email address (attacker's email) to initiate a password reset.\n         Capture the Password Reset Request:\n\n4-----Intercept the HTTP request using a proxy tool like Burp Suite or OWASP ZAP when submitting the password reset request.\n\n\n            Analyze the Leaked Information:\n\nTo clarify:\n\nEndpoint: /orchestrator/v1/password_reset/start\n\nYou need to obtain the JWT token from this specific endpoint.\nThere are two endpoints with the same name:\nOne endpoint does not include a JWT token in its response.\nThe other endpoint includes a JWT token, which is necessary for the attack.\nMake sure to target the correct endpoint that provides the JWT token during the password reset process.\n\nAny JWT token belonging to the victim from any other endpoint will not work.\n\nDownload a tool for Burp Suite called JSON Web Token. It will make your work easier as it highlights the requests containing the JWT token in green, helping you easily identify the correct endpoint\n\nOnly the mentioned \nendpoint /orchestrator/v1/password_reset/start is valid and works for obtaining the necessary JWT for the attack.\n\nThis endpoint may not appear on the first attempt; you may need to repeat the process.\nAs you can see in the recorded video, it appeared for me on the second attempt.\n\n\n\n\n\nCheck the intercepted request and identify sensitive parameters such as:\n     AMP_d0cf3ed24c: Contains user information like deviceId, userId, and sessionId.\nJWT: JSON Web Token containing the user's email and other information.\n\n\n\nsave this 2 paramter\n\n\n\n\n5------Enter the One-Time Password (OTP) received on your email or phone to proceed with the password reset.-->>  attacker account\n         Modify the HTTP Request:\n\n6------Before sending the password reset request, replace your session data with the victim's session data in the HTTP request:\n         Replace the \"\"\"\"AMP_d0cf3ed24c and JWT\"\"\"\"\" values with the victim's values obtained from the leaked request.\n\n\n7--------- Send the Modified Request:\n\n\n8---Access the Victim's Account:\n\nIf successful, you will be able to reset the victim’s password without any interaction from the victim.\nLog in using the victim's email address and the new password you have set.\n\n\n\n## POC\n████\n█████\n\n## Impact\n\n##Summary:\nThe vulnerability discovered allows an attacker to reset the password of a victim's account without requiring any user interaction or special privileges. By intercepting the password reset request and modifying it with the victim's session data, the attacker can successfully take over the account. Additionally, the site allows money transfers, and by exploiting this vulnerability, the attacker can potentially steal funds from victims' accounts.\n\n##Requirements:\nAccess to the victim's password reset request: Intercepted via tools like Burp Suite or OWASP ZAP.\nKnowledge of the victim's session information: This includes tokens such as AMP_d0cf3ed24c and JWT, which are available in the intercepted requests.\nAccess to the attacker’s own OTP (One-Time Password): The attacker needs their own OTP for the password reset.\nAbility to modify HTTP requests: The attacker needs the ability to replace their own session data with the victim’s session data to perform the attack.\n##Gained Privilege:\nBy exploiting this vulnerability, the attacker gains the following privileges:\n\nFull Account Control: The attacker can reset the victim’s password and log in to the account without needing the victim’s credentials.\n\nAccess to Confidential Data: The attacker gains access to sensitive information within the victim’s account, including personal details, emails, and other private data.\n\nManipulation of Account Settings: The attacker can modify account settings, change the email address associated with the account, or perform other actions that would typically require user consent.\n\nPotential to Lock Out the Victim: The attacker can change the password and prevent the victim from accessing their own account, leading to a potential denial of service.\n\nStealing Funds: Since the site allows money transfers, the attacker can transfer all funds from the compromised accounts to their own, effectively stealing money from the victims.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2025-07-21T22:23:20.634Z",
+  "allow_singular_disclosure_after": -25202269.286497373,
+  "singular_disclosure_allowed": true,
+  "vote_count": 270,
+  "voters": [
+    "edark7007",
+    "eslam11x",
+    "iwgp",
+    "0xhuz",
+    "m4khn0",
+    "porcupineyhairs",
+    "l3m0nsec",
+    "orange303",
+    "f4rzads3c",
+    "rejection",
+    "and 260 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 756603,
+    "asset_type": "URL",
+    "asset_identifier": "auth.remitly.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

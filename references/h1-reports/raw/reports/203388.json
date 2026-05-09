@@ -1,0 +1,131 @@
+{
+  "id": 203388,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMDMzODg=",
+  "url": "https://hackerone.com/reports/203388",
+  "title": "Content length restriction bypass can lead to DOS by reading large files on gip.rocks",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-02-04T11:27:50.436Z",
+  "submitted_at": "2017-02-04T11:27:50.436Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "a0xnirudh",
+    "url": "/a0xnirudh",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/t9u71pn2ge7v0d2y9pbsy4fcv6ep/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1868,
+    "url": "https://hackerone.com/gratipay",
+    "handle": "gratipay",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/868/a75c6649c5b4671b3cf44160af884a7da9fd0b67_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/868/a75c6649c5b4671b3cf44160af884a7da9fd0b67_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Gratipay",
+      "twitter_handle": "Gratipay",
+      "website": "https://gratipay.com/",
+      "about": "Gratitude? Gratipay! The easiest way for your company to pay for open source."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-03-31T14:50:05.910Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-03-31T14:50:05.803Z",
+  "team_member_agreed_on_going_public_at": "2017-03-29T17:36:37.638Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello team,\n\n## Introduction\n\nSince you mentioned in the rules that all libraries listed on your github repositories are in scope, I decided to take a look at http://gip.rocks\n\n## Problem:\n\nThe application reads an image file and convert it into smaller formats, zip it and let the users to download the updated file. But the problem here is the condition check before reading the file to the variable:\n\nFile: https://github.com/gratipay/gip.rocks/blob/master/www/v1.spt\n\n```python\nif int(request.headers['Content-Length']) > 256 * 1024:\n    raise Response(413)\n\nimage_type = request.headers['Content-Type']\nif image_type not in ('image/png', 'image/jpeg'):\n    raise Response(415)\n\n# Load the image.\nfp = StringIO(request.raw_body)\nfp.seek(0)\nimage = Image.open(fp)\n\n```\n\nHere you can see that you are calculating the length of the incoming file from the `content-length` HTTP header and if it is less than `256 * 1024`, you will accept the request. But this is not a correct way to check size of the incoming file.\n\n## POC:\n\n1) Initiate a system wide proxy with burp suite\n\n2) Try to send a curl request with a huge file and see the request in curl\n\n3) The content length will be obviously greater than the max value application accepts but modify the `content-length` header to a value which is less than `256 * 1024`.\n\n4) Forward the request and you can see that the server will read the files to a variable and if the file is large enough, this is more than enough to DOS the server.\n\nNow since this deals with DOS, I haven't actually tried out this attack but we can easily confirm this from the source code that this can be bypassed in the way I explained above. I also tried deploying locally but I had a hard time making the software run locally and I don't have enough free time to debug what is happening.\n\nBut I think the bug is very clear from the source code itself, which is why I really didn't test it but thought to report it.\n\n## Mitigation:\n\nPutting your trust on HTTP headers may not be a good idea. But I am not really sure what is a solid method to find the proper length of the string in this case.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-04-28T17:36:37.688Z",
+  "allow_singular_disclosure_after": -284939397.93148357,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "delimitry",
+    "inhibitor181",
+    "edoverflow",
+    "eveeez",
+    "khizer47",
+    "bb00x",
+    "linkks",
+    "a0xnirudh",
+    "spetr0x",
+    "tastic-toaster",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

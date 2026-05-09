@@ -1,0 +1,138 @@
+{
+  "id": 380873,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zODA4NzM=",
+  "url": "https://hackerone.com/reports/380873",
+  "title": "Prototype pollution attack (lodash / constructor.prototype)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-07-12T08:28:18.713Z",
+  "submitted_at": "2018-07-12T08:28:18.713Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "asgerf",
+    "url": "/asgerf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/q5oTdS6oJaM29wThEKhh22Pr/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-16487"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-10-30T12:59:31.457Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-10-15T15:12:26.682Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a prototype pollution vulnerability in lodash.\nIt allows an attacker to inject properties on Object.prototype.\n\n# Module\n\n**module name:** lodash\n**version:** 4.17.10\n**npm page:** `https://www.npmjs.com/package/lodash`\n\n## Module Description\n\nThe Lodash library exported as Node.js modules.\n\n## Module Stats\n\n12M downloads in the last week\n\n# Vulnerability\n\n## Vulnerability Description\n\nThis is a variant of this vulnerability:\nhttps://hackerone.com/reports/310443\n\nThe functions `merge`, `mergeWith`, and `defaultsDeep` can be tricked into adding or modifying properties of the Object prototype. These properties will be present on all objects.\n\n## Steps To Reproduce:\n\nCraft an object of form `{constructor: {prototype: {...}}}` and send it to `_.merge`.\n\n```javascript\nvar _ = require('lodash');\nvar payload = JSON.parse('{\"constructor\": {\"prototype\": {\"isAdmin\": true}}}');\n_.merge({}, payload);\nconsole.log({}.isAdmin); // true\n```\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N]\n\n## Impact\n\nDenial of service, possibly more depending on the application.\nSee https://hackerone.com/reports/310443",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-11-14T15:12:26.781Z",
+  "allow_singular_disclosure_after": -236131689.8010181,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "foobar7",
+    "ali",
+    "bl4de",
+    "macasun",
+    "eveeez",
+    "cryptographer",
+    "0x08",
+    "armansameer",
+    "m3x",
+    "andy1021",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5914,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "lodash",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

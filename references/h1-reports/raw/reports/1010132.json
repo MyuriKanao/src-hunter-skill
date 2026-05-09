@@ -1,0 +1,125 @@
+{
+  "id": 1010132,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDEwMTMy",
+  "url": "https://hackerone.com/reports/1010132",
+  "title": "Possible DOM XSS on app.hey.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-10-16T13:57:35.282Z",
+  "submitted_at": "2020-10-16T13:57:35.358Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "enigmaticjohn",
+    "url": "/enigmaticjohn",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/FyYEq1N1itB6rgYGfmieTVnT/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 67,
+    "url": "https://hackerone.com/basecamp",
+    "handle": "basecamp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Basecamp",
+      "twitter_handle": "basecamp",
+      "website": "https://37signals.com/policies/security/response",
+      "about": "Basecamp is the leading online project manager and the birthplace of Ruby on Rails. Creators of the HEY email service."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-10-27T19:44:49.290Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-27T19:44:49.204Z",
+  "team_member_agreed_on_going_public_at": "2020-10-27T18:25:17.211Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "#Summary:\n\nHello Team,\nWhile testing it was observed that on https://app.hey.com/, on Search box there is a possibility of XSS. Although the payload is reflected in the DOM but the CSP blocks the execution of the script, the XSS can happen if the CSP is somehow bypassed. The Subject parameter is vulnerable.\n\nApart from XSS, the HTML injection attack is working pretty straight forward.\n\n#Steps To Reproduce:\n1. Go to https://app.hey.com\n2. Login to your account.\n3. Click on 'Write' Mail button.\n4. Add the recipient as yourself.\n5. In the Subject, add following payload\n```\nTestPayload&lt;/a&gt;&lt;a href=\"javascript:alert(1)\"&gt;ClickHere&lt;/a&gt;\n```\n6. Send the mail.\n7. Go to top left corner Search Box and type \"**TestPayload**\" \n8. You will see the mail you sent to yourself, and <a> tag will be there \"ClickHere\".\n9. Click on it, you will see the CSP violation in the Console.\n10. Below is the CSP of the page:\n\n```\nscript-src 'self' https://production.haystack-assets.com stats.hey.com *.braintreegateway.com *.braintree-api.com hcaptcha.com *.hcaptcha.com; \nobject-src 'none'; \nbase-uri 'none'; \nform-action 'self'; \nframe-ancestors 'none'; \nreport-uri https://sentry.io/api/1371426/security/?sentry_key=3a5ea420eecc45bd9e1d1c2424683f3a&sentry_environment=production&sentry_release=\n```\nAs seen from the CSP, there might be a possibility of Host whitelists bypass.\n\n## Impact\n\nIf attacker send such type of mail to a victim and if victim accidentally searches for the same mail then the Script will be executed leading to account takeover. This is possible only if CSP is bypassed.",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-11-26T18:25:17.383Z",
+  "allow_singular_disclosure_after": -171924740.2025865,
+  "singular_disclosure_allowed": true,
+  "vote_count": 68,
+  "voters": [
+    "arist0phanes",
+    "sw33tlie",
+    "xploiterr",
+    "fqdn",
+    "najeh_halawani",
+    "ali",
+    "mzfr",
+    "livadak",
+    "sudi",
+    "moex",
+    "and 58 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 53959,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.hey.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

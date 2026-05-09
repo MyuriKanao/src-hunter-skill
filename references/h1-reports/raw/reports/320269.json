@@ -1,0 +1,128 @@
+{
+  "id": 320269,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjAyNjk=",
+  "url": "https://hackerone.com/reports/320269",
+  "title": "`npmconf` (and `npm` js api) allocate and write to disk uninitialized memory content when a typed number is passed as input on Node.js 4.x",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-27T13:52:05.982Z",
+  "submitted_at": "2018-02-27T13:52:05.982Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chalker",
+    "url": "/chalker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-05-12T08:56:12.533Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-05-12T08:54:51.401Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a Buffer allocation issue in `npmconf` (and `npm` package js api).\nIt allows to extract sensitive content from uninitialized memory by passing typed input to `setCredentialsByURI`, limited to Node.js 4.x and below.\n\n# Module\n\n**module name:** `npmconf`\n**version:** 2.1.2\n**npm page:** `https://www.npmjs.com/package/npmconf`\n\n**module name:** `npm`\n**version:** 5.6.0\n**npm page:** `https://www.npmjs.com/package/npm`\n\n## Module Description\n\n> The config thing npm uses\n\n## Module Stats\n\n### npmconf\n\n40 292 downloads in the last day\n219 837 downloads in the last week\n897 947 downloads in the last month\n\n~1 0775 364 estimated downloads per year\n\n`npmconf` is deprecated, but doesn't mention security issues and is still widely used, and the usage seems to *increase* over time.\n\n### npm\n\n`npm` download stats are not representive here, as it's mainly used as a CLI, not as JS api, but here they are (e.g. for comparison with `npmconf`):\n\n141 545 downloads in the last day\n1 067 194 downloads in the last week\n3 701 192 downloads in the last month\n\n~44 414 304 estimated downloads per year\n\n# Vulnerability\n\n## Vulnerability Description\n\nWhen a number is passed to the `password` property of `config.setCredentialsByURI`, `npmconf`/`npm` allocate uninitialized Buffer instances during conversion to base64 (on Node.js 4.x) due to missing type checks before passing user input to the `new Buffer()` constructor.\n\nThose Buffer instances could (and most likely will) contain sensitive information, see [Buffer-knows-everything.md](https://github.com/ChALkeR/notes/blob/master/Buffer-knows-everything.md).\n\nNode.js 4.x is stated as supported in `npm`.\n\n## Steps To Reproduce:\n\nUse Node.js 4.x LTS or below.\n\n### npmconf\n```js\nvar URI = \"https://registry.example.com:8661/\";\nrequire('npmconf').load({}, function (err, conf) {\n  conf.setCredentialsByURI(URI, {username: 'foo', email: 'boo@example.com', password: 200});\n  console.log(conf.getCredentialsByURI(URI)); // This just outputs the setting\n  // conf.save('user', function() {}) // Warning: writes base64-encoded uninitialized buffer .npmrc\n});\n```\n\n### npm\n```js\nvar URI = \"https://registry.example.com:8661/\";\nrequire('npm').load({}, function (err, npm) {\n  npm.config.setCredentialsByURI(URI, {username: 'foo', email: 'boo@example.com', password: 200});\n  console.log(npm.config.getCredentialsByURI(URI)); // This just outputs the setting\n  // npm.config.save('user', function() {}) // Warning: writes base64-encoded uninitialized buffer .npmrc\n});\n```\n\n## Supporting Material/References:\n\n- Arch Linux\n- Node.js v4.8.7 (latest in 4.x LTS branch)\n- npm 5.6.0\n\n# Wrap up\n\n- I contacted the maintainer to let him know: Y\n- I opened an issue in the related repository: N\n\nI reported this initially on 2016-01-20 over email, but didn't receive any response.\nProbably was deemed insignificant or out-of-scope, but I still think this should be fixed and disclosed.\n\n## Impact\n\nRead uninitialized memory, extracting sensitive information from it.\nCause a DoS by large Buffer allocation and conversion to string.",
+  "weakness": {
+    "id": 8,
+    "name": "Out-of-bounds Read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-06-11T08:54:51.518Z",
+  "allow_singular_disclosure_after": -249632965.32500553,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "bl4de",
+    "japz",
+    "0x08"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.4,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 9407,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "npmconf",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

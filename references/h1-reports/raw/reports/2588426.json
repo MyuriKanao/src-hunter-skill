@@ -1,0 +1,133 @@
+{
+  "id": 2588426,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNTg4NDI2",
+  "url": "https://hackerone.com/reports/2588426",
+  "title": "SQL injection in JSONField KeyTransform",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-07-07T08:20:30.202Z",
+  "submitted_at": "2024-07-07T08:20:30.305Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "eyalsec",
+    "url": "/eyalsec",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/e81bjuda1ps85pdkb7pqcxrjxo7l/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23,
+    "url": "https://hackerone.com/django",
+    "handle": "django",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/023/b457fd4bd71786ab14973cc3d53f9faf4d6c38ea_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/023/b457fd4bd71786ab14973cc3d53f9faf4d6c38ea_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Django",
+      "twitter_handle": null,
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2024-42005"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-09-12T00:28:00.244Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-09-09T05:32:49.336Z",
+  "team_member_agreed_on_going_public_at": "2025-09-12T00:28:00.090Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Django team\n\nThe vulnerability is in:\nhttps://github.com/django/django/blob/main/tests/model_fields/test_jsonfield.py#L427\nI created a function and added it to the \"test_jsonfield.py\" to explain the vulnerability (POC).\n```\n    def test_sqli(self):\n\n        # say a to get value b\n        # say b to get value c\n        # say \" for syntax error in sql\n        user_input = \"b\"\n\n        NullableJSONModel.objects.create(value_custom={\"a\": \"b\"})\n        NullableJSONModel.objects.create(value_custom={\"b\": \"c\"})\n        qs = NullableJSONModel.objects.filter(value_custom__isnull=False).values(\n            \"value_custom__\" + user_input,\n        ).annotate(\n            count=Count(\"id\"),\n        )\n\n        for i in qs:\n            v = i[\"value_custom__\" + user_input]\n            if v:\n                print(v)\n```\nto execute the below code i did:\n`python runtests.py model_fields.test_jsonfield.TestQuerying.test_sqli`\nWhen I execute above function with `user_input = \"beeeee\\\"\"` in the code, I get sql syntax error.\n\nThe sql code that get executed is:\n`SELECT COUNT(\"model_fields_nullablejsonmodel\".\"id\") AS \"count\", (CASE WHEN JSON_TYPE(\"model_fields_nullablejsonmodel\".\"value_custom\", ?) IN ('true','null','false') THEN JSON_TYPE(\"model_fields_nullablejsonmodel\".\"value_custom\", ?) ELSE JSON_EXTRACT(\"model_fields_nullablejsonmodel\".\"value_custom\", ?) END) AS \"value_custom__beeeee\"\" FROM \"model_fields_nullablejsonmodel\" WHERE \"model_fields_nullablejsonmodel\".\"value_custom\" IS NOT NULL GROUP BY 2`\n\n## Impact\n\nif user input get into `.values(` the user will able to create sql injection attack.\n\nI hope you have best day :)\n\nEyal",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2025-10-09T05:32:49.422Z",
+  "allow_singular_disclosure_after": -18350879.60897732,
+  "singular_disclosure_allowed": true,
+  "vote_count": 68,
+  "voters": [
+    "orange303",
+    "almuntadhar0x01",
+    "zy9ard3",
+    "yoyomiski",
+    "mohaned0101",
+    "thalaivar304",
+    "ahmed_xyz",
+    "jmo740",
+    "khoof",
+    "f_m",
+    "and 58 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

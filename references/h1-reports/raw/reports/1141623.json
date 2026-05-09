@@ -1,0 +1,130 @@
+{
+  "id": 1141623,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTQxNjIz",
+  "url": "https://hackerone.com/reports/1141623",
+  "title": "Unexpected input validation of octal literals in nodejs v15.12.0 and below returns defined values for all undefined octal literals.",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2021-03-30T14:26:29.640Z",
+  "submitted_at": "2021-03-30T14:26:29.714Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sickcodes",
+    "url": "/sickcodes",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/yhqjS3Lp1zFH9fw8UdN1WUFh/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2021-28918",
+    "CVE-2020-28360"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-06-14T12:46:17.325Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-04-28T02:46:43.512Z",
+  "team_member_agreed_on_going_public_at": "2021-06-14T12:46:17.180Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n Unexpected input validation of octal literals in the nodejs implementation of V8 JavaScript engine V8 9.0.257.13 and below returns defined values for all undefined octal literals where otherwise should return undefined. Input data 08, 09... 078, 079 should return undefined, as evinced by 0o8, 0o9 etc. This affects ALL downstream nodejs software. An attacker could abuse a myriad of downstream software that relies on nodejs, for example any of the 1,570,041 npm packages that expect an undefined response for `eval(08)`;. One such example is netmask npm package: the package is unable to evaluate any octal literal containing an 8 or a 9 leading to SSRF, LFI, RFI.\n\n**Description:**\nDownstream direct references:\nhttps://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Bad_octal\nhttps://sick.codes/universal-netmask-npm-package-used-by-270000-projects-vulnerable-to-octal-input-data-server-side-request-forgery-remote-file-inclusion-local-file-inclusion-and-more-cve-2021-28918/\n\nCVSS Pending\nhttps://sick.codes/sick-2021-011\n\nCVSS 9.8 Critical\nhttps://nvd.nist.gov/vuln/detail/CVE-2020-28360\n\n## Steps To Reproduce:\n\nnodejs, as well as Chrome Console:\n```js\nconsole.log(04);\nconsole.log(05);\nconsole.log(06);\nconsole.log(07);\nconsole.log(08);\nconsole.log(09);\nconsole.log(010);\nconsole.log(0o4);\nconsole.log(0o5);\nconsole.log(0o6);\nconsole.log(0o7);\nconsole.log(0o8);\nconsole.log(0o9);\n```\n\n```bash\n\nSTATEMENT='\nconsole.log(04);\nconsole.log(05);\nconsole.log(06);\nconsole.log(07);\nconsole.log(08);\nconsole.log(09);\nconsole.log(010);\n'\n\nnode <<EOF\n${STATEMENT}\nEOF\n\ncoffee <<EOF\n${STATEMENT}\nEOF\n\nts-node <<EOF\n${STATEMENT}\nEOF\n```\n\nnode (V8) returns:\n```\n4\n5\n6\n7\n8\n9\n8\n```\nHowever, it should absolutely be:\n```\n4\n5\n6\n7\nundef\nundef\n8\n```\n\n## expected results\n\n```bash\nSTATEMENT='\nconsole.log(0o4);\nconsole.log(0o5);\nconsole.log(0o6);\nconsole.log(0o7);\nconsole.log(0o8);\nconsole.log(0o9);\nconsole.log(0o10);\n'\n\nnode <<EOF\n${STATEMENT}\nEOF\n\ncoffee <<EOF\n${STATEMENT}\nEOF\n\nts-node <<EOF\n${STATEMENT}\nEOF\n```\n\nEvery other JS runtime evaluates defined as undefined.\n\nCWE-20: Improper Input Validation\n\nVERSION\nGoogle Chrome   90.0.4430.40 (Official Build) unknown (64-bit)\nRevision 13a486ce2d7548247f6314bbccf47e47773938f6-refs/branch-heads/4430@{#715}\nOS  Linux\nJavaScript  V8 9.0.257.13\nUser Agent  Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.40 Safari/537.36\nCommand Line    ./chrome --flag-switches-begin --flag-switches-end\n\nREPRODUCTION CASE\n\n```bash\nSTATEMENT='\nconsole.log(04);\nconsole.log(05);\nconsole.log(06);\nconsole.log(07);\nconsole.log(08);\nconsole.log(09);\nconsole.log(010);\n'\n\nnode <<EOF\n${STATEMENT}\nEOF\n\ncoffee <<EOF\n${STATEMENT}\nEOF\n\nts-node <<EOF\n${STATEMENT}\nEOF\n```\nFOR CRASHES, PLEASE INCLUDE THE FOLLOWING ADDITIONAL INFORMATION\n```\nconsole.log(04);\nconsole.log(05);\nconsole.log(06);\nconsole.log(07);\nconsole.log(08);\nconsole.log(09);\nconsole.log(010);\nconsole.log(0o4);\nconsole.log(0o5);\nconsole.log(0o6);\nconsole.log(0o7);\nconsole.log(0o8);\nconsole.log(0o9);\nconsole.log(0o10);\nVM78:12 Uncaught SyntaxError: Invalid or unexpected token\n\nconsole.log(04);\nconsole.log(05);\nconsole.log(06);\nconsole.log(07);\nconsole.log(08);\nconsole.log(09);\nconsole.log(010);\nconsole.log(0o4);\nconsole.log(0o5);\nconsole.log(0o6);\nconsole.log(0o7);\nVM111:1 4\nVM111:2 5\nVM111:3 6\nVM111:4 7\nVM111:5 8\nVM111:6 9\nVM111:7 8\nVM111:8 4\nVM111:9 5\nVM111:10 6\nVM111:11 7\n```\n\n## Impact: [add why this issue matters]\nSSRF, RFI, LFI in absolutely any downstream package that relies on octal literal IP address translation.\n\nhttps://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Bad_octal\n\n## Supporting Material/References:\n\nThis bug I previously submitted to Chromium V8 (yesterday) which was rejected as \"per spec\"\n\nHowever, this does not account for the fact that this is extremely dangerous for nodejs webapps, if not all nodejs web applications.\n\nMozilla interprets ECMA-262 octal literals containing 8 or 9 as not legal.\n```\n08 is not a legal ECMA-262 octal constant.\n09 is not a legal ECMA-262 octal constant.\n```\n\nThe spec:\n\nhttps://tc39.es/ecma262/#sec-additional-syntax-numeric-literals\n\n## Impact\n\nAs per Chromium's response as well as our own research, random deviations in octal literal is catastrophic.\n\nThe issue highly affects parseInt. It should return undefined for truly undefined results.\n\n```console\n> parseInt(08);\n8\n> parseInt(0177);\n127\n> parseInt(012);\n10\n> parseInt(0000127);\n87\n> \n```",
+  "weakness": {
+    "id": 20,
+    "name": "Use of Inherently Dangerous Function"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 4,
+  "voters": [
+    "0x0_asif",
+    "sakshamguruji",
+    "ekgaribadmi",
+    "kingstrome"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

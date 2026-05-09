@@ -1,0 +1,144 @@
+{
+  "id": 1785145,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNzg1MTQ1",
+  "url": "https://hackerone.com/reports/1785145",
+  "title": "Full access to InDrive jira panel via exposed API token ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-11-27T16:29:50.989Z",
+  "submitted_at": "2022-11-27T16:29:51.090Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bogdantc",
+    "url": "/bogdantc",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/zkecbhmbyxmnlwanev6efezmzl5s/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 58857,
+    "url": "https://hackerone.com/indrive",
+    "handle": "indrive",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/765s9sszvp9zyt9qwkeaa52vvkf3/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/765s9sszvp9zyt9qwkeaa52vvkf3/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "inDrive",
+      "twitter_handle": "indrive",
+      "website": "https://indrive.com/",
+      "about": "inDrive is a global mobility and urban services platform with over 150 million downloads  in more than 700 cities across 47 countries."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-06-28T09:21:07.265Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-06-28T09:21:07.142Z",
+  "team_member_agreed_on_going_public_at": "2023-06-28T09:09:45.971Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Description**\n\nHello!\n\nBrowsing through GitHub I found the following repository:\n\n███\n\n\nLooking for interesting keywords, the following file popped up:\n\n███████\n\n\n```\npackage ru.indriver.jira.api\n\nobject Constants {\n    const val jiraHost = \"https://indriver.atlassian.net\"\n    const val baseUrl = \"$jiraHost/rest\"\n    const val token = \"██████\"\n\n    ███\n    // const val token = \"██████==\"\n}\n```\n\n\nThe repository wasn't updated in a while, but I still decided to give it a change and try to make an API call with the auth token:\n\ncurl -i -s -k -X $'GET' \\\n    -H $'Host: indriver.atlassian.net' -H $'Cache-Control: max-age=0' -H $'Authorization: Basic ████' -H $'Content-Type: application/json' -H $'Sec-Ch-Ua: \\\"Google Chrome\\\";v=\\\"107\\\", \\\"Chromium\\\";v=\\\"107\\\", \\\"Not=A?Brand\\\";v=\\\"24\\\"' -H $'Sec-Ch-Ua-Mobile: ?0' -H $'Sec-Ch-Ua-Platform: \\\"macOS\\\"' -H $'Upgrade-Insecure-Requests: 1' -H $'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' -H $'Sec-Fetch-Site: none' -H $'Sec-Fetch-Mode: navigate' -H $'Sec-Fetch-User: ?1' -H $'Sec-Fetch-Dest: document' -H $'Accept-Encoding: gzip, deflate' -H $'Accept-Language: en-GB,en-US;q=0.9,en;q=0.8,de;q=0.7' \\\n    -b $'atlassian.xsrf.token=450f5681-becb-48d1-a8bc-efc045d75244_08e86700250ae917acc90fead0122eca3628f5a5_lout' \\\n    $'https://indriver.atlassian.net/rest/api/2/issue/67212'\n\nSurprisingly, this was sucessfull and I was able to fetch a random issue ID, which normally I wouldn't have access to because you're instantly getting redirect to the atlassian OAuth flow if you're visiting https://indriver.atlassian.net/\n\n\n**Steps to reproduce:**\n\n\n1. Do the following cURL:\n```\ncurl -i -s -k -X $'GET' \\\n    -H $'Host: indriver.atlassian.net' -H $'Cache-Control: max-age=0' -H $'Authorization: Basic ████████' -H $'Content-Type: application/json' -H $'Sec-Ch-Ua: \\\"Google Chrome\\\";v=\\\"107\\\", \\\"Chromium\\\";v=\\\"107\\\", \\\"Not=A?Brand\\\";v=\\\"24\\\"' -H $'Sec-Ch-Ua-Mobile: ?0' -H $'Sec-Ch-Ua-Platform: \\\"macOS\\\"' -H $'Upgrade-Insecure-Requests: 1' -H $'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' -H $'Sec-Fetch-Site: none' -H $'Sec-Fetch-Mode: navigate' -H $'Sec-Fetch-User: ?1' -H $'Sec-Fetch-Dest: document' -H $'Accept-Encoding: gzip, deflate' -H $'Accept-Language: en-GB,en-US;q=0.9,en;q=0.8,de;q=0.7' \\\n    -b $'atlassian.xsrf.token=450f5681-becb-48d1-a8bc-efc045d75244_08e86700250ae917acc90fead0122eca3628f5a5_lout' \\\n    $'https://indriver.atlassian.net/rest/api/2/issue/67212'\n```\nNotice the response:\n\n███████\n\nWe have full access to the InDrive Atlassian panel, ability to fetch sensitive information.\n\n## Impact\n\nSensitive information disclosure - full access to the Atlassian panel - projects/issues/accounts etc.",
+  "bounty_amount": "1500.0",
+  "formatted_bounty": "$1,500",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 122,
+  "voters": [
+    "0x3adly",
+    "kashsec",
+    "m4khn0",
+    "k0ns0l",
+    "sameer_ali",
+    "orange303",
+    "p4n7h3rx",
+    "ganeshbagaria",
+    "haxor31337",
+    "alp",
+    "and 112 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 312628,
+      "category": "team",
+      "content": "The token disclosure vulnerability was discovered, revealing the Jira API token being exposed in the company’s GitHub repository. Wrongdoers with the compromised API token could view the projects, tasks, comments, and other information stored in Jira. ",
+      "updated_at": "2023-06-28T09:06:41.376Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 2435873,
+        "username": "majesttic",
+        "name": "Kirill Egorov",
+        "bio": null,
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": null,
+        "created_at": "2022-08-16T07:58:13.212Z",
+        "url": "https://hackerone.com/majesttic",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

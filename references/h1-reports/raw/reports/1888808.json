@@ -1,0 +1,118 @@
+{
+  "id": 1888808,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODg4ODA4",
+  "url": "https://hackerone.com/reports/1888808",
+  "title": "Path traversal leads to reading of local files on ███████ and ████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-02-28T07:20:22.203Z",
+  "submitted_at": "2023-02-28T07:20:22.276Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rodriguezjorgex",
+    "url": "/rodriguezjorgex",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/25kgpf866q8bf1ozfkyxz6ud43kz/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-03-24T17:33:04.996Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-03-23T10:10:18.778Z",
+  "team_member_agreed_on_going_public_at": "2023-03-24T17:33:04.909Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Description:**\nThe ██████████ web application has a feature that allows the downloading of files when you first go to the login screen. The endpoint that manages those downloads is the downloadForm endpoint with the filename parameter.\n\nhttps://███/████/login/downloadForm?filename=█████\n\nThe filename parameter has a directory traversal vulnerability which allows an attacker to add two (2) dots and a backslash (../) to traverse parent directories and view files that are not meant to be viewed.\n\nPOC:\nViewing /etc/hosts file\n\nUsing bash, run the following command:\ncurl https://█████████/███/login/downloadForm?filename=../../../../../../../../etc/hosts\n\nOr simply access the POC URL in a web browser, and the hosts file will be downloaded to the workstation.\n\nInitially, I attempted to read the /etc/passwd file, but I believe there's some form of WAF blocking the request. I didn't attempt to bypass the WAF, but if the WAF is bypassed the /etc/passwd file contains sensitive information about the users in the system. Furthermore, with the user information, an attacker can attempt to view the id_rsa keys of users in the system to gain ssh access to the server.\n\n## References\nhttps://portswigger.net/web-security/file-path-traversal\n\n## Impact\n\nA directory traversal vulnerability that allows an attacker to read files on a system can have serious consequences, depending on the sensitivity of the information that can be accessed. Here are a few examples of the potential impact:\n\nDisclosure of sensitive information: An attacker who can read files on a system can potentially access sensitive information such as user credentials, financial records, confidential business information, or other sensitive data. This could lead to identity theft, data breaches, or other forms of fraud.\n\nSystem compromise: In some cases, directory traversal vulnerabilities can be used to read sensitive configuration files or scripts that can be used to gain full access to the system. Once an attacker has access to the system, they can execute arbitrary code, install malware, or take other actions that can compromise the system's security.\n\nReputation damage: If sensitive information is leaked due to a directory traversal vulnerability, it can damage the reputation of the organization responsible for the system. This can have serious consequences for businesses, particularly those in industries where trust and confidentiality are critical.\nOverall, a directory traversal vulnerability that allows an attacker to read files can be a serious security risk that should be addressed as soon as possible to minimize the potential impact.\n\n## System Host(s)\n██████,███\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\nVisit https://██████████/████/login/downloadForm?filename=../../../../../../../../etc/hosts\n\n## Suggested Mitigation/Remediation Actions\nValidate user input: One of the most common causes of directory traversal vulnerabilities is insufficient validation of user input. To prevent this, all user input should be validated to ensure that it is within expected bounds and does not contain characters that could be used to navigate outside of the intended directory.\n\nSanitize file paths: Before accessing files, all file paths should be sanitized to remove any characters that could be used to navigate outside of the intended directory.\n\nUse secure coding practices: Developers should follow secure coding practices to prevent common vulnerabilities, such as directory traversal attacks. This includes using functions that are designed to handle file operations safely, such as realpath() or basename(), and avoiding the use of user input to construct file paths.\n\n",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 11,
+  "voters": [
+    "m4khn0",
+    "0xtarun",
+    "zy9ard3",
+    "shreyaschavhan",
+    "shubham_srt",
+    "shivammusic",
+    "lazarux0x1337",
+    "1502099",
+    "amr4l44",
+    "maanikbas",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

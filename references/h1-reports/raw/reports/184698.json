@@ -1,0 +1,133 @@
+{
+  "id": 184698,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODQ2OTg=",
+  "url": "https://hackerone.com/reports/184698",
+  "title": "Eavesdropping on private Slack calls",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-24T02:57:14.816Z",
+  "submitted_at": "2016-11-24T02:57:14.816Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "michiel",
+    "url": "/michiel",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/007/439427fb81f710e5e16246ede1828613d46bb79e_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 69,
+    "url": "https://hackerone.com/slack",
+    "handle": "slack",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/069/683fee312381bc46cadc7ea1950abc87944d12c3_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/069/683fee312381bc46cadc7ea1950abc87944d12c3_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Slack",
+      "twitter_handle": "slackhq",
+      "website": "https://slack.com",
+      "about": "All your team communication in one place, instantly searchable, and available wherever you go."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-02-08T21:14:04.833Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-01-09T21:13:58.149Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "A vulnerability exists in Slack's call functionality that allows a team member to eavesdrop on private ongoing Slack calls by inviting themselves into the conversation without the permission from either participant. By doing so they can eavesdrop on co-workers' private conversations as well as taking part in these conversations. To make the attack less obvious, the attacker could re-use Slackbot's avatar and choose a username that is similar to Slackbot. Another scenario would be to pick the avatar of the person you want to impersonate and choose a username that is similar to theirs. \n\n## Setup\nBefore trying to reproduce the vulnerability, make sure you have the following:\n- Slack Calls should be enabled in your Slack instance.\n- Have at least two accounts you control. One we will call the Main Account, the other one we will call the Eavesdropper Account.\n- Have at least two accounts you do not control on the same Slack instance. They will be used to mock the situation of two co-workers having a private Slack call.\n- For easy reproduction, it is advised to initiate the call from a web browser rather than a native app.\n- Make sure to have some type of intercepting proxy running that allows you to record HTTP requests and replay them easily.\n\n## Steps to Reproduce\n### Obtaining the vulnerable request\nFirst off, we are going to obtain the exact request to the endpoint that contains the vulnerability (`/api/screenhero.rooms.invite`). This will be needed to later on modify and add Eavesdropper Account to the private call. \n\nSet up a call and invite someone to the call. Make sure to capture the request to `/api/screenhero.rooms.invite` and save it so you can replay it easily later. The request should look something like:\n\n```\nPOST /api/screenhero.rooms.invite?_x_id=91700980-1479951838.521 HTTP/1.1\nHost: hackerone.slack.com\nOrigin: https://hackerone.slack.com\nX-Slack-Version-Ts: 1479949022\n[...]\n\nis_video_call=false&responder=U0254GYNR&room=R36L2K8P6&set_active=true&should_share=true&token=<snip>\n```\n\n### Staging the attack environment\nStart by setting up a 1:1 call between two users (both accounts you don't necessarily have control over). This is to mock a situation where two co-workers are on a private 1:1 Slack call. \n\nNote the Screenhero room ID of the call. You will need this later. In this scenario, I am going to assume the attacker is already in possession of the room ID. The room ID can be recognized by the ID after `/call/` in https://hackerone.slack.com/call/R36L2K8P6 (an example).\n\n### Pulling off the attack\nTake the request you saved earlier, and now modify the request as follows:\n- change the value of the `room` parameter to the room ID you noted from the previous step\n- change the value of the `responder` to the user ID of Eavesdropper Account. The reason why this can't be your own user ID (Main Account) is that you're not allowed to invite `self`. \n\nAfter these changes, forward the request and wait for a call on Eavesdropper Account. When you accept this call, you will be placed into the private conversation the two victims were having. \n\nLet me know if there's anything else you need to validate this issue.\n",
+  "bounty_amount": "1000.0",
+  "formatted_bounty": "$1,000",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-02-08T21:13:58.184Z",
+  "allow_singular_disclosure_after": -291751957.4120868,
+  "singular_disclosure_allowed": true,
+  "vote_count": 67,
+  "voters": [
+    "arneswinnen",
+    "derision",
+    "tomdev",
+    "ziot",
+    "mashoud1122",
+    "phwd",
+    "bogdantc",
+    "tk0",
+    "jobert",
+    "sameerphad72",
+    "and 57 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.3,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

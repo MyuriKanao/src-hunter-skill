@@ -1,0 +1,138 @@
+{
+  "id": 303632,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDM2MzI=",
+  "url": "https://hackerone.com/reports/303632",
+  "title": "Fastify denial-of-service vulnerability with large JSON payloads",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-10T00:00:35.206Z",
+  "submitted_at": "2018-01-10T00:00:35.206Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nwoltman",
+    "url": "/nwoltman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/rpfZtCAWqk2bAKKSPSmiMgy9/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3711"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-01-25T17:21:10.344Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-01-25T08:54:26.659Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Module:**\n\nFastify - https://www.npmjs.com/package/fastify\nAffected versions: <=0.37.0 (all version before 0.38.0)\n\n**Summary:**\n\nA denial-of-service attack can be performed against servers running Fastify by sending a request with \"Content-Type: application/json\" and a very large payload.\n\n**Description:**\n\nFastify internally builds up the request payload as a string and then JSON parses the string once the full payload is received. It does not (before v0.38.0) limit the size of the payload before JSON parsing it, meaning that the string can grow large enough to surpass either V8's string length limits and throw an `uncaughtException`, or it can surpass the process's memory limits and crash the process.\n\nTo perform this attack, one must send a request with `Content-Type: application/json` containing a very large payload. The request may be streamed. The payload only needs to be large enough to surpass V8's string length limit (`2^30 - 25` bytes with V8 62 / Node 9, or `2^28 - 16` bytes for earlier versions), at which point the Node.js process will crash with an `uncaughtException`. If the process running Node has less memory than V8's maximum string size, the process will run out of memory and crash earlier. If multiple requests with a large payload are made in parallel, the process will run out of memory very quickly (this can be done with only a few parallel requests).\n\nThis attack can be performed repeatedly and indefinitely.\n\n## Steps To Reproduce:\n\n  1. Create a Fastify server using the [default example](https://github.com/fastify/fastify#example).\n  2. Add a POST route. Example: `fastify.post('/*', async () => 'response text')`.\n  3. Start the server (e.g. `node app.js`).\n  4. Use a tool such as curl or Node to send a POST request with `Content-Type: application/json` to the sever (i.e. running on `localhost:3000`) with a payload of size 1 GB or larger.\n  5. The server will crash before the request completes.\n\nPiece of code responsible for this issue (from the last commit before the vulnerability was fixed): https://github.com/fastify/fastify/blob/8bc80ab61ad8de3fd498bf885ac645a0a634874c/lib/handleRequest.js#L60-L81\n\n## Impact:\n\nAll servers running Fastify <= 0.37.0 without a reverse proxy in front that limits the size of request payloads are vulnerable to this denial-of-service attack.\n\n## Supporting Material/References:\n\nExample attack using Node:\n\n```js\nconst http = require('http');\n\nconst req = http.request({\n  host: 'localhost',\n  port: 3000,\n  path: '/',\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n  },\n}, (res) => {\n  console.log(res.statusCode);\n  console.log(res.headers);\n}).on('error', (err) => {\n  console.log(err);\n});\n\nconst buff = Buffer.alloc(100000);\n\nfor (var i = 0; i < 20000; i++) {\n  req.write(buff);\n}\n\nreq.end();\n```\n\n## Impact\n\nAn attacker can consistently crash a Node process running Fastify, thus creating a denial-of-service scenario.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-02-24T08:54:26.749Z",
+  "allow_singular_disclosure_after": -258877593.34607807,
+  "singular_disclosure_allowed": true,
+  "vote_count": 25,
+  "voters": [
+    "bl4de",
+    "generaleg",
+    "whitesector",
+    "eveeez",
+    "khizer47",
+    "ranjit_p",
+    "cr4xerbik4sh",
+    "japz",
+    "0x08",
+    "root0401disabled",
+    "and 15 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 4647,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "fastify",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

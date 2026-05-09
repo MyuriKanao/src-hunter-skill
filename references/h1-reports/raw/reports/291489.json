@@ -1,0 +1,131 @@
+{
+  "id": 291489,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTE0ODk=",
+  "url": "https://hackerone.com/reports/291489",
+  "title": "Kovri: potential buffer over-read in garlic clove handling + I2NP message creation",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-11-18T12:42:53.852Z",
+  "submitted_at": "2017-11-18T12:42:53.852Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "aerodudrizzt",
+    "url": "/aerodudrizzt",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/098/646/ebd692682f9cff0731c0021d35f72330a3c88a8c_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7731,
+    "url": "https://hackerone.com/monero",
+    "handle": "monero",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/731/55634f7fcd917725c7a5771cc6e7c9b4d5fe0c22_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Monero",
+      "twitter_handle": "monero",
+      "website": "https://getmonero.org",
+      "about": " Monero: the secure, private, untraceable cryptocurrency"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-12-05T06:09:37.460Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-12-05T06:09:37.360Z",
+  "team_member_agreed_on_going_public_at": "2017-12-05T02:22:03.101Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Brief\n-----\nThere is a lack of sanitation checks when handling Garlic messages in the kovri I2P router. Sending a specially crafted Garlic message can cause the router to send onward an I2P message containing leaked RAM data, triggering a massive information leakage.\n\nTechnical Details:\n===========\n* Code Version: Taken from Github on the 18th of November 2017 - commit 5aafe6608519d31e537c97b24ea7b23aa372dd5b\n* Vulnerable File: src\\core\\router\\garlic.h\n* Vulnerable Function: GarlicDestination::HandleGarlicPayload\n\nThe function is responsible to parse and handle Garlic Payloads: several independent Garlic Cloves.\nWhen handling a clove with a delivery type of \"DeliveryTypeTunnel\" there are insufficient checks on the message, before it is wrapped and sent onward:\n```cpp\n    GarlicDeliveryType delivery_type = (GarlicDeliveryType)((flag >> 5) & 0x03);\n    switch (delivery_type) {\n      case eGarlicDeliveryTypeLocal:\n        LOG(debug) << \"GarlicDestination: Garlic type local\";\n        HandleI2NPMessage(buf, len, from);\n      break;\n      case eGarlicDeliveryTypeDestination:\n        LOG(debug) << \"GarlicDestination: Garlic type destination\";\n        buf += 32;  // destination. check it later or for multiple destinations\n        HandleI2NPMessage(buf, len, from);\n      break;\n      case eGarlicDeliveryTypeTunnel: {\n        LOG(debug) << \"GarlicDestination: Garlic type tunnel\";\n        // gateway_hash and gateway_tunnel sequence is reverted\n        std::uint8_t* gateway_hash = buf;\n        buf += 32;\n        std::uint32_t gateway_tunnel = bufbe32toh(buf);\n        buf += 4;\n        std::shared_ptr<kovri::core::OutboundTunnel> tunnel;\n        if (from && from->GetTunnelPool())\n          tunnel = from->GetTunnelPool()->GetNextOutboundTunnel();\n        // EI [BUG-TRACE] : The payload length is based on an unchecked length field\n        // EI             : from the just found I2NP message contained in the clove.\n        // EI\t          : When creating and sending this message onward we may leak\n        // EI             : heap memory data to the destination node [18/11/2017]\n        if (tunnel) {  // we have send it through an outbound tunnel\n          auto msg = CreateI2NPMessage(buf, kovri::core::GetI2NPMessageLength(buf), from);\n          tunnel->SendTunnelDataMsg(gateway_hash, gateway_tunnel, msg);\n        } else {\n          LOG(debug)\n            << \"GarlicDestination: no outbound tunnels available for garlic clove\";\n        }\n        break;\n      }\n      case eGarlicDeliveryTypeRouter:\n        LOG(warning) << \"GarlicDestination: Garlic type router not supported\";\n        buf += 32;\n      break;\n      default:\n        LOG(error)\n          << \"GarlicDestination: unknown garlic delivery type \"\n          << static_cast<int>(delivery_type);\n    }\n    buf += kovri::core::GetI2NPMessageLength(buf);  // I2NP\n    buf += 4;  // CloveID\n    buf += 8;  // Date\n    buf += 3;  // Certificate\n    // EI [BUG_TRACE] : This check is too late since the I2NP message was already sent. [18/11/2017]\n    if (buf - buf1  > static_cast<int>(len)) {\n      LOG(error) << \"GarlicDestination: clove is too long\";\n      break;\n    }\n```\n\nProposed Fix\n---------------\nThe inner I2NP message is parsed and forwarded using it's own length field BEFORE this field is checked for consistency. There is a good sanitation check in the bottom of the function, but the check is preformed only AFTER the message is sent.\n\nThe proposed fix is to copy the current code check to the vulnerable case, and to preform it before the new message is created:\n```cpp\n    case eGarlicDeliveryTypeTunnel: {\n        LOG(debug) << \"GarlicDestination: Garlic type tunnel\";\n        // gateway_hash and gateway_tunnel sequence is reverted\n        std::uint8_t* gateway_hash = buf;\n        buf += 32;\n        std::uint32_t gateway_tunnel = bufbe32toh(buf);\n        buf += 4;\n        std::shared_ptr<kovri::core::OutboundTunnel> tunnel;\n        if (from && from->GetTunnelPool())\n          tunnel = from->GetTunnelPool()->GetNextOutboundTunnel();\n        // EI [BUG-FIX] : added this new check\n        if (buf + kovri::core::GetI2NPMessageLength(buf) + 4 + 8 + 3 - buf1  > static_cast<int>(len)) {\n          LOG(error) << \"GarlicDestination: clove is too long\";\n          break;\n        }\n        if (tunnel) {  // we have send it through an outbound tunnel\n          auto msg = CreateI2NPMessage(buf, kovri::core::GetI2NPMessageLength(buf), from);\n          tunnel->SendTunnelDataMsg(gateway_hash, gateway_tunnel, msg);\n        } else {\n          LOG(debug)\n            << \"GarlicDestination: no outbound tunnels available for garlic clove\";\n        }\n        break;\n      }\n```\n\nImplications\n--------------\nSince the original message is allocated on the heap, this message can **leak massive amounts of heap data** to the receiving node (message lengths can be even 32KB). This data contains previous messages, currently treated messages, and many other sensitive data-structures of the I2P router.\n\nIn case there are any questions regarding my findings I will be more than happy to help.",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-01-04T02:22:03.443Z",
+  "allow_singular_disclosure_after": -263307787.14832684,
+  "singular_disclosure_allowed": true,
+  "vote_count": 14,
+  "voters": [
+    "jokebookservice1",
+    "heeeeen",
+    "corb3nik",
+    "soiax",
+    "theraz0r",
+    "cosmossec",
+    "geeknik",
+    "r3y",
+    "eveeez",
+    "cr4xerbik4sh",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.7,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

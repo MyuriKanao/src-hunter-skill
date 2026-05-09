@@ -1,0 +1,185 @@
+{
+  "id": 881115,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84ODExMTU=",
+  "url": "https://hackerone.com/reports/881115",
+  "title": "Cross-Site Scripting (XSS) on www.starbucks.com | .co.uk login pages",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-23T04:57:34.672Z",
+  "submitted_at": "2020-05-23T04:57:34.672Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cdl",
+    "url": "/cdl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/pjn96wngvyyvquwg2vukftoern72/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-06-30T22:44:06.701Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-06-06T02:33:27.940Z",
+  "team_member_agreed_on_going_public_at": "2020-06-30T22:44:06.611Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi team,\n\n**Summary:** \nThere is a cross-site scripting vulnerability on the login page of  www.starbucks.com and various regions, due to improper escaping on the URL path.\n\n**Description:**\nThe login page at https://www.starbucks.com/account/signin builds several links by the relative URL path. An attacker can actually control the relative path: \n\n{F839656}\n\nFurthermore, the application does not escape certain characters –  allowing us to break out of the tags and inject a malicious event handler.\n\n**Platform(s) Affected:** \n- https://www.starbucks.com/account/signin\n- https://www.starbucks.co.uk/account/signin\n\n## Steps To Reproduce:\n\n  1. Open Chrome or Firefox\n  2. Visit `https://www.starbucks.com/account/(A(%22%20%252fonmouseover=%22alert%25%32%38%64%6f%63%75%6d%65%6e%74.%64%6f%6d%61%69%6e%25%32%39%22))/signin` and in the upper right-hand corner, move your mouse over the \"Find the Store\" button.\n\nThe XSS will trigger and you'll get an `alert()` with the value of `document.domain`\n\n{F839657}\n\n\n## Exploitation: \nSince this is on the **login page**, it is absolutely trivial to steal user credentials.\n\nHere's a simple proof-of-concept, this will just alert() your password back to you:\n\n- `https://www.starbucks.com/account/(F(%22%20%252fonmouseover=%22%2561%256c%2565%2572%2574%2528%2564%256f%2563%2575%256d%2565%256e%2574%252e%2567%2565%2574%2545%256c%2565%256d%2565%256e%2574%2573%2542%2579%254e%2561%256d%2565%2528%2527%2541%2563%2563%256f%2575%256e%2574%252e%2550%2561%2573%2573%2557%256f%2572%2564%2527%2529%255b%2530%255d%252e%2576%2561%256c%2575%2565%2529%22))/signin`\n\n{F839660}\n\n\n## How can the system be exploited with this bug?\n  An attacker can easily abuse this bug to steal user passwords, inject malicious javascript into the context of `www.starbucks.com`, etc.\n\n## Suggested Mitigation\nImplement HTML encoding / escaping on the path.\n\n## Impact\n\nThis is a high impact vulnerability as this affects the login page.\n\nBest,\n@cdl",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 839656,
+      "file_name": "Screen_Shot_2020-05-22_at_11.45.25_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/32imaXYXzUsNF759YEE3Nie4?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2020-05-22_at_11.45.25_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2020-05-22_at_11.45.25_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151826Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=829e688cc620c56362794b0126317409bed5e99b36fb742b386d437c695cd11e",
+      "file_size": 334744,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 839657,
+      "file_name": "starbucks.com-loginpagexss.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/tg4hCRGqhbFHmLuwsWSgBhem?response-content-disposition=attachment%3B%20filename%3D%22starbucks.com-loginpagexss.gif%22%3B%20filename%2A%3DUTF-8%27%27starbucks.com-loginpagexss.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151826Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=cf714a0a2c23e0ad3a8f26cdc3a2015066d6f480b283bb14b6bf12a4a3c32518",
+      "file_size": 2869790,
+      "type": "image/gif",
+      "moderated": null
+    },
+    {
+      "id": 839660,
+      "file_name": "starbucks-password-theft-xss.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9L3eeXUg2MosMeitwX7XGJ71?response-content-disposition=attachment%3B%20filename%3D%22starbucks-password-theft-xss.gif%22%3B%20filename%2A%3DUTF-8%27%27starbucks-password-theft-xss.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151826Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ac9c152a191f9ea4641e0c309b7ab4bc1e9e8969fe16062cdcb4743848c1095e",
+      "file_size": 6526657,
+      "type": "image/gif",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-07-06T02:33:28.006Z",
+  "allow_singular_disclosure_after": -184337098.46990755,
+  "singular_disclosure_allowed": true,
+  "vote_count": 77,
+  "voters": [
+    "loaymorad",
+    "gaeunn",
+    "kashsec",
+    "caesarsec",
+    "lachlan2k",
+    "ola0",
+    "r0nz",
+    "n0x496n",
+    "mattberg",
+    "shubs",
+    "and 67 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 13020,
+    "asset_type": "URL",
+    "asset_identifier": "www.starbucks.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 23294,
+      "category": "team",
+      "content": "cdl and hunt4p1zza discovered a vulnerability within how ASP.Net handles the URI to perform reflected cross site scripting (XSS).\n@cdl and @hunt4p1zza — thank you for reporting this vulnerability and for confirming the resolution.",
+      "updated_at": "2020-06-30T22:42:40.129Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 706273,
+        "username": "agedsumatra",
+        "name": "agedSumatra",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2019-08-12T17:50:49.926Z",
+        "url": "https://hackerone.com/agedsumatra",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/yjUg6PZmutR2o3qPxEP2MT1J/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

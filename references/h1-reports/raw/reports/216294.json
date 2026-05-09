@@ -1,0 +1,148 @@
+{
+  "id": 216294,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTYyOTQ=",
+  "url": "https://hackerone.com/reports/216294",
+  "title": "Session replay vulnerability in www.urbandictionary.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-03-26T23:40:02.428Z",
+  "submitted_at": "2017-03-26T23:40:02.428Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tcpiplab",
+    "url": "/tcpiplab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/113/049/692d3d0775ad3998c4e2aee97daa865a1827cfb7_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 207,
+    "url": "https://hackerone.com/urbandictionary",
+    "handle": "urbandictionary",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/1ZmKRpkDkGAWc3mPyktXfrP4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/1ZmKRpkDkGAWc3mPyktXfrP4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Urban Dictionary",
+      "twitter_handle": "urbandictionary",
+      "website": "https://www.urbandictionary.com",
+      "about": "The online dictionary with definitions you write."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-06-20T08:20:00.441Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-05-21T08:19:55.838Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# Session replay vulnerability in www.urbandictionary.com\n\nI considered titling this bug \"*Session tokens not expiring*\", which is what you need to tell your development team. But I titled it as I did to emphasize at least one attack made possible by the bug. There may be others.\n\n## Description\nPrivileged functions, e.g., `/handle.save.php` can still be used after the user has clicked the \"sign out\" link. The cause of the vulnerability seems to be that the server is not invalidating session cookies when the user \"signs out\". I observed session tokens remaining valid even 72 hours after being issued.\n\nExploitation requires the anti-CSRF `authenticity_token` from the privileged page from before the victim \"logged out\", and any one of the victim's `_rails_session` cookies from before the victim \"logged out\". Note that because the server issues a new cookie with each Response, the attacker may choose from among many cookies.\n\n## Impact\n1. Cookies that never expire can impact the security of the user:\n   1. The user's session is susceptible to hijacking or replay.\n   1. The user has no way of causing the application to invalidate their session. This is important in shared computing environments.\n2. Cookies that never expire can impact the security of the server:\n   1. The time window to brute-force a valid session token is increased.\n   1. If many session tokens remain valid, brute-forcing has that many more chances to guess correctly.\n\n## Step-by-step Reproduction Instructions\n1. Set up an HTTP intercept proxy like Burp Suite or ZAP.\n\n1. Authenticate to `http://www.urbandictionary.com/users.php` via the Gmail OAuth function, receiving a valid session cookie from `www.urbandictionary.com`, and then \"sign out\" by clicking `http://www.urbandictionary.com/auth/logout`.\n\n1. Send a `POST` request to `https://www.urbandictionary.com/handle.save.php` containing:\n   1. The `authenticity_token` from the privileged page from before the user \"logged out\".\n   1. Any one of the user's `_rails_session` cookies from before the user \"logged out\".\n   1. In the body of the POST set `user[handle]` to a new value. I've used `H.H. Vong`.\n   1. In the body of the POST set `commit` to `Save`.\n\n   {F171456}\n\n   The screen-shot above shows how to use Burp Repeater to replay a session and modify the user handle.\n\n   Here is that request as a curl command:\n\n   ```\n   $ curl -L -i -s -k  -X $'POST'     -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0' -H $'Referer: https://www.urbandictionary.com/handle.php' -H $'Content-Type: application/x-www-form-urlencoded'     -b $'_rails_session=bnBaYnJjSjNJcmxGN1JrWjFkbmUwa0NFY05GdThtcmtHQU0zTHhsem1iQngyQmhvYUdKQTRCVmNHNlBGRTEvRm9aczFwRXc5ekVUV2FEVDM4RSswQU9rejBReGc1M3dxVGhRV0REQmFCUWFkYWcwQ1RhV2NIN1VUalQyM09tNHAwS3lkc0JaRlJqNkxKd2xNZVdKQzhYOFpBdlhqRHhoYVplWmczTFZBL3hlb3E2YUxkVmp4NEkzZUxtZXBQa1ozME9MUFdXRHRDQStOWXdUT2xkcTRSdz09LS1LNXVZWmFBL0F5STRIUjkwTmdnczR3PT0%3D--4ea5f8f5d73379881a6db43b9b8cdcc9d7c89773'     --data-binary $'authenticity_token=C4EmquHAIijNq8UrFfbdfm%2B3Bp5RxvL1BpzMdf3%2FJgtw%2FSn%2FgTt4AlFlIDWFivaesfXJFgNqrWS8DD85obbnpA%3D%3D&user%5Bhandle%5D=H.H.+Vong&commit=Save'     $'https://www.urbandictionary.com/handle.save.php'\n   ```\n\n1. The response will be a `302/Found` with the `Location` field set to `https://www.urbandictionary.com/users.php`. Your browser will follow the `302` redirect, issuing a `GET` request for the URL in the `Location` field. The server will respond with a `200/OK` status code.\n\n   {F171455}\n\n   The screen-shot above shows the Burp Repeater response with the rendered HTML displaying the successfully modified user handle.\n\n   If you're verifying this with `curl`, you could just `grep` for the modified value. Append this to the `curl` command previously specified: ` | grep -i vong`. Two lines of the HTML in the returned page will contain the newly modified handle:\n\n   ```\n   <title>Urban Dictionary: Hello H.H. Vong</title>\n   <span>Hello H.H. Vong</span>\n   ```\n\n## Suggested Mitigation/Remediation Actions\n1. Configure the server side application to invalidate a user's submitted session token:\n   1. When a new token is issued by the server side application, so that only one token is valid at any given time.\n   1. When the user submits a valid session token to `/auth/logout`.\n   1. When a valid session token has not been submitted to the server side application for greater than *n* seconds where *n* is some value consistent with your own internal policy.\n   1. When a valid session token, stored on the server, is older than *m* seconds, where *m* is the maximum age allowed for a session cookie, based on your own internal policy.\n\n## Product, Version, and Configuration\n* Kali Linux 2016.2\n* Mozilla Firefox 45.7.0\n* Burp Suite 1.7.17\n* `curl` 7.52.1\n\nPlease let me know if you need more information about this issue. Thanks.",
+  "weakness": {
+    "id": 90,
+    "name": "Insufficient Session Expiration"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 171455,
+      "file_name": "after-redirect.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/171/455/d9e18de76ecec3c8359575dab0c85a1cbcb71f3c/after-redirect.png?response-content-disposition=attachment%3B%20filename%3D%22after-redirect.png%22%3B%20filename%2A%3DUTF-8%27%27after-redirect.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRTHIU2UX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152555Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJGMEQCIQClMIEpe0tv%2BQLEug6sEEXvQN2HXLj47w2DKsxsPISrBgIfCEHv8TSaeb3viTuR6LVfgWI%2Fbr40T1K%2FceJt6A5FaSq7BQjn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMLhp3YcJZwwPGu59mKo8FOwLdPN%2FUhlhrV43xrcyCbCLwVoFPFnvRaipbNGP9c1om5hL%2B4LeSSdBv9w7dSVnaFPmXwy6ZGqmJxQVKgzn1dW9wWoJO2DDQV4VUywgSQ%2BNfV0%2FRgp0tx1anfqFtPMeyFgWo%2BIO6eNUKR%2BkDI6Gu49wdzz5akkwltoMJmqjihqqcyi35kpEQdrKp2Wydt7FBGEbZoW%2FI%2F5seJimpX638Aj85n%2Fg9Wfx%2B470vLMMym%2FosvoitLKD7ckhN3v8m7UFhE4ZKQ1UIryjcdhVC8axsv0Xsbr3s7yywbrVXnLKJDSxgz9OQh2rvMSU4TYaI5JIy0qI%2B5OdpKT7Ta9jYlwoNYBDeoc6nGeu6lf8Q3Pdkl46qDEeQO8E9GOvNDW96j8NfC%2BnbfLEmIVsoL3LXTzgr3ZTpETIydOmZfMHV1hS3ui64UKHdauQazq9K3XWL57xEz2e9ukq9j3V8lRc3d%2FW11KD603o3g31q%2FMOjKxT5Dglvfiq%2FpnfTsN5vDzJImxE5iyCWcJU8oWRyDin3K%2BnHdDoUvt4rmQJllSTrr9m6yYWVfvxoc0wywgs%2FJJTZjilNZPKrHPIMkSwdoaVpj%2F0ou9Z9SzS6%2FuCxcjFfke7D%2BaRdJlgoUlDHyMLg61UL0Ez1bTXWDvQH9cp%2FxbODVqRWX4ZibjSIl%2FChkmQxIrWgfhv6mVX0ZFEohZghoB%2Bib1D1LuMsjhjuQ3RwWkT5iGhVbaeKjz2RSumj1iJB8wCq7uqDRNTn%2FCbBYa030LYerB%2B3KB5Q6CD4uVRY1VaFwXAFrLP2XZJHwfzYsE9KQYOrBBeFnT0hCuWwsMcUzkUYnov2HMnkGOoMOIG3Cmsjxn6sCvkWfb7tSRNQhZAnakUJozDQgP3PBjqyAcIk7X7CvLxBfxmeqFcrcynKPo0q%2FR0rwaBjvNy9hYXMhY9p%2FD0Ce6bp14fkCe4zQSKDuN8lmj4x%2FPFiEprLFfT%2FU3B3ISm%2F1SaFq%2Bu4jA7IfEPkNg5IQDqDxVcg7l2MGdC%2BoYkagsNCCk8zOGtonj0VlnSemGLfS%2BTvR%2FFQsyysHudYR02Q9gAy7Ji%2B77PicrW6J5bw9oEwLA1oMiA4pD%2FxsRgAsqgCZloaf0NYbX5qTc4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=86f2a5fbfb047ae94687de69bf022d2979d0816993b698c4a7b3a8a232768739",
+      "file_size": 18464,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 171456,
+      "file_name": "handle.save.php.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/171/456/0988f741d9034e72ef9adda45ea395c450a851fb/handle.save.php.png?response-content-disposition=attachment%3B%20filename%3D%22handle.save.php.png%22%3B%20filename%2A%3DUTF-8%27%27handle.save.php.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRTHIU2UX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152555Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJGMEQCIQClMIEpe0tv%2BQLEug6sEEXvQN2HXLj47w2DKsxsPISrBgIfCEHv8TSaeb3viTuR6LVfgWI%2Fbr40T1K%2FceJt6A5FaSq7BQjn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMLhp3YcJZwwPGu59mKo8FOwLdPN%2FUhlhrV43xrcyCbCLwVoFPFnvRaipbNGP9c1om5hL%2B4LeSSdBv9w7dSVnaFPmXwy6ZGqmJxQVKgzn1dW9wWoJO2DDQV4VUywgSQ%2BNfV0%2FRgp0tx1anfqFtPMeyFgWo%2BIO6eNUKR%2BkDI6Gu49wdzz5akkwltoMJmqjihqqcyi35kpEQdrKp2Wydt7FBGEbZoW%2FI%2F5seJimpX638Aj85n%2Fg9Wfx%2B470vLMMym%2FosvoitLKD7ckhN3v8m7UFhE4ZKQ1UIryjcdhVC8axsv0Xsbr3s7yywbrVXnLKJDSxgz9OQh2rvMSU4TYaI5JIy0qI%2B5OdpKT7Ta9jYlwoNYBDeoc6nGeu6lf8Q3Pdkl46qDEeQO8E9GOvNDW96j8NfC%2BnbfLEmIVsoL3LXTzgr3ZTpETIydOmZfMHV1hS3ui64UKHdauQazq9K3XWL57xEz2e9ukq9j3V8lRc3d%2FW11KD603o3g31q%2FMOjKxT5Dglvfiq%2FpnfTsN5vDzJImxE5iyCWcJU8oWRyDin3K%2BnHdDoUvt4rmQJllSTrr9m6yYWVfvxoc0wywgs%2FJJTZjilNZPKrHPIMkSwdoaVpj%2F0ou9Z9SzS6%2FuCxcjFfke7D%2BaRdJlgoUlDHyMLg61UL0Ez1bTXWDvQH9cp%2FxbODVqRWX4ZibjSIl%2FChkmQxIrWgfhv6mVX0ZFEohZghoB%2Bib1D1LuMsjhjuQ3RwWkT5iGhVbaeKjz2RSumj1iJB8wCq7uqDRNTn%2FCbBYa030LYerB%2B3KB5Q6CD4uVRY1VaFwXAFrLP2XZJHwfzYsE9KQYOrBBeFnT0hCuWwsMcUzkUYnov2HMnkGOoMOIG3Cmsjxn6sCvkWfb7tSRNQhZAnakUJozDQgP3PBjqyAcIk7X7CvLxBfxmeqFcrcynKPo0q%2FR0rwaBjvNy9hYXMhY9p%2FD0Ce6bp14fkCe4zQSKDuN8lmj4x%2FPFiEprLFfT%2FU3B3ISm%2F1SaFq%2Bu4jA7IfEPkNg5IQDqDxVcg7l2MGdC%2BoYkagsNCCk8zOGtonj0VlnSemGLfS%2BTvR%2FFQsyysHudYR02Q9gAy7Ji%2B77PicrW6J5bw9oEwLA1oMiA4pD%2FxsRgAsqgCZloaf0NYbX5qTc4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3b346dd5ea4b2a0a759bc10278c3293289e26f5ca7d558532f59f41815450ab8",
+      "file_size": 45153,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-06-20T08:19:55.877Z",
+  "allow_singular_disclosure_after": -280393559.6767158,
+  "singular_disclosure_allowed": true,
+  "vote_count": 13,
+  "voters": [
+    "tcpiplab",
+    "spam404",
+    "eveeez",
+    "0xspade",
+    "zerotoone",
+    "ereda",
+    "sumit7",
+    "0xm1racle",
+    "rbcafe",
+    "spetr0x",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

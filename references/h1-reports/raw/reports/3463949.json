@@ -1,0 +1,143 @@
+{
+  "id": 3463949,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDYzOTQ5",
+  "url": "https://hackerone.com/reports/3463949",
+  "title": "Missing AES-GCM Authentication Tag Validation and Improper Deprecation Handling",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2025-12-13T16:49:42.781Z",
+  "submitted_at": "2025-12-13T16:49:43.115Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sideni",
+    "url": "/sideni",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-19T21:03:44.897Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-12-19T20:31:51.913Z",
+  "team_member_agreed_on_going_public_at": "2025-12-19T21:03:43.849Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nIn Node.js' crypto module, the `createDecipheriv` states that \"the `authTagLength` option defaults to 16 bytes and must be set to a different value if a different length is used.\" ([here](https://nodejs.org/api/crypto.html#class-decipheriv:~:text=the%20authTagLength%20option%20defaults%20to%2016%20bytes%20and%20must%20be%20set%20to%20a%20different%20value%20if%20a%20different%20length%20is%20used.))\nThe authentication tag's length is however not validated against that default value and can be truncated down to either 4, 8, 12, 13, 14, or 15 bytes. ([here](https://github.com/nodejs/node/blob/4f24aff94ad9160bceaf9dcc9cf5235a65f01029/deps/ncrypto/ncrypto.h#L407-L409))\nThis allows an attacker to brute force an authentication tag after modifying a ciphertext and recover the key material to compute more authentication tags offline afterwards.\n\n**Description:**\nThese authenticated encryption schemes are frequently used to protect some session or some token. An attacker could exploit this flaw by changing a valid ciphertext and by bruteforcing the new authentication tag on the server (with at most 12,884,902,656 requests : `(2**32) * 3 + 2 * 256`) to gain a valid session/token.\nThis also results in a nonce reuse with AES-GCM which leaks the key needed to compute any further authentication tags (see [this blogpost](https://frereit.de/aes_gcm/)). Note that 12 billion requests are not necessarily needed as one could use the truncated tag to recover the needed key (see [this cryptopals challenge](https://cryptopals.com/sets/8/challenges/64.txt)).\n\nWith the key needed to compute arbitrary authentication tags, an attacker can manipulate a ciphertext to decrypt it and to forge a new one.\n\nI understand implicit shorter tag lengths have been deprecated with this [PR](https://github.com/nodejs/node/pull/52345), the deprecation warning however is [only emitted when the tag is actually shorter than 16 bytes](https://github.com/nodejs/node/blob/ebf38d825d20f14a80405be182cfaa568c1eb99f/src/crypto/crypto_cipher.cc#L568C7-L568C25).\nFor people using the function as documented (i.e. expecting the `authTagLength` option to default to 16 bytes), the warning is never shown unless an attack is on the way.\n\n## Steps To Reproduce:\nThe following script shows how the default `authTagLength` of 16 bytes is not enforced and allows for implicit shorter tags.\nIt also shows that the deprecation warning is only shown when an attacker truncates the authentication tag (or when it's explicitly truncated, but that's not the scenario where people are in unknown danger).\n\n```js\nconst {\n    createCipheriv,\n    createDecipheriv\n} = require('crypto');\n\nconst key = 'key0123456789key';\nconst nonce = '123456789012';\n\nvar algo = 'aes-128-gcm';\nconst cipher = createCipheriv(algo, key, nonce);\nconst plaintext = 'This is some plaintext';\n\nconst ciphertext = cipher.update(plaintext, 'utf8');\ncipher.final();\nconst tag = cipher.getAuthTag();\n\n\nvar decipher = createDecipheriv(algo, key, nonce);\ndecipher.setAuthTag(tag);\nvar decryptedPlaintext = decipher.update(ciphertext, null, 'utf8') + decipher.final();\n\nconsole.log('Decrypted with full tag: ' + decryptedPlaintext);\n\nconsole.log('---------------------------------');\n\ndecipher = createDecipheriv(algo, key, nonce);\n// Truncating the authentication tag\ndecipher.setAuthTag(tag.subarray(0, 4));\ndecryptedPlaintext = decipher.update(ciphertext, null, 'utf8') + decipher.final();\nconsole.log('Decrypted with truncated tag: ' + decryptedPlaintext);\n```\n\nObserve how the deprecation warning message is only shown for the latter and how a truncated authentication tag successfully allowed decryption (even if \"the `authTagLength` option defaults to 16 bytes and must be set to a different value if a different length is used.)\n{F5115107}\n\n###For code references:\nThe deprecation warning message is emitted [here](https://github.com/nodejs/node/blob/ebf38d825d20f14a80405be182cfaa568c1eb99f/src/crypto/crypto_cipher.cc#L567-L577).\nThe auth tag is set with `setAuthTag` in which the tag length taken [here](https://github.com/nodejs/node/blob/ebf38d825d20f14a80405be182cfaa568c1eb99f/src/crypto/crypto_cipher.cc#L542-L546) is set implicitly [here](https://github.com/nodejs/node/blob/ebf38d825d20f14a80405be182cfaa568c1eb99f/src/crypto/crypto_cipher.cc#L579-L582).\n\n## Impact\n\n- Ciphertexts can be modified to decrypt to an arbitrary value\n- Ciphertexts can be decrypted by observing parsing differences\n    - For example, if the decrypted data is expected to be JSON, it's possible to observe valid/invalid JSON parsing to decrypt the ciphertext just like with padding oracles\n- The GCM internal GHASH key can be recovered (to compute more arbitrary authentication tags without need for bruteforce)\n    - Requires rotation of the encryption keys\n\nConsidering how the `createDecipheriv` function is documented, this completely breaks the integrity and confidentiality of the encryption scheme that people expect from this API.",
+  "weakness": {
+    "id": 39,
+    "name": "Missing Required Cryptographic Step"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5115107,
+      "file_name": "Screenshot_from_2025-12-13_11-17-31.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/i5epyiym5a6kaq4kjg6ttgqtks7d?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_from_2025-12-13_11-17-31.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_from_2025-12-13_11-17-31.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150013Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=fce38b512c96ddabd8cb59ce23b22c63dad62495611631e908284783a6bcbac6",
+      "file_size": 38767,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 22,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "011alsanosi",
+    "bugzer",
+    "authphantom",
+    "toroochi",
+    "h3lpd3sk404",
+    "georgeughh3",
+    "cunning_fox",
+    "zrabbyb",
+    "and 12 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "low",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

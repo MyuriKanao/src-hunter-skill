@@ -1,0 +1,136 @@
+{
+  "id": 638635,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82Mzg2MzU=",
+  "url": "https://hackerone.com/reports/638635",
+  "title": "Insecure Zendesk SSO implementation by generating JWT client-side",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-07-09T23:30:54.992Z",
+  "submitted_at": "2019-07-09T23:30:54.992Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "xh3n1",
+    "url": "/xh3n1",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/DBFg5SkqL7s6js3eqCtTHTzf/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 21749,
+    "url": "https://hackerone.com/trint",
+    "handle": "trint",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/qqW6sCzyN86bfWnrnhRpaLYD/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/qqW6sCzyN86bfWnrnhRpaLYD/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Trint Ltd",
+      "twitter_handle": "TrintHQ",
+      "website": "http://www.trint.com",
+      "about": "Trint’s AI audio transcription software makes any audio and video searchable, editable and shareable."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-09-08T09:55:04.583Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-08-09T09:54:54.326Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\napp.trint.com implements SSO to Zendesk, it does this by using JWT as described at https://support.zendesk.com/hc/en-us/articles/203663816-Enabling-JWT-JSON-Web-Token-single-sign-on\n\nThis functionality has not been implemented securely because the JWT generation happens in the client-side. This is done by the Zendesk secret being hardcoded in the JavaScript code.\nThe secret is used to create JSON Web Tokens and then you can use the generated token to impersonate any customer in Zendesk. (therefore potentially getting access to their support tickets)\n\nWhilst support.trint.com is marked as out of scope for the program, the described vulnerability isn't caused by Zendesk. The vulnerable component is in app.trint.com.\n\n## Assessment\nThe JavaScript source map files are available next to the minified production files. This significantly makes analyzing this issue easier.\n\n- JavaScript file: https://app.trint.com/static/js/app.e984c9df.js\n- Sourcemap file: https://app.trint.com/static/js/app.e984c9df.js.map\n\nLooking at some of the UI views, I stumbled upon `static/js/modules/auth/pages/ZendeskLoadingPage.js`. I've attached a stripped version which shows the JWT generation:\n\n```js\n[snip]\nimport { ZENDESK_DOMAIN } from 'modules/core/constants/index';\n\nconst { REACT_APP_ZENDESK_SECRET } = process.env;\n\n[snip]\n\nfunction RedirectToZendesk(props) {\n  const { user, history } = props;\n\n  function generateZendeskTokenAndRedirect() {\n    const TIME_NOW_OBJECT = moment(Date.now());\n    try {\n      const payload = {\n        iat: TIME_NOW_OBJECT.unix(),\n        jti: uuid.v4(),\n        name: `${user.profile.firstName} ${user.profile.lastName}`,\n        email: user.username,\n      };\n\n      // encode zendesk token\n      const zendeskToken = jwt.sign(payload, REACT_APP_ZENDESK_SECRET);\n      window.location = `${ZENDESK_DOMAIN}/access/jwt?jwt=${zendeskToken}`;\n    } catch (err) {\n      history.push('/error');\n    }\n  }\n\n  useEffect(\n    () => {\n      generateZendeskTokenAndRedirect(user);\n    },\n    [user],\n  );\n\n  return <Loader />;\n}\n\n[snip]\n\nexport default ZendeskLoadingPage;\n```\r\n\nSearching for `REACT_APP_ZENDESK_SECRET` in the sourcemap will show the JWT secret: \n\n```js\nvar REACT_APP_ZENDESK_SECRET = \"oq1HJ4jXo99Wt41bwvLh9BXBVdgpi52CjkXbThow7UhWQGtJ\";\n```\n\nGenerating the JWT on the client-side like this allows anyone to mint an arbitrary JWT. It would probably be better to generate this on the server-side.\n\n## Reproduction steps\n\n- As logged-in user press \"Support\" on https://app.trint.com\n- Intercept the traffic and see the call to `https://trintsupport.zendesk.com/access/jwt?jwt=[JWT_TOKEN]`\n- Logout of Zendesk\n- Put the JWT token from above URI into https://jwt.io and decode it.\n\nExample:\n```\neyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE1NjI3MDk2NTksImp0aSI6IjIxZDAyOTg3LWU3YWItNDQ5MC05N2Q3LTc2YTBmMzJhOTVjOCIsIm5hbWUiOiJUZXN0IFRlc3QiLCJlbWFpbCI6ImIzODcxNjk0QHVyaGVuLmNvbSJ9.mnnx7dbpXbvU7xr5Bp5pad2eHVN01mSsXApmZoFj73c\n```\n\n```\n{\n  \"iat\": 1562709659,\n  \"jti\": \"21d02987-e7ab-4490-97d7-76a0f32a95c8\",\n  \"name\": \"Test Test\",\n  \"email\": \"b3871694@urhen.com\"\n}\n```\n\n- Now we can continue with tampering the JWT \n  - Change IAT to the current Unix timestamp\n  - Change JTI to a random UUID v4\n  - Change email to the victim email address\n  - Insert `oq1HJ4jXo99Wt41bwvLh9BXBVdgpi52CjkXbThow7UhWQGtJ` as HMAC secret.\n- Use the resulting JWT in a call to `https://trintsupport.zendesk.com/access/jwt?jwt=[JWT_TOKEN]`. You will be logged in as the victim.\n\n## Impact\n\nAccess to the Zendesk account of Trint customers. This includes potentially the support history of said user.\n\nI haven't verified whether the same SSO flow can also be used against Zendesk administrators. If so, the risk would be higher.",
+  "weakness": {
+    "id": 24,
+    "name": "Password in Configuration File"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-09-08T09:54:54.402Z",
+  "allow_singular_disclosure_after": -210404090.44676968,
+  "singular_disclosure_allowed": true,
+  "vote_count": 100,
+  "voters": [
+    "he4am",
+    "cxzer0",
+    "arist0phanes",
+    "m4khn0",
+    "drtrace",
+    "pprab",
+    "fdeleite",
+    "holyfield",
+    "foobar7",
+    "corraldev",
+    "and 90 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 22765,
+    "asset_type": "URL",
+    "asset_identifier": "app.trint.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

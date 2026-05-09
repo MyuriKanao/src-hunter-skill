@@ -1,0 +1,147 @@
+{
+  "id": 1438028,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDM4MDI4",
+  "url": "https://hackerone.com/reports/1438028",
+  "title": "XSS on internal: privileged origin through reader mode",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-12-30T07:48:36.834Z",
+  "submitted_at": "2021-12-30T07:48:37.001Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "nishimunea",
+    "url": "/nishimunea",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/JR7WgikKhgk1DcwtUvQfmtpu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15688,
+    "url": "https://hackerone.com/brave",
+    "handle": "brave",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Brave Software",
+      "twitter_handle": "brave",
+      "website": "https://brave.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-06-22T05:51:13.868Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-06-22T05:51:13.788Z",
+  "team_member_agreed_on_going_public_at": "2023-06-22T05:43:07.465Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nBrave iOS has two weaknesses described below. By combining them, XSS can be achieved on the privileged origin `internal://local`.\n\n1. Exposure of uuidKey through REFERER header\nReader mode in Brave has two HTML templates, [Reader.html](https://github.com/brave/brave-ios/blob/development/Client/Frontend/Reader/Reader.html) and [ReaderViewLoading.html](https://github.com/brave/brave-ios/blob/development/Client/Frontend/Reader/ReaderViewLoading.html). The former template defines [<meta name=\"referrer\" content=\"never\">](https://github.com/brave/brave-ios/blob/development/Client/Frontend/Reader/Reader.html#L10) header for preventing referrer leakage, but the latter template [does not](https://github.com/brave/brave-ios/blob/development/Client/Frontend/Reader/ReaderViewLoading.html#L8). Therefore, by opening an external page through `ReaderViewLoading.html`, the `uuidKey` contained in the Reader mode page URL is leaked.\n\n2. XSS in SessionRestoreHandler\nSessionRestoreHandler is used to restore a previously used tab, but [it does not validate an URL to be restored](https://github.com/brave/brave-ios/blob/83eb41ac922d7bd18fd311e0a4279e02cdd8e190/Client/Frontend/Browser/SessionRestoreHandler.swift#L34). Therefore, if a javascript: URL is provided, the code is executed on the `internal:` domain.\n\nNote that the first vulnerability is not reproduced on iOS 15 because WKWebView's referrer policy has been changed to hostname only. However, according to [Apple's report in June 2021](https://developer.apple.com/support/app-store/), more than 90% of users were using iOS 14.\n\n## Products affected: \n\n* Brave iOS 1.32.3 and higher (include the latest Nightly) on iOS 14.x and below\n\n## Steps To Reproduce:\n\n* Visit https://csrf.jp/brave/reader_uuid_leakage.php\n* Open the page in Reader mode\n* Long tap a hyperlink in the page and choose \"Open in New Private Tab\"\n* Wait for several seconds and tap \"Load original page\"\n* uuidKey in the reader mode URL is stolen through REFERER header\n* Click an exploit URL in the page, then XSS is triggered on `internal://local`\n\n## Supporting Material/References:\n\n* xss_on_internal_origin_through_reader_mode.mov: video of the attack against the vulnerabilities\n* reader_uuid_leakage.php: server-side exploit code\n\n## Impact\n\n* Attacker can elevate privileges to `internal:` origin",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1563002,
+      "file_name": "xss_on_internal_origin_through_reader_mode.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/4ym803w9nmouoeg4dhetct1ayfm7?response-content-disposition=attachment%3B%20filename%3D%22xss_on_internal_origin_through_reader_mode.mov%22%3B%20filename%2A%3DUTF-8%27%27xss_on_internal_origin_through_reader_mode.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150715Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6f65bfa08cd4b86c8a9af594ee9490bf100d302598bc73a607978ace34d30f9f",
+      "file_size": 7318599,
+      "type": "video/quicktime",
+      "moderated": null
+    },
+    {
+      "id": 1563003,
+      "file_name": "reader_uuid_leakage.php",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/8xv283s0ch6zqo6nwdwxaupqbrsq?response-content-disposition=attachment%3B%20filename%3D%22reader_uuid_leakage.php%22%3B%20filename%2A%3DUTF-8%27%27reader_uuid_leakage.php&response-content-type=text%2Fx-php&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150715Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=54df4cb3dffdb433ef5f892808c2f0d71f94bbd27260c6a0d955cc71edbed900",
+      "file_size": 1298,
+      "type": "text/x-php",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "zy9ard3",
+    "shreyaschavhan",
+    "h4x0r_dz",
+    "neilx",
+    "shohag_sp",
+    "salmananu",
+    "magictrap"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 16463,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/brave/brave-ios",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

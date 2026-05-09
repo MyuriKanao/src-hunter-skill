@@ -1,0 +1,130 @@
+{
+  "id": 319467,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTk0Njc=",
+  "url": "https://hackerone.com/reports/319467",
+  "title": "`macaddress` concatenates unsanitized input into exec() command",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-25T05:29:40.739Z",
+  "submitted_at": "2018-02-25T05:29:40.739Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chalker",
+    "url": "/chalker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-05-11T20:14:35.387Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-05-11T20:14:27.538Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE! Thanks for submitting a report! Please replace *all* the [square] sections below with the pertinent details. Remember, the more detail you provide, the easier it is for us to triage and respond quickly, so be sure to take your time filling out the report!\n\nI would like to report code injection in `macaddress`\nIt allows to inject arbitrary shell commands if the user input can influence the `iface` argument.\n\n# Module\n\n**module name:** macaddress\n**version:** 0.2.8\n**npm page:** `https://www.npmjs.com/package/macaddress`\n\n## Module Description\n\n> Retrieve MAC addresses in Linux, OS X, and Windows.\n\n## Module Stats\n\n81 238 downloads in the last day\n1 632 083 downloads in the last week\n7 031 342 downloads in the last month\n\n~84376104 estimated downloads per year [JUST FOR REFERENCE,  ~DOWNLOADS PER MONTH*12]\n\n# Vulnerability\n\n## Vulnerability Description\n\n`(async)  .one(iface, callback) → string` API does not escape or sanitize `iface` argument, and concatenates it to a shell command, passing it to `exec`.\n\nExact lines:\n```\nlib/linux.js:4:    exec(\"cat /sys/class/net/\" + iface + \"/address\", function (err, out) {\nlib/macosx.js:4:    exec(\"networksetup -getmacaddress \" + iface, function (err, out) {\nlib/unix.js:4:    exec(\"ifconfig \" + iface, function (err, out) {\n```\n\n## Steps To Reproduce:\n\nFor Linux, use the following example:\n```js\nlet iface = '../../../etc/passwd; touch /tmp/poof; echo ';\nrequire('macaddress').one(iface, function (err, mac) {\n  console.log(\"Mac address for this host: %s\", mac);  \n});\n```\n\nObserve `/etc/passwd` printed into the console, `/tmp/poof` file created.\n\nFor other OS, the testcase is similar.\n\n## Supporting Material/References:\n\n> State all technical information about the stack where the vulnerability was found\n\n- Arch Linux Current\n- Node.js 9.5.0\n- npm 5.6.0\n\n# Wrap up\n\n- I contacted the maintainer to let him know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nExecute arbitrary shell commands if that parameter is user-controlled.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-06-10T20:14:27.716Z",
+  "allow_singular_disclosure_after": -249678594.09543735,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "kapytein",
+    "michiel",
+    "bl4de",
+    "0x08",
+    "lucifer0110"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 9723,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "macaddress",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "id": 1081145,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDgxMTQ1",
+  "url": "https://hackerone.com/reports/1081145",
+  "title": "SQL Injection through /include/findusers.php",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-01-19T02:42:45.551Z",
+  "submitted_at": "2021-01-19T02:42:46.716Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "egix",
+    "url": "/egix",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/431/9435ac0bb25492f164582fbbc7e3f6f8f016b1d1_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 38302,
+    "url": "https://hackerone.com/impresscms",
+    "handle": "impresscms",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/038/302/c9f69b5546e2b4211c0a26681a398b1685cc5ebb_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/038/302/c9f69b5546e2b4211c0a26681a398b1685cc5ebb_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "ImpressCMS",
+      "twitter_handle": "impresscms",
+      "website": "https://www.impresscms.org",
+      "about": "PHP and MySQL Open source content management system for multiple languages"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-10-06T18:51:25.975Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-06T18:51:24.150Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe vulnerability is located in the `/include/findusers.php` script:\n\n```\n281.\t\t\t$total = $user_handler->getUserCountByGroupLink(@$_POST[\"groups\"], $criteria);\n282.\t\n283.\t\t\t$validsort = array(\"uname\", \"email\", \"last_login\", \"user_regdate\", \"posts\");\n284.\t\t\t$sort = (!in_array($_POST['user_sort'], $validsort)) ? \"uname\" : $_POST['user_sort'];\n285.\t\t\t$order = \"ASC\";\n286.\t\t\tif (isset($_POST['user_order']) && $_POST['user_order'] == \"DESC\") {\n287.\t\t\t\t$order = \"DESC\";\n288.\t\t\t}\n289.\t\n290.\t\t\t$criteria->setSort($sort);\n291.\t\t\t$criteria->setOrder($order);\n292.\t\t\t$criteria->setLimit($limit);\n293.\t\t\t$criteria->setStart($start);\n294.\t\t\t$foundusers = $user_handler->getUsersByGroupLink(@$_POST[\"groups\"], $criteria, TRUE);\n```\n\nUser input passed through the \"groups\" POST parameter is not properly sanitized before being passed to the `icms_member_Handler::getUserCountByGroupLink()` and `icms_member_Handler::getUsersByGroupLink()` methods at lines 281 and 294. These methods use the first argument to construct a SQL query without proper validation:\n\n```\n461.\t\tpublic function getUsersByGroupLink($groups, $criteria = null, $asobject = false, $id_as_key = false) {\n462.\t\t\t$ret = array();\n463.\t\n464.\t\t\t$select = $asobject ? \"u.*\" : \"u.uid\";\n465.\t\t\t$sql[] = \"\tSELECT DISTINCT {$select} \"\n466.\t\t\t\t\t. \"\tFROM \" . icms::$xoopsDB->prefix(\"users\") . \" AS u\"\n467.\t\t\t\t\t. \" LEFT JOIN \" . icms::$xoopsDB->prefix(\"groups_users_link\") . \" AS m ON m.uid = u.uid\"\n468.\t\t\t\t\t. \"\tWHERE 1 = '1'\";\n469.\t\t\tif (! empty($groups)) {\n470.\t\t\t\t$sql[] = \"m.groupid IN (\" . implode(\", \", $groups) . \")\";\n471.\t\t\t}\n```\n\nThis can be exploited by remote attackers to e.g. read sensitive data from the \"users\" database table through boolean-based SQL Injection attacks.\n\n## ImpressCMS branch :\nThe vulnerability has been tested and confirmed on ImpressCMS version 1.4.2 (the latest at the time of writing).\n\n## Steps To Reproduce:\nUse the attached Proof of Concept (PoC) script to reproduce this vulnerability. It's a PHP script supposed to be used from the command-line (CLI). You should see an output like the following:\n\n```\n$ php sqli.php http://localhost/impresscms/\n[-] Retrieving security token...\n[-] Starting SQL Injection attack...\n[-] Admin's email: admin@test.com\n```\n\nThe PoC leverages both this vulnerability and the one reported at #1081137 to achieve unauthenticated exploitation.\n\n## Impact\n\nThis vulnerability might allow **unauthenticated attackers** to disclose any field of the \"users\" database table, including the users' email addresses and password hashes, potentially leading to full account takeovers.\n\n**NOTE**: normally, successful exploitation of this vulnerability should require an admin user session. However, due to the vulnerability described in report #1081137, this could be exploited by unauthenticated attackers as well.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1163169,
+      "file_name": "sqli.php",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/q82wmnbbpgc70ty3o7c6ktf8gfb0?response-content-disposition=attachment%3B%20filename%3D%22sqli.php%22%3B%20filename%2A%3DUTF-8%27%27sqli.php&response-content-type=application%2Fx-php&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150930Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a5ec18f46e65514247db7a87f60a73617b922b34bf59a837f2a4f2246287694b",
+      "file_size": 1677,
+      "type": "application/x-php",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2022-10-06T18:51:24.243Z",
+  "allow_singular_disclosure_after": -113257085.77999945,
+  "singular_disclosure_allowed": true,
+  "vote_count": 30,
+  "voters": [
+    "m4khn0",
+    "deckardcipher",
+    "zy9ard3",
+    "shreyaschavhan",
+    "egix",
+    "isira_adithya",
+    "f_m",
+    "khizer47",
+    "jackiehavoltrey",
+    "sh3rif0x",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 28943,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/impresscms/impresscms",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 189778,
+      "category": "researcher",
+      "content": "Here you can find a full technical write-up for this vulnerability and its exploitation:\nhttps://karmainsecurity.com/impresscms-from-unauthenticated-sqli-to-rce",
+      "updated_at": "2022-09-06T18:52:44.974Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1431,
+        "username": "egix",
+        "name": "Egidio Romano",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://karmainsecurity.com",
+        "location": "Italy",
+        "created_at": "2013-11-11T20:38:45.487Z",
+        "url": "https://hackerone.com/egix",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/431/9435ac0bb25492f164582fbbc7e3f6f8f016b1d1_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/431/9435ac0bb25492f164582fbbc7e3f6f8f016b1d1_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://hackerone.com/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTYzNSwicHVyIjoiYmxvYl9pZCJ9fQ==--2213e2d195ec3875336e375abfc952bfd4ece4e2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemUiOiIyNjB4MjYwXHUwMDNlIn0sInB1ciI6InZhcmlhdGlvbiJ9fQ==--cf3aeca803d1baf476958c689ca7b472a4cb54f1/902421_237936459680366_136756811_o.jpg"
+        }
+      }
+    }
+  ]
+}

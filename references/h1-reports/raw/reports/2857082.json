@@ -1,0 +1,112 @@
+{
+  "id": 2857082,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yODU3MDgy",
+  "url": "https://hackerone.com/reports/2857082",
+  "title": "Exposed Extremely Sensitive Information in Public ZIP File",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-11-20T21:40:16.355Z",
+  "submitted_at": "2024-11-20T21:40:16.461Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "aldenpartridge",
+    "url": "/aldenpartridge",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/09kubowtfgynhft4ri2je3ve03c3/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-12T19:25:43.001Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-02-20T16:59:39.895Z",
+  "team_member_agreed_on_going_public_at": "2026-01-12T19:25:42.784Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "An unprotected ZIP file (█████.zip) containing sensitive information is publicly accessible at http://██████/data/█████.zip. This file contains highly sensitive data, including SMTP credentials, database connection details, and AWS secret keys for the us-gov-west-1 region.\nSteps to Reproduce:\n\n    Download the ZIP file from the publicly accessible URL:\n        URL: http://██████/data/████.zip\n        You can download the file via the browser or using curl:\n\n    curl -O http://██████/data/███.zip\n\nExtract the contents of the ZIP file using any standard extraction tool:\n\nunzip ███.zip\n\nReview the extracted files for sensitive information. The files include:\n\n    SMTP credentials (username, password, host, and port)\n    Database credentials (username, password, host, database name)\n    AWS secret keys (AWS access key, secret key, and session token)\n\n\n    SMTP Credentials(scripts/contact-*.php | scripts/backups/contact-*/php)\nAWS S3 Key (███/scripts/i.js)\n\nWith the exposed data, an attacker could:\n\n    Access and send emails via the SMTP service.\n    Gain unauthorized access to AWS resources, potentially   compromising sensitive data and infrastructure.\n\n## Impact\n\nAn attacker who gains access to this publicly exposed ZIP file can obtain critical information, including:\n\n    SMTP Credentials: Allowing unauthorized email sending and potential phishing or social engineering attacks.\n    AWS Keys: Allowing unauthorized access to AWS services, potentially exposing sensitive data, leading to privilege escalation, or enabling further attacks on the target's infrastructure in the us-gov-west-1 region.\n\nThis exposure of sensitive data represents a CRITICAL security risk.\n\n## System Host(s)\n█████\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\nSteps to reproduce:\n\n    Access the public ZIP file via https://████/data/█████████.zip.\n    Download and extract the contents.\n    Examine the extracted files for sensitive information like SMTP   credentials, database connection details, and AWS keys.\n\n## Suggested Mitigation/Remediation Actions\nRemove Public Access: Immediately restrict access to the ZIP file, ensuring it's not publicly accessible. Store sensitive files in a secure location that requires authentication.\n    Rotate Exposed Credentials: Revoke the exposed SMTP, database, and AWS credentials, and issue new ones.\n    Use Encryption: Store sensitive data in encrypted files, both at rest and in transit, to ensure that unauthorized access does not expose sensitive content.\n    Implement Access Control: Ensure that proper access controls are in place, such as authentication and authorization for any sensitive file locations.\n    Monitor and Audit Access: Implement monitoring and logging to detect and alert on any unauthorized access attempts to sensitive data.\n    Regularly Audit and Rotate Keys: Use a secure key management system (like AWS Secrets Manager) to store and manage sensitive keys, and regularly rotate them to mitigate the impact of potential leaks.\n\n",
+  "weakness": {
+    "id": 101,
+    "name": "Insecure Storage of Sensitive Information"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 5,
+  "voters": [
+    "mohaned0101",
+    "sisi0x",
+    "khoof",
+    "mistersiddd",
+    "pythonomus-prime"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

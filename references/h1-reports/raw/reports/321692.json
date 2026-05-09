@@ -1,0 +1,130 @@
+{
+  "id": 321692,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjE2OTI=",
+  "url": "https://hackerone.com/reports/321692",
+  "title": "`base64-url` below 2.0 allocates uninitialized Buffers when number is passed in input",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-03T23:51:59.031Z",
+  "submitted_at": "2018-03-03T23:51:59.031Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chalker",
+    "url": "/chalker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-05-12T09:10:34.245Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-05-12T09:10:19.488Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report an uninitialized Buffer allocation issue in `base64-url`.\nIt allows to extract sensitive data from uninitialized memory or to cause a DoS by passing in a large number, in setups where typed user input can be passed (e.g. from JSON).\n\n# Module\n\n**module name:** `base64-url`\n**version:** 1.3.3\n**npm page:** `https://www.npmjs.com/package/base64-url`\n\n## Module Description\n\n> Base64 encode, decode, escape and unescape for URL applications.\n\n## Module Stats\n\n48 047 downloads in the last day\n311 047 downloads in the last week\n1 374 420 downloads in the last month\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe problem arises when a number is passed in, e.g. from user-submitted JSON-encoded data.\nThe API should not propagate the already-bad Buffer issue further.\n\nOn Node.js 6.x and below, this exposes uninitialized memory, which could contain sensitive data.\n\nThis can be also used to cause a DoS on any Node.js version by consuming the memory when large numbers are passed on input.\n\n## Steps To Reproduce:\n\n`console.log(require('base64-url').encode(1000))` (Node.js 6.x and lower — note uninitialized memory in output)\n\n`require('base64-url').encode(1e8)` (any Node.js verision — note memory usage and time)\n\n## Supporting Material/References:\n\n- OS: Arch Linux current\n- Node.js 6.13.0\n- Node.js 9.5.0\n\n# Wrap up\n\n- I contacted the maintainer to let them know: Y\n- I opened an issue in the related repository: N\n\nI contacted the author on 2017-03-02.\nI did not receive a reply, but on 2017-08-17 a semver-major version 2.0.0 was released with a fix.\n\nI want a CVE assigned to this issue, also I would prefer the fix to be backported to 1.x branch — a lot of modules still depend 1.x as of 2018-02-26.\n\nTop-10 apps `@latest` versions of which install affected `base64-url@1` through their deps chains:\n```\n664945  react-native\n346288  metro-bundler\n83764   hubot\n81089   sails\n51724   phonegap\n45522   csrf-tokens\n28326   hubot-mock-adapter\n25778   mock-hubot\n23712   connect-phonegap\n18808   nodedata\n```\n\nIn total, there are about 2460 such apps in the npm registry, to my knowledge.\n\n## Impact\n\nSensitive uninitialized memory exposure on Node.js 6.x or lower\nDenail of Service on any Node.js version",
+  "weakness": {
+    "id": 8,
+    "name": "Out-of-bounds Read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-06-11T09:10:19.570Z",
+  "allow_singular_disclosure_after": -249632037.31492394,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "bl4de",
+    "eveeez",
+    "0x08",
+    "thechango",
+    "krkrishnaraj11"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

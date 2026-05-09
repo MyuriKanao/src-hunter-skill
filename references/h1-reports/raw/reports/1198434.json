@@ -1,0 +1,114 @@
+{
+  "id": 1198434,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTk4NDM0",
+  "url": "https://hackerone.com/reports/1198434",
+  "title": "Cache Posioning leading do Denial of Service on `www.█████████`",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-05-15T17:00:17.108Z",
+  "submitted_at": "2021-05-15T17:00:17.139Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "brumens",
+    "url": "/brumens",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/x93y4mon7o5qcsy8yvqxgt27ykcb/65551465b0d18d952f306b2d0c5e69ed082a8c9bc5c9b7bec024e5edc01c00a5"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-07-09T18:20:57.220Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-07-01T14:21:55.997Z",
+  "team_member_agreed_on_going_public_at": "2021-07-09T18:20:57.119Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "*Hey!\nTo be clear. This was not an test for Denial of service (DOS). I accidentally come a cross this vulnerability when I was testing for Server side request forgery (SSRF). I have read you policy well and I was not preforming any type of activity that harmed or slowed you system in anyway. You can read why below when I explain the cache poisoning vulnerability that is the core of the impact.*\n\n# Vulnerability Cache Posioning (CPDoS)\n\n**C**ache **P**osioning **D**enial **O**f  **S**ervice (CPDoS) [1] is taking advantage of *301* redirects by storing an false value of either domain, port or header that effect the response in any way. This makes the cache server store the false value and later delivery it to all users that view the domain page.\n\nThis vulnerability is in fact an Cache poisoning [2] in the ground which makes it possible to not harm the system in any way when testing. This is because it's possible to add random URL path to the domain that make only that path exploited under *x* time.\n\nAn attacker will use intruder to update the cache server every x sec, min or hours to make the domain down. \n\n# Summary\n\nThe vulnerability was discovered when I was testing for SSRF in the host header field.  I notice that it was behaving weard so I added an random parameter in the URL field of the domain that made it redirect with code *301*. This ended up in an reflection of the URL bar in the response.\n\nWhen the URL of the redirect was reflected I was able to add an random port number and store it into the cache server.\n\n#Proof Of Concept\n███\n\n**Supported link**\n[1] https://cpdos.org/ - \"What is CPDoS?\", *Vulnerability explained*\n[2]  https://portswigger.net/research/responsible-denial-of-service-with-web-cache-poisoning - \"Responsible denial of service with web cache poisoning\", *James Kettle*\n\nBest regards,\nAlex\n\n## Impact\n\nAn attacker is able to Cache posioning the host header. This makes the cache server to store an incorrect port number from the server response and deliver out that incorrect domain and port combined to all users that try access the domain. This make the domain crash and unable to view for users.\n\n**Attackers view**\n*For an real attacker to take use of this he/she will disable the random paramter at the url and send it to the home direcly. This will make the domain crash fully*\n\n## System Host(s)\nwww.███\n\n## Affected Product(s) and Version(s)\n/███████\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n**WARNING!** Do not send the request until the step to send the request comes. Otherwise you can by mistage crash the whole domain.\n\n1. Open an browser that is connected to Burp suite\n2. Visit: *https://www.███/█████?█████████*\n3. Intercept the request with Burp suite and add it to the repeater.\n4. **IMPORTEN** Add an random parameter at the end as example: *&CPDoS=1* in the url bar. (*See video POC*).\n4. Add an nonexcisting port at the host header domain. Ex: *1234* Your request raw data should look like below:\n{F1302641}\n5. If an random paramter is added at the end *AND* the port is added to the host header. You can now send the request in Burp suite repeater tab.\nThe data will look similary to:\n```\nGET /████████?███████CPDoS=1 HTTP/1.1\nHost: www.██████:1234\n```\n6. You will see an 301 that do redirect and reflect the port you gave inside the request.\n7. In the request raw data. Delete the port number inside the host header.\n8. Send the request now one more time. You will see the port you added before is still reflecting in the 301 redirect code.\nThis indicates that it's now cache poisoned and the domain path is down. Image: * FullRequest.png*\n████████ <- Might not render...\n\n## Suggested Mitigation/Remediation Actions\nConfigure the cache server to not store the host header.\n\n",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "0-chrollo-0",
+    "shubham_srt",
+    "ibring",
+    "notajax",
+    "citril",
+    "alsinwar",
+    "ekgaribadmi"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

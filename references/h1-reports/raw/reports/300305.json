@@ -1,0 +1,184 @@
+{
+  "id": 300305,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDAzMDU=",
+  "url": "https://hackerone.com/reports/300305",
+  "title": "Ability to bypass partner email confirmation to take over any store given an employee email",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-12-24T08:47:29.068Z",
+  "submitted_at": "2017-12-24T08:47:29.068Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cache-money",
+    "url": "/cache-money",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/075/736/f78da6d0fa17c4d39be1f8088656c23763451dc2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1382,
+    "url": "https://hackerone.com/shopify",
+    "handle": "shopify",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/fjjiC5585s8WoDGHv2M5okbJ/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Shopify",
+      "twitter_handle": "",
+      "website": "https://www.shopify.com",
+      "about": "Shopify is a multi-channel commerce platform that helps people sell online, in-store, and everywhere in between."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-02-07T13:28:31.959Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-02-07T13:28:31.813Z",
+  "team_member_agreed_on_going_public_at": "2018-02-02T21:45:37.463Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I told Pete I would take a look at Spotify, hi Pete.\n\n**Summary**\nIt's possible to take over any store account through partners given an employee email address. This is possible because I found a way to confirm arbitrary emails. I don't know the Shopify ecosystem well enough to know the other ramifications of such a bug.\n\nOn #270981 you wrote:\n> The intention was that, when a partner already had a valid user account on the store, their collaborator account request could be accepted automatically, with the user account converted into a collaborator account.\n\nI tested that functionality and confirmed how it works. I realized that if you can somehow create a partner account with a business email that matched that of an employee, you would be able to take over their employee account, then convert it to a collaborator. The problem is that business accounts need emails to be validated, but this can be bypassed with a race condition.\n\nThe bug works by hitting the email validation endpoint for an email you own, at the same time as changing your email to a victim's. It might take a few tries, but eventually your email will be changed and be validated due to not (properly) using a DB transaction.\n\n**Steps to reproduce**\n1. Create a store account and invite an employee.\n2. Accept the employee invite (maybe not necessary I didn't test).\n3. Login to or create a partner account as the attacker.\n4. Go to your partner settings page `https://partners.shopify.com/[ID]/settings` and change your email to something you own.\n5. Check your email and grab the confirmation link, but don't visit it yet.\n6. Go back to your partner account and change your email to that of the store employee from step 2, but intercept the request to not let it through yet.\n7. Now the tricky part. The \"change email\" takes anywhere from 1,100 - 2,500 ms to load so you need to take that into account. But let the request go through, wait for some milliseconds, then in another tab visit that email confirmation link from step 5.\n8. If done correctly you will now have confirmed an email you do not own.\n9. Visit `https://partners.shopify.com/[ID]/managed_stores`, add the store, and you now have access.\n\nAs proof, look at the email for partner account `698396`. It will be confirmed `cache@hackerone.com`, which I obviously would never be able to validate otherwise.\n\nThanks,\n-- Tanner\n\n## Impact\n\nAbility to take over stores, and possibly perform any other action that relies on a validated email as a security measure.",
+  "bounty_amount": "15250.0",
+  "formatted_bounty": "$15,250",
+  "weakness": {
+    "id": 105,
+    "name": "Time-of-check Time-of-use (TOCTOU) Race Condition"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 268,
+  "voters": [
+    "rc0r",
+    "jin",
+    "jokebookservice1",
+    "smither",
+    "mr-homer",
+    "totalsx",
+    "mr-medi",
+    "datsuraku147",
+    "orange303",
+    "irvinlim",
+    "and 258 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 422,
+    "asset_type": "URL",
+    "asset_identifier": "partners.shopify.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 6525,
+      "category": "team",
+      "content": "@cache-money reported it was possible to bypass the email verification process in our Partners Dashboard. Doing so would have allowed a Partner to request access to a store under an email address the Partner did not own. If the store had a staff account associated with that email address, the staff account would have been automatically converted to a \"collaborator\" account and added to the Partner's dashboard without any merchant interaction. \n\nWe tracked down the bug to a race condition in the logic for changing and verifying email addresses. We fixed it by locking the database record during those actions and requiring store administrators to approve all collaborator requests.\n",
+      "updated_at": "2018-02-02T19:56:23.272Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 175526,
+        "username": "shopify-peteryaworski",
+        "name": "Peter Yaworski",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2017-06-13T14:40:59.020Z",
+        "url": "https://hackerone.com/shopify-peteryaworski",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/175/526/7ba4844078e290c91c4c46a345b4f9e7666f3ed4_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/175/526/7ba4844078e290c91c4c46a345b4f9e7666f3ed4_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/175/526/7ba4844078e290c91c4c46a345b4f9e7666f3ed4_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "id": 6532,
+      "category": "researcher",
+      "content": "After reading Shopify's summary from #270981 a few of times I was able to replicate the intended behavior. Seeing how it worked, I realized the core behavior to investigate was the automatic conversion aspect of it. In order for the conversion to work, you needed to confirm a store employee's email on a partner account. From there you could add the store on the partner account as a \"managed store\", which will then perform the automatic conversion and give you collaborator access. The bug existed in the email confirmation, which allowed me to confirm arbitrary emails under my partner account via race condition.\n\nThe bug was filed on Christmas Eve, and within 12 hours the Shopify team rolled out a fix to address the immediate issue. It was a pleasure to work with a team that takes security as seriously as they do.",
+      "updated_at": "2018-02-07T23:28:33.003Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 75736,
+        "username": "cache-money",
+        "name": "Tanner",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://twitter.com/itscachemoney",
+        "location": "San Francisco, CA",
+        "created_at": "2016-05-11T05:02:26.446Z",
+        "url": "https://hackerone.com/cache-money",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/075/736/f78da6d0fa17c4d39be1f8088656c23763451dc2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/075/736/f78da6d0fa17c4d39be1f8088656c23763451dc2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/075/736/f78da6d0fa17c4d39be1f8088656c23763451dc2_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

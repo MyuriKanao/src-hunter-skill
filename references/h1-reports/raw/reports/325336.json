@@ -1,0 +1,160 @@
+{
+  "id": 325336,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjUzMzY=",
+  "url": "https://hackerone.com/reports/325336",
+  "title": "Subdomain takeover on svcgatewayus.starbucks.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-03-13T02:01:15.805Z",
+  "submitted_at": "2018-03-13T02:01:15.805Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0xpatrik",
+    "url": "/0xpatrik",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/PB6Ser89s4PYXAMkpC66nbdo/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1989,
+    "url": "https://hackerone.com/starbucks",
+    "handle": "starbucks",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/989/c9aa38cf3b1a91daa085d31e23d23f34cd1874df_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Starbucks",
+      "twitter_handle": "Starbucks",
+      "website": "http://www.starbucks.com",
+      "about": "Premier purveyor of the finest coffee in the world, inspiring and nurturing the human spirit — one person, one cup and one neighborhood at a time."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-06-25T18:59:58.915Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-06-07T09:29:32.809Z",
+  "team_member_agreed_on_going_public_at": "2018-06-25T18:59:58.764Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\n\nthis is pretty serious security issue in some context, so please act as fast as possible.\n\n### Overview:\n\nOne of the starbucks.com subdomains is pointing to Azure, which has unclaimed CNAME record. ANYONE is able to own starbucks.com subdomain at the moment.\n\nThis vulnerability is called subdomain takeover. You can read more about it here:\n\n* https://blog.sweepatic.com/subdomain-takeover-principles/\n* https://hackerone.com/reports/32825\n* https://hackerone.com/reports/175070\n* https://hackerone.com/reports/172137\n\n### Details:\n\nsvcgatewayus.starbucks.com has CNAME to s00197tmp0crdfulprod0.trafficmanager.net which has CNAME to 1fd05821-7501-40de-9e44-17235e7ab48b.cloudapp.net. However, 1fd05821-7501-40de-9e44-17235e7ab48b.cloudapp.net is not registered in Azure cloud anymore and thus can be registered by anyone. After registering the Cloud App in Azure portal, the person doing so has full control over content on svcgatewayus.starbucks.com.\n\n### PoC:\n\nhttp://svcgatewayus.starbucks.com\n\n### Mitigation:\n\n* Remove the CNAME record from starbucks.com DNS zone completely.\n* Claim it back in Azure portal after I release it\n\nRegards,\n\nPatrik Hudak\n\n## Impact\n\nSubdomain takeover is abused for several purposes:\n\n* Malware distribution\n* Phishing / Spear phishing\n* XSS\n* Authentication bypass\n* ...\n\nList goes on and on. Since some certificate authorities (Let's Encrypt) require only domain verification, SSL certificate can be easily generated.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-07-07T09:29:32.891Z",
+  "allow_singular_disclosure_after": -247384468.8116639,
+  "singular_disclosure_allowed": true,
+  "vote_count": 109,
+  "voters": [
+    "taha",
+    "wargsec",
+    "kashsec",
+    "0xpatrik",
+    "kanazawaaaa",
+    "arneswinnen",
+    "vavkamil",
+    "sp1d3rs",
+    "bogdantc",
+    "mvc",
+    "and 99 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 13008,
+    "asset_type": "OTHER",
+    "asset_identifier": "Other non domain specific items",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 9759,
+      "category": "researcher",
+      "content": "Subdomain takeover possible on one of Starbucks's subdomain. The subdomain pointed to Microsoft Azure Cloud App which was no longer registered under Azure.\n\nDetailed write-up: https://0xpatrik.com/subdomain-takeover-starbucks/",
+      "updated_at": "2018-08-10T23:30:31.422Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 165612,
+        "username": "0xpatrik",
+        "name": "Patrik Hudak",
+        "bio": "(Automation x AI)²",
+        "cleared": false,
+        "verified": false,
+        "website": "https://0xpatrik.com",
+        "location": "",
+        "created_at": "2017-05-06T21:13:08.252Z",
+        "url": "https://hackerone.com/0xpatrik",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/PB6Ser89s4PYXAMkpC66nbdo/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/PB6Ser89s4PYXAMkpC66nbdo/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/PB6Ser89s4PYXAMkpC66nbdo/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

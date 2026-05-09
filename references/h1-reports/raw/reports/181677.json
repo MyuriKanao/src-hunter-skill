@@ -1,0 +1,136 @@
+{
+  "id": 181677,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODE2Nzc=",
+  "url": "https://hackerone.com/reports/181677",
+  "title": "NULL pointer dereference when parsing ternary operators",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-11T23:43:11.785Z",
+  "submitted_at": "2016-11-11T23:43:11.785Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jpenalbae",
+    "url": "/jpenalbae",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-17T02:31:04.612Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-17T02:31:04.582Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T19:47:12.191Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "There is a NULL pointer dereference when parsing ternary operators which will cause a crash. This could be used to cause a DoS.\n\nSample code causing the crash (file sample.rb is also attached):\n```ruby\nb = a () ? 1 : 0\n```\n\nNote that `a ()` should be treated as a method call which in this case is also undefined, but when adding a blank in between the `a` and `()` it causes a crash (Find full crash attached as crash.log):\n```\n$ bin/sandbox /tmp/sample.rb\nbin/sandbox:20: [BUG] Segmentation fault at 0x00000000000000\nruby 2.3.1p112 (2016-04-26) [x86_64-linux-gnu]\n\n-- Control frame information -----------------------------------------------\nc:0003 p:---- s:0010 e:000009 CFUNC  :sandbox_eval\nc:0002 p:0201 s:0005 E:000a48 EVAL   bin/sandbox:20 [FINISH]\nc:0001 p:0000 s:0002 E:000380 (none) [FINISH]\n\n-- Ruby level backtrace information ----------------------------------------\nbin/sandbox:20:in `<main>'\nbin/sandbox:20:in `sandbox_eval'\n\n-- Machine register context ------------------------------------------------\n RIP: 0x00007f5de668c3df RBP: 0x00007f5de5237ef4 RSP: 0x00007ffdcbdda5e0\n RAX: 0x00007f5de5237e2c RBX: 0x00007f5de523f830 RCX: 0x0000000000000000\n RDX: 0x00007f5de66e710c RDI: 0x00007f5de5237f0c RSI: 0x0000000000000000\n  R8: 0x0000000000000000  R9: 0x00007f5de52055d0 R10: 0x0000000000000001\n R11: 0x0000000000000001 R12: 0x00007f5de52055d0 R13: 0x0000000000000005\n R14: 0x0000000000000001 R15: 0x00007f5de5237f24 EFL: 0x0000000000010217\n\n-- C level backtrace information -------------------------------------------\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea978ea5]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea9790dc]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea853364]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea904dbe]\n/lib/x86_64-linux-gnu/libpthread.so.0 [0x7f5dea5d7ed0]\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(codegen+0x37f) [0x7f5de668c3df] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1361\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(gen_values+0x52) [0x7f5de6692eb2] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:825\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(gen_call.isra.12+0x101) [0x7f5de66934c1] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:855\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(codegen+0x3722) [0x7f5de668f782] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1533\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(codegen+0x30d8) [0x7f5de668f138] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1637\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(codegen+0x2e9e) [0x7f5de668eefe] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1233\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(scope_body.isra.17+0x3e) [0x7f5de6694b2e] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:718\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(codegen+0x2187) [0x7f5de668e1e7] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1528\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(mrb_generate_code+0xda) [0x7f5de669663a] /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:2890\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(me_mruby_engine_generate_code+0x7a) [0x7f5de665800a] ../../../../ext/mruby_engine/mruby_engine.c:226\n/home/jaime/research/shopy/mruby-engine/lib/mruby_engine/mruby_engine.so(ext_mruby_engine_eval+0x89) [0x7f5de665a619] ../../../../ext/mruby_engine/ext.c:193\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea9667bb]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea9746a3]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea9756d3]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea96a509]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea96f342]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3 [0x7f5dea85671d]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3(ruby_exec_node+0x1d) [0x7f5dea85811d]\n/usr/lib/x86_64-linux-gnu/libruby-2.3.so.2.3(ruby_run_node+0x1e) [0x7f5dea85a25e]\nruby [0x40089b]\n/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf0) [0x7f5de9883730]\nruby(_start+0x29) [0x4008c9]\n```\n\nIf we run it under gdb:\n```\n$ gdb --args /usr/bin/ruby bin/sandbox /tmp/sample.rb\n(gdb) r\nStarting program: /usr/bin/ruby bin/sandbox /tmp/sample.rb\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[New Thread 0x7ffff7ff5700 (LWP 26490)]\n\nProgram received signal SIGSEGV, Segmentation fault.\n0x00007ffff37f53df in codegen (s=s@entry=0x7ffff23a8830, tree=0x7ffff23a0f24, val=val@entry=1) at /home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1361\n1361          node *e = tree->cdr->cdr->car;\n(gdb) x/2i 0x00007ffff37f53df\n=> 0x7ffff37f53df <codegen+895>:        mov    rax,QWORD PTR [rsi]\n   0x7ffff37f53e2 <codegen+898>:        lea    rcx,[rax-0x33]\n(gdb) i r rsi\nrsi            0x0      0\n(gdb) list *(0x00007ffff37f53df)\n0x7ffff37f53df is in codegen (/home/jaime/research/shopy/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1361).\n1356        break;\n1357\n1358      case NODE_IF:\n1359        {\n1360          int pos1, pos2;\n1361          node *e = tree->cdr->cdr->car;\n1362\n1363          switch ((intptr_t)tree->car->car) {\n1364          case NODE_TRUE:\n1365          case NODE_INT:\n(gdb) print tree\n$2 = (node *) 0x7ffff23a0f24\n(gdb) print tree->cdr\n$3 = (struct mrb_ast_node *) 0x7ffff23a0f0c\n(gdb) print tree->cdr->cdr\n$4 = (struct mrb_ast_node *) 0x7ffff23a0e2c\n(gdb) print tree->car\n$5 = (struct mrb_ast_node *) 0x0\n(gdb) print *tree\n$6 = {\n  car = 0x0,\n  cdr = 0x7ffff23a0f0c,\n  lineno = 1,\n  filename_index = 0\n}\n(gdb)\n```\n\nEven if gdb points that the bug is at `mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-compiler/core/codegen.c:1361` it is not, the bug its at the next line `1363`. Below is the affected code:\n\n```C\n  case NODE_IF:\n    {\n      int pos1, pos2;\n      node *e = tree->cdr->cdr->car;\n\n      switch ((intptr_t)tree->car->car) {   /* <-- tree->car happens to be NULL  */\n      case NODE_TRUE:\n      case NODE_INT:\n      case NODE_STR:\n        codegen(s, tree->cdr->car, val);\n        return;\n      case NODE_FALSE:\n      case NODE_NIL:\n        codegen(s, e, val);\n        return;\n      }\n      codegen(s, tree->car, VAL);\n      pop();\n```\n\nAs we can see from gdb and the code, the bug is at `switch ((intptr_t)tree->car->car)` as `tree->car` points to a NULL which causes the NULL pointer dereference when accessing it.\n\n\nTested under latest version:\n```\n$ date\nSat Nov 12 00:23:43 CET 2016\n$ cd mruby-engine/\n$ git rev-parse HEAD\n5a5eac4f380b5169882e8a851f0c0abcc7e2f266\n$ cd ext/mruby_engine/mruby\n$ git rev-parse HEAD\n6c299aae67e2e0f13a470b855298bc1efb43387a\n```",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 134201,
+      "file_name": "sample.rb",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/134/201/b08bad66737d092aa66c5ee76ee244b48edbcdde/sample.rb?response-content-disposition=attachment%3B%20filename%3D%22sample.rb%22%3B%20filename%2A%3DUTF-8%27%27sample.rb&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153124Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9408344dddc2c6a5fb837e236077828a7750ca503bbcdcf39a4b1c2be661a2d8",
+      "file_size": 17,
+      "type": "text/plain",
+      "moderated": null
+    },
+    {
+      "id": 134207,
+      "file_name": "crash.log",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/134/207/aa0e1cd227f1d805bf7886851a50c23976b276c8/crash.log?response-content-disposition=attachment%3B%20filename%3D%22crash.log%22%3B%20filename%2A%3DUTF-8%27%27crash.log&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153124Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=beff7b00a8a14b4acbb9a904db34458c7495e550d6c2a6ed33c9167d6cada496",
+      "file_size": 34317,
+      "type": "text/plain",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-01-15T19:47:12.248Z",
+  "allow_singular_disclosure_after": -293831052.7408608,
+  "singular_disclosure_allowed": true,
+  "vote_count": 10,
+  "voters": [
+    "madrobot",
+    "mpz",
+    "eveeez",
+    "japz",
+    "spetr0x",
+    "jaimin",
+    "scept1c",
+    "hackerjuan",
+    "frrrrriend",
+    "xcom"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

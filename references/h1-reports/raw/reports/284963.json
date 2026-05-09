@@ -1,0 +1,132 @@
+{
+  "id": 284963,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yODQ5NjM=",
+  "url": "https://hackerone.com/reports/284963",
+  "title": "Insecure Direct Object Reference on API without API key",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2017-10-31T22:04:56.909Z",
+  "submitted_at": "2017-10-31T22:04:56.909Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "scraps",
+    "url": "/scraps",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/rjjgitwtyi52qhnizz30wpx3e9qr/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15966,
+    "url": "https://hackerone.com/semrush",
+    "handle": "semrush",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/y7ptiv6rtfsv5gp8r7xt2fojdx4o/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/y7ptiv6rtfsv5gp8r7xt2fojdx4o/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Semrush",
+      "twitter_handle": "",
+      "website": "https://www.semrush.com/",
+      "about": "Online Visibility Management Platform."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-03-13T14:20:39.170Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-12-23T21:24:00.081Z",
+  "team_member_agreed_on_going_public_at": "2018-03-13T14:20:39.105Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nIt is possible to query the semrush API without specifying an API key. This allows anyone to query the API and retrieve information without having paid for a subscription. \n\nThis is not a security vulnerability as such, but I believe it does undermine your business model in that a user does not have to pay for access to your API.\n\n**Description:** \nThrough google dorking, I discovered that there are two results in google for  subdomains of api.semrush.com (see F234928). \n\nBy clicking either of the links, I realised that it is possible to change the domain parameter and get the information for that domain. This is all without specifying a valid API key. According to https://www.semrush.com/api-analytics/, a valid API key should be required to do these types of queries. \n\nI tried to further look at this by adding in other fields as per the API guide, and could submit any query I wished, such as: http://uk.api.semrush.com/?action=report&type=domain_rank&export_columns=Db,Dn,Rk,Or,Ot,Oc,Ad,At,Ac,Sv,Sh&domain=semrush.com (see F234936)\n\nI noticed that this doesn't work against api.semrush.com, only uk.api.semrush.com or us.api.semrush.com. It also works against fr.semrush.com, ie, anytime a subdomain of api.semrush.com is specified:\n\nhttp://us.api.semrush.com/?action=report&type=domain_rank&export_columns=Db,Dn,Rk,Or,Ot,Oc,Ad,At,Ac,Sv,Sh&domain=semrush.com&database=us\nhttp://uk.api.semrush.com/?action=report&type=domain_rank&export_columns=Db,Dn,Rk,Or,Ot,Oc,Ad,At,Ac,Sv,Sh&domain=semrush.com&database=us\nhttp://fr.api.semrush.com/?action=report&type=domain_rank&export_columns=Db,Dn,Rk,Or,Ot,Oc,Ad,At,Ac,Sv,Sh&domain=semrush.com&database=us\n\nThe above all work, but the following doesn't and specifies an error message saying: \"ERROR 120 :: WRONG KEY - ID PAIR\" (see F234935).\n\nhttp://api.semrush.com/?action=report&type=domain_rank&export_columns=Db,Dn,Rk,Or,Ot,Oc,Ad,At,Ac,Sv,Sh&domain=semrush.com&database=us\n\nThis proves that it is only subdomains of api.semrush.com which have this problem.\n\n**Browsers Verified In:**\n  * Firefox 56.0.2\n\n**Steps To Reproduce:** \n  1. Use the google dork site:*.api.semrush.com \n  2. Notice the two results that are returned \n  3. Clicking either result gives access to the result for that page and search result\n  4. Experiment with other URLs, such as: \nhttp://us.api.semrush.com/?action=report&type=domain_rank&domain=hackerone.com\nhttp://us.api.semrush.com/?action=report&type=domain_rank&domain=semrush.com\n  5. Notice that results are returned in every case - there doesn't appear to be anything stopping a user from making as many queries as they want, or even scripting this. \n\n**Impact:**\nIf this is the vulnerability I think it is, it effectively allows anyone to query the semrush database without having to pay for it, which would completely undermine your business model. Again, not a security risk as such, but would be a commercial risk. \n\n**Remediation:**\n * On the API processing, ensure that a valid API key must be present for results to be returned (taken from https://www.semrush.com/api-analytics/)\n * Ensure that those two results are removed from google by using google webmaster tools to request their removal\n * Do not allow search engines to index the *.api.semrush.com domain. This can be achieved with a robots.txt file\n",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 234928,
+      "file_name": "semrush_google.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/234/928/c358b143ac3e7a8235d3cc40bb3c6644a3223610/semrush_google.png?response-content-disposition=attachment%3B%20filename%3D%22semrush_google.png%22%3B%20filename%2A%3DUTF-8%27%27semrush_google.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152440Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9df5170f6ddcecffdfd24c6cb175d716cb120d6a7fc64eb59b6693cc5a812a80",
+      "file_size": 42174,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 234935,
+      "file_name": "semrush_google2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/234/935/5809dfb56298c03fe010c698dc49254022ebf6f4/semrush_google2.png?response-content-disposition=attachment%3B%20filename%3D%22semrush_google2.png%22%3B%20filename%2A%3DUTF-8%27%27semrush_google2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152440Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3cffd902cd59cb015366135f749304dc0b84880151160f34667e0b97692f77b9",
+      "file_size": 13471,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 234936,
+      "file_name": "semrush_google3.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/234/936/4150967e5287285c464cfa5345a1d71f1acc8bbe/semrush_google3.png?response-content-disposition=attachment%3B%20filename%3D%22semrush_google3.png%22%3B%20filename%2A%3DUTF-8%27%27semrush_google3.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152440Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6b584bbd366e47bb735784d0fbb46115ec2ff3ffa358cc03f3dafea11d0967e8",
+      "file_size": 22577,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 4,
+  "voters": [
+    "wargsec",
+    "foobar7",
+    "raslanco",
+    "klau5"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

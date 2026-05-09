@@ -1,0 +1,140 @@
+{
+  "id": 1695472,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjk1NDcy",
+  "url": "https://hackerone.com/reports/1695472",
+  "title": "DOS validator nodes of blockchain to block external connections",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-09-08T16:37:05.986Z",
+  "submitted_at": "2022-09-08T16:37:06.035Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cre8",
+    "url": "/cre8",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22522,
+    "url": "https://hackerone.com/hyperledger",
+    "handle": "hyperledger",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4unr4nty3m2omunib0bwxy2s189l/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4unr4nty3m2omunib0bwxy2s189l/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Linux Foundation Decentralized Trust",
+      "twitter_handle": "lfdecentralized",
+      "website": "https://www.lfdecentralizedtrust.org/",
+      "about": "An industry-wide open source initiative to advance blockchain technology, governed by The Linux Foundation."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2022-31006"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-09-13T07:56:43.496Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2022-09-11T09:06:00.136Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Attack was documented in the in the github repo: https://github.com/hyperledger/indy-node/security/advisories/GHSA-x996-7qh9-7ff7\n\n# Attack:\nThe attacker sends 500 read requests to each node and opens a new one when\nholding 500 parallel connections. Every user is able to send read requests\nsince it's a public readable registry so setting up an allowlist like it's\ndone with the nodes' port for the consensus does not work here. To increase\nthe efficiency:\n\nthe custom read request is increased with more bytes (random header or\njson values)\nthe bandwidth of the sender machine is limited\nRequirements on the attacker side:\nIndy-VDR: comment out the timeouts. Using another tool to send the requests\ncould be even more efficient\nVM: attack can be performed from one or multiple VMs limited connection: using\nTC to limit the bandwidth (value depends on the amount of connections)\nSample Implementation\nWe set up a VON-Network and added the firewall rules. The VM had 32 CPUs\nand 64 GB RAM\n\n# Result:\nthere is no damage to the blockchain, only an unreachable network as long\nas the attack is going on .\nOther clients are not able to send read or write requests to the nodes. In\nthe \"best case\" their requests will go through but with a response time of\nmultiple seconds, see:\nNot available [image: image.png]\n\nNot available [image: image.png]\n\n# Counteractions:\nblacklisting actors: It does not matter what is in the body since the\nfirewall rule acts in front of indy that is processing the information. To\navoid big requests the firewall could set a limit of the request size, but\nthis could also block valid requests.\nScaling via the observer-pattern: Right now the amount of nodes is\nlimited so blocking 25*500 connections is very easy. When adding nodes in\nfront of the validators to prevent accessing from the internet the\nvalidators are save, but then all the observers are under attack\nScalability: Giving the VMs more CPU and RAM to increase the parallel\nconnections amount can help in first run, but the DoS attack can be\nperformed as a DDos. An attacker does not have to DoS the network 24/7, but\ncan scale up the VMs on demand to attack a specific network. The setup is\ndone in about 2 minutes automatically. In our test we used 500 as the\nlimit. Maybe there is some kind of algorithm for the node administrators to\ncalculate the limit based on their CPU. But in this case the attacker can\nalso increase his ressources.\n\n## Impact\n\nAn attacker can max out the number of client connections allowed by the ledger, leaving the ledger unable to be used for its intended purpose.\n\nHowever, the ledger content will not be impacted and the ledger will resume servicing client requests after the conclusion of the attack.",
+  "bounty_amount": "1500.0",
+  "formatted_bounty": "$1,500",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-10-11T09:06:00.236Z",
+  "allow_singular_disclosure_after": -112860234.6160684,
+  "singular_disclosure_allowed": true,
+  "vote_count": 20,
+  "voters": [
+    "zy9ard3",
+    "polem4rch",
+    "c4l33ph4",
+    "h4x0r_dz",
+    "khizer47",
+    "shivammusic",
+    "frank-hacker2000",
+    "h4ckimo3",
+    "davrex",
+    "eon1088",
+    "and 10 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 3035,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/hyperledger/indy-node",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

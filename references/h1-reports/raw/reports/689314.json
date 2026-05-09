@@ -1,0 +1,166 @@
+{
+  "id": 689314,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82ODkzMTQ=",
+  "url": "https://hackerone.com/reports/689314",
+  "title": "Project Template functionality can be used to copy private project data, such as repository, confidential issues, snippets, and merge requests",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-09-06T05:40:41.068Z",
+  "submitted_at": "2019-09-06T05:40:41.068Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-11-27T10:02:44.156Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-10-11T17:25:06.264Z",
+  "team_member_agreed_on_going_public_at": "2019-11-27T10:02:44.060Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I've found a three minor vulnerabilities which, when combined, allow an attacker to copy private repositories, confidential issues, private snippets, and then some. I'll go through the code path to explain the vulnerabilities and how they are combined. See the **Proof of Concept** section if you want to reproduce it immediately.\n\nLet's start at the `ProjectsController` of EE, which is prepended to `app/controllers/projects_controller.rb` in an EE instance. \n\n**ee/app/controllers/ee/projects_controller.rb**\n```ruby\noverride :project_params_attributes\n    def project_params_attributes\n      super + project_params_ee\n    end\n\ndef project_params_ee\n  attrs = %i[\n    # ...\n    use_custom_template\n    # ...\n    group_with_project_templates_id\n  ]\n\n  # ...\n\n  attrs\nend\n```\n\nThis method defines what parameters can be passed by the user. The two notable parameters here are `use_custom_template` and `group_with_project_templates_id`. This method appends the result value of `project_params_attributes` method in `app/controllers/projects_controller.rb` on line 351, which specifies all the CE attributes a user can provide when creating a project. The CE controller allows the `template_name` parameter to be passed, too. This means that these three parameters can be passed to the `Projects::CreateService` in the `create` method:\n\n**app/controllers/projects_controller.rb**\n```ruby\ndef create\n  @project = ::Projects::CreateService.new(current_user, project_params(attributes: project_params_create_attributes)).execute\n\n  # ...\nend\n\n# ...\n\ndef project_params_attributes\n  [\n    # ...\n    :template_name,\n    # ...\n  ]\n```\n\nIn EE, the `EE:Projects::CreateService` is prepended to the `Projects::CreateService`. The prepended EE code contains logic to validate the `use_custom_template` and `group_with_project_templates_id` parameters.\n\n**ee/app/services/ee/projects/create_service.rb**\n```ruby\ndef execute\n  # ...\n\n  group_with_project_templates_id = params.delete(:group_with_project_templates_id) if params[:template_name].blank?\n\n  # ...\n\n    validate_namespace_used_with_template(project, group_with_project_templates_id)\nend\n\n# ...\n\ndef validate_namespace_used_with_template(project, group_with_project_templates_id)\n  return unless project.group\n\n  subgroup_with_templates_id = group_with_project_templates_id || params[:group_with_project_templates_id]\n  return if subgroup_with_templates_id.blank?\n\n  templates_owner = ::Group.find(subgroup_with_templates_id).parent\n\n  unless templates_owner.self_and_descendants.exists?(id: project.namespace_id)\n    project.errors.add(:namespace, _(\"is not a descendant of the Group owning the template\"))\n  end\nend\n```\n\nThe code above is where the first vulnerability can be found. In a normal situation, a Project Template can only be copied to a namespace (group) that is a descendant of the project template. However, the `validate_namespace_used_with_template` method returns a `nil` value when the project is **not** being created for a group (`return unless project.group`). This means that if a `group_with_project_templates_id` is given for a project that is created in a `User` namespace, the authorization / validation logic is never executed. This means that the `use_custom_template` and `group_with_project_templates_id` parameters remain to be set on the instance variable `params`.\n\nBecause the EE code is prepended, the `execute` method is executed before the `Projects::CreateService` is called. Because the EE class its validation logic is bypassed, the `execute` method of the `Projects::CreateService` class is called:\n\n**app/services/projects/create_service.rb**\n```ruby\ndef execute\n  if @params[:template_name].present?\n    return ::Projects::CreateFromTemplateService.new(current_user, params).execute\n  end\n\n  # ...\nend\n```\n\nWhen a `template_name` is given, instead of executing the normal execution flow, the result of `Projects::CreateFromTemplateService` is returned. The CE code for this class isn't very important. The EE class contains the logic that is worth checking out:\n\n**ee/app/services/ee/projects/create_from_template_service.rb**\n```ruby\ndef execute\n  return super unless use_custom_template?\n\n  override_params = params.dup\n  params[:custom_template] = template_project if template_project\n\n  ::Projects::GitlabProjectsImportService.new(current_user, params, override_params).execute\nend\n\nprivate\n\ndef use_custom_template?\n  # ...\n    template_name &&\n      ::Gitlab::Utils.to_boolean(params.delete(:use_custom_template)) &&\n      ::Gitlab::CurrentSettings.custom_project_templates_enabled?\n  # ...\nend\n\ndef template_project\n  # ...\n    current_user.available_custom_project_templates(search: template_name, subgroup_id: subgroup_id)\n                .first\n  # ...\nend\n\ndef subgroup_id\n  params[:group_with_project_templates_id].presence\nend\n```\n\nThis class does a couple of things: it makes sure a custom template name is given, that it should use the given template name, and that the GitLab instance has custom project templates enabled. For what it's worth: gitlab.com has this setting enabled. When it passes those checks, the `template_project` method is invoked. Here is the definition of the `available_custom_project_templates` method:\n\n**ee/app/models/ee/user.rb**\n```ruby\ndef available_custom_project_templates(search: nil, subgroup_id: nil)\n  templates = ::Gitlab::CurrentSettings.available_custom_project_templates(subgroup_id)\n\n  ::ProjectsFinder.new(current_user: self,\n                       project_ids_relation: templates,\n                       params: { search: search, sort: 'name_asc' })\n                  .execute\nend\n```\n\nThis method requires two parameters: `search` and `subgroup_id`. The first one is the `template_name` the user passes, the second one `group_with_project_templates_id`. The `templates` variable gets its value based on the following method definition:\n\n**ee/app/models/ee/application_setting.rb**\n```ruby\ndef available_custom_project_templates(subgroup_id = nil)\n  group_id = subgroup_id || custom_project_templates_group_id\n\n  return ::Project.none unless group_id\n\n  ::Project.where(namespace_id: group_id) \nend\n```\n\nThis method will return all `Project` models based on the `namespace_id` that is provided in the `subgroup_id` parameter. This is then passed to the `ProjectsFinder` in the `available_custom_project_templates` method on the `User` model. This is where the second vulnerability can be found. The `ProjectsFinder` uses an initial collection, which consists of the projects the authenticated user can access. However, it does **not** check the access level of the user. This means that any project that is public, but has Repository, Issue, Snippets (etc.) access disabled for Guests, will be returned by the `available_custom_project_templates` method on the `User` model. In a perfect world, it seems that this method would limit the projects that can be returned based on the user's permissions for said projects.\n\nIf we go back to the `EE:Projects::CreateFromTemplateService` file, you can see that the `template_project` will return the first project that is returned by the `available_custom_project_templates` method. This means that `params[:custom_template]` may contain a `Project` model that the user is not authorized to see everything for. The `EE::Projects::CreateFromTemplateService` class then calls the `Projects::GitlabProjectsImportService` class with the updated parameters.\n\n**ee/app/services/ee/projects/gitlab_projects_import_service.rb**\n```ruby\ndef execute\n  super.tap do |project|\n    if project.saved? && custom_template\n      custom_template.add_export_job(current_user: current_user,\n                                     after_export_strategy: export_strategy(project))\n    end\n  end\nend\n\nprivate\n\noverride :prepare_import_params\ndef prepare_import_params\n  super\n\n  if custom_template\n    params[:import_type] = 'gitlab_custom_project_template'\n  end\nend\n\ndef custom_template\n  strong_memoize(:custom_template) do\n    params.delete(:custom_template)\n  end\nend\n\ndef export_strategy(project) \n Gitlab::ImportExport::AfterExportStrategies::CustomTemplateExportImportStrategy.new(export_into_project_id: project.id)\nend\n```\n\nThis EE class is prepended, but uses `super.tap` to call the CE code (`super`) and then taps into the result of the CE code. If `params[:custom_template]` has been set and the project was successfully saved by the `super` call, an export job is scheduled for the `custom_template` that was returned by the `ProjectsFinder`. It's worth nothing that at this point the user may not be authorized to see the code, issues, etc., of the project. Additionally, an export strategy is passed that imports the export file in the newly created project.\n\nThis is where the third vulnerability can be found. When an export job is scheduled, it assumes the user is authorized to make the export. Ideally, the Sidekiq job (`ProjectExportWorker`) that is scheduled would do an authorization check to make sure that the user is authorized to export the project. This would also avoid a TOCTOU issue where the user schedules a job when the queue is clogged / Sidekiq workers are paused and would leave the project before the job is executed. When the export is created, it'll automatically be imported in the project that the user has full access to.\n\nCombined, these vulnerabilities results in an attacker being able to obtain any confidential information that is included in a project export. This vulnerability **only** works for public projects with limited access levels for repositories, issues, pipelines, merge requests (and more) that belong to a group. A good example of this would be `gitlab-org`, `gitlab-data`, `gitlab-com`, on gitlab.com. There are plenty of repositories, such as https://gitlab.com/gitlab-com/finance (see below), that are public but don't expose the repository, issues, and merge requests.\n\n{F576178}\n\n# Proof of Concept\nTo reproduce this vulnerability:\n\n* sign in as a normal user and create a group, let's assume this is group ID 1\n* within this group, create a public project named `test_project`\n* under **Settings > General** update the **Visibility, project features, permissions** to only allow Issues, Repository, Wiki, and Snippets to be seen by **Only Project Members**:\n\n{F576180}\n\n* sign into another account and go to http://instance/projects/new\n* create a new project and intercept the request, it'll look something like this (I've left out unimportant parameters):\n\n```\nPOST /projects HTTP/1.1\nHost: instance\n...\n\n----------506740453\nContent-Disposition: form-data; name=\"project[use_custom_template]\"\n\nfalse\n----------506740453\nContent-Disposition: form-data; name=\"project[template_name]\"\n\n----------506740453\nContent-Disposition: form-data; name=\"project[group_with_project_templates_id]\"\n\n----------506740453\nContent-Disposition: form-data; name=\"project[name]\"\n\nproject_name\n----------506740453\nContent-Disposition: form-data; name=\"project[namespace_id]\"\n\n1\n----------506740453\nContent-Disposition: form-data; name=\"project[path]\"\n\nproject_name\n----------506740453--\n```\n\n* in this request, change `use_custom_template` to `true`, the `template_name` to the name the victim gave to the project (`test_project`), and `group_with_project_templates_id` to the group ID of the public group the victim created (`1`). When forwarded, the server will respond with a redirect and, when followed, show a page indicating that the project is being imported:\n\n{F576184}\n\nDepending on the size of the project and how busy the queues are, it can take a couple of minutes to generate the export of the project and then import it to the new project. Come back in a couple minutes and find the repository, confidential issues, private snippets, merge requests, CI pipelines, and more being copied to the attacker's project.\n\n**Redacted copy of `gitlab-com/finance`**\n{F576189}\n\n## Impact\n\nAny access level that has been put in place for projects the user can access can be bypassed using this vulnerability. According to the documentation, this means that the following information can be obtained:\n\n* Project and wiki repositories\n* Project uploads\n* Project configuration, including services\n* Issues with comments, merge requests with diffs and comments, labels, milestones, snippets, and other project entities\n* LFS objects\n* Issue Boards\n\n{F576190}",
+  "bounty_amount": "12000.0",
+  "formatted_bounty": "$12,000",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 576178,
+      "file_name": "Screen_Shot_2019-09-05_at_10.08.18_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/YJg2MxMjQFVWz8m31AMTNF2n?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-09-05_at_10.08.18_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-09-05_at_10.08.18_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVTZRXMJE%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152051Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCQug7xHOhoQpf%2BGFYu8Ag1vnbpU2O5seGEVEeTYr4A%2BwIgV7jBUtc%2BOqBUqcOHoth872hTyz2AKsesaW3tOa0%2BB9QqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHZaSI%2BasGS%2FaEYVICqOBe8KcIVP%2Fp%2Bg9cjZ4z2H9oKvB4FtoV1kmU2UlVHdiSs%2Br6lOhd3ZZ8AorflXCzlQIib080J5GlJLjRkS5mJWWyaPuahIrKEsvEpdUhz7Q4sFYsy9EntM39VQOu0JhjDp5i%2FjAwEAwQ%2FfGE4zqMTYymYDuWXxfz9fUd3%2Bdr1OaSFEbubI45ehrO0jAd8ZCUNvMq%2FsDUU8ROh%2BDbypzqkJ0A8kIp2huMJ33Qi%2B4uvVvxdXuVDbVuzNgySiNF08NIBbcRhXNFDNTWxRX2A%2FLKMMRJEr7ZFG%2FIp%2FlxU0Sb6B5h5pkHF5ioGYo1aWjwjYctVe6rHvRmcR0Q7a4VXnnpJNNrXQxxy7v%2F3Fx7CJIUUe4LXccIGEgIQFMIBmGGsPL9Q0Zrevzga8QanAm3WQy798sCZxES%2BVJckc8tP699xHaudavcFBpPK46IkoEEdYDgn%2FPvQUl7OMJpPYM5EPCteaPm7Z1cVPE8K4MzuWKtOn4GGpHqwvGy1ftsRr56ND%2FiULbfS8N5aIDcZ1gUd%2BKhHAbdHPZJ5ffb1UqIYaXXHdku0Q9ZZ3c7v%2FRyu8NQkDdsxPH20IZAvnNiaNkNm98Wu6CKaQg%2BQgiauDdX%2FtHzGMJbMIFwvdqyLvIrKni8VzQXMuohRcaHxw4qDqY7HwrHH0SW3O7BM%2FfOr9G%2Bz1sl0a5iHiY79QamfSokvAwBfADX04pQo%2F5H09IG%2Fx3YjCw6yTD754h%2BBQTsBGH3%2FvhGic%2F%2BTezo0wkNpDzTg0ELtE1TVNMDkjJHmATLpPgi77LBqNN33ERQtB8wRp4f44y88rOQB2UG3OD2z%2BYiNPLappLisYI%2BOy8WgAUo2H0Vomse56U7UQX7AEPLL1fRaJkTaeJTDtk%2F3PBjqxAX5eDpL8cOsdZRN1IFsaSRigjSiWgly0VALXxKm7ANaQnF0YTr6jLvdeAlRsZnF4ejiQbqDQjWge6pYzTf%2FvaAg4SS1iIKjqGIVaHj%2F%2BbVnEqCkaOBSiMDQsRZ26%2B8nrgKtXz321aJUGNzawDtYkqN0ObRnA%2BV09gG1dPOqULgNr4a4XRKi4Xtt44FZDD9cp6JwmbcLF0NnvAK5qpxS%2F11SYxr98EzoTUn%2B2mMMyDX91HA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2075e6b9611fb110145924ae91b40c001921462ac0a896969afd2e0a232e6fa5",
+      "file_size": 42822,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 576180,
+      "file_name": "Screen_Shot_2019-09-05_at_10.13.21_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/56DQDWBuNn7wzkMA2XHp4Hav?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-09-05_at_10.13.21_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-09-05_at_10.13.21_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVTZRXMJE%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152051Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCQug7xHOhoQpf%2BGFYu8Ag1vnbpU2O5seGEVEeTYr4A%2BwIgV7jBUtc%2BOqBUqcOHoth872hTyz2AKsesaW3tOa0%2BB9QqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHZaSI%2BasGS%2FaEYVICqOBe8KcIVP%2Fp%2Bg9cjZ4z2H9oKvB4FtoV1kmU2UlVHdiSs%2Br6lOhd3ZZ8AorflXCzlQIib080J5GlJLjRkS5mJWWyaPuahIrKEsvEpdUhz7Q4sFYsy9EntM39VQOu0JhjDp5i%2FjAwEAwQ%2FfGE4zqMTYymYDuWXxfz9fUd3%2Bdr1OaSFEbubI45ehrO0jAd8ZCUNvMq%2FsDUU8ROh%2BDbypzqkJ0A8kIp2huMJ33Qi%2B4uvVvxdXuVDbVuzNgySiNF08NIBbcRhXNFDNTWxRX2A%2FLKMMRJEr7ZFG%2FIp%2FlxU0Sb6B5h5pkHF5ioGYo1aWjwjYctVe6rHvRmcR0Q7a4VXnnpJNNrXQxxy7v%2F3Fx7CJIUUe4LXccIGEgIQFMIBmGGsPL9Q0Zrevzga8QanAm3WQy798sCZxES%2BVJckc8tP699xHaudavcFBpPK46IkoEEdYDgn%2FPvQUl7OMJpPYM5EPCteaPm7Z1cVPE8K4MzuWKtOn4GGpHqwvGy1ftsRr56ND%2FiULbfS8N5aIDcZ1gUd%2BKhHAbdHPZJ5ffb1UqIYaXXHdku0Q9ZZ3c7v%2FRyu8NQkDdsxPH20IZAvnNiaNkNm98Wu6CKaQg%2BQgiauDdX%2FtHzGMJbMIFwvdqyLvIrKni8VzQXMuohRcaHxw4qDqY7HwrHH0SW3O7BM%2FfOr9G%2Bz1sl0a5iHiY79QamfSokvAwBfADX04pQo%2F5H09IG%2Fx3YjCw6yTD754h%2BBQTsBGH3%2FvhGic%2F%2BTezo0wkNpDzTg0ELtE1TVNMDkjJHmATLpPgi77LBqNN33ERQtB8wRp4f44y88rOQB2UG3OD2z%2BYiNPLappLisYI%2BOy8WgAUo2H0Vomse56U7UQX7AEPLL1fRaJkTaeJTDtk%2F3PBjqxAX5eDpL8cOsdZRN1IFsaSRigjSiWgly0VALXxKm7ANaQnF0YTr6jLvdeAlRsZnF4ejiQbqDQjWge6pYzTf%2FvaAg4SS1iIKjqGIVaHj%2F%2BbVnEqCkaOBSiMDQsRZ26%2B8nrgKtXz321aJUGNzawDtYkqN0ObRnA%2BV09gG1dPOqULgNr4a4XRKi4Xtt44FZDD9cp6JwmbcLF0NnvAK5qpxS%2F11SYxr98EzoTUn%2B2mMMyDX91HA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f58e2a9125dbc8a5fd972dcda19ac1188f254ea7c85e2e0111870ad9c6d8372f",
+      "file_size": 77342,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 576184,
+      "file_name": "Screen_Shot_2019-09-05_at_10.17.09_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/7iEDiBFgHrATxZkkAtqhmNhR?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-09-05_at_10.17.09_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-09-05_at_10.17.09_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVTZRXMJE%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152051Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCQug7xHOhoQpf%2BGFYu8Ag1vnbpU2O5seGEVEeTYr4A%2BwIgV7jBUtc%2BOqBUqcOHoth872hTyz2AKsesaW3tOa0%2BB9QqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHZaSI%2BasGS%2FaEYVICqOBe8KcIVP%2Fp%2Bg9cjZ4z2H9oKvB4FtoV1kmU2UlVHdiSs%2Br6lOhd3ZZ8AorflXCzlQIib080J5GlJLjRkS5mJWWyaPuahIrKEsvEpdUhz7Q4sFYsy9EntM39VQOu0JhjDp5i%2FjAwEAwQ%2FfGE4zqMTYymYDuWXxfz9fUd3%2Bdr1OaSFEbubI45ehrO0jAd8ZCUNvMq%2FsDUU8ROh%2BDbypzqkJ0A8kIp2huMJ33Qi%2B4uvVvxdXuVDbVuzNgySiNF08NIBbcRhXNFDNTWxRX2A%2FLKMMRJEr7ZFG%2FIp%2FlxU0Sb6B5h5pkHF5ioGYo1aWjwjYctVe6rHvRmcR0Q7a4VXnnpJNNrXQxxy7v%2F3Fx7CJIUUe4LXccIGEgIQFMIBmGGsPL9Q0Zrevzga8QanAm3WQy798sCZxES%2BVJckc8tP699xHaudavcFBpPK46IkoEEdYDgn%2FPvQUl7OMJpPYM5EPCteaPm7Z1cVPE8K4MzuWKtOn4GGpHqwvGy1ftsRr56ND%2FiULbfS8N5aIDcZ1gUd%2BKhHAbdHPZJ5ffb1UqIYaXXHdku0Q9ZZ3c7v%2FRyu8NQkDdsxPH20IZAvnNiaNkNm98Wu6CKaQg%2BQgiauDdX%2FtHzGMJbMIFwvdqyLvIrKni8VzQXMuohRcaHxw4qDqY7HwrHH0SW3O7BM%2FfOr9G%2Bz1sl0a5iHiY79QamfSokvAwBfADX04pQo%2F5H09IG%2Fx3YjCw6yTD754h%2BBQTsBGH3%2FvhGic%2F%2BTezo0wkNpDzTg0ELtE1TVNMDkjJHmATLpPgi77LBqNN33ERQtB8wRp4f44y88rOQB2UG3OD2z%2BYiNPLappLisYI%2BOy8WgAUo2H0Vomse56U7UQX7AEPLL1fRaJkTaeJTDtk%2F3PBjqxAX5eDpL8cOsdZRN1IFsaSRigjSiWgly0VALXxKm7ANaQnF0YTr6jLvdeAlRsZnF4ejiQbqDQjWge6pYzTf%2FvaAg4SS1iIKjqGIVaHj%2F%2BbVnEqCkaOBSiMDQsRZ26%2B8nrgKtXz321aJUGNzawDtYkqN0ObRnA%2BV09gG1dPOqULgNr4a4XRKi4Xtt44FZDD9cp6JwmbcLF0NnvAK5qpxS%2F11SYxr98EzoTUn%2B2mMMyDX91HA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6a5896b46a1807a331792bf83f3e4c50602d0e312c05798e0fcaf92827dc869c",
+      "file_size": 14209,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 576189,
+      "file_name": "Screen_Shot_2019-09-05_at_10.19.15_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/U4T78d2Ai7e5K5WrkV3tQn2D?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2019-09-05_at_10.19.15_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2019-09-05_at_10.19.15_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVTZRXMJE%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152051Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCQug7xHOhoQpf%2BGFYu8Ag1vnbpU2O5seGEVEeTYr4A%2BwIgV7jBUtc%2BOqBUqcOHoth872hTyz2AKsesaW3tOa0%2BB9QqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHZaSI%2BasGS%2FaEYVICqOBe8KcIVP%2Fp%2Bg9cjZ4z2H9oKvB4FtoV1kmU2UlVHdiSs%2Br6lOhd3ZZ8AorflXCzlQIib080J5GlJLjRkS5mJWWyaPuahIrKEsvEpdUhz7Q4sFYsy9EntM39VQOu0JhjDp5i%2FjAwEAwQ%2FfGE4zqMTYymYDuWXxfz9fUd3%2Bdr1OaSFEbubI45ehrO0jAd8ZCUNvMq%2FsDUU8ROh%2BDbypzqkJ0A8kIp2huMJ33Qi%2B4uvVvxdXuVDbVuzNgySiNF08NIBbcRhXNFDNTWxRX2A%2FLKMMRJEr7ZFG%2FIp%2FlxU0Sb6B5h5pkHF5ioGYo1aWjwjYctVe6rHvRmcR0Q7a4VXnnpJNNrXQxxy7v%2F3Fx7CJIUUe4LXccIGEgIQFMIBmGGsPL9Q0Zrevzga8QanAm3WQy798sCZxES%2BVJckc8tP699xHaudavcFBpPK46IkoEEdYDgn%2FPvQUl7OMJpPYM5EPCteaPm7Z1cVPE8K4MzuWKtOn4GGpHqwvGy1ftsRr56ND%2FiULbfS8N5aIDcZ1gUd%2BKhHAbdHPZJ5ffb1UqIYaXXHdku0Q9ZZ3c7v%2FRyu8NQkDdsxPH20IZAvnNiaNkNm98Wu6CKaQg%2BQgiauDdX%2FtHzGMJbMIFwvdqyLvIrKni8VzQXMuohRcaHxw4qDqY7HwrHH0SW3O7BM%2FfOr9G%2Bz1sl0a5iHiY79QamfSokvAwBfADX04pQo%2F5H09IG%2Fx3YjCw6yTD754h%2BBQTsBGH3%2FvhGic%2F%2BTezo0wkNpDzTg0ELtE1TVNMDkjJHmATLpPgi77LBqNN33ERQtB8wRp4f44y88rOQB2UG3OD2z%2BYiNPLappLisYI%2BOy8WgAUo2H0Vomse56U7UQX7AEPLL1fRaJkTaeJTDtk%2F3PBjqxAX5eDpL8cOsdZRN1IFsaSRigjSiWgly0VALXxKm7ANaQnF0YTr6jLvdeAlRsZnF4ejiQbqDQjWge6pYzTf%2FvaAg4SS1iIKjqGIVaHj%2F%2BbVnEqCkaOBSiMDQsRZ26%2B8nrgKtXz321aJUGNzawDtYkqN0ObRnA%2BV09gG1dPOqULgNr4a4XRKi4Xtt44FZDD9cp6JwmbcLF0NnvAK5qpxS%2F11SYxr98EzoTUn%2B2mMMyDX91HA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a1fa9ee654fdfbdf7fc771ac5cace24b51eb881c79459201f7c578e0fb307c2b",
+      "file_size": 81598,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 576190,
+      "file_name": "cat.gif",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/7cGEg6PnngXDrDJvUgGvLtdx?response-content-disposition=attachment%3B%20filename%3D%22cat.gif%22%3B%20filename%2A%3DUTF-8%27%27cat.gif&response-content-type=image%2Fgif&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVTZRXMJE%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152051Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQCQug7xHOhoQpf%2BGFYu8Ag1vnbpU2O5seGEVEeTYr4A%2BwIgV7jBUtc%2BOqBUqcOHoth872hTyz2AKsesaW3tOa0%2BB9QqugUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHZaSI%2BasGS%2FaEYVICqOBe8KcIVP%2Fp%2Bg9cjZ4z2H9oKvB4FtoV1kmU2UlVHdiSs%2Br6lOhd3ZZ8AorflXCzlQIib080J5GlJLjRkS5mJWWyaPuahIrKEsvEpdUhz7Q4sFYsy9EntM39VQOu0JhjDp5i%2FjAwEAwQ%2FfGE4zqMTYymYDuWXxfz9fUd3%2Bdr1OaSFEbubI45ehrO0jAd8ZCUNvMq%2FsDUU8ROh%2BDbypzqkJ0A8kIp2huMJ33Qi%2B4uvVvxdXuVDbVuzNgySiNF08NIBbcRhXNFDNTWxRX2A%2FLKMMRJEr7ZFG%2FIp%2FlxU0Sb6B5h5pkHF5ioGYo1aWjwjYctVe6rHvRmcR0Q7a4VXnnpJNNrXQxxy7v%2F3Fx7CJIUUe4LXccIGEgIQFMIBmGGsPL9Q0Zrevzga8QanAm3WQy798sCZxES%2BVJckc8tP699xHaudavcFBpPK46IkoEEdYDgn%2FPvQUl7OMJpPYM5EPCteaPm7Z1cVPE8K4MzuWKtOn4GGpHqwvGy1ftsRr56ND%2FiULbfS8N5aIDcZ1gUd%2BKhHAbdHPZJ5ffb1UqIYaXXHdku0Q9ZZ3c7v%2FRyu8NQkDdsxPH20IZAvnNiaNkNm98Wu6CKaQg%2BQgiauDdX%2FtHzGMJbMIFwvdqyLvIrKni8VzQXMuohRcaHxw4qDqY7HwrHH0SW3O7BM%2FfOr9G%2Bz1sl0a5iHiY79QamfSokvAwBfADX04pQo%2F5H09IG%2Fx3YjCw6yTD754h%2BBQTsBGH3%2FvhGic%2F%2BTezo0wkNpDzTg0ELtE1TVNMDkjJHmATLpPgi77LBqNN33ERQtB8wRp4f44y88rOQB2UG3OD2z%2BYiNPLappLisYI%2BOy8WgAUo2H0Vomse56U7UQX7AEPLL1fRaJkTaeJTDtk%2F3PBjqxAX5eDpL8cOsdZRN1IFsaSRigjSiWgly0VALXxKm7ANaQnF0YTr6jLvdeAlRsZnF4ejiQbqDQjWge6pYzTf%2FvaAg4SS1iIKjqGIVaHj%2F%2BbVnEqCkaOBSiMDQsRZ26%2B8nrgKtXz321aJUGNzawDtYkqN0ObRnA%2BV09gG1dPOqULgNr4a4XRKi4Xtt44FZDD9cp6JwmbcLF0NnvAK5qpxS%2F11SYxr98EzoTUn%2B2mMMyDX91HA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=dfee1f3d542d3f7c7a1172d467802def17f2ec96fcb07dc18350504f209bac13",
+      "file_size": 743883,
+      "type": "image/gif",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 455,
+  "voters": [
+    "feedadad",
+    "hellnia",
+    "coder_mohammed",
+    "sky003",
+    "taha",
+    "defenderwww",
+    "orange303",
+    "lel3x",
+    "aboalezz",
+    "act1on3",
+    "and 445 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

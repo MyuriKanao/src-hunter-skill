@@ -1,0 +1,148 @@
+{
+  "id": 2941920,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTQxOTIw",
+  "url": "https://hackerone.com/reports/2941920",
+  "title": "Elevation of Privileges (EoP) vulnerabilities related to the some easy_options on Windows",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2025-01-16T12:00:21.191Z",
+  "submitted_at": "2025-01-16T12:00:21.839Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "justlikebono_official",
+    "url": "/justlikebono_official",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-07-03T06:43:25.420Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-07-01T14:11:20.429Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nAn Elevation of Privileges (EoP) vulnerability can occur in a Windows privileged process that uses CURLOPT_COOKIEJAR, CURLOPT_HSTS, or CURLOPT_ALTSVC.\nThis vulnerability arises due to the differences in the implementation of the unlink function between Windows and Linux, as well as the behavior of MoveFileEx, which follows specially crafted links.\nGiven that many components, such as program updaters, frequently use curl with elevated privileges, this issue must be considered a serious concern.\n\n## Affected version\n\nlibcurl latest version (8.11.1)\n\n## Description\n\nlibcurl provides easy options such as `CURLOPT_COOKIEJAR`, `CURLOPT_HSTS`, and `CURLOPT_ALTSVC`. For example, when `CURLOPT_COOKIEJAR` is set, the library user can specify a file where cookie information will be stored.\n\nSince libcurl is widely used for web communication, it is often utilized in privileged programs that need to communicate with web servers, such as program updaters.\n\nThe issue is that privileged programs using the aforementioned options may occur a Elevation of Privileges (EoP) vulnerability. Since all three options share a very similar code structure, this explanation will focus on `CURLOPT_COOKIEJAR`.\n\nIn the `cookie_output` function of `lib/cookie.c`, the output file's `FILE` pointer is obtained via `Curl_fopen`. The `Curl_fopen` function generates a random temporary file based on the file path specified by the library user through `CURLOPT_COOKIEJAR` and returns the `FILE` pointer to this temporary file.\n\nSubsequently, `cookie_output` writes the cookie contents to the temporary file and then moves the temporary file to the user-specified file path using `Curl_rename`. Internally, `Curl_rename` calls the `MoveFileExA` API, and if this attempt fails, it tries to delete the temporary file using the `unlink` function.\n(https://github.com/curl/curl/blob/c5bb4e77e414c1505d800a0091a6d57c7f75d416/lib/cookie.c#L1660)\n\nIf the file path for storing cookies is in a user-writable location, a specially crafted link in Windows can be used to redirect the calls to `MoveFileExA` or `unlink` to operate on an arbitrary file. The `MoveFileExA` function follows this special link as is, while the `unlink` function, which executes through the Windows C runtime (`unlink() -> remove() -> DeleteFile(WINAPI)`), also follows the link.\n\nThrough this mechanism, an attacker can leverage a privileged process to achieve **arbitrary file deletion**, which can ultimately lead to **escalation of privilege (EoP) to SYSTEM** using well-known exploitation techniques.\n\nAt first glance, it may seem that exploiting this issue requires a race condition. However, it can be exploited in a highly reliable manner using **oplocks**.\n\nFor more details on how arbitrary file deletion can be abused to escalate privileges, refer to the ZDI blog post linked below:\n(https://www.thezdi.com/blog/2022/3/16/abusing-arbitrary-file-deletes-to-escalate-privilege-and-other-great-tricks)\n\nTo help understand this issue better, a proof-of-concept (PoC) demonstrating the vulnerability will be provided, along with step-by-step instructions on how to reproduce it in the next section.\n\n## Steps To Reproduce:\n\n  1. To reproduce the issue described above, I created a simple program (`curl_EoP.sln`) that sends a web request using libcurl and the `CURLOPT_COOKIEJAR` option.\n\n     Additionally, `curl_EoP_Exp.sln` demonstrates how this program can be exploited to achieve **high-privilege arbitrary file deletion**.\n      This exploit modifies the deletion of `\"C:/ProgramData/curl_EoP/{temporary_file_name}.tmp\"` to delete `\"C:/Windows/test_file.txt\"` instead.\n\n     ### Steps to Reproduce:\n\n     1. Open an **administrator CMD** and create `test_file.txt` by running the following command:\n\n        ```cmd\n        echo \"tempfile\" > C:/Windows/test_file.txt\n        ```\n\n     2. Use **Visual Studio C/C++ 2022** to build `curl_EoP_Exp.sln` and `curl_EoP.sln` (x64-Release).\n\n        - **Note**: `curl_EoP.sln` requires **libcurl**.\n\n     3. Run `curl_EoP_Exp.exe` **with normal user privileges**.\n\n        - **Ignore** any stdout output.\n\n     4. Run `curl_EoP.exe` **with administrator or SYSTEM privileges**.\n\n     5. As a result of the exploit, **`C:/Windows/test_file.txt` will be deleted**.\n\n## Patch Suggestion\n\nThe `GetFinalPathNameByHandle` API can be used to retrieve the final destination file path of a specific file handle.\n\nBy comparing this retrieved path with the expected file name, it is possible to determine whether the path has been manipulated via links.\n\nImplement a secure wrapper around functions like `MoveFileExA` and `unlink` that incorporates this logic to prevent exploitation.\n\n## Supporting Material/References:\n\n  * curl_EoP.zip: source codes of curl_EoP.sln\n  * curl_EoP_Exp.zip: source codes of curl_EoP_Exp.sln\n  * PoC.mp4: A video of reproduce steps\n\n## Impact\n\n## Summary:\nA medium-privileged attacker can achieve Escalation of Privilege (EoP) to SYSTEM by targeting any privileged program that uses the CURLOPT_COOKIEJAR, or  CURLOPT_HSTS, or CURLOPT_ALTSVC options with a user writable path.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 3954344,
+      "file_name": "curl_EoP.zip",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/40tguo2gycwaetxgtu92xx4rix7i?response-content-disposition=attachment%3B%20filename%3D%22curl_EoP.zip%22%3B%20filename%2A%3DUTF-8%27%27curl_EoP.zip&response-content-type=application%2Fzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150118Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0e644fbf3771b683f0dfece92b3c998c7f25acbee02a9ceb2da79c445bbb45f7",
+      "file_size": 2600551,
+      "type": "application/zip",
+      "moderated": null
+    },
+    {
+      "id": 3954345,
+      "file_name": "curl_EoP_Exp.zip",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/jen3konbly4fio793fdlevwm90yq?response-content-disposition=attachment%3B%20filename%3D%22curl_EoP_Exp.zip%22%3B%20filename%2A%3DUTF-8%27%27curl_EoP_Exp.zip&response-content-type=application%2Fzip&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150118Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a39a0c888700cb3070e3dd72ee48d630b98d68a15fbbacd1ddca3c8efc6b9f89",
+      "file_size": 1308042,
+      "type": "application/zip",
+      "moderated": null
+    },
+    {
+      "id": 3954346,
+      "file_name": "PoC.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/o8gkan7rcw4u7kfqa0axsilrdzxz?response-content-disposition=attachment%3B%20filename%3D%22PoC.mp4%22%3B%20filename%2A%3DUTF-8%27%27PoC.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQSSX4PF7P%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150118Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDQusVNLjCt%2FuBhh7xi96%2FrI%2F9WAT5cgq5%2B3FFoGruxTgIhALg7JIrskKGjBetGQAmmfe1z7a5bE7gY%2F06r2NvAnAjCKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwqwTsKONVhYRraIvMqjgVC5KT3I9QkEEPBtzVlxI%2BSLp3mtg9ycg980Xzj6ZLciCWwLlP2DuVFXWxA9bAmiGUo7KaswGSkewR8algAkT3aFlF%2Fep0ny3bgRKNSRB9BvWL9xngfoGfhmLrI2h99CYJzR1NzXi%2FrHzIoetyIvPhgZEFKsmfgGsK%2Bhzn2lYoD%2B7pH11Vz8mEFSxSmH5BESHp%2FlnMDyOFRKJhurZwu3yA93wd1pBpjgIQt7bBxgAZ3Il8vC69IHJetuSOigexyTInNbXsCIaIMV00A7kg4bkzUYxSNk44lfWXjGdLqcsDUUh4x4SsfvnnOvPrAEgY1z0kNDXyjAA928FTDEkP8YryUfVH4XBNRc6wnbIWkIVdk87BXjTITGLxo575OvopCF8SCRKYXEmQMoqb9m%2B%2FvdB9T17uulq%2FJHOK%2FUI1jq8Sg9nN%2Bo6NMHYzZBIItsUuAtyRh3wA508HLNhY462Hc6q22jaM%2B6yuvLQxrH2JDaUGHB9%2BFc0Wlnl5Y7J8lEIXS53gvcL%2FDIarXoSzzcLehljw%2FWIG4X%2BxGA2GiIvMaDaiUI4ohkK8D25L%2FgJv4Yzxxj2s5uCoAHXm0wc0CSgof7BVMm8A4if2XVOTtR6DMoFNl5aDow9wKFgEY32jvoY1ZK5fWsiRLSORmhD6rv%2Fe%2FU5jlywxdE8fZu%2Bsq3v3Hk%2FNztrWWPQxJvXeiikDDhU5j0pcbVYJ9Y6%2BZOnLH5njdxiMH90V%2BwFNNKxDL4vZe1ljFNAjMrF9xyoYvTsgrl6apkDnVV%2FFiNKBc4aHk5sxRzJfb2v8FLmc%2FU9PYaS4PeIy9HiLZ3nRfcCYnsj8%2Bv9hr8LGvD4i4bWvbdArCbRAdXrbHr6zovw1a%2Fe7l3BzXsx8w74f9zwY6sAF8GG9BQ0QzMMg0cJMl5Sx96h6Z%2BYiVxfLTqpCU9dnZzNF%2BqreIu2i6TF0QEUTcVtCYKqAzZW%2FMa5kUOffAyF%2FEtYOBUU66H%2Bki7o1tiUub7pcVdQiAXbU76nS%2BWi4OxH7r9NpEVMVS7Xs1ciVid0dhcHjYDcYTZgjyFuX%2FOsICg%2FzNiFaK9B8ecrHTqExgOmrJe0Gb0fVdPGQgT%2F0xDHAKpelWW%2FpkUjgofocIYajmHA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=925b2b4cc99282cd001203b69135c10fb1605e2f72fe2815005bcff7263ede70",
+      "file_size": 2937242,
+      "type": "video/mp4",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 14,
+  "voters": [
+    "zy9ard3",
+    "thalaivar304",
+    "lucsouz4",
+    "2026",
+    "zephyr31337",
+    "zerithx",
+    "iossefy",
+    "redhatyyy",
+    "astericks",
+    "omarjamailsa",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

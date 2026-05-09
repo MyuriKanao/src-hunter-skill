@@ -1,0 +1,132 @@
+{
+  "id": 308155,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDgxNTU=",
+  "url": "https://hackerone.com/reports/308155",
+  "title": "[html-janitor] Passing user-controlled data to clean() leads to XSS",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-23T12:34:13.662Z",
+  "submitted_at": "2018-01-23T12:34:13.662Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bayotop",
+    "url": "/bayotop",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/c5g0hr3clmh63r1zeqlen4qzztym/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0931"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-02-09T15:00:45.549Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-02-09T15:00:35.971Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Module:**\n\n* Name: [html-janitor](https://www.npmjs.com/package/html-janitor)\n* Version: 2.0.2\n\n**Summary:**\n\nPassing user-controlled data to the module's clean() function can result in arbitrary JS execution, because of unsafe DOM operations. \n\nThe description \"*Cleans up your markup and allows you to take control of your HTML. HTMLJanitor uses a defined whitelist to limit HTML it is given to a defined subset.*\" implies that \"dirty\" HTML is expected and therefore I would assume the clean method should never result in arbitrary JS being executed.\n\n**Description:**\n\nThe following will result in JS execution:\n```javascript\nvar myJanitor = new HTMLJanitor({tags:{p:{}}});\nvar cleanHtml = myJanitor.clean(\"<p><img src onerror=alert()><p>\")\n```\n\nbecause [of this code](https://github.com/guardian/html-janitor/blob/master/src/html-janitor.js#L44):\n\n```js\nHTMLJanitor.prototype.clean = function (html) {\n    var sandbox = document.createElement('div'); // This is not a safe way to create a sandbox.\n    sandbox.innerHTML = html; // At this point, the onerror in the img is triggered.\n```\n\n**Recommendation:**\n\nThe \"sandbox\" should be created using safe browser APIs such as `document.implementation.createHTMLDocument();`.\n\n*Note that I previously reported this issue at https://github.com/guardian/html-janitor/issues/34*\n\n## Impact\n\nGiven the module's description I would assume it should be used to prevent XSS vulnerabilities. This is currently a very dangerous assumption given that the module itself has a XSS vulnerability. \n\nNote that the author might have never intended to feed untrusted data into the clean() function. However, in that case this should be at least mentioned in the documentation, because other developers most certainly will use the package in such scenarios.",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-03-11T15:00:36.126Z",
+  "allow_singular_disclosure_after": -257559854.435957,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "jokebookservice1",
+    "bl4de",
+    "eveeez",
+    "plazmaz",
+    "memmas"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.8,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5495,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "html-janitor",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

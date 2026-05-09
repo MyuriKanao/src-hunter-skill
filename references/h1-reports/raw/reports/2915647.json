@@ -1,0 +1,133 @@
+{
+  "id": 2915647,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTE1NjQ3",
+  "url": "https://hackerone.com/reports/2915647",
+  "title": "Netlify Authentication Token Exposed in Public Mozilla CI Logs",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2024-12-27T21:52:43.469Z",
+  "submitted_at": "2024-12-27T21:52:44.033Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "samirsec0x01",
+    "url": "/samirsec0x01",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/qw8vthgd4w28px21gk5fd66tbu3z/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61236,
+    "url": "https://hackerone.com/mozilla",
+    "handle": "mozilla",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/0p8e6gg8xoy45dhjxs5wh4iti6k8/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/0p8e6gg8xoy45dhjxs5wh4iti6k8/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Mozilla",
+      "twitter_handle": "",
+      "website": "https://www.mozilla.org",
+      "about": "Mozilla web bug bounty program specific to encouraging security research in Mozilla's products and web services."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-05-13T09:35:01.798Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-05-12T20:25:29.848Z",
+  "team_member_agreed_on_going_public_at": "2025-05-13T09:35:01.624Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "A critical vulnerability was discovered involving the exposure of a Netlify authentication token within publicly accessible logs. This token provided full access to the `Mozilla IT Web SRE` Netlify account, bypassing all restrictions. The token’s permissions encompassed roles such as Owner, Developer, Billing Admin, Reviewer, Publisher, and Content Editor, granting complete control over site management, deployments, billing, and content configurations. This exposed API key posed significant security risks, enabling unauthorized users to manipulate the account and its associated assets freely.\n\n---\n\n### **Key Information:**\n- **Exposed Token:** `███`\n- **Source of Exposure:**\n  - **Public URL:** [Mozilla CI Logs](https://firefox-ci-tc.services.mozilla.com/tasks/d5NRF8FdQamV9XdPO_mTBQ/runs/0/logs/public/logs/live.log)\n  - **File:** `live.log`\n- **API Used for Verification:** [Netlify API Documentation](https://open-api.netlify.com/)\n- **Website at Risk:** `https://crash-pings.mozilla.org`\n- **Account at Risk:** `Mozilla IT Web SRE`\n\n---\n\n### **Steps to Reproduce:**\n\n1. **Access Public Log:**\n   - Open the following URL in a browser: [Mozilla CI Logs](https://firefox-ci-tc.services.mozilla.com/tasks/d5NRF8FdQamV9XdPO_mTBQ/runs/0/logs/public/logs/live.log).\n\n2. **Locate the Exposed Token:**\n   - Search for the keyword `auth:` in the log file.\n   - Extract the Netlify token (e.g., `███`).\n\n3. **Verify Token Validity:**\n   - Use the token to query the Netlify API. For example:\n\n```bash\ncurl -X GET https://api.netlify.com/api/v1/accounts -H \"Authorization: Bearer ████\" -s | jq\n```\n\n   - Observe the response containing sensitive information about the Netlify account's sites.\n\n```json\n[\n  {\n    \"name\": \"Mozilla IT Web SRE\",\n    \"slug\": \"mozilla-it\",\n    \"role\": \"Developer\",\n    ...\n    ...\n    \"selected_access_site_ids\": [\n      \"5a05c659-aa54-4184-bdbe-7faa4dd497b5\"\n    ],\n    \"billing_name\": \"it-sre\",\n    \"billing_email\": \"it-sre@mozilla.com\",\n    \"billing_details\": null,\n    ...\n    ...\n    \"roles_allowed\": [\n      \"Owner\",\n      \"Developer\",\n      \"Billing Admin\",\n      \"Reviewer\",\n      \"Publisher\",\n      \"Content Editor\"\n    ],\n    \"created_at\": \"2019-06-26T13:57:19.242Z\",\n    \"updated_at\": \"2024-07-08T18:56:21.541Z\",\n    \"has_site_password\": false,\n    \"site_sso_login\": false,\n    \"site_sso_login_context\": \"all\",\n    \"site_jwt_secret\": null,\n    \"saml_config\": {\n      \"idp_entity_id\": \"urn:auth.mozilla.auth0.com\",\n      \"idp_sso_target_url\": \"https://auth.mozilla.auth0.com/samlp/hj3jYIhcrgvPWTpnFoHWLPx57t6KKqhA\",\n      \"idp_slo_target_url\": \"https://auth.mozilla.auth0.com/samlp/hj3jYIhcrgvPWTpnFoHWLPx57t6KKqhA/logout\",\n      \"idp_cert_fingerprint\": \"2F:C4:72:FC:FE:1C:69:A6:6E:8B:A7:FA:72:AA:3D:08:B0:A0:6A:F8\"\n    },\n    \"saml_session_expiration\": 604800,\n    \"deploy_notifications_per_repo\": true,\n    \"payments_gateway_name\": \"zuora_production\",\n    \"lifecycle_state\": \"active\",\n    \"lifecycle_state_reason\": null,\n    \"weeks_past_due\": null,\n    \"days_until_disabled\": null,\n    \"current_billing_period_start\": \"2024-12-26T00:00:00.000-08:00\",\n    \"next_billing_period_start\": \"2025-01-26T00:00:00.000-08:00\",\n    \"current_usage_period_start\": \"2024-12-01T00:00:00.000-08:00\",\n    \"next_usage_period_start\": \"2025-01-01T00:00:00.000-08:00\",\n    ...\n    ...\n    \"type_name\": \"Enterprise\",\n    \"type_id\": \"58f792a3d6865d698b6879bd\",\n    \"type_slug\": \"enterprise\",\n    \"monthly_seats_addon_dollar_price\": \"0.0\",\n    \"owner_ids\": [\n      \"60be48126deb9594c56ad4a0\",\n      \"60c285a4fa8ef00f41b7a171\",\n      \"60eda0538f4cf6540569b4b5\",\n      \"62548540b51a811561330ed7\",\n      \"62c5e063fe09d502f8dc2519\",\n      \"62f22a000c27a1187e2be65b\",\n      \"62ffe60780a012285fb7d36f\",\n      \"63b429858592e6679549e622\",\n      \"650deaef51dc692b41f8b3f2\",\n      \"658210e2646ba26e2d050ff4\"\n    ],\n    \"saml_enabled\": true,\n    \"org_saml_enabled\": false,\n    \"org_mfa_enabled\": false,\n    \"default\": false,\n    \"cancellable\": false,\n    \"has_builds\": true,\n    \"enforce_saml\": \"enforced_strict\",\n    \"team_logo_url\": null,\n    \"can_start_pro_trial\": false,\n    \"on_pro_trial\": false,\n    \"can_start_enterprise_trial\": false,\n    \"on_enterprise_trial\": false,\n    \"security_contacts\": [],\n    \"gitlab_self_hosted_config\": null,\n    \"github_enterprise_config\": null,\n    \"bitbucket_self_hosted_config\": null\n  }\n]\n```\n\n4. **Confirm Full Access:**\n   - Perform other API requests, such as deploying, deleting, or modifying sites.\n   - For example, access sensitive logs, environment variables, or site configurations.\n   - You can test all endpoints in Netlify api docs: https://open-api.netlify.com\n\n---\n\n## **Proof of Concept (PoC):**\nI have created a POC video:\n███\n\n---\n\n### **Recommendations:**\n\n1. **Revoke the Token:**\n   - Revoke the exposed token immediately and notify all affected stakeholders.\n\n2. **Audit Logging Practices:**\n   - Review all CI/CD pipelines to ensure sensitive data (e.g., authentication tokens) are masked.\n\n3. **Enhance Token Security:**\n   - Implement OAuth scopes or IP whitelisting to restrict token usage.\n   - Monitor for suspicious API usage to detect possible exploitation.\n\n---\n\n## **Thank You!**\nI appreciate the opportunity to report this critical issue and assist in securing your systems.\n\n---\n\n## Impact\n\nThe leaked authentication token provides **full access** to the Netlify account, leading to the following risks:\n\n\t1.\t**Financial Theft:**\n\t-\tChange the `billing_email` to divert all payouts to an attacker-controlled account.\n\t2.\t**Site Compromise:**\n\t-\tModify, delete, or deploy malicious content on the associated site (https://crash-pings.mozilla.org).\n\t3.\t**Data Exposure:**\n\t-\tAccess environment variables, logs, and other sensitive configuration data.\n\t4.\t**Reputation Damage:**\n\t-\tUse the compromised account to host malicious content or phishing attacks.\n\t5.\t**Permanent Loss of Control:**\n\t-\tDelete all sites and configurations, causing irreversible damage.",
+  "bounty_amount": "1500.0",
+  "formatted_bounty": "$1,500",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2025-06-11T20:25:30.011Z",
+  "allow_singular_disclosure_after": -28665373.959899385,
+  "singular_disclosure_allowed": true,
+  "vote_count": 120,
+  "voters": [
+    "wdk23",
+    "orange303",
+    "loaymorad",
+    "k0ns0l",
+    "drsniper",
+    "almuntadhar0x01",
+    "chigorin",
+    "exec_iq",
+    "zy9ard3",
+    "shopen",
+    "and 110 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

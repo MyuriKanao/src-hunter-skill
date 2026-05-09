@@ -1,0 +1,161 @@
+{
+  "id": 944735,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85NDQ3MzU=",
+  "url": "https://hackerone.com/reports/944735",
+  "title": "Arbitrary DLL injection in mmsminisrv (Acronis Managed Machine Service Mini)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-07-28T09:14:57.895Z",
+  "submitted_at": "2020-07-28T09:14:57.895Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "adr",
+    "url": "/adr",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/tz82pUkLYHa2wb4pGnrdCbRb/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13428,
+    "url": "https://hackerone.com/acronis",
+    "handle": "acronis",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/e54TDdWdgLKsH3h1oFpK26bq/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/e54TDdWdgLKsH3h1oFpK26bq/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Acronis",
+      "twitter_handle": "Acronis",
+      "website": "https://www.acronis.com",
+      "about": "Complete integrated cybersecurity and data protection for MSPs and IT teams"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-10-20T14:41:30.054Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-10-19T06:51:18.939Z",
+  "team_member_agreed_on_going_public_at": "2020-10-20T14:41:29.926Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "During initialization, **mms_mini.exe** (service binary of mmsminisrv) loads library *C:\\Program Files (x86)\\Common Files\\Acronis\\Home\\libssl10.dll*. The library then tries to load non-existing file: *C:\\bs_hudson\\workspace\\mod-openssl-fips-win\\205\\product\\out\\standard\\vs_2013_release\\OpenSSL\\ssl\\openssl.cnf*. The path seems to be hardcoded leftover from compilation. \n{F926518}\n\nBecause by default any user is able to create directories  on C:\\ drive, it is possible to create missing directories and missing file (*openssl.cnf*). The OpenSSL config file implements support for loading additional DLL modules. Attacker may point to arbitrary DLL which will be loaded by service running with Local System privileges. Once service is restarted (e.g. due to system reboot), the planted library is loaded by the service and arbitrary code is executed. The code would typically add new Administrative user to the Windows system or establish reverse shell connection.\n\nSuccessful injection of arbitrary library is shown on procmon log:\n{F926535}\n\n# Steps to reproduce\n1. Create directories: ```mkdir C:\\bs_hudson\\workspace\\mod-openssl-fips-win\\205\\product\\out\\standard\\vs_2013_release\\OpenSSL\\ssl```\n2. Inside, create openssl.cnf file with following content (replace DLL path with any path you wish):\n    \n    ``` \nopenssl_conf = openssl_init\n[openssl_init]\nengines = engine_section\n[engine_section]\nwoot = woot_section\n[woot_section]\nengine_id = woot\ndynamic_path = c:\\\\temp\\\\cqbeacondll.dll\ninit = 0\n    ```\n3. Plant arbitrary DLL under *dynamic_path* location.\n4. Wait for service to start (or force it by rebooting system)\n\n## Impact\n\nAfter successful attack, low privileged local user can elevate privileges up to Local System (the highest Windows privilege). The vulnerability can be also exploited by malware with local system access.",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 926518,
+      "file_name": "non-existent.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/wQDFBjb3zgxDCHk4TVD8c7BJ?response-content-disposition=attachment%3B%20filename%3D%22non-existent.png%22%3B%20filename%2A%3DUTF-8%27%27non-existent.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151713Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5bfd7400199997b5c600678bce841241587ebd46b4165ec6b7f6f354d6b5ca1c",
+      "file_size": 13007,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 926535,
+      "file_name": "injection.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9PV2SvdN9j4wE24WNodNzYD4?response-content-disposition=attachment%3B%20filename%3D%22injection.png%22%3B%20filename%2A%3DUTF-8%27%27injection.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151713Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3a463617c4b9be8c464db6a62388783995fcf6365ffa3b3d28c2c6445214587c",
+      "file_size": 18400,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 926553,
+      "file_name": "openssl.cnf",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/Z4MtbAh5Zk5QafyUmdBFtqfj?response-content-disposition=attachment%3B%20filename%3D%22openssl.cnf%22%3B%20filename%2A%3DUTF-8%27%27openssl.cnf&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151713Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c1762c6b6521cd1063f7bb7d5effad4492bd4ea105369e7044657f4b0926d82a",
+      "file_size": 194,
+      "type": "application/octet-stream",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-11-18T06:51:18.991Z",
+  "allow_singular_disclosure_after": -172657554.2832812,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "xdanes09",
+    "f_m",
+    "kassem_s94",
+    "2026",
+    "0nlymohammed",
+    "rishikeshj",
+    "3j89",
+    "muemmelmoehre",
+    "marco_py13",
+    "mal3p",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 50772,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "Acronis Cyber Protect Home Office (formerly Acronis True Image)",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

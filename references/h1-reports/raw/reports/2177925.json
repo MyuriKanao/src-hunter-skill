@@ -1,0 +1,151 @@
+{
+  "id": 2177925,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTc3OTI1",
+  "url": "https://hackerone.com/reports/2177925",
+  "title": "Remote vulnerabilities in spp",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-09-22T19:22:45.592Z",
+  "submitted_at": "2023-09-22T19:22:45.771Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "theflow0",
+    "url": "/theflow0",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [
+    "CVE-2006-4304"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-04-25T21:49:25.943Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-01-08T13:20:18.640Z",
+  "team_member_agreed_on_going_public_at": "2024-04-25T21:49:25.172Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "12500.0",
+  "formatted_bounty": "$12,500",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 193,
+  "voters": [
+    "c0l1nr00t",
+    "lones",
+    "k0ns0l",
+    "vague_",
+    "faav",
+    "carsonchan12345",
+    "coder_mohammed",
+    "g0ko",
+    "orange303",
+    "theflow0",
+    "and 183 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 40736,
+    "asset_type": "HARDWARE",
+    "asset_identifier": "PlayStation 4",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 438316,
+      "category": "team",
+      "content": "## Summary\nA malicious PPPoE server can cause denial-of-service or potentially remote code execution in kernel context on the PS4/PS5.\n\n## Heap buffer overwrite and overread in sppp_lcp_RCR and sppp_ipcp_RCR\n\nFor some reason, the PS4/PS5 is vulnerable to [CVE-2006-4304](https://www.freebsd.org/security/advisories/FreeBSD-SA-06:18.ppp.asc). By having invalid options, it is possible to cause a heap buffer overwrite and overread.\n\n```c\nstatic int\nsppp_ipcp_RCR(struct sppp *sp, struct lcp_header *h, int len)\n{\n\tu_char *buf, *r, *p;\n\tstruct ifnet *ifp = &sp->pp_if;\n\tint rlen, origlen, debug = ifp->if_flags & IFF_DEBUG;\n\tu_int32_t hisaddr, desiredaddr;\n\n\tlen -= 4;\n\toriglen = len;\n\t// ...\n\tbuf = r = malloc ((len < 6? 6: len), M_TEMP, M_NOWAIT);\n\tif (! buf)\n\t\treturn (0);\n\t// ...\n\tp = (void *)(h + 1);\n\tfor (rlen=0; len>1 && p[1]; len-=p[1], p+=p[1]) { // [1]\n\t\tif (debug)\n\t\t\taddlog(\" %s\", sppp_ipcp_opt_name(*p));\n\t\tswitch (*p) {\n        // ...\n\t\tdefault:\n\t\t\t/* Others not supported. */\n\t\t\tif (debug)\n\t\t\t\taddlog(\" [rej]\");\n\t\t\tbreak;\n\t\t}\n\t\t/* Add the option to rejected list. */\n\t\tbcopy (p, r, p[1]); // [2]\n\t\tr += p[1];\n\t\trlen += p[1]; // [3]\n\t}\n\tif (rlen) {\n\t\tif (debug)\n\t\t\taddlog(\" send conf-rej\\n\");\n\t\tsppp_cp_send(sp, PPP_IPCP, CONF_REJ, h->ident, rlen, buf); // [4]\n\t\tgoto end;\n\t} else if (debug)\n\t\taddlog(\"\\n\");\n\n\t// ...\n}\n```\n\nNamely, at [1] the length of `p[1]` is not validated to be smaller or equal to `len`. As such, at [2] the call `bcopy()` will copy with a size potentially larger than both the source and the destination.\n\nFurthermore, at [3] the return length is incremented by the malicious length. Hence, the data that is overread from the `mbuf` is copied into `buf` (with overflow) and returned to the malicious PPPoE server with `sppp_cp_send()`.\n\nFor example this is some data that got sent back containing pointers:\n\n```c\n00000000  54 ab 3a 9a ab ad 00 d9  d1 bc 83 e4 88 64 11 00  |T.:..........d..|\n00000010  00 14 00 90 80 21 04 02  00 8e 2a ff 41 41 41 41  |.....!....*.AAAA|\n00000020  41 41 41 41 41 41 41 41  41 41 41 41 00 00 00 00  |AAAAAAAAAAAA....|\n00000030  00 00 00 00 00 00 00 00  00 00 00 00 38 00 2b c5  |............8.+.|\n00000040  72 9a cf 01 03 00 08 00  38 61 07 eb bd ff ff bd  |r.......8a......|\n00000050  ff ff bd ff ff d9 d1 bc  83 e4 29 00 00 00 b4 07  |..........).....|\n00000060  00 00 03 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|\n00000070  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|\n*\n000000a0  00 00 00 00                                       |....            |\n000000a4\n```\n\nRegarding exploitability of the overwrite, note that the allocation size for `malloc()` can be influenced via the LCP header:\n\n```c\nstatic void\nsppp_cp_input(const struct cp *cp, struct sppp *sp, struct mbuf *m)\n{\n\t// ...\n\tstruct lcp_header *h;\n\t// ...\n\th = mtod(m, struct lcp_header *);\n\t// ...\n\tif (len > ntohs(h->len))\n\t\tlen = ntohs(h->len);\n\tp = (u_char *)(h + 1);\n\tswitch (h->type) {\n\tcase CONF_REQ:\n\t\t// ...\n\t\trv = (cp->RCR)(sp, h, len);\n\t\t// ...\n\t}\n}\n```\n\nBy doing so, it is possible to trigger a copy from a bigger `mbuf` to a smaller `buf`, thus allowing to overwrite adjacent allocations with controllable data.\n\nSee attachment for a proof-of-concept that leaks data and can eventually panic the device.\n\n## Integer underflow in sppp_pap_input leading to heap-buffer overread\n\n```c\nvoid\nsppp_pap_input(struct sppp *sp, struct mbuf *m)\n{\n\t// ...\n\tint len, x;\n\t// ...\n\tint name_len, passwd_len;\n\t// ...\n\th = mtod (m, struct lcp_header*);\n\tif (len > ntohs (h->len))\n\t\tlen = ntohs (h->len); // [1]\n\tswitch (h->type) {\n\t/* PAP request is my authproto */\n\tcase PAP_REQ:\n\t\tname = 1 + (u_char*)(h+1);\n\t\tname_len = name[-1];\n\t\tpasswd = name + name_len + 1;\n\t\tif (name_len > len - 6 || // [2]\n\t\t    (passwd_len = passwd[-1]) > len - 6 - name_len) {\n\t\t\tif (debug) {\n\t\t\t\tlog(LOG_DEBUG, SPP_FMT \"pap corrupted input \"\n\t\t\t\t    \"<%s id=0x%x len=%d\",\n\t\t\t\t    SPP_ARGS(ifp),\n\t\t\t\t    sppp_auth_type_name(PPP_PAP, h->type),\n\t\t\t\t    h->ident, ntohs(h->len));\n\t\t\t\tif (len > 4)\n\t\t\t\t\tsppp_print_bytes((u_char*)(h+1), len-4);\n\t\t\t\taddlog(\">\\n\");\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\t// ...\n\t\tif (name_len > AUTHMAXLEN ||\n\t\t    passwd_len > AUTHMAXLEN ||\n\t\t    bcmp(name, sp->hisauth.name, name_len) != 0 ||\n\t\t    bcmp(passwd, sp->hisauth.secret, passwd_len) != 0) {\n\t\t\t/* action scn, tld */\n\t\t\tmlen = sizeof(FAILMSG) - 1;\n\t\t\tsppp_auth_send(&pap, sp, PAP_NAK, h->ident,\n\t\t\t\t       sizeof mlen, (const char *)&mlen,\n\t\t\t\t       sizeof(FAILMSG) - 1, (u_char *)FAILMSG,\n\t\t\t\t       0);\n\t\t\tpap.tld(sp);\n\t\t\tbreak;\n\t\t}\n\t\t// ...\n\t\tif (name_len == sp->hisauth.name_len &&\n\t\t    memcmp(name, sp->hisauth.name, name_len) == 0 && // [3]\n\t\t    secret_len == sp->hisauth.secret_len &&\n\t\t    memcmp(secret, sp->hisauth.secret, secret_len) == 0) {\n\t\t\tsp->scp[IDX_PAP].rcr_type = CP_RCR_ACK;\n\t\t} else {\n\t\t\tsp->scp[IDX_PAP].rcr_type = CP_RCR_NAK;\n\t\t}\n\t// ...\n\t}\n}\n```\n\nAt [1], it is possible to set `len` to a length between 0 and 5. Thus, at [2] `len - 6` can have a negative length between -6 and -1. As such, the checks for `name_len` and `passwd_len` can be bypassed, and it is possible to have lengths up to 255 bytes. As a consequence, at [3] it is possible to read out-of-bounds from the `mbuf` when comparing the name and password with `memcmp()`. Since different responses are returned back based on the comparison, an attacker might be able to use this as a an oracle to leak the out-of-bounds data (by setting the name and secret beforehand). This could be used to leak pointers and defeat KASLR remotely.\n\nNote that this vulnerability is still affecting NetBSD and OpenBSD. FreeBSD seemed to have deprecated this whole protocol.\n\n## Impact\n\nA malicious PPPoE server can cause denial-of-service or potentially remote code execution in kernel context on the PS4/PS5.",
+      "updated_at": "2024-04-25T21:51:34.363Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 240130,
+        "username": "hacker-01",
+        "name": "DP",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-02-09T18:50:35.590Z",
+        "url": "https://hackerone.com/hacker-01",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/GtMbCEXGLm3EdU16BiXgTXMV/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

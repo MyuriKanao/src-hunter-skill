@@ -1,0 +1,136 @@
+{
+  "id": 319476,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMTk0NzY=",
+  "url": "https://hackerone.com/reports/319476",
+  "title": "`whereis` concatenates unsanitized input into exec() command",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-02-25T06:53:14.046Z",
+  "submitted_at": "2018-02-25T06:53:14.046Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "chalker",
+    "url": "/chalker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/068/907/abd483931dad2c93e376707dd59719cc277309cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-3772"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-03-28T06:17:58.607Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-03-26T20:22:53.511Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report command injection in `whereis`\nIt allows to inject arbitrary shell commands by trying to locate crafted filenames.\n\n# Module\n\n**module name:** whereis\n**version:** 0.4.0\n**npm page:** `https://www.npmjs.com/package/whereis`\n\n## Module Description\n\n> Simply get the first path to a bin on any system.\n\n## Module Stats\n\nStats\n101 downloads in the last day\n5 403 downloads in the last week\n18 945 downloads in the last month\n\n~227 340 estimated downloads per year [JUST FOR REFERENCE,  ~DOWNLOADS PER MONTH*12]\n\n# Vulnerability\n\n## Vulnerability Description\n\nFile name argument is not properly escaped before being concatenated into the command that is passed to `exec()`.\n\nSee lines https://github.com/vvo/node-whereis/blob/master/index.js#L4-L12\n\n## Steps To Reproduce:\n\n```js\nvar whereis = require('whereis');\nvar filename = 'wget; touch /tmp/tada';\nwhereis(filename, function(err, path) {\n  console.log(path);\n});\n```\n\nObserve file `/tmp/tada` created.\n\n## Supporting Material/References:\n\n- Arch Linux Current\n- Node.js 9.5.0\n- npm 5.6.0\n- bash 4.4.012\n\n# Wrap up\n\n- I contacted the maintainer to let him know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nFor setups where unsanitized user input could end up in `whereis` argument, users would be able to execute arbitrary shell commands.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-04-25T20:22:53.622Z",
+  "allow_singular_disclosure_after": -253652506.92073375,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "bagipro",
+    "bl4de",
+    "apapedulimu",
+    "akaash_pantherdefence",
+    "eveeez",
+    "sa1tama0",
+    "plazmaz",
+    "tanzanian__hacker",
+    "0619"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.9,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 7254,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "whereis",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

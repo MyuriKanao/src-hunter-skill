@@ -1,0 +1,155 @@
+{
+  "id": 3400506,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDAwNTA2",
+  "url": "https://hackerone.com/reports/3400506",
+  "title": "Stored XSS in Conversion Statistics via Tracker Name",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2025-10-26T19:51:25.798Z",
+  "submitted_at": "2025-10-26T19:51:26.037Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "cyberjoker",
+    "url": "/cyberjoker",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/m8QAvis1NEdKwiqa3zKinxSk/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 2367,
+    "url": "https://hackerone.com/revive_adserver",
+    "handle": "revive_adserver",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/367/4f47a5b4a364515d4bbdc17550d67ea5415363cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/002/367/4f47a5b4a364515d4bbdc17550d67ea5415363cd_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Revive Adserver",
+      "twitter_handle": "",
+      "website": "https://www.revive-adserver.com",
+      "about": "Revive Adserver is a free open source ad serving system"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2025-52668"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2025-11-19T09:33:37.769Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-11-19T09:33:23.756Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I found stored XSS on the conversion statistics page. Advertisers can inject malicious JavaScript through tracker names, which executes when admins view conversion reports (`www/admin/stats-conversions.php:356`). I was able to steal admin session cookies using this vulnerability. This is a privilege escalation problem: low-privilege advertiser accounts can compromise high-privilege admin accounts.\n\n--\n\n---\n\n## Affected System\n\n- **Product:** Revive Adserver\n- **Version Tested:** 6.0.1\n- **Component:** Statistics / Conversion Reports\n- **File:** `www/admin/stats-conversions.php:356`\n- **URL:** `http://[host]/www/admin/stats-conversions.php?clientid=[id]`\n\n---\n\n## Vulnerable Code\n\n```php\n// www/admin/stats-conversions.php:356\necho \"<td align='$phpAds_TextAlignLeft' style='padding: 0 4px'>{$conversion['trackername']}</td>\n      <td align='$phpAds_TextAlignLeft' style='padding: 0 4px'>{$conversion['campaignid']}</td>\n      <td align='$phpAds_TextAlignLeft' style='padding: 0 4px'>{$conversion['campaignname']}</td>\";\n```\n\n**The Problem:**\n- Tracker names are output directly without `htmlspecialchars()` escaping\n- The data comes from advertiser-controlled input (tracker creation form)\n- No input validation strips HTML tags at storage time\n- Admins viewing conversion reports execute the payload in their browser context\n\n---\n\n## How I Reproduced It\n\n**Prerequisites:**\n- Advertiser account (low privileges)\n- Admin account to view the report (for testing impact)\n\n**Steps:**\n\n1. **Login as advertiser** and create a malicious tracker:\n   - Navigate to: **Inventory** → **Advertisers** → Click your advertiser name (e.g., \"Test Advertiser\") → **Trackers** tab\n   - Click **Add new tracker**\n   - Set tracker name to:\n     ```html\n     <img src=x onerror=\"alert('XSS: ' + document.cookie)\">\n     ```\n   - Set tracker type to \"Sale\" and status to \"Active\"\n   - Click **Save Changes**\n   - The tracker is now saved (tracker ID 1)\n\n{F4935037}\n\n2. **Create conversion records** (via normal tracking or database):\n   ```sql\n   -- Link conversion to malicious tracker\n   INSERT INTO rv_data_intermediate_ad_connection (\n       tracker_id, ad_id, inside_window, tracker_date_time,\n       connection_date_time, connection_action, connection_status, updated\n   ) VALUES (1, 1, 1, NOW(), NOW(), 1, 4, NOW());\n   ```\n\n3. **Login as admin** and navigate to:\n   ```\n   http://[host]/www/admin/stats-conversions.php?clientid=1\n   ```\n   **Note:** This page may not be accessible via the menu in default/fresh installations. See \"Menu Configuration Note\" in the Notes section below for details.\n\n4. **Result:** JavaScript alert fires immediately:\n   ```\n   XSS: sessionID=abc123; ox_install_session_id=def456\n   ```\n{F4935020}\n\nI confirmed the XSS executes in the admin's browser context with full cookie access. The payload persists - it fires every time any admin views conversion statistics for that advertiser.\n\n---\n\n## Notes\n\n**Additional Findings:**\n\nWhile investigating this issue, I noticed:\n- Lines 357-358 also lack `htmlspecialchars()` on `campaignid` and `campaignname`\n- Campaign names are also user-controlled (by advertisers) and suffer from the same vulnerability\n- Other `stats-*.php` files may have similar issues - I haven't audited them all yet\n\n**Testing Scope:**\n\nI tested this vulnerability in an isolated Docker environment using accounts I created. I did not:\n- Test against production/public Revive Adserver installations\n- Attempt actual exploitation beyond controlled PoC\n- Exfiltrate or access any real user data\n\n**Menu Configuration Note:**\n\n**Important:** The stats-conversions.php page is not included in the default menu system on fresh Revive Adserver installations. During testing, I had to manually enable it by modifying `lib/OA/Admin/Menu/config.php` to add the menu entry:\n\n```php\n$oMenu->addTo(\"2.1\", new OA_Admin_Menu_Section(\"stats-conversions\",\n    'Conversions', \"stats-conversions.php?clientid={clientid}\",\n    false, \"statistics/conversions\"));\n```\n\nThis is likely a configuration issue rather than a security control, as:\n- The code-level permission check (`OA_Permission::enforceAccount`) allows advertiser/manager access\n- Other statistics pages with similar data are accessible\n- The vulnerable code exists regardless of menu visibility\n\n## Impact\n\nAn advertiser (or compromised advertiser account) can inject persistent XSS that executes when admins view conversion statistics. I successfully captured admin session cookies, which enable full account takeover. The attacker can then create admin accounts, modify campaigns, access all advertiser data, or inject code affecting all users. This works because advertisers routinely create trackers, and admins routinely review conversion statistics - no unusual behavior required.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 4935020,
+      "file_name": "CleanShot_2025-10-26_at_17.15.02_2x.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/hfhwape5zbvo6707qoub7kxjb2up?response-content-disposition=attachment%3B%20filename%3D%22CleanShot_2025-10-26_at_17.15.02_2x.png%22%3B%20filename%2A%3DUTF-8%27%27CleanShot_2025-10-26_at_17.15.02_2x.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6INISVZ3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150025Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQCxA0kU9XiY%2BIErAIXnMsMVNtl%2FE5gn07DboF84Ro4GewIhAKcH526HP%2FUTlGNE%2Bn3Z%2BKrZG7OBGUuwQgTF7eN2vM4XKrsFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igxkq1afLOUwAnpcC78qjwVV7NeQwp6c10oAYyQZlXnTn9gI0Ts%2B9KxIUb4X8GpfDoGqGGXzDUQxkGsQu%2BPGy%2F%2FLIf4JfosEHqORZBSn%2FScHH6f8LzV6C0KHK5jRpzQtoK%2F%2BENjjdQs8haxQiuT2ZRFBcypmd%2BAKTGjMSxe4m1XWFhwDwiIhkY4qm7a2FYMp5nDCtx3KQI%2FBZyn8PShdZTH0P%2By7VBQ%2F7qmQfGzhvWv1dz1CZTBIkOuFKsqQPB6Koah6W78OSIGVKi5bgEbMBingtEmJ67j3Yr992mXh%2BvSXohKdY1Y4gWOHtCfjLzyQE5pPInEBsVtBGV7KCZLUfMqzJ9LJ96B9KpY0ChVQl5mGV5zWxAMtbJ5Vs9gGY3RyPhS7bRETfqgxrAx7fcN6s8RmdT7DYDhWzH%2FP0BjJIdJDI7NR5GJuCWE5Jp9qxnUCt%2B4gv3ZC2QMTB8KLoIlR0q2ZYGEK5v6hdyXfuOuDfEJDL50qQ7qcZN5ziQc%2F5dwCpUhkm9D%2FeZ9j08ZPtOjZcuOqBvbaX7fjVDJtqdjKNG7pSWm0UuWgGiY5D7qRTGWtkavFUSB%2FJvd9qFDSqQXdF8tdsMp8xoBVOF6hhDYRtFbvodyM3sZz%2BswB4ngY6NZrwHECBMmTLsy3YGvQcm3XtOS2xP6hv4egpk347yDEi2PK3l1l7eXzvKJanMacTaMuna2%2BFljYwc%2BLcaUCqFEPfbrjl0X7PPFZQ6sjs3K5sSVE4Z8U%2FHhfR0sV2PLc%2BPJwd6ot9QM98J6UZZqNievrEktulW2VN%2Bng2aPiSqIupgmtEbBMp%2FbECVgwy%2FsQPOL%2FvfvMiWb%2F3SSI55L26VjoVhSSgQC2bm2Rxjv%2BMvwUaqLhX2f28%2Fb6Kz6vgIehCdJzML29%2FM8GOrABGc1isADKJTP2ykuKvj%2BPktq52gWZ9Sl8NQxqpeEdGbEYy8HeJ9qEps%2Fx8nQ%2B0D8zhGH1Ra6nI%2B4jtk8iQWWguah%2B34MJnN2L9sLZd3gkqWmOFGbT1viV3Ej8OnaiPBxI5dC5CzXX17If2zHZSygBHyPXnpGECPPipctHHdSAba6Wkg5J0m9bcPvgIkHBVUReeA%2BlLaf37ZKiYx4iHg2UIdedWVwsHggGaWLH0syaN2w%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=baccc1b42b187597087be81cf62837d4853a23b0be7764f58304a1ece5b07c16",
+      "file_size": 385494,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 4935037,
+      "file_name": "CleanShot_2025-10-26_at_21.44.06_2x.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/f34mjbx6ar9xed9ztxbb4ke6q0r2?response-content-disposition=attachment%3B%20filename%3D%22CleanShot_2025-10-26_at_21.44.06_2x.png%22%3B%20filename%2A%3DUTF-8%27%27CleanShot_2025-10-26_at_21.44.06_2x.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ6INISVZ3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150025Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQCxA0kU9XiY%2BIErAIXnMsMVNtl%2FE5gn07DboF84Ro4GewIhAKcH526HP%2FUTlGNE%2Bn3Z%2BKrZG7OBGUuwQgTF7eN2vM4XKrsFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igxkq1afLOUwAnpcC78qjwVV7NeQwp6c10oAYyQZlXnTn9gI0Ts%2B9KxIUb4X8GpfDoGqGGXzDUQxkGsQu%2BPGy%2F%2FLIf4JfosEHqORZBSn%2FScHH6f8LzV6C0KHK5jRpzQtoK%2F%2BENjjdQs8haxQiuT2ZRFBcypmd%2BAKTGjMSxe4m1XWFhwDwiIhkY4qm7a2FYMp5nDCtx3KQI%2FBZyn8PShdZTH0P%2By7VBQ%2F7qmQfGzhvWv1dz1CZTBIkOuFKsqQPB6Koah6W78OSIGVKi5bgEbMBingtEmJ67j3Yr992mXh%2BvSXohKdY1Y4gWOHtCfjLzyQE5pPInEBsVtBGV7KCZLUfMqzJ9LJ96B9KpY0ChVQl5mGV5zWxAMtbJ5Vs9gGY3RyPhS7bRETfqgxrAx7fcN6s8RmdT7DYDhWzH%2FP0BjJIdJDI7NR5GJuCWE5Jp9qxnUCt%2B4gv3ZC2QMTB8KLoIlR0q2ZYGEK5v6hdyXfuOuDfEJDL50qQ7qcZN5ziQc%2F5dwCpUhkm9D%2FeZ9j08ZPtOjZcuOqBvbaX7fjVDJtqdjKNG7pSWm0UuWgGiY5D7qRTGWtkavFUSB%2FJvd9qFDSqQXdF8tdsMp8xoBVOF6hhDYRtFbvodyM3sZz%2BswB4ngY6NZrwHECBMmTLsy3YGvQcm3XtOS2xP6hv4egpk347yDEi2PK3l1l7eXzvKJanMacTaMuna2%2BFljYwc%2BLcaUCqFEPfbrjl0X7PPFZQ6sjs3K5sSVE4Z8U%2FHhfR0sV2PLc%2BPJwd6ot9QM98J6UZZqNievrEktulW2VN%2Bng2aPiSqIupgmtEbBMp%2FbECVgwy%2FsQPOL%2FvfvMiWb%2F3SSI55L26VjoVhSSgQC2bm2Rxjv%2BMvwUaqLhX2f28%2Fb6Kz6vgIehCdJzML29%2FM8GOrABGc1isADKJTP2ykuKvj%2BPktq52gWZ9Sl8NQxqpeEdGbEYy8HeJ9qEps%2Fx8nQ%2B0D8zhGH1Ra6nI%2B4jtk8iQWWguah%2B34MJnN2L9sLZd3gkqWmOFGbT1viV3Ej8OnaiPBxI5dC5CzXX17If2zHZSygBHyPXnpGECPPipctHHdSAba6Wkg5J0m9bcPvgIkHBVUReeA%2BlLaf37ZKiYx4iHg2UIdedWVwsHggGaWLH0syaN2w%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=182c82edd48c275ca3e9f51f4351daf779c41039ff828bbb2a25bbf14d648ffc",
+      "file_size": 257650,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": "2025-12-19T09:33:24.140Z",
+  "allow_singular_disclosure_after": -12202021.024633836,
+  "singular_disclosure_allowed": true,
+  "vote_count": 26,
+  "voters": [
+    "bl4de",
+    "mohaned0101",
+    "sisi0x",
+    "thalaivar304",
+    "2026",
+    "011alsanosi",
+    "voidnesss",
+    "promptybender",
+    "h31mast3r",
+    "safient",
+    "and 16 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.7,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 154,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/revive-adserver/revive-adserver",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

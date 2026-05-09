@@ -1,0 +1,125 @@
+{
+  "id": 185775,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODU3NzU=",
+  "url": "https://hackerone.com/reports/185775",
+  "title": "Crash: Initialize Decimal with itself triggers an assertion",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-11-27T09:39:55.969Z",
+  "submitted_at": "2016-11-27T09:39:55.969Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "brakhane",
+    "url": "/brakhane",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/040/726/4b47d99eec4ee906a402afb934855158d1e6d929_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-16T20:24:30.867Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-16T20:24:30.829Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T20:05:16.769Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "When `Decimal` is initialized with itself, a new (empty) `mpd_t` will be created. To fill it with a value, `to_s` of the current instance is called, which accesses the empty `mpd_t`. This triggers an assertion, which leads to a crash.\n\n# Patch\nI've created and attached a simple patch which just returns self when a Decimal is initialized with itself. Pretty simple, but should do the job (careful: I've created the patch after a 20h flight, could be... uhm, suboptimal).\n\n# PoC\nPoC does work on `https://www.mruby.science/runs`, but as it's not up2date that shouldn't really mean anything.\n\n```\na = Decimal.new\na.initialize a\n```\n\n# Trace\n\n```\n$ gdb attach 10251\nGNU gdb (GDB) 7.12\nCopyright (C) 2016 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.  Type \"show copying\"\nand \"show warranty\" for details.\nThis GDB was configured as \"x86_64-pc-linux-gnu\".\nType \"show configuration\" for configuration details.\nFor bug reporting instructions, please see:\n<http://www.gnu.org/software/gdb/bugs/>.\nFind the GDB manual and other documentation resources online at:\n<http://www.gnu.org/software/gdb/documentation/>.\nFor help, type \"help\".\nType \"apropos word\" to search for commands related to \"word\"...\nattach: No such file or directory.\nAttaching to process 10251\nReading symbols from /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/build/host/bin/mirb...done.\nReading symbols from /usr/lib/libm.so.6...(no debugging symbols found)...done.\nReading symbols from /usr/lib/libreadline.so.7...(no debugging symbols found)...done.\nReading symbols from /usr/lib/libncursesw.so.6...(no debugging symbols found)...done.\nReading symbols from /usr/lib/libc.so.6...(no debugging symbols found)...done.\nReading symbols from /lib64/ld-linux-x86-64.so.2...(no debugging symbols found)...done.\n0x00007f8de487f131 in pselect () from /usr/lib/libc.so.6\n(gdb) c\nContinuing.\n\nProgram received signal SIGABRT, Aborted.\n0x00007f8de47d104f in raise () from /usr/lib/libc.so.6\n(gdb) bt\n#0  0x00007f8de47d104f in raise () from /usr/lib/libc.so.6\n#1  0x00007f8de47d247a in abort () from /usr/lib/libc.so.6\n#2  0x00007f8de47c9ea7 in __assert_fail_base () from /usr/lib/libc.so.6\n#3  0x00007f8de47c9f52 in __assert_fail () from /usr/lib/libc.so.6\n#4  0x000000000045a356 in mpd_msword (dec=0xa75980) at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby-mpdecimal/src/mpdecimal.c:218\n#5  mpd_iszero (dec=dec@entry=0xa75980) at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby-mpdecimal/src/mpdecimal.c:331\n#6  0x0000000000472fc0 in mpd_qformat_spec (dec=dec@entry=0xa75980, spec=spec@entry=0x7ffc8fdcd220, ctx=ctx@entry=0x9f8580, \n    status=status@entry=0x7ffc8fdcd28c) at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby-mpdecimal/src/io.c:1320\n#7  0x00000000004738d5 in mpd_qformat (dec=0xa75980, fmt=fmt@entry=0x481177 \"f\", ctx=0x9f8580, status=status@entry=0x7ffc8fdcd28c)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby-mpdecimal/src/io.c:1390\n#8  0x000000000045602a in ext_decimal_to_s (state=0x9b1010, rself=...)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby-mpdecimal/src/ext.c:220\n#9  0x000000000040f6af in mrb_funcall_with_block (mrb=mrb@entry=0x9b1010, self=..., mid=<optimized out>, mid@entry=38, argc=<optimized out>, \n    argc@entry=0, argv=argv@entry=0x0, blk=..., blk@entry=...) at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/src/vm.c:407\n#10 0x000000000040fbcc in mrb_funcall_argv (mrb=mrb@entry=0x9b1010, self=..., self@entry=..., mid=mid@entry=38, argc=argc@entry=0, argv=argv@entry=0x0)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/src/vm.c:424\n#11 0x0000000000403d23 in convert_type (raise=1 '\\001', method=0x4810cd \"to_s\", tname=0x4813ea \"String\", val=..., mrb=0x9b1010)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/src/object.c:316\n#12 mrb_convert_type (mrb=mrb@entry=0x9b1010, val=..., type=type@entry=MRB_TT_STRING, tname=tname@entry=0x4813ea \"String\", \n    method=method@entry=0x4810cd \"to_s\") at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/src/object.c:338\n#13 0x0000000000455927 in ext_decimal_initialize (state=0x9b1010, self=...)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby-mpdecimal/src/ext.c:86\n#14 0x000000000041150f in mrb_vm_exec (mrb=mrb@entry=0x9b1010, proc=<optimized out>, proc@entry=0x9b9020, pc=<optimized out>)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/src/vm.c:1165\n#15 0x0000000000416d57 in mrb_vm_run (mrb=mrb@entry=0x9b1010, proc=proc@entry=0x9b9020, self=..., stack_keep=stack_keep@entry=2)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/src/vm.c:766\n#16 0x00000000004028be in main (argc=<optimized out>, argv=<optimized out>)\n    at /home/simon/git/shopify/mruby-engine/ext/mruby_engine/mruby/mrbgems/mruby-bin-mirb/tools/mirb/mirb.c:549\n(gdb) info registers\nrax            0x0\t0\nrbx            0x6\t6\nrcx            0x7f8de47d104f\t140247400517711\nrdx            0x0\t0\nrsi            0x7ffc8fdccc30\t140722722098224\nrdi            0x2\t2\nrbp            0x4ac565\t0x4ac565\nrsp            0x7ffc8fdccca8\t0x7ffc8fdccca8\nr8             0x0\t0\nr9             0x7ffc8fdccc30\t140722722098224\nr10            0x8\t8\nr11            0x246\t582\nr12            0xda\t218\nr13            0x4acbb8\t4901816\nr14            0x0\t0\nr15            0x7ffc8fdcd220\t140722722099744\nrip            0x7f8de47d104f\t0x7f8de47d104f <raise+207>\neflags         0x246\t[ PF ZF IF ]\ncs             0x33\t51\nss             0x2b\t43\nds             0x0\t0\nes             0x0\t0\nfs             0x0\t0\ngs             0x0\t0\n(gdb) \n```\n\n",
+  "bounty_amount": "10000.0",
+  "formatted_bounty": "$10,000",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 137556,
+      "file_name": "0001-When-initialized-with-itself-return-self.patch",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/137/556/9cc5fd9c49a8efaaba147b7369228af495fe81fe/0001-When-initialized-with-itself-return-self.patch?response-content-disposition=attachment%3B%20filename%3D%220001-When-initialized-with-itself-return-self.patch%22%3B%20filename%2A%3DUTF-8%27%270001-When-initialized-with-itself-return-self.patch&response-content-type=text%2Fx-diff&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152710Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=a50f533f2d6775f40fad560e0262f94578d428df80178f787fcf997012ee0f02",
+      "file_size": 1125,
+      "type": "text/x-diff",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2017-01-15T20:05:16.799Z",
+  "allow_singular_disclosure_after": -293829713.7830287,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "michiel",
+    "pekafat",
+    "mpz",
+    "hussain_0x3c",
+    "eveeez",
+    "japz",
+    "spetr0x",
+    "scept1c",
+    "hackerjuan"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

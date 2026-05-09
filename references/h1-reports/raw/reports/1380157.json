@@ -1,0 +1,127 @@
+{
+  "id": 1380157,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzgwMTU3",
+  "url": "https://hackerone.com/reports/1380157",
+  "title": "Content-Security Policy bypass with File Uploads",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-10-25T12:43:03.507Z",
+  "submitted_at": "2021-10-25T12:43:03.559Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gronke",
+    "url": "/gronke",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 19858,
+    "url": "https://hackerone.com/rocket_chat",
+    "handle": "rocket_chat",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/019/858/ada6c92a338715afad123af214dd6e22fd8dc6ff_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rocket.Chat",
+      "twitter_handle": "RocketChat",
+      "website": "https://rocket.chat",
+      "about": "Rocket.Chat is a company built on open source values and a love for efficiency. The company is driven by our amazing community of contributors."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2024-08-10T21:56:59.721Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-07-11T21:56:48.890Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nThe current default CSP header in Rocket.Chat prevents inline script execution, which can be bypassed by importing a script file uploaded via the Rocket.Chat file upload.\n\n## Description\n\nThe default CSP header blocks execution of inline-scripts. When a HTML injection vulnerability occurs though, that restriction can be bypassed by uploading a JavaScript file via the file-upload feature (with `application/javascript` or `text/javascript` content-type) to include it in a `<script src=\"<UPLOAD_URL></script>\" tag.\n\nIt is worth noticing that script tags are removed from message content, but this filter can also be bypassed as following:\n\n```html\n<iframe srcdoc=\"&#x3c;script src='/file-upload/<UPLOAD ID>/payload.js?download'></script>\">\n```\n\n## Releases Affected:\n\n  * 4.0.3\n  * 3.18.2\n\n## Steps To Reproduce (from initial installation to vulnerability):\n\n  1. Upload payload as `payload.js` via File Upload feature\n  2. Inject iframe with srcdoc via arbitary XSS\n\n## Suggested mitigation\n\n  * Block script content-types from file-uploads\n  * Filter frames from message body\n\n## Impact\n\nThe CSP `unsafe-inline` restriction can be bypassed by uploading script payload as File Upload.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2024-08-10T21:56:48.995Z",
+  "allow_singular_disclosure_after": -55012009.97914067,
+  "singular_disclosure_allowed": true,
+  "vote_count": 13,
+  "voters": [
+    "he4am",
+    "theeeclipse",
+    "skeptiker",
+    "eminfidan",
+    "shivammusic",
+    "gitsjsons",
+    "anekesec",
+    "jeyilysomelf",
+    "maverick1henry",
+    "ludas",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.3,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

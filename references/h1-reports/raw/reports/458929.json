@@ -1,0 +1,147 @@
+{
+  "id": 458929,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80NTg5Mjk=",
+  "url": "https://hackerone.com/reports/458929",
+  "title": "Malformed BSP in GoldSrc Engine may cause shellcode injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-12-07T22:20:44.175Z",
+  "submitted_at": "2018-12-07T22:20:44.175Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "kohtep2010",
+    "url": "/kohtep2010",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/tg1wmihldmstpzgysu4jqiatwjhu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-03-25T22:03:24.144Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-03-23T07:11:45.780Z",
+  "team_member_agreed_on_going_public_at": "2020-03-25T22:03:23.875Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 21,
+  "voters": [
+    "base_64",
+    "mvc",
+    "spam404",
+    "romesful",
+    "snwlvl",
+    "meepmerp",
+    "cofee_roaster",
+    "hupernikao",
+    "tacticalcheerio",
+    "7ekken",
+    "and 11 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 1289,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "hl.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 20877,
+      "category": "team",
+      "content": "### Introduction\n\nHello. There's a vulnerability in GoldSrc Engine that allows to run arbitrary assembly code using incorrect BSP format processing.\n\n### Description\n\nThe vulnerability is found in the **UTIL_StringToIntArray** function. This function belongs to the game mod library (mp.dll/cs.so) and has the following call chain:\n\nSV_LoadEntities -> ED_LoadFromFile -> ED_ParseEdict -> gEntityInterface.pfnKeyValue -> CGameText::KeyValue -> UTIL_StringToIntArray\n\nThe call of this function occurs at server start during processing of the entities of map being loaded. The vulnerability itself is a classic buffer overflow with the possibility of rewriting the return address to the address where the shellcode is located.\n\nVulnerability was tested on Windows 10 and it works successfully.\n\n### How to reproduce\n\nIn order to reproduce the vulnerability, an attacker needs to perform an entity list correction within the BSP itself. As a demonstration, I took a **35hp_2** map, which uses the **game_text** entity, into which we can write the shellcode that runs OS calculator via WinExec function. You can see shellcode implementation on the image below.\n\n{F387197}\n\nWhen client connects to the HLDS, attacker will send malformed map to it. After client completes download, server will send console command **map 35hp_2_shell** to client, which will start a local server, causing the load of malformed map and the shellcode execution, since this command is not on the stufftext filter list.\n\nTo quickly check the work of the shellcode, it is enough just to put the malformed map in the **maps** folder of any mod (I used Counter-Strike 1.6, Steam) and execute the console command 'map 35hp_2_shell' manually.\n\nI attached malformed map to report.\n\n### Possible solutions\n\nThe argument **pString** needs to be checked for length. So, if it is larger than the buffer where the string is copied, then the function must be terminated. You can also simply replace the function strcpy with strncpy.\n\n## Impact\n\nAn attacker can execute code remotely on a client machine using HLDS, or he can upload a malformed map to web-resources, that can lead to infection of users of the resource.",
+      "updated_at": "2020-03-25T22:03:17.599Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 279011,
+        "username": "mikela",
+        "name": "Mike L",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-05-17T22:06:50.780Z",
+        "url": "https://hackerone.com/mikela",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

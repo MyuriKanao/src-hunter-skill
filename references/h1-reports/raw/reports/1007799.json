@@ -1,0 +1,118 @@
+{
+  "id": 1007799,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDA3Nzk5",
+  "url": "https://hackerone.com/reports/1007799",
+  "title": "Local File Inclusion In Registration Page",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-10-13T23:23:56.794Z",
+  "submitted_at": "2020-10-13T23:23:56.819Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "moloshy",
+    "url": "/moloshy",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/N6pTRwogeYiupyWB7oCHXf65/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-23T18:27:36.444Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-10T13:36:23.342Z",
+  "team_member_agreed_on_going_public_at": "2020-11-23T18:27:36.323Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nWhen registering on https://████████ it is possible to use path traversal characters in a parameter allowing an attacker to read local files.\n\n**Description:**\nThe registerUserInfoCommand.nextPageName parameter within the registration form is vulnerable to file path manipulation, where it is possible to submit a request containing path traversal characters (e.g. ../../../) followed by a local file, which will return the contents of the file. This can be used to read local files including sensitive configuration files such as /WEB-INF/web.xml, /WEB-INF/app-config.xml and /WEB-INF/spring/explicit-security-config.xml.\n\n## Impact\nAn attacker could read local files on the web server that they would normally not have access to, such as the application source code or configuration files containing sensitive information on how the website is configured. \n\n## Step-by-step Reproduction Instructions\n\n1. Browse to https://██████/████████/register/RegisterUserInfo.htm\n2. Setup an intercepting proxy (e.g. BurpSuite) and click Next, catching the request in Burp (don't worry about filling out the form fields)\n3. For ease here I would recommend copying and pasting the below parameters into the request, replacing the parameters that were there originally.  This request will fetch the /WEB-INF/web.xml configuration file, I have also attached two other requests which grab app-config.xml and explicity-security-config.xml. Once the parameters are there, forward the request to the server and you should see the web.xml file.  \n\n```\nregisterUserInfoCommand.organization=Chantest+Corporation&registerUserInfoCommand.organizationId=49800&registerUserInfoCommand.currPageName=SearchUserOrgInfo.jsp&registerUserInfoCommand.nextPageName=..%2f..%2f..%2fWEB-INF%2fweb.xml&registerUserInfoCommand.prevPageName=jsp%2FRegistration%2FRegisterAccountInfo.jsp&registerUserInfoCommand.submitButton=Choose+This+Organization+and+Continue+%3E\n```\n\n## Product, Version, and Configuration (If applicable)\nN/A\n\n## Suggested Mitigation/Remediation Actions\nRather than placing the filename of the next page directly in a parameter, it would be better to maintain a whitelist of acceptable filenames and use a unique corresponding identifier to access the file. Then any request containing an invalid identifier can just be rejected. Additionally, you could also sanitise any path traversal characters that may be present in a request.\n\n## Impact\n\nAn attacker could read local files on the web server that they would normally not have access to, such as the application source code or configuration files containing sensitive information on how the website is configured.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 12,
+  "voters": [
+    "lewiswildgoose",
+    "m0chan",
+    "0xelkomy",
+    "iamunixtz",
+    "pr0f0x01",
+    "mirazdevox",
+    "dastan_9408",
+    "t3chn0phil3",
+    "farmerted",
+    "shadowcracker",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

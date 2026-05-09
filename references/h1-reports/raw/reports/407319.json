@@ -1,0 +1,158 @@
+{
+  "id": 407319,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MDczMTk=",
+  "url": "https://hackerone.com/reports/407319",
+  "title": "ActiveStorage service's signed URLs can be hijacked via AppCache+Cookie stuffing trick when using GCS or DiskService",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-07T20:39:10.582Z",
+  "submitted_at": "2018-09-07T20:39:10.582Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "rosa",
+    "url": "/rosa",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/154/237/a07aeeba083a8f178942d326a68f6427c699e0f1_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22,
+    "url": "https://hackerone.com/rails",
+    "handle": "rails",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby on Rails",
+      "twitter_handle": "rails",
+      "website": "http://rubyonrails.org/security",
+      "about": "Web development that doesn't hurt."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-16477"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-12-27T21:27:02.574Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-11-27T21:27:00.676Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "`ActiveStorage` tries to force `content-disposition: attachment` for [a list of content-types](https://github.com/rails/rails/blob/2a470d73a75ebf8cd7975e469bd82586d9234442/activestorage/lib/active_storage/engine.rb#L33-L42), including `text/html`. However, `response-content-type` and `response-content-disposition` in GCS and DiskService's URLs aren't signed, which means an attacker can modify them at will. This is not the case for Azure or S3.\n\nThis can be exploited using `AppCache` and cookie bombing as follows:\n1. Upload the following file as `ActiveStorage::Blob`\nFile: fallback.html\n```\n<html>\n<script>\n  alert('Your request to the page '+location.href+' is hijacked!');\n</script>\n</html>\n```\nGrab the service signed URL for it and modify content type and content disposition params to `text/html` and `inline`. \n\n2. Now upload this other file using that URL as fallback:\nFile: manifest.appcache\n```\nCACHE MANIFEST \nFALLBACK:\n/bucket_name/ [fallback_url from previous step]\n```\nIn the same way, grab the signed service URL and modify content disposition and type to ensure it's served inline and as `text/cache-manifest`. \n\n3. Finally, upload this file using the service URL for manifest.appcache:\nFile: main.html\n```\n<html manifest=\"[manifest_url from the manifest above]\">\nAny requests to this bucket will be hijacked.\n<script>\nsetTimeout(function(){\nfor(var i = 1e3; i>0; i--){document.cookie = i + '=' + Array(4e3).join('0') + '; path=/'};\n}, 3000);\n</script>\n</html>\n```\nGrab the service URL for `main.html`, modify content type and disposition to ensure it's served as `inline` and `text/html`, and trick a user of the Rails app with access to `ActiveStorage` attachments into clicking it.\n\nSince it'll be open inline and as HTML, the JS code to overflow the cookies for the service (storage.googleapis.com in the case of GCS) will be executed. Next time the user makes a request for a file under the same bucket as `main.html`, googleapis.com will return an error due to the size of the cookie headers. This will be interpreted as being offline by the browser, which will offer the fallback specified in the manifest.  The `fallback.html` above will be opened inline and as HTML as well, and its JS code executed. That code can be made to send `location.href` (the signed URL)  to the attacker.\n\n## Impact\n\nGain access to signed URLs for private objects, which in practice means access to those objects, as signed URLs is all that is needed.",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-12-27T21:27:00.731Z",
+  "allow_singular_disclosure_after": -232394172.4511006,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "lightangel1412",
+    "foobar7",
+    "ali",
+    "jxkz",
+    "ghost_shell",
+    "itsmk",
+    "reddmist"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.4,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "none",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 160,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rails/rails",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 11811,
+      "category": "team",
+      "content": "# Bypass vulnerability in Active Storage\n\nThere is a vulnerability in Active Storage. This vulnerability has been\nassigned the CVE identifier CVE-2018-16477.\n\nVersions Affected:  >= 5.2.0\nNot affected:       < 5.2.0\nFixed Versions:     5.2.1.1\n\nImpact\n------\nSigned download URLs generated by `ActiveStorage` for Google Cloud Storage\nservice and Disk service include `content-disposition` and `content-type`\nparameters that an attacker can modify. This can be used to upload specially\ncrafted HTML files and have them served and executed inline. Combined with\nother techniques such as cookie bombing and specially crafted AppCache manifests,\nan attacker can gain access to private signed URLs within a specific storage path.\n\nVulnerable apps are those using either GCS or the Disk service in production.\nOther storage services such as S3 or Azure aren't affected.\n\nAll users running an affected release should either upgrade or use one of the\nworkarounds immediately. For those using GCS, it's also recommended to run the\nfollowing to update existing blobs:\n\n```\nActiveStorage::Blob.find_each do |blob|\n  blob.send :update_service_metadata\nend\n```\n\nReleases\n--------\nThe FIXED releases are available at the normal locations.\n\nWorkarounds\n-----------\nPutting the following monkey patches in an intializer can help to mitigate the issue:\n\nFor GCS service:\n```\nrequire 'active_storage'\nrequire 'active_storage/service/gcs_service'\n\nmodule ActiveStorage\n  module GCSMetadata\n    def upload(key, io, checksum: nil, content_type: nil, disposition: nil, filename: nil)\n      instrument :upload, key: key, checksum: checksum do\n        begin\n          content_disposition = content_disposition_with(type: disposition, filename: filename) if disposition && filename\n          bucket.create_file(io, key, md5: checksum, content_type: content_type, content_disposition: content_disposition)\n        rescue Google::Cloud::InvalidArgumentError\n          raise ActiveStorage::IntegrityError\n        end\n      end\n    end\n\n    def update_metadata(key, content_type:, disposition: nil, filename: nil)\n      instrument :update_metadata, key: key, content_type: content_type, disposition: disposition do\n        file_for(key).update do |file|\n          file.content_type = content_type\n          if disposition && filename\n            file.content_disposition = content_disposition_with(type: disposition, filename: filename)\n          end\n        end\n      end\n    end\n  end\n\n  module StoreMetadata\n    def upload_without_unfurling(io)\n      service.upload key, io, checksum: checksum, **service_metadata\n    end\n\n    def identify\n      unless identified?\n        update! content_type: identify_content_type, identified: true\n        update_service_metadata\n      end\n    end\n\n    private\n      def service_metadata\n        if forcibly_serve_as_binary?\n          { content_type: \"application/octet-stream\", disposition: :attachment, filename: filename }\n        else\n          { content_type: content_type }\n        end\n      end\n\n      def update_service_metadata\n        service.update_metadata key, service_metadata if service_metadata.any?\n      end\n  end\nend\n\nRails.application.config.to_prepare do\n  ActiveStorage::Service::GCSService.prepend ActiveStorage::GCSMetadata\n  ActiveStorage::Blob.prepend ActiveStorage::StoreMetadata\nend\n```\n\nFor Disk service:\n```\nrequire 'active_storage'\nrequire 'active_storage/service/disk_service'\n\nmodule ActiveStorage\n  module GetParamsFromKey\n    def show\n      if key = decode_verified_key\n        serve_file disk_service.path_for(key[:key]), content_type: key[:content_type], disposition: key[:disposition]\n      else\n        super\n      end\n    rescue Errno::ENOENT\n      head :not_found\n    end\n  end\n\n  module IncludeParamsInKey\n    def upload(key, io, checksum: nil, **)\n      super(key, io, checksum: checksum)\n    end\n\n    def update_metadata(key, **)\n    end\n\n    def url(key, expires_in:, filename:, disposition:, content_type:)\n      instrument :url, key: key do |payload|\n        content_disposition = content_disposition_with(type: disposition, filename: filename)\n        verified_key_with_expiration = ActiveStorage.verifier.generate(\n          {\n            key: key,\n            disposition: content_disposition,\n            content_type: content_type\n          },\n          { expires_in: expires_in,\n          purpose: :blob_key }\n        )\n\n        generated_url = url_helpers.rails_disk_service_url(verified_key_with_expiration,\n          host: current_host,\n          disposition: content_disposition,\n          content_type: content_type,\n          filename: filename\n        )\n        payload[:url] = generated_url\n\n        generated_url\n      end\n    end\n  end\nend\n\nRails.application.config.to_prepare do\n  ActiveStorage::DiskController.prepend ActiveStorage::GetParamsFromKey\n  ActiveStorage::Service::DiskService.prepend ActiveStorage::IncludeParamsInKey\nend\n```",
+      "updated_at": "2018-11-21T21:20:55.490Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 4981,
+        "username": "rafaelfranca",
+        "name": "Rafael França",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "",
+        "location": "",
+        "created_at": "2014-04-14T22:32:11.816Z",
+        "url": "https://hackerone.com/rafaelfranca",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/004/981/dd3b6bb41f9c33e3448ebbc47303f5a135f25105_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/004/981/dd3b6bb41f9c33e3448ebbc47303f5a135f25105_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/004/981/dd3b6bb41f9c33e3448ebbc47303f5a135f25105_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

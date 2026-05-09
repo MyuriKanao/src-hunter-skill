@@ -1,0 +1,132 @@
+{
+  "id": 3463608,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDYzNjA4",
+  "url": "https://hackerone.com/reports/3463608",
+  "title": "Denial of Service (DoS) vulnerability in dedotdotify() URL path normalization",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-12-13T07:58:59.061Z",
+  "submitted_at": "2025-12-13T07:58:59.486Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sy2n0",
+    "url": "/sy2n0",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-13T16:21:37.027Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-12-13T13:16:23.762Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nA Denial of Service (DoS) vulnerability exists in the `dedotdotify()` function in `lib/urlapi.c` that can cause excessive CPU consumption due to O(n²) time complexity when processing URLs with malicious path patterns containing many `../` sequences.\n\n## Affected Component\n\n- **Component**: libcurl URL API\n- **File**: `lib/urlapi.c`\n- **Function**: `dedotdotify()` (lines 794-898)\n- **Vulnerable Code**: Lines 857-866\n\n## Vulnerability Details\n\nThe `dedotdotify()` function normalizes URL paths by removing `../` and `./` sequences according to RFC 3986 Section 5.2.4. However, the implementation has a quadratic time complexity (O(n²)) vulnerability.\n\n### Root Cause\n\nWhen processing a `/../` sequence, the code uses `memrchr()` to find the last `/` in the output buffer to remove the preceding segment:\n\n```c\nelse if(is_dot(&p, &blen) && (ISSLASH(*p) || !blen)) {\n  /* remove the last segment from the output buffer */\n  size_t len = curlx_dyn_len(&out);\n  if(len) {\n    char *ptr = curlx_dyn_ptr(&out);\n    char *last = memrchr(ptr, '/', len);  // O(n) operation\n    if(last)\n      curlx_dyn_setlen(&out, last - ptr);\n  }\n```\n\nEach `memrchr()` call scans the entire current output buffer length, which is O(n). When processing a path like `/a1/a2/.../an/../..`, the function:\n1. First adds all n segments to the output buffer (buffer size grows to ~n segments)\n2. For each `/../`, calls `memrchr()` which scans the entire remaining buffer\n3. Total operations: O(n + (n-1) + (n-2) + ... + 1) = O(n²)\n\n### Attack Vector\n\nThis vulnerability is triggered in all normal URL parsing operations:\n\n1. **Command-line curl**: When processing user-provided URLs\n   - Code path: `src/tool_operate.c` → `parseurlandfillconn()` → `curl_url_set()`\n\n2. **libcurl API**: When `CURLOPT_URL` is set\n   - Code path: `lib/url.c:1771` → `curl_url_set()` → `parseurl()` → `dedotdotify()`\n\n3. **Default behavior**: Triggered when `CURLU_PATH_AS_IS` flag is not set (default)\n   - Check: `lib/urlapi.c:1230-1233`\n\n### Input Size Limit\n\n- Maximum input length: `CURL_MAX_INPUT_LENGTH` = 8MB (8,000,000 bytes)\n- An attacker can create paths up to this limit to maximize CPU consumption\n\n## Impact\n\n### Severity Assessment\n\n**CVSS v3.1 Vector**: `AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H`\n\n- **Attack Vector**: Network (malicious URL can be provided via HTTP request, redirect, etc.)\n- **Attack Complexity**: Low (simple URL manipulation)\n- **Privileges Required**: None\n- **User Interaction**: None\n- **Scope**: Unchanged\n- **Confidentiality**: None\n- **Integrity**: None\n- **Availability**: High (CPU exhaustion leading to DoS)\n\n### Affected Scenarios\n\n1. **Web servers/proxies** that process user-provided URLs using curl/libcurl\n2. **API clients** that accept external URLs\n3. **Mobile applications** processing URLs from user input or network responses\n4. **Any application** using curl/libcurl to parse URLs from untrusted sources\n\n### Potential Consequences\n\n- **CPU exhaustion**: High CPU usage for extended periods\n- **Service degradation**: Delayed response to legitimate requests\n- **Resource starvation**: May prevent other requests from being processed\n- **Amplification**: A single malicious URL can consume significant CPU resources\n\n## Proof of Concept\n\n### Malicious URL Pattern\n\n```\nhttp://example.com/a1/a2/a3/.../an/../../\n```\n\nThis pattern first adds n path segments, then processes n `../` sequences, causing maximum CPU consumption.\n\n### PoC Code\n\nA complete proof-of-concept is provided in `dos_PoC.c`:\n\n```c\n// Compile: gcc -o dos_PoC dos_PoC.c -lcurl\n// Run: ./dos_PoC\n```\n\n### Performance Measurements\n\nTesting results on macOS with optimized build:\n\n| Segments | Path Length | Processing Time | Time Ratio |\n|----------|-------------|-----------------|------------|\n| 100      | 690 bytes   | 0.000012s       | 1.0x       |\n| 1,000    | 7,890 bytes | 0.000028s       | 2.3x       |\n| 10,000   | 88,890 bytes| 0.000271s       | 22.6x      |\n| 50,000   | 488,890 bytes| 0.001383s      | 115.3x     |\n\n**Analysis**:\n- When input size increases 10x (1,000 → 10,000 segments), processing time increases ~9.7x\n- This demonstrates quadratic time complexity (approaching O(n²))\n- With maximum allowed input (8MB), the impact would be significantly greater\n\n### Steps to Reproduce\n\n1. Compile the PoC:\n   ```bash\n   gcc -O2 -o dos_PoC dos_PoC.c -lcurl\n   ```\n\n2. Run the PoC:\n   ```bash\n   ./dos_PoC\n   ```\n\n3. Observe the processing time increases quadratically with input size.\n\n4. Test with actual curl command:\n   ```bash\n   # Create malicious URL\n   MALICIOUS_URL=\"http://example.com$(python3 -c \"print('/a' + '/a'.join(map(str, range(10000))) + '/../' * 10000)\")\"\n   \n   # Measure time\n   time curl \"$MALICIOUS_URL\"\n   ```\n\n## Affected Versions\n\nThis vulnerability affects **all versions of curl/libcurl** that include the `dedotdotify()` function. The function was introduced as part of the URL API implementation.\n\nThe vulnerability exists in the current codebase at:\n- File: `lib/urlapi.c`\n- Function: `dedotdotify()` (line 794)\n\n## Recommended Mitigation\n\n### Short-term Workaround\n\nApplications can use the `CURLU_PATH_AS_IS` flag to skip path normalization:\n- For `curl_url_set()`: Pass `CURLU_PATH_AS_IS` in flags\n- For `CURLOPT_URL`: Use `CURLOPT_PATH_AS_IS` option\n\n**Note**: This workaround may have security implications if path normalization is required for security purposes.\n\n### Long-term Fix\n\nThe `dedotdotify()` function should be rewritten to achieve O(n) time complexity:\n\n1. **Track last slash position**: Instead of using `memrchr()` to search for the last `/` each time, maintain a pointer or index to the last segment boundary.\n\n2. **Single-pass algorithm**: Process the path in a single pass, maintaining a stack or pointer array of segment boundaries.\n\n3. **Example approach**:\n   - Use a linked list or array to track segment boundaries\n   - When encountering `../`, pop from the segment stack instead of searching\n   - This reduces complexity from O(n²) to O(n)\n\n### Input Validation\n\nConsider adding path length limits specifically for `dedotdotify()` processing, independent of the overall `CURL_MAX_INPUT_LENGTH` limit.\n\n## Additional Information\n\n### Related Code References\n\n- Vulnerability location: `lib/urlapi.c:857-866`\n- Function definition: `lib/urlapi.c:794-898`\n- Call site: `lib/urlapi.c:1230-1233`\n- URL parsing entry point: `lib/urlapi.c:901 (parseurl())`\n\n### Testing Environment\n\n- OS: macOS (darwin 25.1.0)\n- Compiler: gcc with -O2 optimization\n- curl: Latest source code from repository\n\n### Disclosure\n\nThis vulnerability was discovered through source code analysis and verified with proof-of-concept code. No actual exploitation attempts were made against production systems.\n\n## References\n\n- RFC 3986 Section 5.2.4: \"Remove Dot Segments\"\n- curl Security Policy: https://curl.se/docs/security.html\n- curl Vulnerability Disclosure Policy: https://curl.se/dev/vuln.html\n\n---\n\n## Reporter\n- Jiyong Yang / BAEKSEOK University\n\n## Impact\n\nAn attacker can cause denial of service and excessive CPU consumption by providing a malicious URL with a path containing many `../` sequences. The dedotdotify() function processes such paths with O(n²) time complexity, consuming disproportionate CPU resources and potentially rendering the service unresponsive or significantly degraded. This affects any application using curl/libcurl to parse untrusted URLs, including web servers, proxies, API clients, and mobile applications.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5114148,
+      "file_name": "dos_PoC.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/xyiz62pgej8ozzk2930nq1s4hfjj?response-content-disposition=attachment%3B%20filename%3D%22dos_PoC.c%22%3B%20filename%2A%3DUTF-8%27%27dos_PoC.c&response-content-type=text%2Fx-c%2B%2Bsrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150019Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ca76f9d528cdbe7808c655248a13e9c62b0986156e5eaba2d152f97b573571ca",
+      "file_size": 4558,
+      "type": "text/x-c++src",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 13,
+  "voters": [
+    "2026",
+    "mostafama2",
+    "avatar_",
+    "duck_17",
+    "glitch-nox",
+    "aniyoe",
+    "d7a",
+    "matador7omar",
+    "surendrasinghkamboj",
+    "prostonedhacker",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

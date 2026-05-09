@@ -1,0 +1,138 @@
+{
+  "id": 308158,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMDgxNTg=",
+  "url": "https://hackerone.com/reports/308158",
+  "title": "[html-janitor] Bypassing sanitization using DOM clobbering",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-01-23T12:47:54.192Z",
+  "submitted_at": "2018-01-23T12:47:54.192Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bayotop",
+    "url": "/bayotop",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/c5g0hr3clmh63r1zeqlen4qzztym/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2017-0928"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-02-05T17:54:24.558Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-02-05T17:53:55.433Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Module:**\n\nName: [html-janitor](https://www.npmjs.com/package/html-janitor)\nVersion: 2.0.2\n\n**Summary:**\n\nArbitrary HTML can pass the sanitization process, which can be unexpected and dangerous (XSS) in case user-controlled input is passed to the clean function.\n\n**Description:**\n\nProof of concept:\n\n```javascript\nvar myJanitor = new HTMLJanitor({tags:{p:{}}});\nvar cleanHtml = myJanitor.clean(\"<form><object onmouseover=alert(document.domain) name=_sanitized></object></form>\")\nconsole.log(cleanHtml) // logs: <form><object onmouseover=alert(document.domain) name=_sanitized></object></form>\n```\nThe following check can be leveraged to bypass the whole sanitization process:\n\n```javascript\ndo {\n  // Ignore nodes that have already been sanitized\n  if (node._sanitized) {\n      continue;\n  }\n...\n```\n\nAs `node` is the first child in the created tree walker (i.e. in this case the `<form>` tag) `node._sanitized` will point to the inner `<object>` and the check passes.\n\nTo learn more about DOM clobbering see: https://www.youtube.com/watch?v=5W-zGBKvLxk (by Mario Heiderich)\n\n**Recommendation:**\n\nIt should be enough to set `node._sanitized` to `false` every time a new node is being processed. \n\n*Note that I previously reported this issue at https://github.com/guardian/html-janitor/issues/35*\n\n## Impact\n\nGiven the module's description I would assume it should be used to prevent XSS vulnerabilities. This is currently a very dangerous assumption given that the whole sanitization process can be bypassed.\n\nNote that the author might have never intended to feed untrusted data into the clean() function. In that case this is *just* a regular issue. Furthermore, the fact that untrusted data is unexpected should be at least mentioned in the documentation, because other developers most certainly will use the package in such scenarios.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-03-07T17:53:55.516Z",
+  "allow_singular_disclosure_after": -257895060.00830308,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "sourc7",
+    "bl4de",
+    "mohaned0101",
+    "thalaivar304",
+    "whitesector",
+    "eveeez",
+    "ranjit_p",
+    "cr4xerbik4sh",
+    "japz",
+    "newatia123",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.8,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 5495,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "html-janitor",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

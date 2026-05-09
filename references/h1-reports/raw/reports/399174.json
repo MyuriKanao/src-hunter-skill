@@ -1,0 +1,125 @@
+{
+  "id": 399174,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zOTkxNzQ=",
+  "url": "https://hackerone.com/reports/399174",
+  "title": "Access MoPub Reports Data even after Company removed you from their MoPub Account.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-24T23:21:37.544Z",
+  "submitted_at": "2018-08-24T23:21:37.544Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "suyog",
+    "url": "/suyog",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/EWRjDSU9Qw1UQYg7z5Htub5s/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61,
+    "url": "https://hackerone.com/x",
+    "handle": "x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "X / xAI",
+      "twitter_handle": "XSecurity",
+      "website": "https://x.com",
+      "about": "X helps you create and share ideas and information instantly, without barriers."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-11-05T18:08:15.483Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-11-02T20:17:11.561Z",
+  "team_member_agreed_on_going_public_at": "2019-11-05T18:08:15.385Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Description + Attacking approach\n\n**API Workflow** :\n\n- The MoPub Reporting API supports two separate CSV outputs where publishers can retrieve inventory or campaign performance data.\n\n- Publishers can retrieve daily reports via making a GET request using the request parameters.\n\n- This URL will return a 302 redirect response. The link to download the report will be returned in the response location header.\n\n-----\n\n**How you grab Report data even after company removed you**\n\n- If Publisher/Company invite you for their MoPub Account with any permissions & Roles.\n (\"administrators or Members\" - it doesn't matter, which permission company gives you while invitation)\n\n- After accept the invitation you have access to make all changes to the company account. \n\n-----\n\n**Attacking approach start from here**\n\n- In order to retrieve data, the API must first be enabled for company account.\n- So, you can Enable data access through API (just click on checkbox in the Reports page of the MoPub UI.)\nor it might be already enabled by publisher.\n- Note down the \"Reporting API access details\". [i.e. API key, Inventory report ID, Campaign report ID]\n- Also Note the Report ID of each MoPub Report present inside the Company Account.\n\n**!!!**\n\n- Now, the publisher/company doesn't want you with their MoPub account and they removed you from their Manage User settings.\n- But they forgot to Reset API key.\n- Now, you don't have any access of company account. \n\n> NOTE! **You have the \"Reporting API access details (which you noted)\".**\n\n-----\n\n**Access the Reporting API :**\n\n- GET request using the request parameters.\n\n[report_key=[individual_report_id ; inventory_report_id ; campaign_report_id]\napi_key=[API_KEY]\ndate=Date of the report. Format YYYY-MM-DD]\nhttps://app.mopub.com/reports/custom/api/download_report?report_key=[REP_KEY]&api_key=[API_KEY]&date=[YYYY-MM-DD]\n\n- Sample Request:\n\n██████████\n\n-----\n\n##Remediation :\n\n1. API key must be auto-reset after the user removed from company.\n2. **(for 2nd condition in impact)** Once the Data access is disabled, user should not be able to access reports data via API.\n\n\n.\n\n\n**Thank you : )**\n\n## Impact\n\n- Attacker(removed user) able to access Organization Current as well as in Future created MoPub reports in 2 conditions :\n\n1. If API key is not reset and \"data access through API\" checkbox is enabled \n2. If API key is not reset and \"data access through API\" checkbox is disabled.",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-12-02T20:17:11.618Z",
+  "allow_singular_disclosure_after": -203022224.6773836,
+  "singular_disclosure_allowed": true,
+  "vote_count": 11,
+  "voters": [
+    "ali",
+    "elmahdi",
+    "sa1tama0",
+    "exception",
+    "cryptographer",
+    "rudvan88",
+    "michaelsdavid",
+    "supernintenden",
+    "seebluecat",
+    "newfile",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 1074,
+    "asset_type": "URL",
+    "asset_identifier": "mopub.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

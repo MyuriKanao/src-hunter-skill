@@ -1,0 +1,132 @@
+{
+  "id": 665798,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82NjU3OTg=",
+  "url": "https://hackerone.com/reports/665798",
+  "title": "Earn free DAI interest (inflation) through instant CDP+DSR in one tx",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-08-02T08:11:11.902Z",
+  "submitted_at": "2019-08-02T08:11:11.902Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "lucash-dev",
+    "url": "/lucash-dev",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/515/399/dd4a50c732c98417d7be59efa049e8c234259884_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 38065,
+    "url": "https://hackerone.com/makerdao_bbp",
+    "handle": "makerdao_bbp",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/PxXdq1Fo6fX6n4fzUk31AqPD/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/PxXdq1Fo6fX6n4fzUk31AqPD/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "BlockDev Sp. Z o.o",
+      "twitter_handle": "makerdao",
+      "website": "https://makerdao.com/",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-08-12T23:44:52.395Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-08-12T23:44:52.302Z",
+  "team_member_agreed_on_going_public_at": "2019-08-12T15:17:59.163Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe MCD contracts contain different mechanisms for accumulating rates in different\ncontracts, namely `pot` and `jug` corresponding to the cost of a loan and interest\nearned on savings. Because these rates are not synchronised, and depend on the\ncall to the `drip` method to be calculated, it's possible to game the system\nto obtain returns on DAI \"savings\" that exist only within a transaction.\nThis means all holders of ETH/gems can costlessly and risklessly earn interest\nfrom the `pot` contract without ever holding DAI for any amount of time.\nThis leads to inflation of the DAI supply and transfer of value to attackers.\n\n## Detailed Description of the Attack Mechanism\n\nOne of the novel features introduced in the MC contracts is the concept of DSR\n(DAI Savings Rate) which incentivises investors to hold DAI, by allowing them\nto earn interest on DAI deposits in the `pot` contract.\nNormally that doesn't result in overall inflation of the DAI supply,\nas the only ways of obtaining the DAI to deposit on the \"savings account\" is by\neither acquiring a CDP (Collateralised Debt Position) or buying DAI from someone\nelse. As repaying a CDP will require an amount of DAI increasing with time, the\noverall economic effect is a net increase in DAI value.\n\nIn practice, however, both the Stability Fee rates and the DSR rate accrue at discrete\nmoments in time (rather than continuously), whenever a user calls the method\n`drip` on the `jug` or `pot` contracts. As these methods are not synchronised\nbetween the `jug` and `pot` contracts it is possible, by carefully sequencing\nmethod calls to perform a transaction with the following steps:\n\n1. Transform the ETH/token into gem balance, using the `join` contract.\n2. Create a CDP urn (vat.frob), obtaining the maximum amount of DAI from the gem balance.\n3. Deposit the resulting DAI balance into `pot` (`join` method).\n4. Update accumulated DSR rate (`pot.drip`).\n5. Withdraw DAI from `pot` (`exit` method), obtaining the DAI deposited in 3 plus\ninterest.\n6. Repay CDP (again, `vat.frob`), getting back the gem balance.\n7. Transform back the gem balance into ETH/token.\n\nAt first glance the attack might not seem very practical, since there's no way\nto guarantee that no other transaction with call `pot.drip` in the same block, and\nthat the time between calls to drip might be just a few seconds, earning a minimal\namount of interest.\nIn practice, a balance of several million USD worth of tokens would be enough to\nobtain interest payments larget than the gas cost of each call -- this could be\neasily crowdsourced in a trustless contract that splits the profits according to\nsize of ETH/token deposits by participants, or easily obtained by some individual\ninvestors (e.g. exchanges).\nEven if the attack doesn't earn an interest in every instance (due to `pot.drip`\nhaving already been called in the same block), a random portion of successful\noccurrences would be enough to make executing it repeatedly profitable. Moreover,\nthe crowdsourcing contract could obtain miner collaboration by paying them a portion of profits or\nextremely high fees.\n\nIf a crowdsourced attacker is correctly built and publicised, nothing prevents\nevery single ETH/token holder from depositing their holdings in it, and profitably\nparticipating (with minimal cost and no risk) in a continuous attack on the MCD contracts,\nearning interest on a total balance worth billions USD -- and considerably inflating\nthe DAI supply.\n\nThe attack will become clearer by inspecting a concrete example.\n\n\n## Reproducing the Attack - Example Crowdsourcer Contract\n\nPlease find attached the file `antivat.t.sol` which includes an example crowdsourcer\ncontract (AntiVat) capable of accepting ETH deposits from users, and executing\nthe CDP+DSR attack (`grabFreeDai` method). The contract also distributes profits\nproportionally between contributors.\n\nThe contract could be easily extended to support other gems and to provide an\nincentive to the miner.\n\nPlease note that this attacker contract is provided merely as an example for\nhelping in reproducing the bug.\n\n## Possible Fix\n\nAs a suggested fix, calling `pot.drip` from within the call to `vat.frob` would\nrender the attack impossible (interest would always be zero).\n\nPlease note that I make no claim that the above is the best way of fixing the issue.\nThe suggested fix is provided only as proof that this is a fixable bug in the\ncontracts.\n\n## Impact Analysis\n\nPlease refer to the \"Impact Analysis\" field below for a detailed analysis.\n\n## Impact\n\nThis section will proceed to demonstrate that this is a critical bug that meets\n(and exceeds) the requirements stated in the policy.\n\nIn the description above I've already made the points that:\n1 - The issue reported is fixable.\n2 - The attack has minimal cost when performed by a crowdsourced contract (or\nhigh-balance attacker).\n\nI'll proceed to show that:\n3 - It's possible to steal 10% (or more) of the value of the collateral in the\nsystem.\n\nThe attack described consists of repeatedly obtaining DAI interest over large\nbalances in ETH/token that could be used for collateral, but without increasing\nthe overall collateral locked in the system. As the DAI interest is paid for with\nnewly created DAI, this corresponds to a continuous inflation of the DAI supply,\ntransferring value continuously from legitimate holders of DAI.\n\nUltimately, given enough time, virtually all the DAI market cap could be in the hands of\nthe attackers. The only limiting factor is time, and the rate at which value can\nbe stolen is a function of the value of ETH and collateral tokens available to the\nattackers (which could well be the economic majority in the ETH ecosystem), the\nDSR rate, and the \"Line\" limit.\n\nAssuming, as an example, that the DSR rate is 2% a year, that the available ETH\nsupply is 20x that of the collateral in the MCD contracts, and that the \"Line\" limit\nis higher than that -- after one year (assuming successful attack in most blocks)\nthe attackers would have inflated the DAI\nsupply in 40%, transfering much more than 10% of collateral value to themselves.\n\nIt's impossible to know beforehand what values the DSR rate and the \"Line\" limit\nwill have, but all they can do without breaking the contract functionality is\nto slow down the theft. (a DSR rate of 0% would effectively kill the DAI savings\nfunctionality, and low \"Line\" values that prevent DAI from being created in the\nattack would also affect the possibility of new legitimate users joining the system)\n\n# Final Note\n\nI understand this is an involved attack, exploiting an issue in the interaction\nbetween several contracts, and with complex economic consequences.\nPlease don't hesitate in contacting me for further explanations or to provide\nany information that can help you reproduce and evaluate the issue.",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 545462,
+      "file_name": "antivat.t.sol",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/545/462/231e3c77a2f374943e4b32d1279cd1dd84c9a331/antivat.t.sol?response-content-disposition=attachment%3B%20filename%3D%22antivat.t.sol%22%3B%20filename%2A%3DUTF-8%27%27antivat.t.sol&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152156Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=7651c4634fa9662b2ad2c5cc6ee9fe1e112f40d7c273f1d6fee8cd300782e45b",
+      "file_size": 5664,
+      "type": "text/plain",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 63,
+  "voters": [
+    "an40r1",
+    "n1m0",
+    "dittyroma",
+    "checkm50",
+    "p1stachios",
+    "mashoud1122",
+    "base_64",
+    "7odamoo",
+    "letstryharder",
+    "ali",
+    "and 53 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 29468,
+    "asset_type": "OTHER",
+    "asset_identifier": "MCD_POT",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

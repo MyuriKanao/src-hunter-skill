@@ -1,0 +1,127 @@
+{
+  "id": 509930,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDk5MzA=",
+  "url": "https://hackerone.com/reports/509930",
+  "title": "Potential unprivileged Stored XSS through wp_targeted_link_rel",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-14T21:37:27.180Z",
+  "submitted_at": "2019-03-14T21:37:27.180Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "simonscannell",
+    "url": "/simonscannell",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/HvE5FGgP56eXFMNMr4rwmunu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 55,
+    "url": "https://hackerone.com/wordpress",
+    "handle": "wordpress",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "WordPress",
+      "twitter_handle": "wordpress",
+      "website": "https://wordpress.org/",
+      "about": "Beautiful sites of any kind."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-16773"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-01-08T16:12:24.864Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-01-03T23:02:01.930Z",
+  "team_member_agreed_on_going_public_at": "2020-01-08T16:12:24.447Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The user description is vulnerable to a Stored XSS via an attribute injection. At fault is the `wp_targeted_link_rel()` filter that parses attributes regardless of their position.\n\n```\nfunction wp_targeted_link_rel( $text ) {\n\t// Don't run (more expensive) regex if no links with targets.\n\tif ( stripos( $text, 'target' ) !== false && stripos( $text, '<a ' ) !== false ) {\n\t\t$text = preg_replace_callback( '|<a\\s([^>]*target\\s*=[^>]*)>|i', 'wp_targeted_link_rel_callback', $text );\n\t}\n```\n\nIt essentially just parses the attribute string of all `<a>` tags and passes them to the preg replace callback.\n\n```\nfunction wp_targeted_link_rel_callback( $matches ) {\n\t$link_html = $matches[1];\n\t$rel_match = array();\n...\n// Value with delimiters, spaces around are optional.\n\t$attr_regex = '|rel\\s*=\\s*?(\\\\\\\\{0,1}[\"\\'])(.*?)\\\\1|i';\n\tpreg_match( $attr_regex, $link_html, $rel_match );\n\n\tif ( empty( $rel_match[0] ) ) {\n\t\t// No delimiters, try with a single value and spaces, because `rel =  va\"lue` is totally fine...\n\t\t$attr_regex = '|rel\\s*=(\\s*)([^\\s]*)|i';\n\t\tpreg_match( $attr_regex, $link_html, $rel_match );\n\t}\n```\n\nAs can be seen it then uses a regex to parse the `rel` attribute, its value and its delimeter from the string.\n\nIf the rel attribute is found, the following happens:\n\n```\n\n\tif ( ! empty( $rel_match[0] ) ) {\n\t\t$parts     = preg_split( '|\\s+|', strtolower( $rel_match[2] ) );\n\t\t$parts     = array_map( 'esc_attr', $parts );\n\t\t$needed    = explode( ' ', $rel );\n\t\t$parts     = array_unique( array_merge( $parts, $needed ) );\n\t\t$delimiter = trim( $rel_match[1] ) ? $rel_match[1] : '\"';\n\t\t$rel       = 'rel=' . $delimiter . trim( implode( ' ', $parts ) ) . $delimiter;\n\t\t$link_html = str_replace( $rel_match[0], $rel, $link_html );\n```\n\nAs you can see the value of the `rel` attribute is splitted by whitespaces and each part is then escaped. The targeted `rel` value is then added to the alread existing ones and put back together.\n\nMost importantly, are the following line:\n\n```\n\t\t$delimiter = trim( $rel_match[1] ) ? $rel_match[1] : '\"';\n\t\t$rel       = 'rel=' . $delimiter . trim( implode( ' ', $parts ) ) . $delimiter;\n\t\t$link_html = str_replace( $rel_match[0], $rel, $link_html );\n```\nif the delimeter is empty (e.g. when `rel=abc` has no quotes), the delimer becomes  `\"`. The original rel attribute is then replaced with the new one. \n\nThis is a problem since the following payload:\n\n`<a title=\"  target='xyz'  rel=abc \">PoC</a>`\n\nwould turn into\n\n`<a title=\" target='xyz' rel=\"abc\" \">PoC</a>` Note that an additional `\"` has been injected and the title attribute has been escaped.\n\nThis is because the regex to match the rel attribute ignores the position of the `rel` attribute within the attribute string. The above payload shows how the rel attribute is placed within a double quoted attribute. Since no delimeter is set, the delimer becomes a double quote and when the rel attribute is inserted back into the string, the double quote is injected.\n\nI recommend using something like `parse_shortcode_atts()` as in `wp_rel_nofollow()` to prevent this from happening.\n\nBy abusing the attribute injection, it is easily possible to create a Stored XSS payload. \n\nTge `wp_targeted_link_rel()` filter is not only called on the user description, however, this is where it becomes exploitable. This is because this vulnerable filter is added before the `kses` filters are added, which means that the injected attribute would be caught by `wp_post_kses()`. The user description is the only exception where the kses filters are called before `wp_targeted_link_rel()` is called.\n\n`<a href=\"#\" title=\" target='abc' rel= onmouseover=alert(/XSS/) \">This is a PoC for a Stored XSS</a>`\n\n\n## Proof of Concept\n\nThe following will demonstrate how a normal forum user can achieve stored XSS on their profile page in BuddyPress\n████████\n\n1. This works if the Bio of forum users is displayed in their profile page. Log in as an administrator and go to Appearence -> Customize and then BuddyPress Nouveu -> Member front page and make sure that displaying the user bio is enabled\n\n2. Create a normal forum user account\n3. Login and edit your profile. Paste \n`<a href=\"#\" title=\" target='abc' rel= onmouseover=alert(/XSS/) \">This is a PoC for a Stored XSS</a>` as your user description\n4. visit your profil and hover over the link.\n\n## Impact\n\nThe Impact of this can vary from site to site. I have shown how this can be exploited in BuddyPress as a mere, normal forum user. Since you can also inject a style attribute and make the link span over the entire page, one can turn this into a wormable Stored XSS in BuddyPress.\n\nBasically every plugin or forum is affected that displays the user description.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-02-02T23:02:01.985Z",
+  "allow_singular_disclosure_after": -197655509.16537577,
+  "singular_disclosure_allowed": true,
+  "vote_count": 80,
+  "voters": [
+    "thaivu",
+    "mashoud1122",
+    "foobar7",
+    "ali",
+    "tess",
+    "bibekshah",
+    "simonscannell",
+    "sameerphad72",
+    "0xbeven",
+    "aryan2808",
+    "and 70 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 2750,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "WordPress Core",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

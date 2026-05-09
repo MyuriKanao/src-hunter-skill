@@ -1,0 +1,125 @@
+{
+  "id": 998398,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85OTgzOTg=",
+  "url": "https://hackerone.com/reports/998398",
+  "title": "Prototype Pollution leads to XSS on https://blog.swiftype.com/#__proto__[asd]=alert(document.domain)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-10-05T13:36:28.671Z",
+  "submitted_at": "2020-10-05T13:36:29.292Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "s1r1u5",
+    "url": "/s1r1u5",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6NqjjWVeuBun4Voc9bJVpTSp/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23607,
+    "url": "https://hackerone.com/elastic",
+    "handle": "elastic",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/607/c5cce6a2e2d95af85e014db95c2d7560e73e9bec_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/607/c5cce6a2e2d95af85e014db95c2d7560e73e9bec_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Elastic",
+      "twitter_handle": "elastic",
+      "website": "https://www.elastic.co/",
+      "about": "Smarter search. Stronger security. Seamless observability. Uncover real-time insights with Search AI."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-08-16T18:54:38.948Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-08-16T18:19:42.270Z",
+  "team_member_agreed_on_going_public_at": "2021-08-16T18:54:38.774Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \ndeparam function which parses location.hash in https://s.swiftypecdn.com/install/v2/st.js  is vulnerable to prototype pollution.\nThere is a script gadget in the same js file which leads to XSS.\n\n\n## Steps To Reproduce:\nVisit (Refresh if you don't see a pop up)\nhttps://blog.swiftype.com/#__proto__[asd]=alert(document.domain)\n\n## Root Cause\nhttps://s.swiftypecdn.com/install/v2/st.js is the vulnerable file.\ndeparam function parses the ` location.hash` incorrectly which leads to Prototype Pollution.\n\n```\n\n t.deparam = h = function(e, n) {\n            var i = {}\n              , r = {\n                \"true\": !0,\n                \"false\": !1,\n                \"null\": null\n            };\n            return t.each(e.replace(/\\+/g, \" \").split(\"&\"), function(e, o) {\n                var s, a = o.split(\"=\"), u = b(a[0]), c = i, h = 0, p = u.split(\"][\"), f = p.length - 1;\n                if (/\\[/.test(p[0]) && /\\]$/.test(p[f]) ? (p[f] = p[f].replace(/\\]$/, \"\"),\n                p = p.shift().split(\"[\").concat(p),\n                f = p.length - 1) : f = 0,\n                2 === a.length)\n                    if (s = b(a[1]),\n                    n && (s = s && !isNaN(s) ? +s : \"undefined\" === s ? l : r[s] !== l ? r[s] : s),\n                    f)\n                        for (; h <= f; h++)\n                            u = \"\" === p[h] ? c.length : p[h],\n                            c = c[u] = h < f ? c[u] || (p[h + 1] && isNaN(p[h + 1]) ? {} : []) : s; //pollution here\n                    else\n                        t.isArray(i[u]) ? i[u].push(s) : i[u] !== l ? i[u] = [i[u], s] : i[u] = s;\n                else\n                    u && (i[u] = n ? l : \"\")\n            }),\n            i\n        }\n\n```\n\nGadget found in the same js, which is very interesting gadget I found so far :xD\n\n```\n\n    \n        pInstall._convertStringHooksToFunctions = function() {\n            var functionHooks = {};\n            $.each(this._userServerConfiguration.install.hooks, function(hookName, hookFunction) {\n                functionHooks[hookName] = eval(hookFunction) //eval everything in the object\n            }),\n            this._userServerConfiguration.install.hooks = functionHooks\n        }\n        \n\n```\n\n## Impact: \nXSS\n\n## Impact\n\nXSS",
+  "weakness": {
+    "id": 63,
+    "name": "Cross-site Scripting (XSS) - DOM"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-09-15T18:19:42.352Z",
+  "allow_singular_disclosure_after": -146609648.61488092,
+  "singular_disclosure_allowed": true,
+  "vote_count": 155,
+  "voters": [
+    "bochen",
+    "scarecow",
+    "buraaqsec",
+    "arist0phanes",
+    "taha",
+    "achabi7",
+    "orange303",
+    "m3ss1_neo",
+    "wi11",
+    "monkelife",
+    "and 145 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 5807,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.swiftype.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

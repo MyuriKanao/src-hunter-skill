@@ -1,0 +1,153 @@
+{
+  "id": 1034346,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDM0MzQ2",
+  "url": "https://hackerone.com/reports/1034346",
+  "title": "Security@ email forwarding and Embedded Submission drafts can be used to obtain copy of deleted attachments from other HackerOne users",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-11-14T03:25:43.624Z",
+  "submitted_at": "2020-11-14T03:25:43.710Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jobert",
+    "url": "/jobert",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ht4b9SmcYNqmpbyCFXd7cxHB/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-11-17T00:42:05.672Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-11-16T23:39:34.810Z",
+  "team_member_agreed_on_going_public_at": "2020-11-17T00:42:05.581Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "HackerOne has a number of ways for hackers to submit security vulnerabilities to a program, two of which are through an embedded submission form and through security@ email forwarding. These two features can be exploited to update a report draft created through security@ email forwarding that does not belong to the attacker. In addition to that, the attacker can exploit these features to obtain copies of orphaned platform attachments that were uploaded through an embedded submission form and don't belong to the attacker.\n\n# Steps to reproduce\nThe exploit consists of chaining two vulnerabilities. The first one is an oversight in the access control of report drafts created and updated through an embedded submission form. To reproduce this first vulnerability, a victim will have to send an email that forwards all emails to a HackerOne inbox. An example of such an email address is security@hackerone.com, which forwards emails to our own program. When someone sends an email to this address, they'd receive an email similar to this one:\n\n{F1077716}\n\nIn the backend, this essentially does two things: it creates a `ReportDraft` object and a corresponding `Invitation` object. The email above contains the secret invitation token for the user to get access to the report draft. As long as the invitation is not accepted, the `ReportDraft` has its `reporter_id` and `tracer` attributes set to `NULL`. When a user would accept the invite, the `reporter_id` attribute would be overwritten with the user's ID who accepted the invitation. For now, let's not accept the invite and dive into the inner workings of embedded submission forms.\n\nSimilar to security@ email forwarding, embedded submission forms allow anonymous users to create a `ReportDraft` object in the backend. This object contains the current state of the embedded submission form to avoid data loss in case the user happens to close their window. To avoid unauthorized access to other anonymous users writing a report at the same time, the frontend generates a UUID to keep track of which attachments belong to the draft. The `ReportDraft` stores this UUID in the `tracer` attribute. Only when the user knows the UUID of this draft will it be able to update the draft. Every request triggered for an unauthenticated session in an embedded submission form will submit this UUID for the backend to authorize the user. This is where the first vulnerability is found.\n\nThe `Teams::EmbeddedSubmissionsController` implements a number of actions, which one of which is `draft_sync`:\n\n```ruby\n# frozen_string_literal: true\n\nmodule Teams\n  class EmbeddedSubmissionsController < ApplicationController\n    # ...\n    def draft_sync\n      draft = Interactors::ReportDrafts::UpdateOrCreate.interact_without_authorization(\n        draft_id: report_params[:draft_id],\n        # ...\n        handle: team.handle,\n        # ...\n        attachment_ids: report_params[:attachment_ids],\n        as_user: current_user,\n        tracer: report_params[:tracer],\n      )\n    # ...\n  end\nend\n```\n\nHackerOne's backend consolidates business logic, input validation, and authorization into service objects called interactors. This particular interactor is called explicitly without any form of authorization. Among a few other attributes, the interaction is given a `draft_id`, `attachment_ids`, `tracer`, and a reference to the `current_user`, which is an instance of a `User` object or an instance of `UserAuthentication::AnonymousUser`. The `handle` attribute that is given is the program's handle based on embedded submission UUID. At this point, the application **should** determine whether the `current_user` OR a valid `tracer` value is present, but this check is missing. This is the first vulnerability. When the interaction is executed, it tries to look up a draft using the following code (see `draft` method):\n\n```ruby\n# frozen_string_literal: true\n\nmodule Interactors\n  module ReportDrafts\n    class UpdateOrCreate < HackeroneInteractor\n      attribute :draft_id, Integer, required: false\n      # ...\n      attribute :attachment_ids, Array, default: []\n      attribute :tracer, String, required: false\n\n      private\n\n      def execute\n        return if draft_id && draft.nil?\n\n        draft.update(\n          # ...\n        )\n\n        draft\n      end\n\n      # ...\n\n      def draft\n        @draft ||= if draft_id\n          ReportDraft.find_by(\n            id: draft_id,\n            team: team,\n            reporter: nil_or_current_user,\n            tracer: tracer,\n          )\n        else\n          ReportDraft.find_or_initialize_by(\n            team: team,\n            reporter: nil_or_current_user,\n            tracer: tracer,\n          )\n        end\n      end\n\n      # ...\n\n      def nil_or_current_user\n        current_user.is_a?(User) ? current_user : nil\n      end\n    end\n  end\nend\n```\n\nStepping through the code, a user can see that if a `draft_id` is present, the system will try to look up a `ReportDraft` object by a tracer UUID and reporter. Going back to the security@ email forwarding, we know that there are `ReportDraft` objects that have a `tracer` or `reported_by_id` attribute set to `NULL`. This means that an attacker can, by guessing a draft ID created through the security@ email forwarding feature, change the contents of a draft by completely removing the `tracer` value from a draft sync that is initiated through the embedded submission form. Here is an excerpt of that request:\n\n```http\nPOST /80b9bc53-a236-445d-a7e4-553828b7d533/embedded_submissions/draft_sync HTTP/2\nHost: hackerone.com\n...\n\n{\n  \"draft_id\": \"1\",\n  \"title\": \"This becomes the new title for draft 1\",\n  \"vulnerability_information\":\"This becomes the new vulnerability information for draft 1\"\n}\n```\n\nOnce the victim claims the invitation through the email that was shown earlier, they'll see the updated vulnerability information and title.\n\n{F1077723}\n\nYou can see that the interaction passes *all* attributes to the `update` call, see `Interactors::ReportDrafts::UpdateOrCreate#execute`. This means that the attacker can only change *all* attributes, reducing the likelihood of the expoitation. However, due to the fact that this allows an attacker to change report drafts, the impact on the integrity is set to high. It could be used to tamper with drafts that are in the process of being submitted to a live program.\n\nTo further increase the severity of the vulnerability, it can be chained with another vulnerability. When a user uploads an attachment through an embedded submission form, it'll create an `Attachment` object that belongs to the `ReportDraft` object. In the backend, its attributes will look like this:\n\n```json\n{\n  \"id\": \"1\",\n  \"uploaded_by_id\": null,\n  \"attachable_id\": 1,\n  \"attachable_type\": \"ReportDraft\"\n}\n```\n\nThe `attachable_id` and `attachable_type` form a polymorphic relation to any other persistent model in HackerOne's database. As long as the user is working on its report, the attachment references a `ReportDraft` object. On submission, it'll transfer the ownership to the `Report` that was created – this is the report that customers see. ActiveRecord, the ORM HackerOne uses, has logic to (conveniently) disassociate a polymorphic relation when the model referencing the polymorphic relation overwrites the IDs. To show this, consider the following code example:\n\n```ruby\n# Create an attachment. At this time, the `attachable_id` and `attachable_type` are set to `NULL`\nattachment = Attachment.create!\n\n# Create another attachment. At this time, the `attachable_id` and `attachable_type` are set to `NULL`\nanother_attachment = Attachment.create!\n\n# Create a report draft and reference the first attachment. The `attachable_id` and `attachable_type` of the attachment are updated to reference the created report draft.\nreport_draft = ReportDraft.create! attachment_ids: [attachment.id]\n\n# Update the attachment IDs of a report draft. This will do two things:\n#   - update `attachment.attachable_id` to `NULL`\n#   - update `another_attachment.attachable_type` to `ReportDraft`\n#   - update `another_attachment.attachable_id` to `report_draft.id`\nreport_draft.update! attachment_ids: [another_attachment.id]\n```\n\nThis means that the `attachment`, as created in the above code example, is not referencing any object at all. There is a code path in HackerOne's platform to get an attachment in this state: upload an attachment using an embedded submission form, then clicking the \"X\" to remove it, and type one character in the vulnerability information field to trigger a draft sync. This will leave the first attachment in an orphaned state that has its `uploaded_by_id` and `attachable_id` set to `NULL`. Going back to the `Interactors::ReportDrafts::UpdateOrCreate` interactor, there's a method that associates attachments to a `ReportDraft` with the following logic:\n\n```ruby\n# ...\ndef valid_attachments\n  (\n    draft.attachments.with_attached_file.where(id: attachment_ids) +\n    Attachment.with_attached_file.where(\n      id: attachment_ids,\n      attachable_id: nil,\n      uploaded_by: nil_or_current_user,\n    )\n  ).uniq\nend\n# ...\n```\n\nThe code that contains the vulnerability is the second `Attachment` lookup: it selects all attachment objects that don't have an `attachable_id` set and that are uploaded by an anonymous user. This means that any attachment that was uploaded by an anonymous user and removed the attachment from a draft can be associated with the attacker's report draft. There are 823 attachments that match this criteria.\n\nAn attacker can exploit this chain using the following steps:\n\n1. in an authenticated session, start typing a report to any program. Observe the network traffic for the `draft_sync` endpoint to determine the latest report draft ID, which is included in the response (e.g. 1).\n1. in the same session, upload an attachment and observe which ID was associated (e.g. 5).\n1. send an email to the program's email forwarding address (e.g. security@hackerone.com). This will create a report draft with an ID that is one to ~ ten IDs up from the report draft the authenticated user created.\n1.  in an incognito browser, go to the program's embedded submission form URL. An example is [HackerOne's own form](https://hackerone.com/80b9bc53-a236-445d-a7e4-553828b7d533/embedded_submissions/new). Start typing and intercept the request to the `draft_sync` endpoint.\n1. change the `draft_id` to the ID obtained in step 1 and completely remove the `tracer` value from the request.\n1. set the `attachment_ids` to an array containing *all* possible attachment IDs from 1 to the ID obtained in step 2\n1. claim the report draft through the invitation you received\n1. in the UI, observe that the attachments belonging to the victim are attached to the report draft\n1. copy the ID and inline them in the vulnerability information field, e.g. `{F5}`\n1. in the report preview section, click the link to obtain a copy of the victim's attachment\n\n## Impact\n\nThe first vulnerability can be used to change the contents of a number of draft reports that were created through the security@ email forwarding feature. However, chaining the two vulnerabilities would increase the severity as it would allow an attacker to associate orphaned `Attachment` objects to its own report draft, potentially containing sensitive information. The attacker does not have to be authenticated in order to exploit this vulnerability.",
+  "weakness": {
+    "id": 55,
+    "name": "Insecure Direct Object Reference (IDOR)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1077716,
+      "file_name": "Screen_Shot_2020-11-13_at_6.12.58_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/9SxkxusCYkPnqVT3Zm32EU21?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2020-11-13_at_6.12.58_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2020-11-13_at_6.12.58_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151648Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=67f3c83ad654cc07eda64412b4c5e3293f144c1dfe4ff7685981b09543d5fc1b",
+      "file_size": 119353,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 1077723,
+      "file_name": "Screen_Shot_2020-11-13_at_6.41.57_PM.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/AJ8yLJBwzUcAdxBwo2VfLKU9?response-content-disposition=attachment%3B%20filename%3D%22Screen_Shot_2020-11-13_at_6.41.57_PM.png%22%3B%20filename%2A%3DUTF-8%27%27Screen_Shot_2020-11-13_at_6.41.57_PM.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQWPEODDBF%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151648Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJHMEUCIQC29PU%2FjrhrTrwuQy3LCYqDX7UOerD9wzLzz4mr1y37%2BAIgUYd%2FG9GVl%2BwK5Rp%2BxodG0dOErIQ8NZcO3D966hxiDMkquwUI6P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDEsyD6YaEw%2BDun6YYSqPBYhYjKBX2bPG%2FFuZPmK37I0cJbJBCYOAvXftpysm%2BzXReAWxV6%2FUEbHl1un6%2B%2Bc6%2Fz44dS5%2B57KTilNptTJDUPZZQ8FGJ2AKX5PViJicXrcDMZbAoiFLyH9prJVs%2FwzgnZHX4osrWBFuNA0L7gDeqn9SNQ5Gknukt4vVfR580vRiHCTjBQsFHkXX%2Bs%2BLdf1v1Or7GsRN5H3lgDCnP3HLxEFvmkyB4i3NV0OH9YHSS8t0h2%2BVYGlht0PblS7mXUNl7gZKCaR5Hofafl0RMPHPdoPXTZdqVXV9VEFZJz1G6gQvbBImtHecquEMH%2Fp%2BT%2FCGdxX2U1aEJJCnshObrFAnudfvFrqvpY98eh1ailkKprI1SGbzbGmv%2ByKV3ClxJc5B4vckjM9O%2BC9owspxmNIx76CH4efb1gKtZDPutfIcFJSPgei5AViOYxt5vyGemlkfr9wkSCWqlNo0YEybBy8xdgTFfPIkqyxTmYZYXvQ%2B7NdbJgk8peowaTR7vnDBY5DY4w1XodT3MfYN5vCe45m2Zon7kKtcghPlp87Kk1b1NLWsjfqxLxBEiXc9VFQCcB3CIvYCJZ%2FjLY2Ov%2BFQVnJyPnkIixAJlGcyRtEaoiBqPWo5HFkvJ4%2FWC8YtfDQ%2BVCXqdjFw7KNlaWM4e76l7V5uZRZZIXwMRpUJJAti6e%2FgXP7a9WsS9D4I08H1a1x8h8g7HbjzcJMw0r6gINTJV%2B5NXx73Qxk7RXhqRycxrb473rokw1xPILHgwI36zQn0Ts9sXbwkUwioDWq4ueAOEsCqF0dul8fV4iI6Gbc7do3O%2BAs9bQokeb5KRo74UveVYA8F9w9boCn41xC928jKCUJfiXx1BLMQDWgd4IdDKIaveAcwkI79zwY6sQEbJwA2tB95lkFkWC%2FHXhPskbReU5Ub2jfXdmrffI5v05h%2B4Y7yCH%2BnlPexgdDZsQfvtYmzM0FbTZMHwoeNtm6bCbBQgBrtftx56Ooky6Z%2BIofWcb1M%2FAT5NrmyX99k5BaCJO3yTBLTiQI1EKTjbJQI%2Bc518mAGsJ6A0AZWQWy5oWC5TcNd%2FN4ieUqv10JEIKH%2B3eL5VixEcr9L83YVpmnpiGzV0ulYxlc5rPo%2B1vPLn%2BU%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=0a4139d518f97e39a0454543042e5d01bcadb6c13798520acb52bda000155cf6",
+      "file_size": 598328,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-12-16T23:39:34.926Z",
+  "allow_singular_disclosure_after": -170177833.8922758,
+  "singular_disclosure_allowed": true,
+  "vote_count": 89,
+  "voters": [
+    "taha",
+    "alolowiwael",
+    "nytr0gen",
+    "xploiterr",
+    "badcracker",
+    "archangel",
+    "m0chan",
+    "mashoud1122",
+    "mattberg",
+    "gevakun",
+    "and 79 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 3,
+    "asset_type": "URL",
+    "asset_identifier": "hackerone.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

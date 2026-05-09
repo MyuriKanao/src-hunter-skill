@@ -1,0 +1,140 @@
+{
+  "id": 3516186,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNTE2MTg2",
+  "url": "https://hackerone.com/reports/3516186",
+  "title": "Cookie Max-Age Integer Overflow Vulnerability",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2026-01-19T10:12:12.195Z",
+  "submitted_at": "2026-01-19T10:12:12.503Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bhaskar_ram",
+    "url": "/bhaskar_ram",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/cqqhpn6i5pp2lq6ax7uv1h3wuls8/8774a5031fc14b74dc4404da039040c69df8ed41021007c0c2beb9de489fcf66"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-01-19T11:50:14.091Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-01-19T10:57:56.396Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nThe cookie parsing code in `lib/cookie.c` contains an integer overflow vulnerability when processing the `Max-Age` attribute of HTTP cookies. The vulnerable code attempts to add the max-age value to the current timestamp without adequate overflow protection\n\nWhile the code includes an overflow check (`CURL_OFF_T_MAX - now < co->expires`), this check itself can experience integer overflow in edge cases where:\n1. The `max-age` value is extremely large (near `CURL_OFF_T_MAX`)\n2. The current time (`now`) is large enough that the subtraction `CURL_OFF_T_MAX - now` produces unexpected results\n3. The addition `co->expires += now` occurs without proper bounds checking\n\nAn attacker can exploit this vulnerability by:\n1. Controlling a web server or performing a man-in-the-middle attack\n2. Sending HTTP responses with `Set-Cookie` headers containing extremely large `Max-Age` values\n3. Causing curl/libcurl to incorrectly calculate cookie expiration times\n4. Resulting in cookies persisting beyond their intended lifetime or being immediately expired\n\n**Vulnerable Code Location:** `lib/cookie.c:607-611`\n\n```c\nelse if(CURL_OFF_T_MAX - now < co->expires)\n    /* would overflow */\n    co->expires = CURL_OFF_T_MAX;\nelse\n    co->expires += now;\n```\n\n## Affected version\n**Affected Versions:** curl 7.x - 8.x\n\n## Steps To Reproduce:\n\n### Vulnerable Code Flow\n\n1. **Cookie Header Parsing** (`parse_cookie_header()`)\n   - Parses `Max-Age` attribute from `Set-Cookie` header\n   - Calls `curlx_str_number()` to convert string to integer\n   - Handles overflow cases but with insufficient protection\n\n2. **Overflow Check** (Line 607)\n   ```c\n   if(CURL_OFF_T_MAX - now < co->expires)\n   ```\n   - This check can itself overflow when `now` is large\n   - Does not account for all edge cases\n\n3. **Time Addition** (Line 611)\n   ```c\n   co->expires += now;\n   ```\n   - Performs addition without verifying result\n   - Can wrap around on overflow\n\n### Exploitation Scenarios\n\n#### Scenario 1: Maximum Max-Age Value\n```http\nHTTP/1.1 200 OK\nSet-Cookie: session=abc123; Max-Age=9223372036854775807; Path=/\n```\n- Max-Age set to `CURL_OFF_T_MAX` (64-bit maximum)\n- When added to current time, may overflow\n- Cookie may expire immediately or persist indefinitely\n\n#### Scenario 2: Near-Overflow Value\n```http\nHTTP/1.1 200 OK\nSet-Cookie: tracking=xyz; Max-Age=9223372036854000000; Path=/\n```\n- Max-Age chosen to overflow when added to `time(NULL)`\n- Bypasses overflow check due to edge case\n- Results in incorrect expiration calculation\n\n#### Scenario 3: Cookie Jar Pollution\n```http\nHTTP/1.1 200 OK\nSet-Cookie: cookie1=val; Max-Age=9223372036854775807\nSet-Cookie: cookie2=val; Max-Age=9223372036854775806\nSet-Cookie: cookie3=val; Max-Age=9223372036854775805\n... (repeated many times)\n```\n- Multiple cookies with overflow values\n- Fills cookie jar with persistent cookies\n- Causes denial of service\n\n---\n\n### PoC Server\n\nA malicious HTTP server has been developed to demonstrate the vulnerability:\n\n**File:** `poc_cookie_overflow.py`\n\n```bash\n# Run the PoC server\npython3 poc_cookie_overflow.py\n\n# Server starts on http://localhost:8000\n# Provides 4 different exploit scenarios\n```\n\n### Testing Steps\n\n#### Test 1: Maximum Max-Age Value\n```bash\n# Test with vulnerable curl\ncurl -c cookies.txt http://localhost:8000/exploit1\n\n# Examine cookie file\ncat cookies.txt\n\n# Expected (vulnerable): Cookie with incorrect expiration\n# Expected (patched): Cookie capped at 400 days\n```\n\n#### Test 2: Near-Overflow Value\n```bash\ncurl -c cookies.txt http://localhost:8000/exploit2\ncat cookies.txt\n\n# Check if overflow occurred\npython3 -c \"\nimport time\nwith open('cookies.txt') as f:\n    for line in f:\n        if 'near_overflow' in line:\n            parts = line.split()\n            expiry = int(parts[4])\n            now = int(time.time())\n            print(f'Expiry: {expiry}')\n            print(f'Now: {now}')\n            print(f'Diff: {expiry - now} seconds')\n            print(f'Days: {(expiry - now) / 86400} days')\n\"\n```\n\n#### Test 3: Negative Max-Age\n```bash\ncurl -c cookies.txt http://localhost:8000/exploit3\ncat cookies.txt\n\n# Verify cookie was expired immediately\n```\n\n#### Test 4: Cookie Jar Pollution\n```bash\ncurl -c cookies.txt http://localhost:8000/exploit4\nwc -l cookies.txt\n\n# Should show 10+ cookies with overflow values\n```\n\n## Supporting Material/References:\n\n- [RFC 6265 - HTTP State Management Mechanism](https://datatracker.ietf.org/doc/html/rfc6265)\n- [RFC 6265bis - Cookies (Draft)](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis)\n- [CWE-190: Integer Overflow or Wraparound](https://cwe.mitre.org/data/definitions/190.html)\n- [curl Security Policy](https://curl.se/docs/security.html)\n\n\n  * [attachment / reference]\n\nAttached PoC, patch files\n\n## Impact\n\n## Summary:\n   - Attacker-set session cookies persist beyond intended lifetime\n   - Users remain logged in indefinitely\n   - Session tokens cannot be properly expired\n   - Tracking cookies persist longer than allowed\n   - User privacy preferences bypassed\n   - GDPR/privacy regulation violations\n   - Authentication cookies may expire immediately\n   - Or persist indefinitely, preventing logout\n   - Access control mechanisms compromised\n   - Malformed cookies fill up cookie storage\n   - Legitimate cookies may be evicted\n   - Application functionality degraded",
+  "weakness": {
+    "id": 15,
+    "name": "Integer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5244479,
+      "file_name": "fix_cookie_maxage_overflow.patch",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/she0vzaqaymvex3g739fqbiese8u?response-content-disposition=attachment%3B%20filename%3D%22fix_cookie_maxage_overflow.patch%22%3B%20filename%2A%3DUTF-8%27%27fix_cookie_maxage_overflow.patch&response-content-type=text%2Fx-diff&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145933Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c75bbb81970db7f813f7888c87118cf5dbafc5099c1b686fd092df5817e8e56c",
+      "file_size": 3577,
+      "type": "text/x-diff",
+      "moderated": null
+    },
+    {
+      "id": 5244481,
+      "file_name": "poc_cookie_overflow.py",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/p86e3xpeo1ojp6ntwz70n6elenur?response-content-disposition=attachment%3B%20filename%3D%22poc_cookie_overflow.py%22%3B%20filename%2A%3DUTF-8%27%27poc_cookie_overflow.py&response-content-type=application%2Fx-sh&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUV2CGWUB%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145933Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQCTXpxsFPt1L%2FkCxOVB1B3bBXWaNOlY5wahEl5r2sxxBgIhANZZTGMjD1dUdM6hu53hcgIE%2BhLd%2F5bYa3ZdxidZkTITKroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igx%2FJgTOGH7sfsex8cIqjgU0qgSJ9WhXa7evAxE%2B%2BIf9cl6N4OunmKi1bbV3Gj4oEXwaOD6BD53PpBRgoDh3BKRK1f7KsrMtk7oQKfjJkC24OrFpqNdFReGiSfZ1iwGS3LhDzFVwQdn1%2BK8Ol6C6ex3caYbFTIhVw0SAtKwqliL%2F93RaJd7oREgGvzI8IG0T3IAxQX7%2FCcOBfHTXizPiBLNrfLpqwm0Nwl2%2F1nMwD%2FIlZVXXGLkOMUb1J4dBuH2ILkLdJY5uvzxYr80JyJqgUzwRAkazE1oYfLyHJGRBgJHJ2dA1FSp7B%2BGFd%2Fo%2FfcRyyL7GyD%2BuH8BKk%2F0bR8j9qmQnftDc7%2B4mafAudu0YWNx47h7wl0lF9X9f5SnqU4ImIYjPUeS8zJ%2BElpfJAshC9lqkuO1uuQrQlknnzGulGKpUkLj3dE0y2TI5tUrjC%2FtF8%2FIsUntd2eVaBF%2FYE%2BelZD6Zftc9ZvvVQhImYlFGiHGzEun8Zp77ikhc7pdZNm55EhQZoQW0aLxeUZRGEDT65OOfGiqUSk0YPu1y7idAZZy7M5yu8GzeYOvmYsGOt0aKWBoH6bquc9IcUzfFKfSiTQ1vsts7yC3dadpPkBxwfBkn9bh6bKJf7CAFfueAhP%2Fbc%2By%2FEF3wSNK%2BE2PDtFfzNfck9xkYhPJbdwq8L11C4x3EM7BkGkGGjoml%2FCdzIWn9jXxMZhMejeAheaWqKqnR4rmFmYlvfiJLpuQAouvvUzpfQo%2BuzwtTLMJrl8P%2FoIH7WVxm2WwZy4tO%2Blx3c7%2F7fv9LSeE5E%2FOgOg%2B6bSI4RkNXAtNyPDG%2FeY7u5VFXYYHBgji2BWbqq0UGfKEvusUXUVtwFuAniojpSOzeVkfC9Oow64qoX4LMGa%2FZlsSi55wwtv78zwY6sAFsfiizT40h6BNyeJmgpnfo1N6cLUC4QuJhp2F6NPTJJuTaz%2F0q%2Fv4xHYTI8pFZShEkmnGRggZOoBtIuL5ZHtnM2olXFY3CVC9y72drP3OwIIToCP3Ui4zOhTQV2R78aLq8IQJyVf7nMR6yVlk2gQI1svAuSOAjVsTkyK%2Bd7vItexRmem3Td1bRFMAPLnCKsHM5FYhtHwhI%2BaSL6Y2BjpQeVoBT5xKJrTpvsPBYzzJp%2FA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6d56b3e467a38af75d7f81924151d5180ca08359bde2a801846c74ab25e0f692",
+      "file_size": 12423,
+      "type": "application/x-sh",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 28,
+  "voters": [
+    "2026",
+    "asherif",
+    "mabdelnafea",
+    "brazil1",
+    "xwx1234llllll",
+    "dilkhazbarjis",
+    "dsokey100",
+    "sweens",
+    "cybersamurai117",
+    "mistersiddd",
+    "and 18 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

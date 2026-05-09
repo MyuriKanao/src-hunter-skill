@@ -1,0 +1,181 @@
+{
+  "id": 906433,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MDY0MzM=",
+  "url": "https://hackerone.com/reports/906433",
+  "title": "Android WebViews in Twitter app are vulnerable to UXSS due to configuration and CVE-2020-6506",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-06-23T22:02:23.714Z",
+  "submitted_at": "2020-06-23T22:02:23.714Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "alesandroortiz",
+    "url": "/alesandroortiz",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/281/801/9c6833231ccd8fb957dfd04cc325d7ea2cf4b81b_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61,
+    "url": "https://hackerone.com/x",
+    "handle": "x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "X / xAI",
+      "twitter_handle": "XSecurity",
+      "website": "https://x.com",
+      "about": "X helps you create and share ideas and information instantly, without barriers."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-6506"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-09-24T19:11:25.599Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-09-09T23:20:37.742Z",
+  "team_member_agreed_on_going_public_at": "2020-09-24T19:11:25.504Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nCVSS score: 8.1 / High / CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N\n\n**Embargo notice: Do Not Disclose publicly until https://crbug.com/1083819 is disclosed.**\n\nTwitter for Android is affected by a UXSS vulnerability due to its configuration of Android WebView and CVE-2020-6506.\n\nVendor mitigation is recommended to protect unpatched WebView users, due to its impact and ease of exploitation. Mitigation options which minimize breaking changes are provided for various use cases.\n\nAndroid WebView is the system component which allows Android apps to display web pages. Apps typically use Android WebView directly or via frameworks/libraries.\n\nCVE-2020-6506 is a universal cross-site scripting (UXSS) vulnerability in Android WebView which allows cross-origin iframes to execute arbitrary JavaScript in the top-level document. This vulnerability affects vendors which use Android WebView with a default configuration setting, and run on systems with Android WebView version prior to 83.0.4103.106.\n\nAll relevant details to understand and mitigate the vulnerability should be in this report. As an affected vendor, you may request access to the restricted crbug for full details and discussion, subject to acceptance by the Chromium Security Team. To request access, send me an email.\n\n## CVE-2020-6506 Details:\nEmbargo notice: Do Not Disclose publicly until https://crbug.com/1083819 is disclosed.\n\nAn Android WebView instance with WebSettings.setSupportMultipleWindows() kept at default or set to false allows an iframe on a different origin bypass same-origin policies and execute arbitrary JavaScript in the top document.\n\nTo perform the attack, an iframe can call window.open() with a javascript: URL. Other methods of opening a new window, such as a link with target=”_blank” and href=”javascript:...”, can also be used to perform the attack.\n\nPerforming the attack requires a single user interaction (a tap/click or a keypress). The malicious iframe does not need to be visible, and can obtain the keypress interaction while a user attempts to type in the top-level document (no direct iframe interaction required).\n\nThe patched version of Android WebView (83.0.4103.106) was released on Monday, June 15th, 2020: https://chromereleases.googleblog.com/2020/06/stable-channel-update-for-desktop_15.html\n\nVendors can and should mitigate CVE-2020-6506 to protect their users using unpatched Android WebView versions.\n\n## Vendor Details:\nTwitter for Android uses WebViews to render the URL in Video Website Cards. This type of Card uses the vulnerable WebView configuration, therefore there's two ways a user can reach the vulnerable WebView:\n1. Advertiser creates legitimate Video Website Card pointing to the advertiser URL, then shares it via regular Tweets or paid advertising campaigns.\n2. Attacker creates Video Website Card with the user-trusted target URL, then shares it via regular Tweets or paid advertising campaigns.\n\nIf the advertiser/target URL has a malicious or compromised iframe, the iframe can perform the UXSS attack with minimal user interaction (tap/click or keypress). If there's sensitive data in the WebView, it is vulnerable to exfiltration. Page contents and data can also be altered to benefit the attacker, such as requesting sensitive info from the user while purporting to be the advertiser/target URL.\n\nBased on Twitter's use case, the suggested solution is option 1a or 1b. The final determination is left to the vendor. Reference implementations for each option is available by request.\n\nIf none of these options appear suitable, please provide feedback to address concerns. Other vendors could have the same concerns, so your input is appreciated to best mitigate for all affected vendors.\n\n### Potential Solutions:\nVendors generally have two choices to mitigate for unpatched WebView users:\n1. Enable multiwindow support. If needed, implementation options exist to mimic single-window behavior and minimize breaking changes. Does not require multi-tab UI. Suitable for browsers and frameworks.\n2. Keep multiwindow support disabled, and strictly limit WebView rendering to trusted content only. Suitable for non-browser apps, and for frameworks when used in non-browser apps.\n\nDetailed choices:\n* Option 1a: Enable multiwindow support, and create a new tab in UI or block window creation.\n    * Suitable and preferred choice for browsers.\n    * Implementation: Set WebSettings.setSupportMultipleWindows() to true, and handle onCreateWindow() callback to create new tab in UI or block window creation.\n    * Potential downsides: If all window creation is blocked, user experience may be negative.\n\n* Option 1b: Enable multiwindow support, and mimic single-window behavior via WebView instance replacement.\n    * Suitable for browsers and frameworks. Preferred choice for frameworks.\n    * Potential implementation: Set WebSettings.setSupportMultipleWindows() to true, and handle onCreateWindow() callback to create a new WebView on top of existing WebView. Rebind any event listeners, state info, and other logic to the new WebView. Finally, destroy the old WebView as soon as possible.\n    * Potential downsides: May cause breaking changes if existing code expects a single WebView instance for duration of use.\nTo minimize breaking changes, vendor could add an abstraction layer to internally track WebView instances. The abstraction could perform necessary setup/cleanup for each instance to maintain current WebView behavior (such as JS injection on first page load or each page load, event listeners, state, etc.). The abstraction layer could then seamlessly provide existing interfaces to other layers.\n\n* Option 1c: Enable multiwindow support, and mimic single-window behavior via WebView instance reuse.\n    * Suitable for browsers and frameworks.\n    * Only if Option 1b is not feasible, and existing code expects a single WebView instance for duration of use. Minimizes breaking changes at the cost of complexity and fragility.\n    * Potential implementation: Set WebSettings.setSupportMultipleWindows() to true, and handle onCreateWindow() callback. In the callback, create a temporary WebView with shouldOverrideUrlLoading() which returns true (prevents loading) and stores the attempted URL in a variable. Filter the attempted URL to ensure it is a safe HTTP(S) URL, then call loadUrl() on the initial WebView with the attempted URL. Finally, destroy the temporary WebView when convenient.\n    * Potential downsides: May still cause breaking changes. May break if Android WebView behavior changes in future. Adds complexity which may be difficult to maintain.\n\n* Option 2: Keep multiwindow support disabled, and enforce strict origin allowlist.\n    * Suitable for non-browser apps, and for frameworks when used in non-browser apps.\n    * Because the vulnerability is not mitigated with this option, WebViews must only render first-party trusted content in top-level window and iframes. If using cross-origin iframes, they must be properly sandboxed. Cross-origin iframes must avoid sandbox=\"allow-popups allow-top-navigation allow-scripts\" because this allows exploitation.\n    * Potential downsides: Any bypass of origin filtering allows exploitation of unpatched WebView users. For frameworks with configurable origin allowlists, developers can misconfigure allowlists and make their apps vulnerable.\n\nAdjacent phishing mitigation: If the current page URL is not guaranteed to be shown to the user, origin allowlists are recommended to mitigate phishing risks. This is an adjacent vulnerability, but it's a good opportunity to mitigate it because URL filtering is likely to be implemented as part of the UXSS mitigation.\n\nAdditional implementation details for options 1a and 1b: When using multiple WebView instances simultaneously, ensure to destroy the background WebView, unload the background page, or handle background page events safely. Otherwise, background pages can perform actions which should only be allowed by a foreground page, which often cause other security issues.\n\n## Environment:\nDevice: Samsung Galaxy S10 + Emulated Android device\nOS version: Android 10 (on both devices)\nTwitter version: 8.50.0-release.02\n\n## Steps To Reproduce:\n\n### Prerequisites:\n* System with unpatched Android WebView (prior to version 83.0.4103.106)\n* Twitter Video Website Card with landing URL pointed to a PoC URL. (Provides WebView with WebSettings.setSupportMultipleWindows() kept at default or set to false.)\n  * PoC 1: https://twitter.com/AlesandroOrtizR/status/1275538453183238144 \n  * PoC 2: https://twitter.com/AlesandroOrtizR/status/1275538647702548480 \n\n### Steps To Reproduce, tap/click interaction, visible iframe:\n1. Using the PoC 1 Card, navigate to https://alesandroortiz.com/security/chromiumwebview/cve-2020-6506.html\n2. Tap/click iframe.\n\n### Steps To Reproduce, keypress interaction, hidden iframe:\n1. Using the PoC 2 Card, navigate to https://alesandroortiz.com/security/chromiumwebview/cve-2020-6506-keypress-2.html\n2. Tap the \"search this site\" input field to focus it. (This input field is in the parent page, not the iframe.)\n3. Start typing. Before/while you type, the focus will be stolen by the hidden iframe. After typing a character while the iframe input is focused, the attack is immediately performed. (This can be made more subtle by delaying the focus theft, see code comments.)\n\nExpected Behavior:\nJavaScript is not executed in top-level document. HTML is not written to top-level document and JS alert dialog is not shown (or a JS alert dialog is shown but with info from iframe document). \n\nObserved Behavior:\nJavaScript is executed in top-level document. HTML is written to top-level document, and if the WebView allows JS alert dialogs, a JS alert dialog is also shown with info from top-level document. \n\n## Supporting Material/References:\n\n  * twitter-cve-2020-6506.mp4: Screen recording of both reproduction cases.\n  * Twitter-CVE-2020-6506-Report.pdf: Original report in PDF, in case any formatting is missing or difficult to parse in HackerOne.\n\n**Embargo notice: Do Not Disclose publicly until https://crbug.com/1083819 is disclosed.**\n\n## Impact\n\nA malicious iframe on any page within the vulnerable WebView can perform a UXSS attack on the top-level document with minimal user interaction.",
+  "bounty_amount": "560.0",
+  "formatted_bounty": "$560",
+  "weakness": {
+    "id": 60,
+    "name": "Cross-site Scripting (XSS) - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 880242,
+      "file_name": "twitter-cve-2020-6506.mp4",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/NKjVv9TdkkJDzwifawjeN5Yg?response-content-disposition=attachment%3B%20filename%3D%22twitter-cve-2020-6506.mp4%22%3B%20filename%2A%3DUTF-8%27%27twitter-cve-2020-6506.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151730Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=b3b6fb7cd79ef3c697d49f0f07cb13e93a41178d015546e52f4a0a1d0c89dbd7",
+      "file_size": 8786444,
+      "type": "video/mp4",
+      "moderated": null
+    },
+    {
+      "id": 880243,
+      "file_name": "Twitter-CVE-2020-6506-Report.pdf",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/bvCQgL2Ls85a1uUibx6AFTTn?response-content-disposition=attachment%3B%20filename%3D%22Twitter-CVE-2020-6506-Report.pdf%22%3B%20filename%2A%3DUTF-8%27%27Twitter-CVE-2020-6506-Report.pdf&response-content-type=application%2Fpdf&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQZTAGCJRT%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151730Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJIMEYCIQDPU%2FztfhwrBklF0YLHpyKWtyZA6IDPHUl3WIYuhDqa%2BQIhAMEzshLL7rsxhI1ngl1SqCcsqw%2FXwR7Syk9SLVJWVPrlKroFCOb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgydwDjR74QaMnn2wOwqjgXXmz8jk3YnL%2Bxz7vVe0pX3%2FsR9qKewdgKC%2BrwGgp7DAmP4N6508c8XooOUxpTcv1hN7wODXU3Yu10JUrvr491SPf%2BsRIDNjnmdpB2GdLRvybs0hs3xu%2FQaPEPqAnqZF6dKS4Dzs7MPWfjxFotjudNrNBjA7S7WpbYDu%2BnA0e9fHurBPXNZDz7lfaYD9UWWK5skfwwo5lR9gP21VHcTNXX0Kl8PF%2BYszI8ziXGb9lryaCQI5vECgRluMjq3SRXi%2BbKbj9dV9R5ct4beQw4Wf0tuUNSKAHoqPEQwozMgX3VVylfPMqNN%2BJhf4dwZ2RenYw3jp%2BUe0snfeAAlDGCZ3GHfb%2B0EK1goA0S%2B3JdY1M0Gjb6ZnBBMlLfJmTYwieDIrDhLa5vph%2Fin3q%2FodkQlR7UtCOryYLyAQ%2FwwO0VafFpTk1p00IYlJyfRse6tlpma2L4QzhZRKytL5cHjXAEBijUzM1TUfsYXoWJKFMrspERWITCH99KAPHFDfShCSNJuSkTftPEe2e8He1m0AGdDbEdsWz8PZktU4jjNYVfXcWRicHqzi1iaN6ilVk9JzP1VdCW54cXXDqMDd1nBvyGBZYoeH%2F%2FLzB%2BHI%2BDd4mMELSlf57nG9mE35SFEVkpqBwCccmmZPSTN7iyIOt0nre%2BvvV0YJ71LzYKMoFDDmLH1PF2bJ0z0EzoIBiIrUz9uiNjEjxVa3iqN4ntxYhWSL%2BODKo3dP9wmX65QG%2B1OaynRRALU22rltT%2FQTUM%2FrpROrjwJZ7l5RfF0OTW9JNttaMo%2Br%2FfTqus%2BqBycV%2Bpta4Q4394YfUuP9Z4TAeJ%2BIFPkzzN8tNdGcvftOKFGV3cuNW%2F8AqHJFlSNbrFykb7F0B7L8OMw%2FOH8zwY6sAGVIVsuSAYyueYlzSFK5olCllGuHGTR31mbMn%2BagxNr%2BUHhssl3Nwcbh%2FvOBY9dJb%2FPaHd72s1FvZFDs3CEgbqSY6Pd22aQ3leKQPv1UPUvS5J7vOx4l40Tp095enGBWlqimhhJfdsTWx68bJN7uyxLT0r%2FOXXZEum9orTn9VSKNSPq2MHjeAIo4J9qL1BmhajdjG1xBjuQhnkep2icH3JU%2BYX1CnQjcweCcgT9hUkxCQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=224b4049a67659e611560a9ecfe367adb63882899ac1d48b72bf5706882ca45c",
+      "file_size": 70996,
+      "type": "application/pdf",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2020-10-09T23:20:37.864Z",
+  "allow_singular_disclosure_after": -176054212.5074179,
+  "singular_disclosure_allowed": true,
+  "vote_count": 32,
+  "voters": [
+    "sourc7",
+    "ali",
+    "mzfr",
+    "xnutronex",
+    "thalaivar304",
+    "hensis",
+    "demonia",
+    "dark_warlord14",
+    "khizer47",
+    "exception",
+    "and 22 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "required",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 1068,
+    "asset_type": "GOOGLE_PLAY_APP_ID",
+    "asset_identifier": "com.twitter.android",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 24595,
+      "category": "researcher",
+      "content": "More details on CVE-2020-6506 available at: https://alesandroortiz.com/articles/uxss-android-webview-cve-2020-6506/",
+      "updated_at": "2020-09-24T19:40:09.461Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 281801,
+        "username": "alesandroortiz",
+        "name": "Alesandro Ortiz",
+        "bio": "",
+        "cleared": true,
+        "verified": true,
+        "website": "https://AlesandroOrtiz.com",
+        "location": "",
+        "created_at": "2018-05-24T05:05:41.479Z",
+        "url": "https://hackerone.com/alesandroortiz",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/281/801/9c6833231ccd8fb957dfd04cc325d7ea2cf4b81b_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/281/801/9c6833231ccd8fb957dfd04cc325d7ea2cf4b81b_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/281/801/9c6833231ccd8fb957dfd04cc325d7ea2cf4b81b_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

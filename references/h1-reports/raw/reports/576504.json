@@ -1,0 +1,125 @@
+{
+  "id": 576504,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81NzY1MDQ=",
+  "url": "https://hackerone.com/reports/576504",
+  "title": "Authentication Bypass by abusing Insecure crypto tokens in /lib/OA/Dal/PasswordRecovery.php:",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-10T12:35:35.004Z",
+  "submitted_at": "2019-05-10T12:35:35.004Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "paulos__",
+    "url": "/paulos__",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/008/601/abf2077609ef0546be8676abd1bec49aaefc9ff2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 2367,
+    "url": "https://hackerone.com/revive_adserver",
+    "handle": "revive_adserver",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/002/367/4f47a5b4a364515d4bbdc17550d67ea5415363cd_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/002/367/4f47a5b4a364515d4bbdc17550d67ea5415363cd_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Revive Adserver",
+      "twitter_handle": "",
+      "website": "https://www.revive-adserver.com",
+      "about": "Revive Adserver is a free open source ad serving system"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-05-21T15:15:41.490Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-05-21T15:15:41.338Z",
+  "team_member_agreed_on_going_public_at": "2019-05-21T13:16:46.680Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi,\n\nThis is a fun bug I came across while doing a pentest for a client, after going through Revive Advserver's code for a few hours, I found this authentication bypass. This vulnerability seem to affect all versions, including the latest one, I was sent by one of your developers to report it here.\n\nIt goes like this:\n\nIn */lib/OA/Dal/PasswordRecovery.php*:\n\n```php\n50: function generateRecoveryId($userId)\n{\n$doPwdRecovery = OA_Dal::factoryDO('password_recovery');\n\n    // Make sure that recoveryId is unique in password_recovery table\n    do {\n        $recoveryId = strtoupper(md5(uniqid('', true)));\n        $recoveryId = substr(chunk_split($recoveryId, 8, '-'), -23, 22);\n        $doPwdRecovery->recovery_id = $recoveryId;\n        ....\n .....\n....\n```\n\nThat function is used to generate the password reset token used to create new password for admins. The token generated for changing password is insecure because it soley just relies on uniqid() which, according to PHP manual states:\n\n*\"This function does not create random nor unpredictable string. This function must not be used for security purposes. Use cryptographically secure random function/generator and cryptographically secure hash functions to create unpredictable secure ID.\"*\n\nThe reason being that the function does not generate cryptographically secure tokens, in fact without being passed any additional parameters the return value is little different from *microtime()*. If you need to generate cryptographically secure tokens use *openssl_random_pseudo_bytes()*\n\n*uniqid()* is worse than the manual makes it out to be. An example return value is `58fc30c53db63` . Already, this is only <7 bytes of entropy. But it becomes worse, because without the more_entropy flag set, PHP only uses the current time to generate the return value, PHP code says:\n\n```C\nsec = (int) tv.tv_sec;\nusec = (int) (tv.tv_usec % 0x100000);\nif (more_entropy) {\nuniqid = strpprintf(0, \"%s%08x%05x%.8F\", prefix, sec, usec, php_combined_lcg() * 10);\n} else {\nuniqid = strpprintf(0, \"%s%08x%05x\", prefix, sec, usec);\n}\n```\n\nThe first four bytes are the current UNIX timestamp, and the last 20 bits are derived from the current time in microseconds.\n\nThis gives a bit less than 2²⁰, or one million, possible results per given second. If you are able to predict when a new session key is generated for a user, you can guess their key with a decent number of requests, depending on how accurate your guess is. On a popular forum, you may not even need to target a specific user, as the number of users logging in at one time may be large enough.\n\nAnd lucky for us, we can easily predict what Revive Adserver uses:\n\nIdeally an attacker will look up the host IP of their target, locate the server's geoip and set their timezone similar to the server's timezone to make a more accurate prediction.\n\n### Making it more practical\n\nWhen looking more closely I noticed, most servers that host Revive respond with the following headers:\n```\nHTTP/1.1 200 OK\nServer: nginx\nDate: Thu, 09 May 2019 21:26:20 GMT\nContent-Type: application/x-javascript\nConnection: close\nVary: Accept-Encoding\nX-Cacheable: NO:Not Cacheable\nAge: 0\nX-Cache: MISS\nX-Frame-Options: SAMEORIGIN\nContent-Length: ...\n```\n\nDo you see it? It says *Date: Thu, 09 May 2019 21:26:20 GMT* -- so we can easily know what timezone the server syncs and uses (in this case GMT+0 as timezone) , all an attacker have to do is change their timezone to GMT, request a password reset token simultaneously as they they generate uniqid() from their side as well. All an attacker needs is the email address of the account they reset (which can be enumurated in numerous ways, including by abusing *admin/password-recovery.php* by sending some email addresses until it says *Email Password Reset sent*)\n\n\nA PoC one would use can look like the following (except weaponized to request a password and generate the tokens simultaneously):\n\n```php\nfor($i=0;$i<=10000;$i++){\n\n     $recoveryId = strtoupper(md5(uniqid('', true)));\n     $recoveryId = substr(chunk_split($recoveryId, 8, '-'), -23, 22);\n\n     print $recoveryId.\"</br>\";\n\n}\n```\n\nThis generates 10,000 tokens we can try as a token to login as the admin by automating this with process with Burp Intruder. \n\nYou get the idea! :)\n\n### Suggested Fix\n\nRelaying on more cryptographically secure functions like *openssl_random_pseudo_bytes()* is better for such sensitive tokens.\n\n## Impact\n\nAuthentication Bypass\n\n\nThanks,",
+  "weakness": {
+    "id": 27,
+    "name": "Improper Authentication - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-06-20T13:16:46.779Z",
+  "allow_singular_disclosure_after": -217303549.8160582,
+  "singular_disclosure_allowed": true,
+  "vote_count": 30,
+  "voters": [
+    "ranapir",
+    "foobar7",
+    "kapytein",
+    "0xd0m7",
+    "savitar0x01",
+    "yassineaboukir",
+    "joshualaurencio",
+    "pr0f0x01",
+    "aeswagyewgyes",
+    "prinzhorn",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 154,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/revive-adserver/revive-adserver",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

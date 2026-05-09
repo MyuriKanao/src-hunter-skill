@@ -1,0 +1,114 @@
+{
+  "id": 587214,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81ODcyMTQ=",
+  "url": "https://hackerone.com/reports/587214",
+  "title": "██████ Authenticated User Data Disclosure",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-21T17:52:47.504Z",
+  "submitted_at": "2019-05-21T17:52:47.504Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "deputy",
+    "url": "/deputy",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-10-04T15:16:11.942Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-06-28T01:36:52.362Z",
+  "team_member_agreed_on_going_public_at": "2019-10-04T15:16:11.890Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Background##\nThe Air Force’s ███ application is exposing members’ personal information to other users with access to the applocaton. We’ve identified two specific issues, but there may be other similar problems in the same vein as the ones described here. The underlying problem appears to be that users are not prevented from visiting the web addresses (URLs) that return others’ data.\n███████ Home Page: https://███/█████\nVersion Number: 1.85.10\n\n###Caveats###\n1. Users must first be able to login to ██████ in order to exercise these issues. Members’ data is not being exposed to just any user on the web, as far as we know\n2. All screenshots containing member data were taken with the consent of the member. Personal information has been redacted and replaced with placeholders (Person #1 and Person #2). Person #1 is the logged in user. Person #2 is another user whose data is being accessed by Person #1, with Person #2’s consent.\n\n##Issue #1: Exposure of Members’ Vulnerable Mover List (VML) Status Information##\nBLUF: Talent Marketplace exposes members’ bid/preference information along with the CC’s ranking and comments sent to the Air Force Personnel Center to any logged on user in the VML cycle.\nWhen you visit the “My VML Status” page you are presented by the position preferences you’ve chosen, the bids you’ve received, your Losing Commander’s comments/ranking, and some other information about your VML cycle. See ███████\n\nIn order to present you with this information, your browser makes a request in the background for the information it uses to populate the webpage. This request is easily viewable using developer tools present in most modern browsers.\n\n████████ shows the raw data sent to your browser in response to the request it sends. You can see all the preferences you put in, information on the bids you’ve received, and your Losing Commander’s ranking and comments for the member. Notice the redacted “personId” labeled “ID #1” at the very top of the screenshot. This is a unique ID tied to Person #1 (you). If you replace this ID with that of Person #2, and make the request again, the server will send you all the same information for Person #2, even though you (not Person #2) are making the request.\n\nTaken to the nth degree, any user could iterate through all “personId” values to gather all bid/preference/CC comments for everyone in a VML cycle, but there’s also a way to determine the “personId” of any arbitrary user.\n\n###Finding a Member’s PersonID###\nOn the “My Profile” page, there’s a button you can click to change your military supervisor. When you begin typing someone’s name in the dialog box, your browser makes another background request to search the server’s database for users with that name. Contained in the response is the user’s “personId.” This is not necessarily a problem in and of itself, but it can be used to determine the Person ID of the member whose VML Status you wish to see. See ██████████.\n\n###Key URLs###\nNote: You must first log in to the ████ application before visiting these URLs\n**Access Arbitrary Member’s VML Cycle Info By Person ID (Replace XXXXXX with Person ID)**\nhttps://█████/███/IndividualReport/GetVmlEligibleBidInfoData?personId=XXXXXX&vmlCycleId=4\n**Determine Arbitrary Member’s Person ID By Name (Replace XXXXXX with Name)**\nhttps://███/██████/SearchPersonUser/FindPerson?SearchTerm=XXXXXX\n\n##Issue #2: Exposure of Other Members’ Career Brief##\nBLUF: ███ exposes other members’ career brief to any logged on user.\nWhen you view the “My Boards” section of ████, there’s a link that you can visit to see a PDF of your career brief as seen by the Board. The URL for this PDF uses another unique ID (not the same as PersonID from Issue #1) to determine whose career brief you see. If you replace your unique ID with someone else’s in the URL, you can see their Career Brief, which contains Privacy Act data. See ███.\n\n###Finding a Member’s “Encrypted ID”###\nThe Career Brief page uses an “Encrypted ID,” to identify a member. It is much longer than a “Person ID,” making it difficult to just iterate over all possible IDs, but there is a way for you to find the Encrypted ID of a particular user if they have a mentor profile. When you view the members’ mentor profile in the “Mentoring Connections” section of ██████████, the URL contains their Encrypted ID. If you copy and paste that ID and replace your ID with theirs in the URL for your career brief, you will see their career brief, which is clearly marked as Privacy Act Data, and should not be visible to any member. See ████\n\n###Key URLs###\nNote: You must first log in to the ████ application before visiting this URL\n**Access Arbitrary Members’ Career Brief By Encrypted ID (Replace XXXXXX with Encrypted ID)**\nhttps://███████/███/Dashboard/CareerBrief/PrintOfficerCareerBrief?person=XXXXXX\n\n##Suggested Mitigations##\nWe suggest that █████████ enforce access to user data based on the current logged in user, rather than just the PersonID or Encrypted ID the user presents in the request URL.\n\nIt’s likely that there are other API endpoints accessible to the user that have similar issues to the two presented above. We also recommend surveying all API endpoints to ensure they are properly validating that the logged in user is only requesting their own information rather than that of any other user.\n\n## Impact\n\nAny user logged into USAF ███████ can see data, including Privacy Act data, of other users through the application. The issue does not expose user data to the open Internet, but it does expose it to other legitimate users who should not be able to see it.",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "mik317",
+    "lumbridge",
+    "mr-inspector",
+    "witchking_h1",
+    "seven6",
+    "deputy",
+    "05bs001"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

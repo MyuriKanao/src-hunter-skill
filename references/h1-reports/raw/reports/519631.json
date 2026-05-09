@@ -1,0 +1,142 @@
+{
+  "id": 519631,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MTk2MzE=",
+  "url": "https://hackerone.com/reports/519631",
+  "title": "SQL Injection in ████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-04-01T18:15:35.494Z",
+  "submitted_at": "2019-04-01T18:15:35.494Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "arinerron2",
+    "url": "/arinerron2",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/cmsHvP63igYRYh1XFBvPsb1W/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-08-19T12:21:33.198Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-04-11T16:56:47.113Z",
+  "team_member_agreed_on_going_public_at": "2019-08-19T12:21:33.102Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\nThere is an SQL injection vulnerability in `████████` in the /█████/recruiter/updapp.aspx` page, exploitable through the `app_id` form parameter.\n\n## Impact\n\nAn attacker could use this vulnerability to control the content in the database, exfiltrate information, and obtain remote code execution.\n\n## Step-by-step Reproduction Instructions\n\n1. Visit https://█████████/Gateway/sso.aspx and sign in. Note that any user can create a user (and any privilege level works for this vulnerability as long as a user is signed in), so this should be considered an unauthenticated vulnerability.\n2. With the Network tab of devtools open, visit https://██████/████/recruiter/updapp.aspx\n3. Replay the GET request that returned the HTTP 500 error as a POST request with the body `app_id='`. This can be done by right clicking on the request, copying it as cURL, pasting the command in terminal, and appending ` -k -X POST --data \"app_id='\"`.\n4. Notice in the response, there is an error: `ORA-01756: quoted string not properly terminated`. This is because the single apostrophe (`'`) caused the SQL query to be syntactically invalid.\n5. Replay the request in the same way as shown in #3, but with the body `app_id=''` (this time append ` -k -X POST --data \"app_id=''\"` to the cURL command). \n6. Notice in the response, there is an error: `ORA-01722: invalid number`. This is because the double apostrophes (`''`)  did not cause the SQL query to be syntactically invalid, but because aposrophes are not numbers, they caused a different error.\n7. Repeat step #3 as many times as you like. An odd number of apostrophes (`'`) will cause the SQL query to fail because it is syntactically invalid, and an even number will cause it to fail because it is valid, but apostrophes are not numbers.\n\nI did not want to exploit this to get remote code execution because this is a live production system, but to get RCE, simply execute an SQL query that writes the file at https://raw.githubusercontent.com/danielmiessler/SecLists/master/Web-Shells/laudanum-0.8/aspx/shell.aspx to `D:\\██████\\shell.aspx` using the `INTO OUTFILE` syntax, then visit https://███/█████████/shell.aspx\n\n## Suggested Mitigation/Remediation Actions\n\nSanitize everything in the SQL query (use prepared statements), and validate the data before putting it in the query.\n\nNote: I wouldn't have been able to find this vulnerability if it wasn't for the fact that verbose error pages were enabled. Because they were, it leaked source code, and I could see that the SQL injection vulnerability existed before testing.\n\n## Impact\n\nAn attacker could use this vulnerability to control the content in the database, exfiltrate information, and obtain remote code execution.",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 48,
+  "voters": [
+    "m4khn0",
+    "spam404",
+    "masonhck357",
+    "0-1",
+    "dastan_9408",
+    "eveeez",
+    "lumbridge",
+    "rashedulcss",
+    "cybulski",
+    "zzzhacker13",
+    "and 38 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 17907,
+      "category": "researcher",
+      "content": "See the writeup at https://aaronesau.com/blog/posts/5",
+      "updated_at": "2019-08-19T16:41:42.909Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 123580,
+        "username": "arinerron2",
+        "name": "Aaron Esau",
+        "bio": "I'm Aaron (aka: Arinerron), an 18 year old security researcher, and a student web and software developer.",
+        "cleared": false,
+        "verified": false,
+        "website": "https://www.aaronesau.com/",
+        "location": "Portland, Oregon (United States)",
+        "created_at": "2016-11-13T07:53:24.324Z",
+        "url": "https://hackerone.com/arinerron2",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/cmsHvP63igYRYh1XFBvPsb1W/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/cmsHvP63igYRYh1XFBvPsb1W/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/cmsHvP63igYRYh1XFBvPsb1W/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    }
+  ]
+}

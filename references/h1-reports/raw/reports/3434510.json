@@ -1,0 +1,132 @@
+{
+  "id": 3434510,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDM0NTEw",
+  "url": "https://hackerone.com/reports/3434510",
+  "title": "Out-of-bounds read in HTTP method handling causes undefined behavior and potential crash This is sharp, Gaurav. We’ve got a real memory-safety bug ins",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-11-20T03:47:40.650Z",
+  "submitted_at": "2025-11-20T03:47:41.112Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "gaurav_7777",
+    "url": "/gaurav_7777",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-11-20T09:20:56.480Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-11-20T09:18:00.611Z",
+  "team_member_agreed_on_going_public_at": "2025-11-20T09:20:56.088Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Summary\n-​‍​‌‍​‍‌​‍​‌‍​‍‌ Component: libcurl core HTTP handling (HTTP/2 request translation and CONNECT detection)\n- Type: out-of-bounds read resulting from missing null-termination\n- Impact: Behavior not defined by the specification, the program can crash (DoS) and CONNECT requests can be misclassified\n- Root cause: The method string was copied without a null ​‍​‌‍​‍‌​‍​‌‍​‍‌termin\n\nAffected​‍​‌‍​‍‌​‍​‌‍​‍‌ code paths\n- Struct layout:\n- struct httpreq { ... char method[1]; }\n- Allocation and copy (no NUL):\n- req = calloc(1, sizeof(*req) + m_len);\n- memcpy(req->method, method, m_len);\n\n- Unsafe uses:\n- strcmp(\"CONNECT\", req->method) — assumes null-terminated string\n- strlen(req->method) — sizes HTTP/2 pseudo-header :method\n\nDirect risk: Both strcmp and strlen may access memory beyond what has been allocated if req->method[m_len] is out-of-bounds. The impact varies with the allocator/layout; ASan will always detect ​‍​‌‍​‍‌​‍​‌‍​‍‌this.\n\nSteps​‍​‌‍​‍‌​‍​‌‍​‍‌ to reproduce (concise)\n\n- Prereqs: make sure CMake and nghttp2 are installed\n- What version outputs are you having:\n```bash\n cmake --version \n```\n```text\n→ 3.26.2\n```\n\n```bash\npkg-config --modversion libnghttp2 \n```\n```text\n→ 1.52.0\n```\n\nBuild curl with ASan + HTTP/2:\n\n\n```bash\nmkdir -p build && cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS='-O1 -g -fsanitize=address' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address' -DCURL_USE_NGHTTP2=ON\n```\n```bash\ncmake --build build -j\"$(nproc)\"\n```\nVerify binary and features:\n\n```bash\n./src/curl ​‍​‌‍​‍‌​‍​‌‍​‍‌--version\n```\n{F5027206}\n\n## Impact\n\nImpact\n\n-​‍​‌‍​‍‌​‍​‌‍​‍‌ Denial of Service/crash: Out of bounds read occurring during the creation of HTTP/2 pseudo-headers or checking CONNECT logic.\n-​‍​‌‍​‍‌​‍​‌‍​‍‌ Logic flaw: The function for detecting CONNECT might behave differently due to a comparison of an uninitialized value being performed.\n\n- Trigger surface: Any path which produces a struct httpreq (e.g., custom methods) and then executes HTTP/2 translation or CONNECT ​‍​‌‍​‍‌​‍​‌‍​‍‌checks\n\nProposed​‍​‌‍​‍‌​‍​‌‍​‍‌ repair (minimal and robust)\n\n- In both creators, not only add a null terminator but also allocate memory for ​‍​‌‍​‍‌​‍​‌‍​‍‌it:\n\n```diff\n- req = calloc(1, sizeof(*req) + m_len);\n+ req = calloc(1, sizeof(*req) + m_len + 1);\n  if(!req) goto out;\n  memcpy(req->method, method, m_len);\n+ req->method[m_len] = '\\0';\n```\n\n-​‍​‌‍​‍‌​‍​‌‍​‍‌ Locations to change:\nCurl_http_req_make\nCurl_http_req_make2\nThis change removes local undefined reads without changing the logic. Optional hardening: replace ​‍​‌‍​‍‌​‍​‌‍​‍‌strcmp(\"CONNECT\",",
+  "weakness": {
+    "id": 9,
+    "name": "Buffer Over-read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5027206,
+      "file_name": "image.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/d6o578q1b962clm5q0d6mg443dlt?response-content-disposition=attachment%3B%20filename%3D%22image.png%22%3B%20filename%2A%3DUTF-8%27%27image.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=72cef0e2ed288b9d3bed634f782bf970a3a0e7adbaa49c607bcfb9978954dc27",
+      "file_size": 45308,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 28,
+  "voters": [
+    "nischalxd",
+    "2026",
+    "zerodaysec_xyz",
+    "esberat",
+    "gaurav_7777",
+    "madnessbrains",
+    "24h",
+    "neeljshah22",
+    "laumv",
+    "limbo0xf14",
+    "and 18 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

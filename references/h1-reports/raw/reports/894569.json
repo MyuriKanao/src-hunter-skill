@@ -1,0 +1,136 @@
+{
+  "id": 894569,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84OTQ1Njk=",
+  "url": "https://hackerone.com/reports/894569",
+  "title": "An attacker can run pipeline jobs as arbitrary user",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-06-09T15:53:22.000Z",
+  "submitted_at": "2020-06-09T15:53:22.000Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "u3mur4",
+    "url": "/u3mur4",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/449/470/1f5148d87050c9c48970956ff5160260dcd451c2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-08-26T14:11:44.351Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-08-17T05:35:38.057Z",
+  "team_member_agreed_on_going_public_at": "2020-08-26T14:11:44.225Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Summary\n\nAn attacker can run arbitrary pipeline jobs as a `victim` user. This means the attacker can access the user private repositories, member only repositories, registry, etc... by using the victim `CI_JOB_TOKEN` token.\n\n> This is only my recent research and I wanted to report it as soon as possible. I will update the report with more information later on.\n\n### Steps to reproduce\n\nVICTIM:\n\n- Sign in to a GitLab instance as a *Victim user*\n- Create an arbitrary private repository with some private files. (We will steal this repo as a poc.)\n\nATTACKER ACCOUNT 1: \n\n- Sign in to a GitLab instance as a *Attacker1 user*\n- Create a new project using the following settings:\n    - Project Name: `poc`\n    - Visibility Level : `public`\n    - Check the `Initialize repository with a README` checkbox\n- Add a new `.gitlab-ci.yml` file to the project\n\n```\nimage: \"ruby:2.6\"\n\nbefore_script:\n  - echo Hello\n\nrspec:\n  script:\n    - echo Hello\n```\n\n> We will mirror this repository and update the `.gitlab-ci.yml` file later on to trigger the CI/CD job.\n\nATTACKER ACCOUNT 2: \n- Sign in / Register to a GitLab instance as a *Attacker2 user*\n- Create a new public group called as `test`\n- Create a new project inside the `test` group using the following settings:\n    - Project Name: `poc`\n    - Visibility Level : `public`\n- Go to `Project settings` => `Repository` => `Mirroring repositories`\n    - Set `Git repository URL` to the previously created repository by the *Attacker1 user*\n    - Set `Mirror direction` to `Pull`\n    - Check the `Trigger pipelines for mirror updates` checkbox\n    - Click the `Mirror repository` button\n- Go to the `test` group `Members` option and invite the *Victim user*\n- Set the *Victim user* `Choose a role permission` to `Owner`\n- Go to the `Account Setting` => `Account` and delete this account.\n\nATTACKER ACCOUNT 1: \n\n- Sign in back to the GitLab instance as a *Attacker1 user*\n- Go to the `attacker1/poc` project and update the `.gitlab-ci.yml` file using the following content:\n\n```\nimage: \"ruby:2.6\"\n\nrspec:\n  script:\n    - git clone https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/victim/private_repo_name.git\n    - cd private_repo_name\n    - ls -lah .\n    - cat README.md\n```\n- Wait half an hour to automatically trigger a mirror update in the `test/poc` project which owner is the *Victim user*.\n\nThe `test/poc` project will trigger a mirror update which also triggers a pipeline run. The triggerer of the pipeline will be the *Victim user*. \nThe *Attacker1 user* controls the `attacker/poc/gitlab-ci.yml` file which is mirrored to the `test/poc` project.\n\n\n### What is the current *bug* behavior?\n\n- If there is a mirrored project with `Trigger pipelines for mirror updates` enabled inside a group and the group owner delete its account (need another owner role inside the group) then the trigger of the pipeline will be to other owner account. (I think this only works when the account deleted without removing the account from the group members but I still need to confirm this.)\n\n### What is the expected *correct* behavior?\n\n- refuse pipeline run in the previously mentioned case\n\n### Output of checks\n\nThis bug happens on GitLab.com.\n\n#### Results of GitLab environment info\n```\nbundle exec rake gitlab:env:info RAILS_ENV=development\nSystem information\nSystem:\t\t\nProxy:\t\tno\nCurrent User:\tu3mur4\nUsing RVM:\tno\nRuby Version:\t2.6.6p146\nGem Version:\t3.0.3\nBundler Version:1.17.3\nRake Version:\t12.3.3\nRedis Version:\t6.0.4\nGit Version:\t2.27.0\nSidekiq Version:5.2.7\nGo Version:\tgo1.14.4 linux/amd64\n\nGitLab information\nVersion:\t13.1.0-pre\nRevision:\t4bd9f8164e0\nDirectory:\t/home/u3mur4/Hack/gitlab/gitlab-development-kit/gitlab\nDB Adapter:\tPostgreSQL\nDB Version:\t12.3\nURL:\t\thttp://gdk.yoyo.pw:3000\nHTTP Clone URL:\thttp://gdk.yoyo.pw:3000/some-group/some-project.git\nSSH Clone URL:\tssh://u3mur4@gdk.yoyo.pw:2222/some-group/some-project.git\nElasticsearch:\tno\nGeo:\t\tno\nUsing LDAP:\tno\nUsing Omniauth:\tyes\nOmniauth Providers: google_oauth2\n\nGitLab Shell\nVersion:\t13.3.0\nRepository storage paths:\n- default: \t/home/u3mur4/Hack/gitlab/gitlab-development-kit/repositories\nGitLab Shell path:\t\t/home/u3mur4/Hack/gitlab/gitlab-development-kit/gitlab-shell\nGit:\t\t/usr/bin/git\n```\n\n## Impact\n\nstealing the CI_JOB_TOKEN of any user (access the user private repositories, member only repositories and registry, etc...)",
+  "bounty_amount": "12000.0",
+  "formatted_bounty": "$12,000",
+  "weakness": {
+    "id": 65,
+    "name": "Business Logic Errors"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 307,
+  "voters": [
+    "acid_slug",
+    "bighound",
+    "overjt",
+    "phys",
+    "th3hidd3nmist",
+    "sky003",
+    "orange303",
+    "h3xit",
+    "wapiflapi",
+    "n1m0",
+    "and 297 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.6,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

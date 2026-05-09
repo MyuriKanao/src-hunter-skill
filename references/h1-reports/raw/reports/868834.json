@@ -1,0 +1,137 @@
+{
+  "id": 868834,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84Njg4MzQ=",
+  "url": "https://hackerone.com/reports/868834",
+  "title": "Denial of Service by resource exhaustion CWE-400 due to unfinished HTTP/1.1 requests",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-05-08T07:45:07.938Z",
+  "submitted_at": "2020-05-08T07:45:07.938Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "shogunpanda",
+    "url": "/shogunpanda",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/dj1adyqvobj3bceo78som7c5tyhg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8251"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-10-17T19:24:45.481Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-09-17T19:24:31.171Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** Node.js is vulnerable to HTTP denial of service (DOS) attacks based on delayed requests submission which can make the server unable to accept new connections.\n\n**Description:**\n\nAn attacker can open an arbitrary number of HTTP connections and keep the server busy by never completing the request phase.\n\nNode.js only has two requests timeouts:\n\n1. [server.timeout](https://nodejs.org/docs/latest-v12.x/api/http.html#http_server_timeout) that controls the maximum number of milliseconds the socket can be idle. This also includes the server processing time. \n2. [server.headersTimeout](https://nodejs.org/docs/latest-v13.x/api/http.html#http_server_headerstimeout) (Added in Node 11.3.0), that controls the maximum number of milliseconds allowed to receive the full request headers before timing out.\n\nHandling of request bodies is specific to the application code and core Node.js never consumes or parses the request bodies. \n\nCurrently, the body parsing and handling is performed by the following modules:\n* [fastify](https://www.fastify.io/)\n* [restify](https://restify.com/)\n* [busboy](https://github.com/mscdex/busboy), used by [fastify-multpart](https://github.com/fastify/fastify-multipart/) and [multer](https://github.com/expressjs/multer)\n* [raw-body](https://github.com/stream-utils/raw-body), used by [body-parser](https://github.com/expressjs/body-parser)\n\nAll of the modules above are vulnerable to the attack.\n\nIf part of the body is already sent, the body parsing modules above can be patched to impose a request body sending timeout and therefore mitigate the attack.\n\nThe application unfortunately can not completely handle this attack. If the attacker never starts sending the body after completing the submission of the headers, the application code is never invoked. \n\nPrior to Node.js 13.0.0, the default timeout for a request was 2 minutes, which is a countermeasure against this attack.\nStarting with Node.js 13.0.0 instead, the default timeout has been changed to be 0 (which means no timeout) in order to address serverless deployments where long running requests are needed. Since the socket is never considered idle, the application is completely vulnerable to the attack.\n\nWhile `server.headersTimeout` is able to detect a slow request, it is only effective if the delay happens during the headers phase (like in Slowloris attacks). If the attacker delays the start of the headers, the start of body sending or sends the body very slow without resulting in an idle socket, the attack is not detected.\n\nIn the long run an unprotected server will have a lot of pending requests to handle. At some point it will reach the open connections limit and therefore will not be able to serve additional requests, resulting in a Denial of Service.\n\n## Steps To Reproduce:\n\n1. From one or more attacking sources, open one or more HTTP connections to the target server\n2. For each of the connection in step 1\n     2.1. (Optional) Wait a certain amount of time before sending the first request header.\n     2.2 Send all request headers with regular pausing.\n     2.3 (Optional) Wait a certain amount of time before sending the body data.\n     2.4. Send the request body with regular pausing.\n\nAll the substeps must be performed by sending periodically the smallest amount of data with the highest delay such that the server does not detect an idle socket. For Node 13.0.0 and above there is no idle timeout by default, so the attacker can wait an arbitrary time. For Node.js prior to 13.0.0, at least one byte each 2 minutes must be sent.\n\nWe have tested the following test cases:\n\n1. **Connection established, none or partial headers sent then sending is paused:** If `server.timeout` is not 0, then idle detection is triggered and closes the connection with no response. With the default timeout of 0 in Node.js 13.0.0 and above, the server is completely vulnerable to the attack.\n2. **Connection established, headers sent with long delays:** `server.headersTimeout` is triggered and closes the connection with no response. \n3. **Connection established, headers sent and sending is paused before starting the body:** If `server.timeout` is not 0, then idle detection is triggered and closes the connection with no response. With the default timeout of 0 in Node.js 13.0.0 and above, the server is completely vulnerable to the attack.\n4. **Connection established, headers sent, body sent with long delays:** `server.timeout` is not able to detect the attack and the server is completely vulnerable to the attack.\n\nWhat follows is a sample code which reproduces the problem. \n\n```javascript\nconst { createConnection } = require('net')\n\nlet start\nlet response = ''\nlet body = ''.padEnd(4096, '123')\n\nconst client = createConnection({ port: parseInt(process.argv[2], 10) }, () => {\n  start = process.hrtime.bigint()\n\n  // Send all the headers quickly so that server.headersTimeout is not triggered\n  client.write('POST / HTTP/1.1\\r\\n')\n  client.write('Content-Type: text/plain\\r\\n')\n  client.write(`Content-Length: ${Buffer.byteLength(body)}\\r\\n`)\n  client.write(`\\r\\n`)\n\n  // Send the body very slower but in away that the server.timeout is not triggered\n  let i = 0\n  let interval = setInterval(() => {\n    client.write(body[i])\n    i++\n\n    // Done sending, end the request\n    if (i === body.length) {\n      clearInterval(interval)\n      client.write(`\\r\\n\\r\\n`)\n    }\n  }, 60000)\n})\n\nclient.on('data', data => {\n  response += data\n  client.end()\n})\n\nclient.on('close', () => {\n  const duration = Number(process.hrtime.bigint() - start) / 1e9\n\n  console.log(`Receive the following response (${response.length} bytes) in ${duration.toFixed(3)} s:\\n\\n`)\n  console.log(response)\n})\n```\n\nOnce executed, the client will not receive a response before 4096 minutes. If multiple parallel execution of the code above targets the same server, it will result in service denial. \n\n## Impact\n\nThis attack has very low complexity and can easily trigger a DDOS on an unprotected server.\n\n## Supporting Material/References:\n\nWe have written a patch for Node.js ([PR 33304](https://github.com/nodejs/node/pull/33304)) which introduces a new `http.Server` option called `requestTimeout` with a default value in milliseconds of `120000` (2 minutes).\n\nWhen `requestTimeout` is a positive value, the server will start a new timer set to expire in `requestTimeout` milliseconds when a new connection is established. The timer is also set again if new requests after the first are received on the socket (this handles pipelining and keep-alive cases).\nThe timer is cancelled in the following case:\n\n1. When the request body is completely received by the server.\n2. When the response is completed. This handles the case where the application responds to the client without consuming the request body.\n3. When the connection is upgraded, like in the WebSocket case.\n\nIf the timer expires, then the server responds with status code 408 and closes the connection. This prevents the DOS attack.\n\n## Acknowledgement\n\nThis research was conducted and co-authored by me and [Matteo Collina](matteo.collina@nearform.com) and has been sponsored by [NearForm](https://nearform.com)\n\n## Impact\n\nIf an attacker execute a significative amount of requests on a target server without completing any, the server at some point will reach the allowed number of open connections and will not be able to serve any further request, resulting in a Denial of Service.",
+  "bounty_amount": "250.0",
+  "formatted_bounty": "$250",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-10-17T19:24:31.246Z",
+  "allow_singular_disclosure_after": -175377051.57791194,
+  "singular_disclosure_allowed": true,
+  "vote_count": 8,
+  "voters": [
+    "eliteoffensive",
+    "sa1tama0",
+    "lumbridge",
+    "giddy21",
+    "haether",
+    "youssefazabawi",
+    "rosor02",
+    "dwiz_anuj"
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.3,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "none",
+      "integrity": "none",
+      "availability": "high"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

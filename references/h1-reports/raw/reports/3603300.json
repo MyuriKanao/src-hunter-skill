@@ -1,0 +1,119 @@
+{
+  "id": 3603300,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjAzMzAw",
+  "url": "https://hackerone.com/reports/3603300",
+  "title": "SMB READ_ANDX DataOffset not validated",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2026-03-13T16:59:26.450Z",
+  "submitted_at": "2026-03-13T16:59:27.491Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "tavro",
+    "url": "/tavro",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/huciv90n2t8vtu1lhar76a9cmqsu/20fc426031f09e5347054871ae4e3af2478fd2b3d5e8a321468ecf6f2da5ac20"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-03-16T07:31:08.922Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-03-14T21:52:10.802Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nin `smb_request_state()` case `SMB_DOWNLOAD` curl reads two server-controlled fields from a `READ_ANDX` response and uses them to decide where in the receive buffer file data starts.\n\n```c\n/* lib/smb.c */\nlen = Curl_read16_le((const unsigned char *)msg +\n                     sizeof(struct smb_header) + 11);\noff = Curl_read16_le((const unsigned char *)msg +\n                     sizeof(struct smb_header) + 13);\nif(len > 0) {\n    if(off + sizeof(unsigned int) + len > smbc->got) {\n        failf(data, \"Invalid input packet\");\n        result = CURLE_RECV_ERROR;\n    }\n    else\n        result = Curl_client_write(data, CLIENTWRITE_BODY,\n                                   (char *)msg + off + sizeof(unsigned int),\n                                   len);\n}\n```\n\n`off` and `len` are both `unsigned short` values read directly from the server response. the only check performed is `off + sizeof(unsigned int) + len > smbc->got`\n\nthis is a pure upper bound check. there is no lower bound check on `off`. the SMB specification requires `DataOffset` to point past all headers and parameter words, for a standard 12-word `READ_ANDX` response that minimum is 59 bytes\nfrom the start of the SMB frame, or 63 bytes from the start of `recv_buf` (which includes the 4-byte NBT prefix). curl has no such minimum. `sizeof(struct smb_header)` in this codebase is 36 bytes (4-byte NBT session header + 32-byte SMB header). `msg` points to `smbc->recv_buf`, the raw receive buffer, so `msg + 0 + 4 = recv_buf[4]` is the first byte of the SMB magic field `\\xff S M B`.\n\n## Affected version\nlatest master\n\n## Steps To Reproduce:\n### exploit\n\na server sets `DataOffset = 0x0000` and `DataLength = N` in its `READ_ANDX` response. the bounds check becomes `0 + 4 + N > smbc->got`. for any well formed response (minimum `smbc->got` ≥ 63 bytes for the size check at line 1088 to pass), this evaluates false for any `N ≤ smbc->got − 5`. the check passes. curl then calls:\n\n```c\nCurl_client_write(data, CLIENTWRITE_BODY,\n                  (char *)msg + 0 + 4,   /* = recv_buf[4] */\n                  N);\n```\n\n`recv_buf[4]` is `smb_header.magic[0]` = `0xff`. the application receives `N` bytes of raw SMB receive-buffer content as \"file data\". with `DataLength = 28` and a total response of 91 bytes:\n\n```\nrecv_buf[4..31] delivered to application:\n\noffset  value   field\n  4     ff      magic[0]\n  5     53      magic[1]  'S'\n  6     4d      magic[2]  'M'\n  7     42      magic[3]  'B'\n  8     2e      command   (READ_ANDX)\n  9-12  ??      status    (4 bytes)\n  13    ??      flags\n  14-15 ??      flags2\n  16-17 ??      pid_high\n  18-25 ??      signature (8 bytes — HMAC-MD5 in authenticated sessions)\n  26-27 ??      pad\n  28-29 ??      tid\n  30-31 ??      pid\n```\n\nthe attacker controls the content of all of these fields because they are fields in the server's own response. in an authenticated session, `signature` holds HMAC-MD5-derived session keying material.\n\n### proof of concept\n\na minimal Python SMB server was written that completes the full handshake (NEGOTIATE → SESSION_SETUP_ANDX → TREE_CONNECT_ANDX → NT_CREATE_ANDX → READ_ANDX) and then sends a `READ_ANDX` response with `DataOffset = 0x0000` and `DataLength = 0x001c`. `curl smb://127.0.0.1:14450/share/file --user guest: -o output.bin`\n\ncurl exit code is 0 and `output.bin` size is 28 bytes\n\n`output.bin` content:\n```\n00000000: ff53 4d42 2e00 0000 0088 4100 0000 0000  .SMB......A.....\n00000010: 0000 0000 0000 0000 0100 d7ba            ............\n```\n\nthe first four bytes are `\\xff S M B`. this is the SMB magic from the receive buffer. no file data was ever sent by the server. curl wrote internal SMB session state to disk and reported a successful download.\n\nthe full protocol trace:\n```\n--> 0x72 NEGOTIATE\n<-- NEGOTIATE response (dialect \"NT LM 0.12\")\n--> 0x73 SESSION_SETUP_ANDX\n<-- SESSION_SETUP response (uid=1)\n--> 0x75 TREE_CONNECT_ANDX\n<-- TREE_CONNECT response (tid=1)\n--> 0xa2 NT_CREATE_ANDX\n<-- NT_CREATE response (fid=1, end_of_file=28)\n--> 0x2e READ_ANDX\n<-- READ_ANDX response (DataOffset=0x0000, DataLength=28)  ← exploit\n    bounds check: 0+4+28=32 > 91 → false → PASS\n    Curl_client_write(recv_buf+4, 28)\n--> 0x04 CLOSE\n--> 0x71 TREE_DISCONNECT\n```\n\n### fix\n\nadd a minimum bound check on `off` before the existing check. for a standard `READ_ANDX` response with `word_count = 12`, the earliest valid `DataOffset` is 59 (32-byte SMB body + 1 byte `word_count` + 24 bytes of parameter words +\n2 bytes `ByteCount`). the data read pointer must not precede the end of the parameter block.\n\n```c\n/* proposed addition at lib/smb.c after line 1096 */\nif(off < sizeof(struct smb_header) - sizeof(unsigned int) +\n         1 + (SMB_WC_READ_ANDX * sizeof(unsigned short)) +\n         sizeof(unsigned short)) {\n    failf(data, \"Invalid input packet\");\n    result = CURLE_RECV_ERROR;\n    break;\n}\n```\n\nthe concrete minimum for a 12-word response `sizeof(smb_header) − 4 + 1 + 12×2 + 2 = 32 + 1 + 24 + 2 = 59`. any `off < 59` must be rejected.\n\n## Impact\n\n## Summary:\n\nthe application receives attacker controlled bytes instead of the requested file, with no indication of failure. any pipeline that acts on the downloaded content operates on data the server dictated. and the `signature`, `tid`, `uid` and `pid` fields from the server's response frame are delivered above the transport layer. in authenticated sessions the signature field contains HMAC-MD5 derived material that is internal to the SMB session and should never be visible to the application. and curl returns exit code 0. automated checks based on exit code or file size will not detect the attack.",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 30,
+  "voters": [
+    "thelem",
+    "2026",
+    "t3tra-dev",
+    "matty69v",
+    "theseusbrain07",
+    "atikpo2",
+    "xq_a01",
+    "arunkalingas11",
+    "thuanwhitehat",
+    "templeog",
+    "and 20 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

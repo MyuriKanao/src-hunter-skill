@@ -1,0 +1,118 @@
+{
+  "id": 1556950,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNTU2OTUw",
+  "url": "https://hackerone.com/reports/1556950",
+  "title": "Exposure of Private Personal Information to an Unauthorized Actor - PII  and soldier data (mos, schools, and speciality training)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-05-03T01:51:43.047Z",
+  "submitted_at": "2022-05-03T01:51:43.148Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hxhbrofessor",
+    "url": "/hxhbrofessor",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/uzhyfu6ykguggq5pugx4f12p2je6/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-01-24T14:49:36.727Z",
+  "bug_reporter_agreed_on_going_public_at": "2025-01-08T23:46:03.679Z",
+  "team_member_agreed_on_going_public_at": "2025-01-24T14:49:36.538Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Description:**\n\nAuthenticated users on `https://█████████/SelfService/home/selfservice` can view other ████████'s data by following the page site for `My ███ Data` and start manipulating URL requests to view the following tabs: \n* Personnel\n* Active Duty Tours\n* ADOS\n* Assignments\n* ATRRS\n* Data Discrepancies\n* DJMS-RC Pay File Records\n* DJMS-RC Pay Voucher\n* Drill Attendance\n* Education/Training\n* Gains/Losses\n* GI Bill Programs\n\nTester primarily focused on Personnel, ATRRS, and Education/Training tabs. \n\n## References\n\n* CWE-359: Exposure of Private Personal Information to an Unauthorized Actor\n* CWE-200 - Information Disclosure\n* CWE-284 - Improper Access Control\n\n## Contributers\n\n- badlifeguard\n- theonetruepengu\n\n## Impact\n\nThe information displayed in Personnel, ATRRS, and Education/Training tabs shows a soldier's Last 4 of an SSN, Home of Record, MOS (Job title), and schools. Due to heightened tensions in today's GEO-Political climate, the availability of this information can be dangerous and potentially put a soldier's life at risk: scenario, insider threat working with an adversarial country to retrieve data.\n\n## System Host(s)\n████████, ██████████\n\n## Affected Product(s) and Version(s)\n\n\n## CVE Numbers\n\n\n## Steps to Reproduce\n* Authenticate to https://█████████/SelfService/home/selfservice with burpsuite\n* Turn Intercept off\n* Go to the bottome of the page and click on `My █████████ Data`\n* On Burp, click proxy\n** HTTP History\n** Scroll to the last GET request with message 200\n** URL should be `https://█████████/SelfService/Home/dynamicdata/section/██████████/██████████%20TPU/61/124948002`\n** Right click over the message and send to `Intruder`\n* Intruder Set up\n** Clear all variables in Postions Tab\n** in the get request highlight the `2` in `GET /SelfService/Home/dynamicdata/section/███████/████%20TPU/61/124948002` and on the right hand side of Intruder click `add variable`\n** Payload Tab \n*** Payload Set > Payload Type > select numbers\n*** Payload Options [Numbers] > From: 1 > To: 9 > Step: 1\n** Options Tab\n*** Grep Exact > add > refetch response > in the search box: search `Primary MOS` this will display a succesful record found.\n\nAdditional URLs  to manipulate utilizing the same steps above are:\n\n```bash\nPersonnel\nhttps://█████/SelfService/Home/dynamicdata/section/██████/███████%20TPU/61/124948002\n\nATTRS\nhttps://██████████/SelfService/Home/dynamicdata/section/█████████/█████████%20TPU/444/124948002\n\nEducation/Training\nhttps://████████/SelfService/Home/dynamicdata/section/█████/████%20TPU/2001/124948002\n\n```\n\n## Suggested Mitigation/Remediation Actions\nCorrect permissions on access to these URLs. Authenticated users should be checked against their own ID and data.\n\n",
+  "weakness": {
+    "id": 57,
+    "name": "Violation of Secure Design Principles"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 69,
+  "voters": [
+    "s0urc3_c0d3",
+    "loaymorad",
+    "k0ns0l",
+    "almuntadhar0x01",
+    "marcelo1195",
+    "mohaned0101",
+    "ahmed_xyz",
+    "2026",
+    "aliyueka",
+    "jackiehavoltrey",
+    "and 59 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

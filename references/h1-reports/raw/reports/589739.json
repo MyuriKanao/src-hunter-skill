@@ -1,0 +1,147 @@
+{
+  "id": 589739,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81ODk3Mzk=",
+  "url": "https://hackerone.com/reports/589739",
+  "title": "Multiple HTTP/2 DOS Issues",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-24T20:53:30.231Z",
+  "submitted_at": "2019-05-24T20:53:30.231Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "jasnell",
+    "url": "/jasnell",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/211/162/109187a55a3f81113d4b61b965ec72cbaa4970e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": true,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2019-08-16T23:40:09.482Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-08-16T23:40:09.421Z",
+  "team_member_agreed_on_going_public_at": "2019-08-16T15:28:56.804Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "A security researcher has conducted a broad survey of HTTP/2 implementations to investigate common Denial of Service attack vectors. The Node.js implementation has been found to be subject to a number of these issues. (On the plus side, we're not the only ones! ;-) ...)\n\nThis work is still under embargo and has not yet been disclosed. \n\nSpecifically:\n\n* Data Dribble Attack: \"This program will request 1MB of data from a specified resource. It will request this same resource over 100 streams (so, 100MB total). It manipulates window sizes and stream priority to force the server to queue the data in 1-byte chunks.\"\n\n* Ping Flood (nginx variant):  \"Nginx and libnghttp2 (used by Apache, Tomcat, node.js, and others) has a 10K-message limit on the number of control messages it will queue. Sending a controlled number of messages may enable an attacker to force the server to hold 10K messages in memory...\"\n\n* Resource Loop: \"(actually, it should be called “Priority Shuffling”): This program continually shuffles the priority of streams in a way which causes substantial churn to the priority tree. Node.js [is] particularly impacted.\"\n\n* Reset Flood: \"This opens a number of streams and sends an invalid request over each stream. In some servers, this solicits a string of stream RSTs. In [Node.js] the servers may queue the RSTs internally until they run out of memory.\"\n\n* O-Length Headers Leak: \"This sends a stream of headers with a 0-length header name and 0-length header value. [Node.js] allocates memory for these headers and keeps the allocation alive until the session dies. Because the names and values are 0 bytes long, the cumulative length never exceeds the header size limit.\"\n\n* Internal Data Buffering: \"This opens the HTTP/2 window so the server can send without constraint; however, it leaves the TCP window closed so the server cannot actually write (many of) the bytes on the wire. Then, the client sends a stream of requests for a large response object which the target queues internally. This appears to work to create a long-ish standing queue in node.js\"\n\nEach is a distinct issue that will need to be looked at individually. I've edited the descriptions to remove references to vulnerabilities in other HTTP/2 implementations that have not yet been disclosed.\n\n---\n\nAdditional details from the report:\n\n```\n“Data Dribble” on node.js: node.js seems to queue the data internally. For a 1MB output file\nrequested 100 times in parallel fast enough that node.js is constantly processing input,\nnode.js’s RSS rises by 808MB and then falls by 120MB (for an aggregate rise of 688MB).\n(Actually, it looks like the numbers vary a bit across tests, but I think the end result is “a lot”.)\nHowever, node.js does not have the excess CPU utilization which Nginx exhibits. If you\ninstead delay the sends considerably so that node.js has time to try to send in the meantime, it\nlooks like node.js will kill off the session before the input queue grows more than a few\nhundred MB.\n\n“Internal Data Buffering” on node.js: For a 1MB output file requested 100 times in parallel\n(but sent with 24 requests per SSL frame), node.js behaves in an interesting way. It appears to\nbuffer some, but not all, data internally. It seems to continue reading (and processing requests\nand queueing data to satisfy those requests) for as many streams as it can until it can’t read\nany more. Once it can’t read anymore, it appears to try to write and realize the writing is\nblocked. At that point, it seems to switch to reading frames from the wire and queuing the\nrequests internally (without processing them). (All of this is conjecture and is based on what\nI’ve observed rather than a detailed analysis of the code.) So, if you pack the 100 requests\ninto a single SSL frame, node.js’s RSS increases by approximately 246MB. Or, if you send\n585 requests in a single SSL frame, node.js’s RSS increases by approximately 1,296MB. For\nreasons that are not entirely clear to me, if you send 100K requests each on three different\nconnections (approximately 2.8MB of request data per connection, node.js will run out of\nmemory and crash. The other interesting thing that happens is on the session ending. When\nthe session ends, it looks like node.js temporarily starts reading everything which is left in the\ninput queue, tries to process the requests, and store the request output in memory. So,\nsending 100,000 requests (approximately 2.8MB of request data) and then closing the\nconnection can make node.js temporarily use 12GB of RSS.\n\nResource Loop on node.js: Over the loopback interface, node.js can handle roughly ~10 Mb/s\nbefore the assigned thread uses 100% of its CPU core (on an m5.24xlarge). RSS rose from\n50MB at the start of the test to 236MB by the end of test (~3 minutes). RSS rose another\n156MB when a second stream was added. With two streams, serving of content to another\n(non-attacking) connection was severely impacted.\n\nZero-length Headers on node.js: With truly 0-length headers (i.e. the payload is 0 bytes), the\nserver will accept and process an unlimited number; however, they don’t seem to create a\nstanding queue on the server side. The processing overhead is much lighter than the\n“Resource Loop” test. (Roughly 25 Mb/s only produces a 75% CPU load on the server.) With\n0-length headers which are Huffman encoded into 1-byte or greater headers, the server input\nfor that socket (and only that socket) seems to get blocked for ~ 2 minutes, until the\nconnection is killed off. It appears that the server will hold the connection open even if the\nclient goes away. That behavior allows a different kind of DoS attack (exhaust server file\ndescriptors or kernel receive buffers).\n\nReset Flood on node.js: The server queue grows without an obvious bound until the\nconnection dies or the server runs out of memory and dies. After the connection ends, the\nserver is unresponsive while GC runs\n```\n\n## Impact\n\nMultiple denial of service vectors.",
+  "weakness": {
+    "id": 48,
+    "name": "Uncontrolled Resource Consumption"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-09-15T15:28:56.859Z",
+  "allow_singular_disclosure_after": -209778789.72303182,
+  "singular_disclosure_allowed": true,
+  "vote_count": 9,
+  "voters": [
+    "sameerphad72",
+    "bl4de",
+    "dhakal_ananda",
+    "eveeez",
+    "l1nkworld",
+    "uathackerone",
+    "armansameer",
+    "salex",
+    "hacking23123"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 17882,
+      "category": "team",
+      "content": "A security researcher conducted a broad survey of HTTP/2 implementations to investigate common Denial of Service attack vectors. The Node.js implementation was been found to be subject to a number of these issues.\n\nSpecifically:\n\nData Dribble Attack: \"This program will request 1MB of data from a specified resource. It will request this same resource over 100 streams (so, 100MB total). It manipulates window sizes and stream priority to force the server to queue the data in 1-byte chunks.\"\n\nPing Flood (nginx variant): \"Nginx and libnghttp2 (used by Apache, Tomcat, node.js, and others) has a 10K-message limit on the number of control messages it will queue. Sending a controlled number of messages may enable an attacker to force the server to hold 10K messages in memory...\"\n\nResource Loop: \"(actually, it should be called “Priority Shuffling”): This program continually shuffles the priority of streams in a way which causes substantial churn to the priority tree. Node.js [is] particularly impacted.\"\n\nReset Flood: \"This opens a number of streams and sends an invalid request over each stream. In some servers, this solicits a string of stream RSTs. In [Node.js] the servers may queue the RSTs internally until they run out of memory.\"\n\nO-Length Headers Leak: \"This sends a stream of headers with a 0-length header name and 0-length header value. [Node.js] allocates memory for these headers and keeps the allocation alive until the session dies. Because the names and values are 0 bytes long, the cumulative length never exceeds the header size limit.\"\n\nInternal Data Buffering: \"This opens the HTTP/2 window so the server can send without constraint; however, it leaves the TCP window closed so the server cannot actually write (many of) the bytes on the wire. Then, the client sends a stream of requests for a large response object which the target queues internally. This appears to work to create a long-ish standing queue in node.js\"\n\nEach is a distinct issue that will need to be looked at individually. I've edited the descriptions to remove references to vulnerabilities in other HTTP/2 implementations that have not yet been disclosed.\n\nAdditional details from the report:\n\n“Data Dribble” on node.js: node.js seems to queue the data internally. For a 1MB output file\nrequested 100 times in parallel fast enough that node.js is constantly processing input,\nnode.js’s RSS rises by 808MB and then falls by 120MB (for an aggregate rise of 688MB).\n(Actually, it looks like the numbers vary a bit across tests, but I think the end result is “a lot”.)\nHowever, node.js does not have the excess CPU utilization which Nginx exhibits. If you\ninstead delay the sends considerably so that node.js has time to try to send in the meantime, it\nlooks like node.js will kill off the session before the input queue grows more than a few\nhundred MB.\n\n“Internal Data Buffering” on node.js: For a 1MB output file requested 100 times in parallel\n(but sent with 24 requests per SSL frame), node.js behaves in an interesting way. It appears to\nbuffer some, but not all, data internally. It seems to continue reading (and processing requests\nand queueing data to satisfy those requests) for as many streams as it can until it can’t read\nany more. Once it can’t read anymore, it appears to try to write and realize the writing is\nblocked. At that point, it seems to switch to reading frames from the wire and queuing the\nrequests internally (without processing them). (All of this is conjecture and is based on what\nI’ve observed rather than a detailed analysis of the code.) So, if you pack the 100 requests\ninto a single SSL frame, node.js’s RSS increases by approximately 246MB. Or, if you send\n585 requests in a single SSL frame, node.js’s RSS increases by approximately 1,296MB. For\nreasons that are not entirely clear to me, if you send 100K requests each on three different\nconnections (approximately 2.8MB of request data per connection, node.js will run out of\nmemory and crash. The other interesting thing that happens is on the session ending. When\nthe session ends, it looks like node.js temporarily starts reading everything which is left in the\ninput queue, tries to process the requests, and store the request output in memory. So,\nsending 100,000 requests (approximately 2.8MB of request data) and then closing the\nconnection can make node.js temporarily use 12GB of RSS.\n\nResource Loop on node.js: Over the loopback interface, node.js can handle roughly ~10 Mb/s\nbefore the assigned thread uses 100% of its CPU core (on an m5.24xlarge). RSS rose from\n50MB at the start of the test to 236MB by the end of test (~3 minutes). RSS rose another\n156MB when a second stream was added. With two streams, serving of content to another\n(non-attacking) connection was severely impacted.\n\nZero-length Headers on node.js: With truly 0-length headers (i.e. the payload is 0 bytes), the\nserver will accept and process an unlimited number; however, they don’t seem to create a\nstanding queue on the server side. The processing overhead is much lighter than the\n“Resource Loop” test. (Roughly 25 Mb/s only produces a 75% CPU load on the server.) With\n0-length headers which are Huffman encoded into 1-byte or greater headers, the server input\nfor that socket (and only that socket) seems to get blocked for ~ 2 minutes, until the\nconnection is killed off. It appears that the server will hold the connection open even if the\nclient goes away. That behavior allows a different kind of DoS attack (exhaust server file\ndescriptors or kernel receive buffers).\n\nReset Flood on node.js: The server queue grows without an obvious bound until the\nconnection dies or the server runs out of memory and dies. After the connection ends, the\nserver is unresponsive while GC runs\n\nImpact:\n\nMultiple denial of service vectors.",
+      "updated_at": "2019-08-16T23:39:29.763Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 211162,
+        "username": "jasnell",
+        "name": "James M Snell",
+        "bio": "Node.js TSC and Security Triage Team",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2017-10-23T20:31:27.628Z",
+        "url": "https://hackerone.com/jasnell",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/211/162/109187a55a3f81113d4b61b965ec72cbaa4970e3_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/211/162/109187a55a3f81113d4b61b965ec72cbaa4970e3_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/211/162/109187a55a3f81113d4b61b965ec72cbaa4970e3_original.jpg/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

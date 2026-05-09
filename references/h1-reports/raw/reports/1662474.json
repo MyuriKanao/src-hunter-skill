@@ -1,0 +1,111 @@
+{
+  "id": 1662474,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjYyNDc0",
+  "url": "https://hackerone.com/reports/1662474",
+  "title": "springboot actuator is leaking internals at ██████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-08-08T08:11:58.435Z",
+  "submitted_at": "2022-08-08T08:11:58.468Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "thpless",
+    "url": "/thpless",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/7a340dy8tao8fyfeo4pmmxggzoe6/8774a5031fc14b74dc4404da039040c69df8ed41021007c0c2beb9de489fcf66"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-09-14T20:29:17.123Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-08-11T19:44:48.337Z",
+  "team_member_agreed_on_going_public_at": "2022-09-14T20:29:16.894Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "### Proof of Concept\n\nIf you go to https://█████████/actuator you'll get a complete overview of all the endpoints that are accessable \n(Suggestion: Use a Firefox Browser if possible, its json representation is well formed and the links are clickable )\n\n██████████\n\n## Impact\n\nInformation Disclosure \n\n* https://████/actuator/beans\nDisplays a complete list of all the Spring beans in your application.\n\n* https://██████████/actuator/caches\nExposes available caches. For ███ it is empty\n\n* https://███████/actuator/health\nThe actual status of the actuator is displayed\n```\nstatus\t\"UP\"\ncomponents\t\ndiskSpace\t\nstatus\t\"UP\"\ndetails\t\ntotal\t1167859712\nfree\t1167810560\nthreshold\t10485760\nexists\ttrue\nping\t\nstatus\t\"UP\"\n```\n\n* https://███/actuator/info\nversion and  built time are displayed\n```\t\nbuild\t\nversion\t\"1.2.1-SNAPSHOT\"\nartifact\t\"unregister-file-endpoint\"\nname\t\"UnregisterFileEndpoint\"\ngroup\t\"com.hexusfed\"\ntime\t\"2022-06-30T14:44:23.879Z\"\n```\n\n* https://██████████/actuator/conditions\nShows the conditions that were evaluated on configuration and auto-configuration classes and the reasons why they did or did not match.\n\n* https://█████/actuator/configprops\nDisplays a collated list of all configuration properties.\n\n* https://█████/actuator/env\ncontains internal paths, ports, version numbers etc.\n\n* https://███/actuator/loggers\nconfiguration of loggers in the application\n\n* https://███/actuator/heapdump *** (CRITICAL)***\nDownloads a complete  heap dump file (about 30 MBs). This file has a  PHD-format and can be analyzed with a heapdump analyzer tool.\n\n* https://█████████/actuator/threaddump\nPerforms a thread dump.\n\n* https://████████/actuator/metrics\ninternal metrics\n\n* https://█████/actuator/scheduledtasks\nFor this system there are no scheduled tasks running\n\n* https://█████/actuator/mappings\nDisplays a collated list of all request paths (mapped to the coresponding internal software module).\n\n## System Host(s)\n████\n\n## Affected Product(s) and Version(s)\nspring-boot.actuator.v3\n\n## CVE Numbers\n\n\n## Steps to Reproduce\nIf you use the link https://███████/actuator, you'll see all the leaked endpoints in a json file\n\n## Suggested Mitigation/Remediation Actions\nBy default, all endpoints except for shutdown are enabled. To configure the enablement of an endpoint, use its management.endpoint.<id>.enabled property.\n\nNormally /actuator/health and /actuator/info are enabled the rest is disabled .\n\n",
+  "weakness": {
+    "id": 18,
+    "name": "Information Disclosure"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 4,
+  "voters": [
+    "thpless",
+    "zy9ard3",
+    "shivammusic",
+    "reaper840"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

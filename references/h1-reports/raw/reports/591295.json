@@ -1,0 +1,158 @@
+{
+  "id": 591295,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81OTEyOTU=",
+  "url": "https://hackerone.com/reports/591295",
+  "title": "Potential pre-auth RCE on Twitter VPN",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-05-28T07:53:44.155Z",
+  "submitted_at": "2019-05-28T07:53:44.155Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "orange",
+    "url": "/orange",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/051/3495315121602d0de9c4f6728fef03bc3b41d3fe_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 61,
+    "url": "https://hackerone.com/x",
+    "handle": "x",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/ikx4ept298unt534kpz4am2bd4zs/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "X / xAI",
+      "twitter_handle": "XSecurity",
+      "website": "https://x.com",
+      "about": "X helps you create and share ideas and information instantly, without barriers."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-11510",
+    "CVE-2019-11542",
+    "CVE-2019-11539",
+    "CVE-2019-11538",
+    "CVE-2019-11508",
+    "CVE-2019-11540"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-08-10T15:06:45.375Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-07-18T16:57:46.863Z",
+  "team_member_agreed_on_going_public_at": "2019-08-10T15:06:45.289Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hi, we(Orange Tsai and Meh Chang) are the security research team from DEVCORE. Recently, we are doing a research about SSL VPN security, and found several critical vulnerabilities on Pulse Secure SSL VPN! We have reported to vendor and [patches](https://kb.pulsesecure.net/articles/Pulse_Security_Advisories/SA44101) have been released on `2019/4/25`. Since that, we keep monitoring numerous large corporations using Pulse Secure and we noticed that Twitter haven't patched the SSL VPN server over one month!\n\nThese vulnerabilities include a pre-auth file reading(CVSS 10) and a post-auth(admin) command injection(CVSS 8.0) which can be chained into a pre-auth RCE! Here are all vulnerabilities we found:\n\n* CVE-2019-11510 - Pre-auth Arbitrary File Reading\n* CVE-2019-11542 - Post-auth Stack Buffer Overflow\n* CVE-2019-11539 - Post-auth Command Injection\n* CVE-2019-11538 - Post-auth Arbitrary File Reading\n* CVE-2019-11508 - Post-auth Arbitrary File Writing\n* CVE-2019-11540 - Post-auth Session Hijacking\n\n\n## Our Steps\n\nFirst, we download following files with CVE-2019-11510:\n1. `/etc/passwd`\n2. `/etc/hosts`\n3. `/data/runtime/mtmp/system`\n4. `/data/runtime/mtmp/lmdb/dataa/data.mdb`\n5. `/data/runtime/mtmp/lmdb/dataa/lock.mdb`\n6. `/data/runtime/mtmp/lmdb/randomVal/data.mdb`\n7. `/data/runtime/mtmp/lmdb/randomVal/lock.mdb`\n\n██████████\n\n\nThe VPN user and hashed passwords are stored in the file `mtmp/system`. However, Pulse Secure caches the plain-text password in the `dataa/data.mdb` once the user log-in. Here, we just grep part of username/plain-text-password for proofs and further actions.\n\n*P.S. we mask the password field for security concerns, and we can send to you if you provide your PGP key.*\n\n```\n█████████ / ████\n█████████ / ██████\n█████ / █████████\n██████████ / █████████\n███ / ██████\n```\n\nOnce we log into the SSL VPN, we found the server has enabled the Two-Factor Authentication. Here, we listed two methods to bypass the 2FA:\n\n████\n\n1. We observed Twitter using the 2FA solution from Duo.com. With the file `mtmp/system`, we could obtain the integration key, secret key, and API hostname, which should be protected carefully according to the [Duo documentation](https://duo.com/docs/pulseconnect):\n\n    > Treat your secret key like a password\n    The security of your Duo application is tied to the security of your secret key (skey). Secure it as you would any sensitive credential. Don't share it with unauthorized individuals or email it to anyone under any circumstances!\n\n    ```\n    # secret-key = ██████████\n    ████\n    dc=███,dc=duosecurity,dc=com\n    cn=<USER>\n\n    # LDAP password = ██████████\n    ██████████\n    █████\n    ███████\n    uid=<username>\n    ```\n\n2. The Pulse Secure stores the user session in the `randomVal/data.mdb`. Without `Roaming Session` option enabled, we can reuse the session and log into your SSL VPN!\n\n██████████\n\n\n\nThe next, in order to trigger the command injection(CVE-2019-11542). We leverage the web proxy function to access the admin interface with following URL:\n\n```\nhttps://0/admin/\n```\n\n████████\n\nWe are now trying to crack the admin hash by GPU. It seems takes a long time, but once we cracked, we can achieve RCE absolutely. Actually, we can simply wait for the admin login and obtain the plain-text password directly!\n```\n███████\n███████\n```\n\nAnyway, we decided to report to you first, because it's lethal and critical. If you want, we can provide the RCE PoC in admin interface in order to proof the potential risk!\n\n\n## Impact:\n\n1. Access Intranet(we have accessed the `███████` for proof) ██████████\n2. Plenty of staff plain-text passwords\n3. Internal server and passwords(such as the LDAP)\n4. Attack back all VPN clients(we will detail the step in [Black Hat USA 2019](https://www.blackhat.com/us-19/briefings/schedule/#infiltrating-corporate-intranet-like-nsa---pre-auth-rce-on-leading-ssl-vpns-15545))\n5. Private keys\n6. Sensitive cookies in Web VPN(such as okta, salesforce, box.com and google)\n\n## Supporting Material/References:\n\nWe attached screenshots to proof our actions. For security concern, we didn't attach the `mtmp/system` and the `dataa/data.mdb`. If you want, we can send to you with your PGP key encrypted!\n\n## Recommend Solution\n\nThe only and simplest way to solve this problem is to upgrade your SSL VPN to the [latest version](https://kb.pulsesecure.net/articles/Pulse_Security_Advisories/SA44101)!\n\n## Impact\n\n1. Access Intranet(we have accessed the `████████` for proof) ████\n2. Plenty of staff plain-text passwords\n3. Internal server and passwords(such as the LDAP)\n4. Attack back all VPN clients(we will detail the step in [Black Hat USA 2019](https://www.blackhat.com/us-19/briefings/schedule/#infiltrating-corporate-intranet-like-nsa---pre-auth-rce-on-leading-ssl-vpns-15545))\n5. Private keys\n6. Sensitive cookies in Web VPN(such as okta, salesforce, box.com and google)",
+  "bounty_amount": "20160.0",
+  "formatted_bounty": "$20,160",
+  "weakness": {
+    "id": 59,
+    "name": "OS Command Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2019-08-17T16:57:46.997Z",
+  "allow_singular_disclosure_after": -212279049.4958609,
+  "singular_disclosure_allowed": true,
+  "vote_count": 1235,
+  "voters": [
+    "iiiwaleed",
+    "iwgp",
+    "loaymorad",
+    "miszczyk",
+    "0xmohamed",
+    "sgabe",
+    "taha",
+    "feedadad",
+    "mehqq",
+    "orange303",
+    "and 1225 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 1062,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "*.twitter.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 18079,
+      "category": "researcher",
+      "content": "Thanks Twitter Security Team again :) The details can be found here!\n* [Attacking SSL VPN - Part 3: The Golden Pulse Secure SSL VPN RCE Chain, with Twitter as Case Study!](https://blog.orange.tw/2019/09/attacking-ssl-vpn-part-3-golden-pulse-secure-rce-chain.html)\n\n",
+      "updated_at": "2019-09-07T01:22:28.461Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 51,
+        "username": "orange",
+        "name": "Orange Tsai",
+        "bio": "This is 🍊",
+        "cleared": false,
+        "verified": false,
+        "website": "http://blog.orange.tw",
+        "location": "Taiwan",
+        "created_at": "2013-11-01T02:54:18.394Z",
+        "url": "https://hackerone.com/orange",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/051/3495315121602d0de9c4f6728fef03bc3b41d3fe_original.jpeg/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/051/3495315121602d0de9c4f6728fef03bc3b41d3fe_original.jpeg/74790fe75ac5dbe8a5140a122388d59ebac913dcfa941f0b3a45e6cad161f9ea",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/000/051/3495315121602d0de9c4f6728fef03bc3b41d3fe_original.jpeg/fba683f28d17594d98b39d87e2b3aa09acb938c22d49b206f663ae961dc39adc"
+        }
+      }
+    }
+  ]
+}

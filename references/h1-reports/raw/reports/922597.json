@@ -1,0 +1,138 @@
+{
+  "id": 922597,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC85MjI1OTc=",
+  "url": "https://hackerone.com/reports/922597",
+  "title": "HTTP Request Smuggling due to CR-to-Hyphen conversion",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-07-13T14:57:33.146Z",
+  "submitted_at": "2020-07-13T14:57:33.146Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "amitklein",
+    "url": "/amitklein",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 22984,
+    "url": "https://hackerone.com/nodejs",
+    "handle": "nodejs",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/022/984/e600648ace4a8553247bce967d461a030aa81d49_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Node.js",
+      "twitter_handle": "nodejs",
+      "website": "https://nodejs.org",
+      "about": "The Node.js JavaScript Runtime"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2020-8201"
+  ],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2020-10-17T19:15:29.014Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2020-09-17T19:15:25.798Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "> NOTE! Thanks for submitting a report! Please replace *all* the [square] sections below with the pertinent details. Remember, the more detail you provide, the easier it is for us to triage and respond quickly, so be sure to take your time filling out the report!\n\n**Summary:** [add summary of the vulnerability]\nApparently, node.js converts CR in HTTP request headers to hyphen before parsing. This can lead to HTTP Request Smuggling as it is a non-standard interpretation of the header.\n\n**Description:** [add more details about this vulnerability]\nConsider an HTTP request with Content[CR]Length header . Suppose a proxy in front of node.js ignores the Content[CR]Length header (and therefore assumes a 0-length body). node, on the other hand, converts the CR to a hyphen and uses the value of the (newly formed...) Content-Length header. HTTP Request Smuggling ensues.\n\n## Steps To Reproduce:\nThis is the HTTP stream that demonstrates the vulnerability:\nGET / HTTP/1.1\nHost: www.example.com\nContent[CR]Length: 42\nConnection: Keep-Alive\n\nGET /proxy_sees_this HTTP/1.1\nSomething: GET /node_sees_this HTTP/1.1\nHost: www.example.com\n\nA proxy server that ignores the invalid Content[CR]Length header will assume that the body length is 0 (since there's no body length indication), and will thus transmit the stream up to (but not including) the GET /proxy_sees_this. It will wait for node to respond (which interestingly does happen, even though node.js does expect the body - perhaps on GET requests, the URL is invoked regardless of the body?), then the proxy forwards the second request (from its perspective) - the GET /proxy_sees_this. Node then silently discards the expected 42 bytes of the body of the first request, and thus starts parsing the 2nd request from GET /node_sees_this.\nHTTP Request Smuggling ensues.\n\n[Also, if you were able to find the piece of code responsible for this issue, please add a link to it in the source repository.]\n\n## Impact: [add why this issue matters]\nHTTP Request Smuggling can lead to web cache poisoning, session hijacking, cross site scripting, etc.\n\n## Supporting Material/References:\n\n  * List any additional material (e.g. screenshots, logs, references, commits, code examples, etc.).\n\n## Impact\n\nHTTP Request Smuggling can lead to web cache poisoning, session hijacking, cross site scripting, etc.",
+  "weakness": {
+    "id": 86,
+    "name": "HTTP Request Smuggling"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2020-10-17T19:15:25.923Z",
+  "allow_singular_disclosure_after": -175377592.7623901,
+  "singular_disclosure_allowed": true,
+  "vote_count": 134,
+  "voters": [
+    "orange303",
+    "adzy2k6",
+    "arist0phanes",
+    "mrw0l05zyn",
+    "suruli",
+    "poneglyph",
+    "ninetynine",
+    "run_win",
+    "s_p_q_r",
+    "remonsec",
+    "and 124 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.5,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "low",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 666,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/nodejs/node",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

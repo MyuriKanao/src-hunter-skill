@@ -1,0 +1,121 @@
+{
+  "id": 680480,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC82ODA0ODA=",
+  "url": "https://hackerone.com/reports/680480",
+  "title": "Command Injection (via CVE-2019-11510 and CVE-2019-11539)",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2019-08-23T15:57:54.016Z",
+  "submitted_at": "2019-08-23T15:57:54.016Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "l00ph0le",
+    "url": "/l00ph0le",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/012/963/cbd75f8c49a36b6f3bdb9d8ac16a57611f6a5975_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2019-11510",
+    "CVE-2019-11539"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-05-07T16:57:13.463Z",
+  "bug_reporter_agreed_on_going_public_at": "2019-12-04T13:57:30.224Z",
+  "team_member_agreed_on_going_public_at": "2020-05-07T16:57:13.358Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nThe Navy has a Pulse Secure SSL VPN (https://████████/dana-na/auth/url_default/welcome.cgi) that is vulnerable to:\nCVE-2019-11510 - Pre-auth Arbitrary File Reading\nCVE-2019-11539 - Post-auth Command Injection\n\nvulnerable hostname from ssl certificate: ██████████.navy.mil\n\nThe pre-auth arbitrary file reading vulnerability (CVE-2019-11510) enables an un-authenicated user to read the file /data/runtime/mtmp/lmdb/dataa/data.mdb from the Pulse VPN device. This files contains admin and other users credentials in plain-text format. This information can be used to log into the pulse device as an administrator.\n\nOnce logged in as an administrator, the post-auth command injection vulnerability (CVE-2019-11539) allows an attacker to execute commands on the device. Commands execution could lead to compromise to other servers on the network or malware implantation.\n\nThere was a talk recently at Blackhat USA that goes into great detail of the vulnerabilities and how to exploit them.\n\nExploit code was recently released to the public for this vulnerability. I would consider this an extremely critical issue, and others will be scanning your network trying to compromise this. The Pulse Secure version can be obtained from your device via a publicly available file here (https://██████████/dana-na/nc/nc_gina_ver.txt), so it is really easy to detect for attackers.\n\nHere are links to Blackhat presentation, Pulse Secure Security Bulletin, exploit code, video of exploit code in action and example report found on twitter's network.\n\nBlackhat 2019 Presentation\nhttps://i.blackhat.com/USA-19/Wednesday/us-19-Tsai-Infiltrating-Corporate-Intranet-Like-NSA.pdf\n\nPulse Secure Security Bulletin\nhttps://kb.pulsesecure.net/articles/Pulse_Security_Advisories/SA44101\n\nPublicly available exploit code:\nhttps://raw.githubusercontent.com/projectzeroindia/CVE-2019-11510/master/CVE-2019-11510.sh\n\nVideo of how exploit works:\nhttps://www.youtube.com/watch?v=v7JUMb70ON4&feature=youtu.be\n\nExample report found on Twitter's network\nhttps://hackerone.com/reports/591295\n\n## Impact\nCritical - I would consider this an extremely critical issue, and others will be scanning your network trying to compromise this.\n\n## Step-by-step Reproduction Instructions\n1. From macos/linux command line issue the following command;\ncurl --path-as-is -s -k \"https://███████/dana-na/../dana/html5acc/guacamole/../../../../../../../etc/passwd?/dana/html5acc/guacamole/\"\n\nThis will display the /etc/passwd file from the pulse secure device. This in itself it enough to confirm the presence of both vulnerabilities.\n\nI've attached screenshots of getting the vulnerable Pulse Secure version from the device, and confirming the arbitrary file read vulnerability. I did not attempt to login into your device as administrator. Reading /etc/passwd is enough to confirm the vulnerability exists.\n\n## Product, Version, and Configuration (If applicable)\nPulse Secure 9.0.1.63949\n\n## Suggested Mitigation/Remediation Actions\nInstall updated firmware/os from the Pulse Secure Security Bulletin\nhttps://kb.pulsesecure.net/articles/Pulse_Security_Advisories/SA44101\n\n## Impact\n\nAn attacker could compromise this device, and gain access to the DoD networks, compromise other servers, or implant malware.",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 26,
+  "voters": [
+    "m4khn0",
+    "l00ph0le",
+    "daehee",
+    "drtrace",
+    "lemonoftroy",
+    "z32",
+    "hundredpercent",
+    "dastan_9408",
+    "hardworkpaysoff",
+    "zanasz",
+    "and 16 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

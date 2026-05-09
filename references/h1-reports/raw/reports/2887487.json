@@ -1,0 +1,140 @@
+{
+  "id": 2887487,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yODg3NDg3",
+  "url": "https://hackerone.com/reports/2887487",
+  "title": "Buffer Overflow Risk in Curl_inet_ntop and inet_ntop4",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2024-12-08T07:15:38.929Z",
+  "submitted_at": "2024-12-08T07:15:39.266Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": true,
+    "username": "b3fbcf5debe00185bbe06c0",
+    "url": "/b3fbcf5debe00185bbe06c0",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-12-08T21:43:23.479Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2024-12-08T21:43:07.039Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "*Curl is a software that I love and is an important tool for the world. *\n*If my report doesn't align, I apologize for that.*\n\nThe `Curl_inet_ntop` function is designed to convert IP addresses from binary format to human-readable string format, supporting both IPv4 and IPv6. It internally delegates to `inet_ntop4` for IPv4 addresses and `inet_ntop6` for IPv6 addresses. However, insufficient validation of buffer size (`buf`) in these functions exposes the implementation to **buffer overflow risks**, which can lead to undefined behavior, application crashes, or security vulnerabilities.\n\nThis report analyzes vulnerabilities in both `Curl_inet_ntop` and `inet_ntop4`, demonstrates proof-of-concept (POC) exploits, and proposes mitigation strategies.\n\n\n## **Vulnerability Analysis**\n\n### **Root Cause**\nThe vulnerabilities stem from:\n1. **`Curl_inet_ntop`:** Lack of buffer size validation before delegating to `inet_ntop4` or `inet_ntop6`.\n2. **`inet_ntop4`:** Direct use of `strcpy` without ensuring that the destination buffer (`dst`) is large enough.\n\n### **Key Points of Failure**\n1. **Buffer Size Mismatch:**\n   - For IPv4, a minimum of 16 bytes is required for `\"255.255.255.255\\0\"`.\n   - For IPv6, a minimum of 46 bytes is required for `\"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\\0\"`.\n   - Both `Curl_inet_ntop` and `inet_ntop4` assume that the caller provides a sufficiently large buffer without explicit validation.\n\n2. **Unsafe String Operations in `inet_ntop4`:**\n   - `inet_ntop4` uses `strcpy(dst, tmp)` to copy the temporary buffer `tmp` into `dst`, which can overflow if `dst` is too small.\n\n3. **Production Vulnerabilities:**\n   - Assertions (`DEBUGASSERT`) in `inet_ntop4` are disabled in production builds, removing critical safety checks.\n\n\n## **Proof-of-Concept (POC)**\n\n### **Test for `inet_ntop4`**\n\n#### **Vulnerable Code**\n```c\n#include <stdio.h>\n#include <string.h>\n#include <errno.h>\n\nstatic char *inet_ntop4(const unsigned char *src, char *dst, size_t size) {\n    char tmp[sizeof(\"255.255.255.255\")];\n    snprintf(tmp, sizeof(tmp), \"%d.%d.%d.%d\",\n             src[0], src[1], src[2], src[3]);\n\n    if (strlen(tmp) >= size) {\n        errno = ENOSPC;\n        return NULL;\n    }\n    strcpy(dst, tmp); // Vulnerable to overflow\n    return dst;\n}\n\nint main() {\n    unsigned char ipv4[4] = {192, 168, 0, 1};\n    char small_buffer[10]; // Intentionally too small\n\n    // Test with an insufficient buffer\n    if (inet_ntop4(ipv4, small_buffer, sizeof(small_buffer)) == NULL) {\n        perror(\"inet_ntop4 failed\");\n    } else {\n        printf(\"IPv4: %s\\n\", small_buffer);\n    }\n\n    return 0;\n}\n```\n\n#### **Expected Output**\nThe function attempts to write the string `\"192.168.0.1\\0\"` into a 10-byte buffer, causing buffer overflow. Running this code may result in:\n1. A segmentation fault due to memory corruption.\n2. Undefined behavior depending on the system's memory layout.\n\n#### **Testing with AddressSanitizer**\nCompile the code with AddressSanitizer to identify buffer overflow:\n```bash\ngcc -fsanitize=address -o inet_ntop4_test inet_ntop4.c\n./inet_ntop4_test\n```\nAddressSanitizer will detect and report the overflow.\n\n\n### **Test for `Curl_inet_ntop`**\n\n#### **Vulnerable Code**\n```c\n#include <stdio.h>\n#include <string.h>\n#include <errno.h>\n\nextern char *inet_ntop4(const unsigned char *src, char *dst, size_t size);\n\nchar *Curl_inet_ntop(int af, const void *src, char *buf, size_t size) {\n    switch(af) {\n    case AF_INET:\n        return inet_ntop4((const unsigned char *)src, buf, size);\n    default:\n        errno = EAFNOSUPPORT;\n        return NULL;\n    }\n}\n\nint main() {\n    unsigned char ipv4[4] = {192, 168, 0, 1};\n    char small_buffer[10]; // Intentionally too small\n\n    // Test with IPv4\n    if (Curl_inet_ntop(AF_INET, ipv4, small_buffer, sizeof(small_buffer)) == NULL) {\n        perror(\"Curl_inet_ntop failed\");\n    } else {\n        printf(\"IPv4: %s\\n\", small_buffer);\n    }\n\n    return 0;\n}\n```\n\n#### **Expected Output**\nThe function delegates to `inet_ntop4`, resulting in the same overflow vulnerability as above.\n\n\n## **Proposed Fix**\n\n### **Fixed Implementation of `inet_ntop4`**\n```c\nstatic char *inet_ntop4(const unsigned char *src, char *dst, size_t size) {\n    char tmp[sizeof(\"255.255.255.255\")];\n\n    // Safely format the IPv4 address\n    snprintf(tmp, sizeof(tmp), \"%d.%d.%d.%d\", src[0], src[1], src[2], src[3]);\n\n    if (strlen(tmp) >= size) {\n        errno = ENOSPC;\n        return NULL;\n    }\n\n    // Safely copy to destination buffer\n    strncpy(dst, tmp, size - 1);\n    dst[size - 1] = '\\0'; // Ensure null termination\n    return dst;\n}\n```\n\n### **Fixed Implementation of `Curl_inet_ntop`**\n```c\nchar *Curl_inet_ntop(int af, const void *src, char *buf, size_t size) {\n    switch(af) {\n    case AF_INET:\n        if (size < 16) { // Minimum size for IPv4\n            errno = ENOSPC;\n            return NULL;\n        }\n        return inet_ntop4((const unsigned char *)src, buf, size);\n    case AF_INET6:\n        if (size < 46) { // Minimum size for IPv6\n            errno = ENOSPC;\n            return NULL;\n        }\n        // Delegate to a similarly fixed inet_ntop6\n        return inet_ntop6((const unsigned char *)src, buf, size);\n    default:\n        errno = EAFNOSUPPORT;\n        return NULL;\n    }\n}\n```\n\n## **Mitigation Strategies**\n\n1. **Buffer Size Validation:**\n   - Validate the size of the destination buffer at every level (`Curl_inet_ntop`, `inet_ntop4`, `inet_ntop6`).\n\n2. **Safe String Handling:**\n   - Use `snprintf` or `strncpy` to prevent unbounded writes to the buffer.\n\n3. **Testing with Tools:**\n   - Use AddressSanitizer (ASAN) or similar tools to detect overflows during testing.\n\n4. **Documentation:**\n   - Clearly document the minimum buffer size requirements (16 bytes for IPv4, 46 bytes for IPv6).\n\n## **Conclusion**\n\nBoth `Curl_inet_ntop` and `inet_ntop4` pose significant buffer overflow risks due to a lack of proper size validation and unsafe string operations. The proposed fixes address these issues by enforcing strict buffer size checks and using safer string handling techniques. Comprehensive testing and adherence to these best practices will ensure the functions are secure and robust for both IPv4 and IPv6 address conversions.\n\n## Impact\n\nThe vulnerability classified under **CWE-120** (Buffer Overflow) can have significant consequences, particularly when exploited in critical systems. The failure to validate the size of the buffer before copying data can lead to several negative impacts:\n\n1. **Memory Corruption**: \n   - A buffer overflow allows data to be written beyond the boundaries of a buffer, corrupting adjacent memory. This can cause unpredictable program behavior, crashes, or data corruption, leading to instability in the system.\n\n2. **Program Crashes and System Instability**: \n   - When memory is overwritten, the program may experience crashes or undefined behavior. This is especially dangerous in production environments, where system downtime or service interruption can occur, affecting user experience and reliability.\n\n3. **Security Risks (Remote Code Execution)**: \n   - In some cases, attackers may use buffer overflow vulnerabilities to inject and execute arbitrary code, potentially gaining control over the affected system. This could lead to a full compromise of the system, allowing unauthorized access, privilege escalation, and the execution of malicious actions on the machine.\n\n4. **Denial of Service (DoS)**: \n   - An attacker could exploit the buffer overflow to crash the application or system, making it unavailable to legitimate users. This type of attack is commonly referred to as a Denial of Service (DoS), impacting the availability of services and applications.\n\n5. **Exploitation Potential**: \n   - The vulnerability is highly exploitable if an attacker can control the data being written to the buffer. Any system that processes user inputs or external data (such as network packets or file data) is potentially at risk, making it a critical vulnerability in many systems.\n\n### **Summary of Impact**\nA buffer overflow vulnerability like this can result in severe consequences, including system crashes, data corruption, unauthorized code execution, and potentially remote control of affected systems. In any production environment, this issue can lead to a complete system compromise or denial of service, with high security and operational risks. Prompt action to mitigate or fix such vulnerabilities is crucial to ensure the security and stability of the system.",
+  "weakness": {
+    "id": 3,
+    "name": "Classic Buffer Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 3824033,
+      "file_name": "curl-inet.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/8j3z3mxm1ouzqhvcfbtdrcevhbgc?response-content-disposition=attachment%3B%20filename%3D%22curl-inet.c%22%3B%20filename%2A%3DUTF-8%27%27curl-inet.c&response-content-type=text%2Fx-csrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150238Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=9530d994e518a60846e3cb05e45a0b4d7ac2b7811070ac14b6dbe90d34dc2a22",
+      "file_size": 2200,
+      "type": "text/x-csrc",
+      "moderated": null
+    },
+    {
+      "id": 3824034,
+      "file_name": "curl-inet-test.txt",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/3vdw5zod0x2l63vmid97tsjd3cha?response-content-disposition=attachment%3B%20filename%3D%22curl-inet-test.txt%22%3B%20filename%2A%3DUTF-8%27%27curl-inet-test.txt&response-content-type=text%2Fplain&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150238Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=71337e19b7a59d68e094397a765a5a1fdcbdde4f50e48b5c7b7e9f81713ef76f",
+      "file_size": 2907,
+      "type": "text/plain",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 39,
+  "voters": [
+    "anhiu102",
+    "popobawa",
+    "thalaivar304",
+    "sick__andtired",
+    "idealphaseth",
+    "ahmed_magdy",
+    "asp_5",
+    "hussien-101",
+    "shivam_mahar1",
+    "olamidesunday",
+    "and 29 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

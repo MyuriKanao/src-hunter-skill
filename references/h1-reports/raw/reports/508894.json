@@ -1,0 +1,147 @@
+{
+  "id": 508894,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC81MDg4OTQ=",
+  "url": "https://hackerone.com/reports/508894",
+  "title": "Vulnerability in GoldSource Engine allows to upload and run an arbitrary DLL on client",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2019-03-13T00:29:26.137Z",
+  "submitted_at": "2019-03-13T00:29:26.137Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "kohtep2010",
+    "url": "/kohtep2010",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/tg1wmihldmstpzgysu4jqiatwjhu/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 23363,
+    "url": "https://hackerone.com/valve",
+    "handle": "valve",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/023/363/c78d46a7d0ea39e3a15a7c19c1a48634f2571eb9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Valve",
+      "twitter_handle": "",
+      "website": "https://www.valvesoftware.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "no-content",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2020-03-25T22:02:00.522Z",
+  "bug_reporter_agreed_on_going_public_at": "2020-03-08T09:27:09.594Z",
+  "team_member_agreed_on_going_public_at": "2020-03-25T22:02:00.371Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "",
+  "weakness": {
+    "id": 76,
+    "name": "Malware"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 11,
+  "voters": [
+    "mvc",
+    "ali",
+    "spam404",
+    "b911bade858ce8e6a0f50f8",
+    "romesful",
+    "null_rhythm",
+    "mr_teejay",
+    "njbooher3",
+    "hupernikao",
+    "fatzombi",
+    "and 1 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": {
+    "databaseId": 1289,
+    "asset_type": "DOWNLOADABLE_EXECUTABLES",
+    "asset_identifier": "hl.exe",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 20876,
+      "category": "team",
+      "content": "###Introduction\n\nGreetings. In GoldSource Engine there is a vulnerability that allows to run an arbitrary DLL on the client, using the flaws in the file downloading system.\n\n###Description\n\nPart of the problem is hidden in the **CL_BatchResourceRequest** function. This is a client function that is responsible for adding a list of server files to the download queue. Files added to the queue can be of different types: sound, model, decal, generic, eventscript, skin. Before adding to the queue, some types of resources are tested for validity using the **IsSafeFileToDownload** function. This is where the problem arises.\n\n**IsSafeFileToDownload** function is used only in generic resources, all other types rely only on the **CL_CheckFile** check, which has a very poor set of rules, according to IDA pseudocode for 7960 engine build:\n\n```if ( Q_strstr(pFileName, \"..\") || Q_strstr(pFileName, \"server.cfg\") )\n{\n  Con_DPrintf(\"Refusing to download a path with '..'\\n\");\n  return 1;\n}```\n\nAs you can see, only the presence of double-dot and the file name server.cfg substrings in the variable pFileName are checked.\n\nFile transfer under the server->client scheme can be done in two ways:\n\n* With the help of netchan (UDP);\n* Using HTTP.\n\nOf course, if we try to transfer the file using the first method, we will fail, because when the file is downloaded, IsSafeFileToDownload is still will be executed in **Netchan_CopyFileFragments** function, although the progress of the file transfer will be shown.\n\n{F440411}\n\nBut this does not apply to the second method, where the file will be downloaded fairly quickly and will not pass any verification function.\n\nSuch architecture creates security holes. Thus, the server has the ability to upload any file to the mod folder on the client, bypassing the IsSafeFileToDownload filter. You can upload any file, from the autoexec.cfg script to the TrackerUI.dll library, which is loaded by the client.dll library in the **Initialize** function. There is no such library in the vanilla Half-Life 1 and Counter-Strike 1.6 games, which allows you to upload malware library on the any mod.\n\n###How to reproduce\n\n1. Specify the sv_downloadurl console variable for the client to download the file using the HTTP protocol (http://127.0.0.1 will be enough for local tests).\n2. In the **SV_CreateResourceList** function, call the following code: ```SV_AddResource (t_eventscript, filename, FS_FileSize (filename), RES_FATALIFMISSING, 0);```, where **filename** is the name of a file with a forbidden extension, for example, **bin\\TrackerUI.dll**.\n3. Upload bin\\TrackerUI.dll to the hosting specified in sv_downloadurl.\n4. Connect to the server.\n\nAs a result, client will download the library bin\\TrackerUI.dll, which should not be downloaded, following the IsSafeFileToDownload rules, and will be loaded the next time the game starts.\n\n###Possible solutions\n\nReplace the **CL_CheckFile** function code above with the following one:\n\n```if (! IsSafeFileToDownload (pFileName) )\n{\nCon_DPrintf (\"Refusing to download restricted file.\\n\");\nreturn 1;\n}```\n\n## Impact\n\nServer has the ability to arrange a massive infection of the players by spreading a malware library.",
+      "updated_at": "2020-03-25T22:01:49.522Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 279011,
+        "username": "mikela",
+        "name": "Mike L",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2018-05-17T22:06:50.780Z",
+        "url": "https://hackerone.com/mikela",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

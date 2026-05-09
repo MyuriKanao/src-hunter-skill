@@ -1,0 +1,142 @@
+{
+  "id": 226896,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjY4OTY=",
+  "url": "https://hackerone.com/reports/226896",
+  "title": "Nextcloud Server Remote Command Execution",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2017-05-08T14:12:27.054Z",
+  "submitted_at": "2017-05-08T14:12:27.054Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "sniperpex",
+    "url": "/sniperpex",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/031/539/7a8fda8df50f7759dccaf81642706dae5f0543bc_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13291,
+    "url": "https://hackerone.com/nextcloud",
+    "handle": "nextcloud",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/hsgut1vi1cv8housqai9cm9383yx/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Nextcloud",
+      "twitter_handle": "nextclouders",
+      "website": "https://nextcloud.com",
+      "about": "Access, share and protect your files, calendars, contacts, communication & more at home and in your enterprise."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2017-05-10T09:02:11.391Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2017-05-10T09:00:02.778Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hy NextCloud Security Team i found a critical vulnerability (RCE) :\n\nNextcloud Server 11.0.2 is affected by a critical vulnerability, which gives to the attacker complete permission to run a system command. \n\nThe root cause is insufficient validation of arguments to the exec function.\n\nVulnerable Code (498 - 525) /lib/private/legacy/helper.php:\n===================\npublic static function findBinaryPath($program) {\n\t\t$memcache = \\OC::$server->getMemCacheFactory()->create('findBinaryPath');\n\t\tif ($memcache->hasKey($program)) {\n\t\t\treturn $memcache->get($program);\n\t\t}\n\t\t$result = null;\n\t\tif (self::is_function_enabled('exec')) {\n\t\t\t$exeSniffer = new ExecutableFinder();\n\t\t\t// Returns null if nothing is found\n\t\t\t$result = $exeSniffer->find($program); \n\t\t\tif (empty($result)) {\n\t\t\t\t$paths = getenv('PATH');\n\t\t\t\tif (empty($paths)) {\n\t\t\t\t\t$paths = '/usr/local/bin /usr/bin /opt/bin /bin';\n\t\t\t\t} else {\n\t\t\t\t\t$paths = str_replace(':',' ',getenv('PATH'));\n\t\t\t\t}\n\t\t\t\t$command = 'find ' . $paths . ' -name ' . escapeshellarg($program) . ' 2> /dev/null';\n\t\t\t\texec($command, $output, $returnCode);\n\t\t\t\tif (count($output) > 0) {\n\t\t\t\t\t$result = escapeshellcmd($output[0]);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t// store the value for 5 minutes\n\t\t$memcache->set($program, $result, 300);\n\t\treturn $result;\n\t}",
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 4,
+  "voters": [
+    "spetr0x",
+    "veeraprasannavp007",
+    "hi_man",
+    "sniperpex"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 7.0,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "low",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 3993,
+      "category": "team",
+      "content": "While we appreciate the reporter's enthusiasm we'd like to note that the code is only called with hard-coded values and trusted input. Until now the reporter has failed to provide us with a proof of concept for this issue.\n\nThe fact that a function can take input and actually evaluates it is by itself not a security risk unless user input is passed to this function. Which we fail to see here looking at https://github.com/search?q=user%3Anextcloud+findBinaryPath&type=Code&utf8=%E2%9C%93\n\nAs the reporter claimed to have requested a CVE identifier for this issue ([CVE-2017-6959](http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=2017-6959)) we have publicly disclosed this issue to dispute this CVE.\n\n------\n\n**Update:** [The CVE has been rejected.](http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=2017-6959)",
+      "updated_at": "2017-05-11T23:17:48.591Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 37891,
+        "username": "lukasreschke",
+        "name": "Lukas Reschke",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": "https://statuscode.ch",
+        "location": "Germany",
+        "created_at": "2015-08-05T13:37:40.660Z",
+        "url": "https://hackerone.com/lukasreschke",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/000/037/891/e7fea4d5383dc07d1fe767b02f3bda2bc7639c63_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/000/037/891/e7fea4d5383dc07d1fe767b02f3bda2bc7639c63_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/000/037/891/e7fea4d5383dc07d1fe767b02f3bda2bc7639c63_original.png/d6d8259739a2a4d509639b7804214d057bca547cc3fafe509ec3e3a86321b1d1"
+        }
+      }
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

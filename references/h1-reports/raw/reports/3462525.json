@@ -1,0 +1,123 @@
+{
+  "id": 3462525,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDYyNTI1",
+  "url": "https://hackerone.com/reports/3462525",
+  "title": "Buffer Overflow in cURL Internal printf Function",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2025-12-12T04:24:35.869Z",
+  "submitted_at": "2025-12-12T04:24:36.511Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "mlgzackfly",
+    "url": "/mlgzackfly",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/xknn61khk1x7d2l6a6bowwxw9sdc/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-12T07:20:25.221Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-12-12T07:20:09.252Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "A critical buffer overflow vulnerability exists in the `curl_msprintf()` function in cURL's internal printf implementation. The function writes formatted output to a user-provided buffer without performing any bounds checking, allowing attackers to overflow arbitrary memory and potentially achieve arbitrary code execution.\n\n## Affected Version\nCurrent master branch (commit 141ce4be64) and potentially earlier versions\n\n## CVSS Score Breakdown\n\n**Base Score: 9.8 (Critical)**\n- **Attack Vector (AV):** Network (N)\n- **Attack Complexity (AC):** Low (L)\n- **Privileges Required (PR):** None (N)\n- **User Interaction (UI):** None (N)\n- **Scope (S):** Unchanged (U)\n- **Confidentiality (C):** High (H)\n- **Integrity (I):** High (H)\n- **Availability (A):** High (H)\n\n## Vulnerability Details\n\n### Location\n- **File:** `lib/mprintf.c`\n- **Function:** `curl_msprintf()`\n- **Lines:** 1203-1211\n\n### Root Cause\nThe vulnerability occurs because `curl_msprintf()` calls `formatf()` with the `storebuffer()` callback function, which writes directly to the provided buffer without any size validation:\n\n```c\nint curl_msprintf(char *buffer, const char *format, ...)\n{\n  va_list ap_save; /* argument pointer */\n  int retcode;\n  va_start(ap_save, format);\n  retcode = formatf(&buffer, storebuffer, format, ap_save);\n  va_end(ap_save);\n  *buffer = 0; /* we terminate this with a zero byte */\n  return retcode;\n}\n\nstatic int storebuffer(unsigned char outc, void *f)\n{\n  char **buffer = f;\n  **buffer = (char)outc;  // VULNERABILITY: No bounds checking\n  (*buffer)++;\n  return 0;\n}\n```\n\n### Attack Vector\nAn attacker can trigger this vulnerability by:\n1. Providing a malicious format string to any cURL function that internally uses `curl_msprintf()`\n2. Supplying format specifiers that generate output larger than the target buffer\n3. Causing stack corruption and potentially hijacking control flow\n\n## Proof of Concept\n\n### Test Code\n```python\nimport ctypes\n\n# Load libcurl\nlibcurl = ctypes.CDLL(\"libcurl.so.4\")\ncurl_msprintf = libcurl.curl_msprintf\n\n# Create small buffer (16 bytes)\nbuffer = ctypes.create_string_buffer(16)\n\n# Trigger overflow with long format string\nlong_format = b\"A\" * 100 + b\"%s\" + b\"B\" * 50\nresult = curl_msprintf(buffer, long_format)\n\nprint(f\"Result: {result}\")\nprint(f\"Buffer content: {buffer.value}\")\n# Buffer overflow occurs - writes beyond 16-byte buffer\n```\n\n## Impact\n\n### Business Impact\n- **Confidentiality:** Critical - Potential memory disclosure\n- **Integrity:** Critical - Arbitrary code execution\n- **Availability:** High - Application crashes and DoS\n\n### Technical Impact\n- **Arbitrary Code Execution:** Attackers can execute arbitrary code in the context of the application\n- **Memory Corruption:** Stack and heap corruption leading to crashes\n- **Information Disclosure:** Potential leakage of sensitive memory contents\n- **Denial of Service:** Application crashes and system instability\n\n## Affected Components\n\n### Primary Functions\n- `curl_msprintf()` - Direct vulnerability\n- Any function calling `curl_msprintf()` internally\n\n### Potentially Affected Areas\n- URL parsing and construction\n- Error message formatting\n- Log message generation\n- HTTP header processing\n- Cookie handling",
+  "weakness": {
+    "id": 4,
+    "name": "Stack Overflow"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 15,
+  "voters": [
+    "dpaysm",
+    "2026",
+    "oblivionsage",
+    "pluk",
+    "d7a",
+    "abidashraf851",
+    "matador7omar",
+    "duck_17",
+    "mlgzackfly",
+    "prostonedhacker",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": 3295650,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zMjk1NjUw",
+  "url": "https://hackerone.com/reports/3295650",
+  "title": "Exposure of Hard-coded Private Keys and Credentials in curl Source Repository (CWE-321)",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "critical",
+  "readable_substate": "N/A",
+  "created_at": "2025-08-12T08:28:19.519Z",
+  "submitted_at": "2025-08-12T08:28:19.806Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "spectre-1",
+    "url": "/spectre-1",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/rn73sjb3roaxd9xkv095k2szed44/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-08-12T08:33:15.149Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-08-12T08:30:38.759Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Multiple private/test RSA keys and example credentials were discovered embedded in the public curl source repository and associated documentation. These sensitive secrets were detected using automated tools (gitleaks) and manual review. Their presence could allow attackers to impersonate trusted curl infrastructure, decrypt traffic, or pivot into build or CI systems if reused, creating a severe supply chain risk. Such exposures also risk compliance violations (e.g., GDPR, PCI-DSS, HIPAA) and undermine trust in open source releases.\n\nThis report, including the verification steps and analysis, was prepared using an AI security assistant to ensure comprehensive and reproducible results.\nAffected version\n\nConfirmed in curl master branch as of August 2025. Also observed in prior tags (≥ 7.80.0) on Linux and macOS. Example version for testing:\n\ncurl 8.1.2 (x86_64-pc-linux-gnu) libcurl/8.1.2 OpenSSL/3.0.7 zlib/1.2.13 brotli/1.0.9 zstd/1.5.2 libidn2/2.3.4 nghttp2/1.51.0\nRelease-Date: 2023-06-12\nProtocols: dict file ftp ftps gopher gophers http https imap imaps mqtt pop3 pop3s rtmp rtsp smb smbs smtp smtps telnet tftp ws wss\nPlatform: Linux 5.15.0-83-generic x86_64\n\nSteps To Reproduce:\n\n    Clone the curl repository: git clone https://github.com/curl/curl.git\n    Run a secret scanning tool (e.g., gitleaks detect --source=.) to identify hard-coded secrets.\n    Alternatively, search for likely private key and credential strings with:\n        grep -r '-----BEGIN' ./tests/\n        grep -r 'password' ./docs/examples/\n    Review identified files to confirm the presence of full private keys or functional credential examples, such as tests/data/testprivkey.pem or docs/examples/http-auth-example.txt.\n    See .gitleaks/report.json for a consolidated findings report.\n\nSupporting Material/References:\n\n    Example evidence: tests/data/testprivkey.pem containing full private key\n    Example evidence: docs/examples/http-auth-example.txt with plaintext credentials\n    Full scan log: .gitleaks/report.json (generated via gitleaks)\n    curl/curl GitHub repository\n    Screenshot evidence as required (available on request)\n\nSeverity: Critical / CWE-321 (Use of Hard-coded Cryptographic Key)\n\n## Impact\n\n## Summary:The security impact of this vulnerability is severe and multi-faceted:\n\n    Impersonation & Privilege Escalation: Attackers can use leaked private keys to impersonate curl services, developers, or automated systems, gaining unauthorized access to protected infrastructure or code-signing processes.\n    Data Decryption: If any of the exposed keys have been (or are) used in production, an attacker could decrypt sensitive traffic or files, leading to data breaches.\n    Credential Stuffing & Service Hijack: Exposed example/test credentials may be reused in production or CI/CD, allowing attackers to pivot and escalate their access within targeted environments.\n    Supply Chain Attacks: Malicious actors might leverage sensitive secrets to inject or distribute malicious builds of curl/libcurl or to poison official releases.\n    Regulatory & Compliance Risks: This level of exposure may trigger mandatory breach reporting and legal or regulatory actions, especially for downstream consumers subject to compliance standards.\n\nIn summary: This issue enables attackers to compromise trust in the curl project, attack users and downstream integrations at scale, and potentially introduce persistent, hard-to-detect threats into the open source supply chain and the global software ecosystem.",
+  "weakness": {
+    "id": 35,
+    "name": "Use of Hard-coded Cryptographic Key"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 13,
+  "voters": [
+    "corrupted_bytes",
+    "k0ns0l",
+    "anonxr",
+    "thalaivar304",
+    "2026",
+    "mai91",
+    "b14cksh33p",
+    "cybtriplea1",
+    "syper_fuzzer",
+    "whocares1907",
+    "and 3 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

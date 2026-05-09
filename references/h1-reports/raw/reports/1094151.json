@@ -1,0 +1,123 @@
+{
+  "id": 1094151,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDk0MTUx",
+  "url": "https://hackerone.com/reports/1094151",
+  "title": "Leaking Rockset API key on Github",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2021-02-03T17:54:12.599Z",
+  "submitted_at": "2021-02-03T17:54:12.674Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "fonte",
+    "url": "/fonte",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 49532,
+    "url": "https://hackerone.com/rockset",
+    "handle": "rockset",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/uQgy2m4PMuEh1pJTivfoR35h/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/uQgy2m4PMuEh1pJTivfoR35h/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Rockset",
+      "twitter_handle": "RocksetCloud",
+      "website": "http://rockset.com",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-03-02T16:02:20.439Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-03-02T10:50:51.137Z",
+  "team_member_agreed_on_going_public_at": "2021-03-02T16:02:20.269Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary:\nWe all know that Github is great, but it runs the risk of some credentials being revealed by mistake. In this case I found a Rockset API key, This API key is not in the current code, but it is visible in an old commit.\n\n## Steps To Reproduce:\nYou can find the leak in this link : https://github.com/rockset/recipes/pull/19/files\n\n```\n        /* Getting the distance covered by each vehicle using the latest and oldest locations */\n        distance_for_vehicles AS (\n        SELECT\n            ST_DISTANCE(\n@@ -128,7 +147,7 @@\n    'q4': query4 \n}\n\napi_key = \"skZMJRZSXLZZj5HAdBjNxUfZbarWV5dLqfVO6U623zW5KROzfY0vNRa22ToZfRRe\"\n```\n\nThen I visited the documentation of Rockset ( https://docs.rockset.com/rest-api/ ) and I found this way to check if the API key is revoke or not\n```\ncurl --request GET \\\n    --url https://api.rs2.usw2.rockset.com/v1/orgs/self/users/self/apikeys \\\n    -H 'Authorization: ApiKey skZMJRZSXLZZj5HAdBjNxUfZbarWV5dLqfVO6U623zW5KROzfY0vNRa22ToZfRRe'\n```\nand I got this answer:\n```\n{\"data\":[{\"created_at\":\"2019-10-22T06:08:37Z\",\"name\":\"K1\",\"key\":\"skZMJRZSXLZZj5HAdBjNxUfZbarWV5dLqfVO6U623zW5KROzfY0vNRa22ToZfRRe\",\"last_access_time\":null,\"created_by\":null}]}\n```\nSo I could verify that it was not revoked\n\n## Impact\n\nI just checked that the key was not revoked. I didn't try anything with the token  to be prudent, and I don't know the real impact of this, But I think it is a good idea to share this with you, to avoid any risk that may grow.\n\nRegards!",
+  "weakness": {
+    "id": 33,
+    "name": "Cleartext Storage of Sensitive Information"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 19,
+  "voters": [
+    "najeh_halawani",
+    "ali",
+    "th4nu_0x0",
+    "mohaned0101",
+    "salahhasoneh",
+    "shamal0x",
+    "since2003",
+    "demonia",
+    "khizer47",
+    "sa1tama0",
+    "and 9 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 49978,
+    "asset_type": "WILDCARD",
+    "asset_identifier": "api.*.rockset.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

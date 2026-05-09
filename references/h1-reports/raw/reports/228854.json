@@ -1,0 +1,120 @@
+{
+  "id": 228854,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjg4NTQ=",
+  "url": "https://hackerone.com/reports/228854",
+  "title": "WordPress Automatic Update Protocol Does Not Authenticate Updates Provided by the Server",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2017-05-16T15:51:39.377Z",
+  "submitted_at": "2017-05-16T15:51:39.377Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "paragonie-scott",
+    "url": "/paragonie-scott",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/051/441/089de22b2f1b80a1e57a2792318dede5cbad81db_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 55,
+    "url": "https://hackerone.com/wordpress",
+    "handle": "wordpress",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/055/f114d1d31f904e3b903cd99a6cf566bb531f8401_original.jpg/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "WordPress",
+      "twitter_handle": "wordpress",
+      "website": "https://wordpress.org/",
+      "about": "Beautiful sites of any kind."
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2019-07-22T16:21:59.487Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-02-05T17:46:34.216Z",
+  "team_member_agreed_on_going_public_at": "2019-07-22T16:21:59.340Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "When the WordPress automatic update process is initiated (likely via `wp-cron.php`), this is the path the code takes:\n\n* https://github.com/WordPress/WordPress/blob/4a6f90db58a935abb688cfb91b391dffeda7b35c/wp-admin/includes/class-wp-upgrader.php#L242-L283\n* https://github.com/WordPress/WordPress/blob/38347d7c580be4cdd8476e4bbc653d5c79ed9b67/wp-admin/includes/file.php#L482-L525\n* https://github.com/WordPress/WordPress/blob/9f4bbcdb7896a7baba9eb88add281f3fbcdec0ef/wp-includes/http.php#L67-L71\n* https://github.com/WordPress/WordPress/blob/76d77e927bb4d0f87c7262a50e28d84e01fd2b11/wp-includes/class-http.php#L597-L613\n* https://github.com/WordPress/WordPress/blob/76d77e927bb4d0f87c7262a50e28d84e01fd2b11/wp-includes/class-http.php#L95-L425\n\nThe only integrity check that is provided is that the `Content-MD5` header sent by the WordPress server is [checked against the MD5 checksum of the file](https://github.com/WordPress/WordPress/blob/38347d7c580be4cdd8476e4bbc653d5c79ed9b67/wp-admin/includes/file.php#L515-L522) (which, if omitted by the server, the WordPress site will silently disregard).\n\nThere is no code signing in place. As a consequence, an attacker who has fully compromised the WordPress update server can issue updates to any WordPress install on the Internet that hasn't disabled automatic updates.\n\nI have previously reported this [to the WordPress Trac](https://core.trac.wordpress.org/ticket/39309), along with a proposed solution (Ed25519 signature verification + update hash commitment to a Merkle tree, similar to Mozilla's [Binary Transparency](https://wiki.mozilla.org/Security/Binary_Transparency) project). However, the Powers That Be deemed it a low priority issue, and the rest of the WP core team responded one of two ways:\n\n1. \"I don't understand cryptography, so I won't be much help here.\"\n2. \"I'm already overworked and can't find the time or energy to touch this.\"\n\nI hope that, by reporting this to HackerOne, it can be given the attention it requires from people with the time/energy availability and the crypto/security expertise to make a solution happen.\n\nThis problem was [narrowly missed before](https://www.wordfence.com/blog/2016/11/hacking-27-web-via-wordpress-auto-update/). I'd like to see it gets fixed before the rest of the Internet has to contend with a DDoS botnet that consists of >20% of the top 10 million websites. I don't imagine many networks would survive such an attack.",
+  "weakness": {
+    "id": 32,
+    "name": "Cryptographic Issues - Generic"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 2,
+  "voters": [
+    "bughunterninja",
+    "karimeo"
+  ],
+  "severity": {
+    "rating": "high",
+    "score": 8.1,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "high",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "low",
+      "integrity": "high",
+      "availability": "low"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

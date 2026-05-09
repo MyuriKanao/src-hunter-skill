@@ -1,0 +1,128 @@
+{
+  "id": 3684614,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8zNjg0NjE0",
+  "url": "https://hackerone.com/reports/3684614",
+  "title": "Heap-buffer-overflow in `Curl_ssl_push_certinfo_len()` — sole bounds check is `DEBUGASSERT`",
+  "state": "Closed",
+  "substate": "not-applicable",
+  "severity_rating": "high",
+  "readable_substate": "N/A",
+  "created_at": "2026-04-20T06:46:01.012Z",
+  "submitted_at": "2026-04-20T06:46:01.662Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "h3zh3z",
+    "url": "/h3zh3z",
+    "profile_picture_urls": {
+      "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+    },
+    "is_me?": false,
+    "cleared": false,
+    "verified": false,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 35663,
+    "url": "https://hackerone.com/curl",
+    "handle": "curl",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/035/663/2faf4c279d437d64bfda6d23d62ce1833813a4d9_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "curl",
+      "twitter_handle": "",
+      "website": "https://curl.se",
+      "about": "cURL is an Open Source project providing a library and command-line tool doing internet transfers"
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": false,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2026-04-29T06:10:29.925Z",
+  "bug_reporter_agreed_on_going_public_at": null,
+  "team_member_agreed_on_going_public_at": "2026-04-20T08:02:43.505Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Summary\n\n`Curl_ssl_push_certinfo_len()` in `lib/vtls/vtls.c` uses `DEBUGASSERT(certnum < ci->num_of_certs)` as its **only** bounds check before writing a heap pointer into `ci->certinfo[certnum]`. `DEBUGASSERT` is a no-op in every release/production build (`lib/curl_setup.h:1084`). Any mismatch between the count passed to `Curl_ssl_init_certinfo()` and the certnum values subsequently passed to `Curl_ssl_push_certinfo_len()` results in an unguarded heap out-of-bounds read and write.\n\nThis function is the single shared certinfo write path for all five TLS backends (OpenSSL, GnuTLS, mbedTLS, Rustls, Schannel). The `certnum` argument in every backend derives directly from the server-supplied certificate chain length. There is no runtime check in any production build.\n\n## Affected version\n\nReproduced against:\n- **curl 8.19.0** (tag `curl-8_19_0`, commit `8c908d2`, released 2025-03-10) — current stable release\n- **curl 8.20.0-DEV** (commit `759f2e5`) — current development tip\n\nTested on Linux x86_64 with `clang`, AddressSanitizer, and UndefinedBehaviorSanitizer.\n\n## Call path from `CURLOPT_CERTINFO` to the vulnerable write\n\nWhen an application sets `CURLOPT_CERTINFO=1`, every successful TLS handshake runs the following sequence (shown for the OpenSSL backend; all five backends are identical in structure):\n\n```\ncurl_easy_perform(handle)\n  Curl_ossl_check_peer_cert()                      openssl.c:4736\n    ossl_certchain(data, ssl)                       openssl.c:4739\n      numcerts = sk_X509_num(peer_cert_chain)   <- server controls N\n      Curl_ssl_init_certinfo(data, numcerts)     <- alloc N-slot table\n      for i = 0 .. N-1:                         <- certnum = i\n        Curl_ssl_push_certinfo_len(data, i, ...) <- called N times\n          DEBUGASSERT(i < num_of_certs)          <- SOLE GUARD, no-op in release\n          ci->certinfo[i] = ...                  <- heap write, unbounded in release\n```\n\nThe same funneling path exists in all five backends:\n\n| Backend | File | Line | Caller |\n|---------|------|------|--------|\n| OpenSSL | `openssl.c` | 392, 409–505 | `ossl_certchain()` |\n| GnuTLS | `gtls.c` | 1630, 1638 | `Curl_extract_certinfo()` loop |\n| mbedTLS | `mbedtls.c` | 433, 438 | `mbed_extract_certinfo()` |\n| Rustls | `rustls.c` | 1225, 1250 | certinfo loop |\n| Schannel | `schannel.c` | 1679, 1550 | `add_cert_to_certinfo()` |\n\n## Vulnerable code\n\n`lib/vtls/vtls.c:647–675`:\n\n```c\nCURLcode Curl_ssl_push_certinfo_len(struct Curl_easy *data,\n                                    int certnum, ...)\n{\n  struct curl_certinfo *ci = &data->info.certs;\n\n  DEBUGASSERT(certnum < ci->num_of_certs);   /* :658 — no-op in release */\n\n  /* ... build label:value string ... */\n\n  nl = Curl_slist_append_nodup(ci->certinfo[certnum], ...); /* :667 OOB READ  */\n  ci->certinfo[certnum] = nl;                               /* :674 OOB WRITE */\n}\n```\n\n`lib/curl_setup.h:1084`:\n\n```c\n#define DEBUGASSERT(x) do {} while(0)   /* release/production builds */\n```\n\n## Steps To Reproduce\n\n1. Build curl with AddressSanitizer and UndefinedBehaviorSanitizer:\n\n```bash\nautoreconf -fi\nCC=clang CFLAGS=\"-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1\" \\\nLDFLAGS=\"-fsanitize=address,undefined\" \\\n./configure --disable-shared --with-openssl \\\n  --disable-docs --disable-manual\nmake -j\"$(nproc)\"\n# If configure fails on optional deps (e.g. libpsl), add --without-libpsl\n```\n\n2. Compile the attached `poc.c` against the static libcurl:\n\n```bash\nclang -fsanitize=address,undefined -fno-omit-frame-pointer -g -O1 \\\n  -I./include -I./lib \\\n  poc.c ./lib/.libs/libcurl.a \\\n  -lssl -lcrypto -lz -lpthread -ldl \\\n  -o /tmp/poc_curl_certinfo_oob\n```\n\n3. Run it:\n\n```bash\nASAN_OPTIONS=\"halt_on_error=0:print_stacktrace=1:detect_leaks=0\" \\\nUBSAN_OPTIONS=\"print_stacktrace=1:halt_on_error=0\" \\\n  /tmp/poc_curl_certinfo_oob\n```\n\nThe PoC calls the real `Curl_ssl_init_certinfo()` (verified via `nm` in the static library) to allocate a production certinfo table for a 2-cert chain. It then replicates the exact read+write pattern from `Curl_ssl_push_certinfo_len()` at lines :667/:674 with `certnum=5`, bypassing the `DEBUGASSERT` to demonstrate release-build behavior.\n\nObserved sanitizer output (curl 8.19.0):\n\n```text\n[*] certnum=5  OOB (only 2 allocated) — ASan should fire:\n\n/work03/poc.c:173:20: runtime error: load of address 0x7be1db0e1a18 with insufficient\n    space for an object of type 'struct curl_slist *'\n    #0 in main poc.c:173:20\nSUMMARY: UndefinedBehaviorSanitizer: undefined-behavior poc.c:173:20\n\n==25989==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x7be1db0e1a18\nREAD of size 8 at 0x7be1db0e1a18 thread T0\n    #0 in main poc.c:173:20\nSUMMARY: AddressSanitizer: heap-buffer-overflow poc.c:173:20 in main\n```\n\n## Impact\n\n`Curl_ssl_push_certinfo_len()` is the sole write path for all five TLS backends when `CURLOPT_CERTINFO=1` is set. The only guard `DEBUGASSERT` is compiled out in every production build.\n\n**Memory corruption in release builds.** Without the assert, `ci->certinfo[certnum]` is an unbounded heap array access. The write at `:674` stores a heap pointer at a server-influenced offset past the end of the allocated table, overwriting adjacent allocator metadata or live heap objects. This is a heap pointer write primitive relative to the certinfo array.\n\n**All five TLS backends are affected equally.** Every backend derives `certnum` from the server-controlled certificate chain length and calls this unguarded function directly. Any future count mismatch in any backend — a filter applied before init but not before push, a new backend, a refactoring error — immediately becomes silent heap corruption in production with no fallback.\n\n**Severity is High** because: the vulnerable code runs on every HTTPS connection that uses `CURLOPT_CERTINFO=1`; the input that drives `certnum` (certificate chain length) is server-controlled; the result in release builds is an unguarded heap pointer write; and the sole protection (`DEBUGASSERT`) is unconditionally absent in production.\n\nThe fix is a single runtime bounds check before the array access at `:658`.",
+  "weakness": {
+    "id": 8,
+    "name": "Out-of-bounds Read"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [
+    {
+      "id": 5765228,
+      "file_name": "poc.c",
+      "expiring_url": "https://hackerone-us-west-2-production-attachments.s3.us-west-2.amazonaws.com/vmob6heuob0icyoqjj6nc0zfg0w7?response-content-disposition=attachment%3B%20filename%3D%22poc.c%22%3B%20filename%2A%3DUTF-8%27%27poc.c&response-content-type=text%2Fx-c%2B%2Bsrc&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAQGK6FURQVYY4SI2D%2F20260509%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260509T145908Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB8aCXVzLXdlc3QtMiJIMEYCIQDuqGDqs1tvaNWhOkIGoaKoJ4SlyK9RmryG4Oky4U%2FuBwIhALc6FVzi9iwXU%2F073p4GH5Rq3z7LMuCjqFPMxCGA%2FIbIKrsFCOj%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMDEzNjE5Mjc0ODQ5IgwOwnvr0lE9InZ%2BZ4MqjwVpY%2BZFTusxomT9%2BD4RnzxzHNVMmP0MW1RKpekK8J3rFii%2BNnHhWhxcv4d2Qrncbn3fTaaJgUCRw%2B%2BhDEG4nWhnNnGTwKHTT3tYg0dR%2FRcdrGhEMXzJBrwzv33QPY8XqzkJfCXsTB1ZDA2OAqucxJSrftgiwkaedHZzNx44CBj0i86cLxTiTbJVbf%2BEJue8CrUkRqeiyH%2BkVuljwG6lOTpN8FH6aW1w65oeQSVt1v2dmqXa1goqx26hK5r%2Bn6WeRExSTePNX%2BQaqMEwHPTAYJT5XDabggBtR8Gez1cys5nKwFZIM9ADI23HRXcgms8hMj8JP7W9CTkrg%2B2xWRPaCXvfUtnYY0%2BbAFSiY%2FrlP7Nn4ldy%2FsYpICiEXGGnMMMcc3XCo9IXecq23bObeeijNLvg68tKZeZqaQo%2FJJhN9pv6hhE9FYOCIYQ0I31GDBbnX1T7Vh%2FZpy%2BRhRNLEwygyXiVcbRojaCVGQWF3PCuK3X4STfaVbTRTyO5rh89ITRcUWgGjGJtmZ4p7jttkt4THs1xalaqoRmHtpVL1SYa3ANphJ4I7bUEjB%2Bahy37tcZB8Z3hOIM6eFuhvBBUsMUHCefXvp1GoZtIHaxwXeOWDll15zqUp7xyDe3pSWsnjvLlzawSIsiCHbZLoy3Y1QTPrCd%2F%2FqJNc9Eto%2FW1%2BF8t3%2BoELeqktAIK8BcjuJ%2BkkVCTziATVZPr46Ocj6wfle%2BVmXC2cBcFDux3uWPno9Fa6UpkEG4nBCrAEaHSet%2BMx4MCLnxM4Fk2XyAHNKb0QVsBNl46wF7l2zB%2BfLVUc5LTBkhZG9wDuqjwPor%2FhoxvEdCblYYFmZuFaVdYp%2FTh2JFAGlF7o2cUvMhXyyCBNMXoJlzlMPyK%2Fc8GOrABFk21VbPFL734OH2aozAhjnZ6qqe6mTno6mrMT8D%2BdopoFRNjoIeQFnQDUgNDDW0RdJzE8FoQj2rnBQW7hESjclwdnliiCH9GoK4vKSA0rIHMbR5k03rjl%2BGcz4TKdG2cicYqmu235Y0WQshpPftNDi74b9Hzyv86l0k1f%2F5ilhRIA9tfs0ct9sk7q4i%2Fqft4GIDdrPFOihSPhx7hWO1YpujNZAIO0wKNe2DcTVUT5u4%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=3cb426fd8f2954e19c0a7a3937de2de9651bcfb1c1d2e14204932c966c8a024f",
+      "file_size": 8271,
+      "type": "text/x-c++src",
+      "moderated": null
+    }
+  ],
+  "allow_singular_disclosure_at": null,
+  "vote_count": 7,
+  "voters": [
+    "wassemalaaiddin",
+    "whitedevil0422",
+    "minimikk",
+    "teamerr404",
+    "m2r1",
+    "mrp4rr0t",
+    "johndoe0417"
+  ],
+  "severity": {
+    "rating": "high",
+    "author_type": "User"
+  },
+  "structured_scope": {
+    "databaseId": 18844,
+    "asset_type": "SOURCE_CODE",
+    "asset_identifier": "https://github.com/curl/curl",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "id": 2262382,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC8yMjYyMzgy",
+  "url": "https://hackerone.com/reports/2262382",
+  "title": "Server Side Request Forgery (SSRF) via Analytics Reports",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2023-11-23T12:52:15.969Z",
+  "submitted_at": "2023-11-23T12:52:16.197Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "hacker1_agent",
+    "url": "/hacker1_agent",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/oh81cpyfy2ztjmago1s3w5mavu26/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 13,
+    "url": "https://hackerone.com/security",
+    "handle": "security",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/000/013/fa942b9b1cbf4faf37482bf68458e1195aab9c02_original.png/3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "open",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": true,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "HackerOne",
+      "twitter_handle": "Hacker0x01",
+      "website": "https://hackerone.com",
+      "about": "Vulnerability disclosure should be safe, transparent, and rewarding."
+    }
+  },
+  "has_bounty?": true,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": true,
+  "disclosed_at": "2023-12-08T18:09:11.323Z",
+  "bug_reporter_agreed_on_going_public_at": "2023-11-28T17:00:22.829Z",
+  "team_member_agreed_on_going_public_at": "2023-12-08T18:09:11.099Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "Hello Gents, I would like to report an issue where attackers are able to read internal files via an SSRF vulnerability.\n\n\n## Proof of concept\n\n+ ███\n\n## Impact\n\nSSRF.\n\nThanks and have a nice day!",
+  "weakness": {
+    "id": 68,
+    "name": "Server-Side Request Forgery (SSRF)"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2023-12-28T17:00:23.103Z",
+  "allow_singular_disclosure_after": -74556315.84838556,
+  "singular_disclosure_allowed": true,
+  "vote_count": 511,
+  "voters": [
+    "shell4dz",
+    "defenderwww",
+    "0x3a0x3a",
+    "l0da",
+    "iwgp",
+    "orange303",
+    "r4xxx",
+    "zakurag1",
+    "loaymorad",
+    "winterwolf16",
+    "and 501 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 10.0,
+    "author_type": "Team",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "changed",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "none"
+    }
+  },
+  "structured_scope": {
+    "databaseId": 3,
+    "asset_type": "URL",
+    "asset_identifier": "hackerone.com",
+    "max_severity": "critical"
+  },
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "id": 382248,
+      "category": "team",
+      "content": "We recently received a critical server-side request forgery (SSRF) vulnerability report through our bug bounty program. The issue allowed attackers to make internal requests from our application servers by exploiting a lack of output sanitization in an error message. By crafting malicious requests, an attacker could have accessed internal AWS services and obtained temporary credentials. \n\nUpon receiving the report, we were able to reproduce and verify the issue. We have implemented a fix that is now deployed in production. Below you can see that element[:template] wasn’t properly sanitized in the error message. The value being returned `html_without_layout` is being fed into a library that converts this into a PDF.\n\nDiff: \n\n```ruby\n             \nhtml_without_layout = elements.map do |element|\n  case element[:type]\n  when 'template'\n    path = template_path(element)\n    if path\n      ApplicationController.new.render_to_string(\n        partial: path,\n        layout: false,\n        assigns: {\n          include_css: true,\n        },\n        locals: {\n          query_results:,\n          constants: PSR_CONSTANTS,\n          retesting_reports: retesting_reports,\n          reporters: reporters,\n          total_submission_count: total_submission_count,\n          in_scope_asset_count: in_scope_asset_count,\n          report_asset_count: report_asset_count,\n        },\n      )  \n    else\n-    \"Missing template for element: #{element[:template]}\"\n+    \"Missing template for element\"\n\n```\n\nWe have also added regression tests to prevent future occurrences of this vulnerability. \n\nOur forensic investigation concluded that there is no evidence this issue was exploited prior to the report.\n\nWe have rated this vulnerability CVSSv3 10 (Critical) based on the potential impact of exposed credentials: \n\nCVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:N/CR:H/IR:H/AR:H. \n\nWe want to thank @mega7 for sending in their report; reports like this one are invaluable for us to continue enhancing our security posture. We also appreciate them for stopping at the right point in testing, demonstrating a responsible and ethical approach.",
+      "updated_at": "2023-12-09T13:23:53.459Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1558501,
+        "username": "jordan_mga51",
+        "name": "n m",
+        "bio": "",
+        "cleared": false,
+        "verified": false,
+        "website": null,
+        "location": "",
+        "created_at": "2021-03-01T18:49:08.383Z",
+        "url": "https://hackerone.com/jordan_mga51",
+        "hackerone_triager": false,
+        "hackerone_employee": true,
+        "user_type": "company",
+        "profile_picture_urls": {
+          "small": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "medium": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png",
+          "xtralarge": "/assets/avatars/default-14ffa99f59cd01423c64904352cc130ffcb6a802eadfd11777a54485749e60f2.png"
+        }
+      }
+    },
+    {
+      "id": 377752,
+      "category": "researcher",
+      "content": "# Report Conclusion:\n\n+ ## The Main Issue:\n> I was able to access *AWS Credentials* using an *SSRF* vulnerability by injecting an `<iframe>` tag into `template` element when generating a `PDF` of analytics reports.\n+ ## The potential impacts of this vulnerability:\n> 1. Ability to read internal files.\n> 2. Unauthorized Access to AWS Credentials.\n> 3. Manipulating AWS resources.\n> 4. Possibility of Data Loss.\n> 5. Accounts Takeover.\n> 7. Executing Arbitrary Commands.\n\n+ ## What did I do when I found this vulnerability:\n> I quickly reported this issue as soon as I found it, then I was trying to find the quickest way to alert Hackerone team as quickly as possible, especially because I know it could take some days for a response. then I thought about sending a message to some of the Hackerone triage team, I was expecting a response within a few hours but it doesn't happened. So I decided to send a message to @jobert, and I was really surprised by his quick and kind response.\n\n\n+ ## How the Hackerone team was responsible for fixing this issue and how they responded:\n> I was really surprised by Hackerone quick response, they have fixed the issue and let me retest it in less than 24 hours. They are a very collaborative team.\n\n+ ## Supporting Material/References:\n> + [What to Do If You Inadvertently Expose an AWS Access Key.](https://aws.amazon.com/blogs/security/what-to-do-if-you-inadvertently-expose-an-aws-access-key/)\n> + [How to prevent server-side request forgery. (SSRF)](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)\n> + [How to prevent HTML injection.](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)\n> + [How to write high quality reports.](https://docs.hackerone.com/en/articles/8475116-quality-reports)\n> + [How To: Server-Side Request Forgery (SSRF)](https://www.hackerone.com/application-security/how-server-side-request-forgery-ssrf)\n\n\nThanks for reading and have a nice day!\n\n*Best Regards,*\n*@Mega7*",
+      "updated_at": "2023-12-27T00:37:58.104Z",
+      "can_view?": true,
+      "can_create?": false,
+      "attachments": [],
+      "user": {
+        "id": 1753332,
+        "username": "hacker1_agent",
+        "name": "Amgad Esam",
+        "bio": "",
+        "cleared": true,
+        "verified": true,
+        "website": null,
+        "location": "",
+        "created_at": "2021-05-29T18:43:05.947Z",
+        "url": "https://hackerone.com/hacker1_agent",
+        "hackerone_triager": false,
+        "hackerone_employee": false,
+        "user_type": "hacker",
+        "profile_picture_urls": {
+          "small": "https://profile-photos.hackerone-user-content.com/variants/oh81cpyfy2ztjmago1s3w5mavu26/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef",
+          "medium": "https://profile-photos.hackerone-user-content.com/variants/oh81cpyfy2ztjmago1s3w5mavu26/d9695107bfcd68eeb1c9e0912b109cdae9a6c00c0bda6fd4cbd6d9bdb828840a",
+          "xtralarge": "https://profile-photos.hackerone-user-content.com/variants/oh81cpyfy2ztjmago1s3w5mavu26/4ac84fbe897190579a137d0cf55152b233cdd4f9984435bd80ef67e5e51a0586"
+        }
+      }
+    }
+  ]
+}

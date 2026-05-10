@@ -2,11 +2,9 @@
 
 # src-hunter
 
-面向 SRC、众测和 Bug bounty 场景的 Claude Code skill。
+这是一个给 SRC、众测和 Bug bounty 用的 Claude Code skill。
 
-拿到目标后，它会把 Claude 带入一套固定的黑盒漏洞挖掘流程，从目标确认、信息收集、资产枚举、漏洞验证到报告整理，按实战节奏推进。
-
-触发 bug bounty、HackerOne、SRC 挖洞、WAF 绕过、任意账号、密码重置等关键词时，skill 会自动加载对应的方法论和 playbook，并按五个阶段展开：
+简单说，就是你给它一个目标，它会按一套固定流程帮你推进漏洞挖掘：先确认目标范围，再做信息收集和资产枚举，然后进入漏洞测试，最后整理报告。
 
 ```text
 intake → recon → enum → hunt → report
@@ -20,8 +18,6 @@ intake → recon → enum → hunt → report
 - HackerOne 已披露 High / Critical hacktivity 数据
 - WooYun 历史案例统计残余
 - 常见国产组件指纹和默认凭据
-
-这些内容都按黑盒视角重新组织：默认你只有一个 URL，没有源码，也没有内部信息。
 
 ## 安装
 
@@ -130,6 +126,8 @@ skill 内置触发词包括：
 
 具体到每类漏洞还有更细的限制（DoS 类最敏感、上传不留 webshell、读类只读 1 条样本等），看对应 playbook 的最后一节。
 
+## 友情链接
+[linuxdo](https://linux.do/)
 ## License
 
 MIT。

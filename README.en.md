@@ -36,6 +36,19 @@ references/
 
 The playbooks are the entry point. They're written from a black-box hunter's perspective — assume you only have a URL — and each one carries the same shape: where to look, what to throw, what response shapes to watch for, how to escalate, and the legal lines.
 
+## MCP integration
+
+The skill wires in a local MCP server as a tool layer so Claude can drive browser automation, CDP debugging, network interception, JS hooks, AST deobfuscation, Frida memory verification, WASM reversing, source-map reconstruction, Android adb bridging, and SSL-pinning bypass directly during the hunt phase.
+
+**Current pick**: [jshookmcp](https://github.com/vmoranv/jshookmcp) 0.3.0 (134 curated / 386 full / 36 domains). The full index and scenario→tool map lives in [`references/tools/mcp-jshook.md`](references/tools/mcp-jshook.md).
+
+Seven high-affinity playbooks (`xss` / `rce` / `ssrf-cache-host` / `mobile` / `oauth-saml-jwt` / `api-rest` / `file-upload`) carry a `## 相关 MCP 工具` trailer block telling Claude which jshook tools to reach for and when.
+
+## TODO
+
+- Support more MCP tools
+- Multi-agent execution workflow
+
 ## Triggers
 
 The skill loads on any of these (and a few more spelled out in `SKILL.md`):

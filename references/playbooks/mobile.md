@@ -351,6 +351,20 @@ WebView JS bridge RCE                       = 8.1 High
 
 ---
 
+## 相关 MCP 工具
+
+实战中可调用 jshookmcp 完成自动化。**默认 `search` profile 未预加载工具,调用前先用 `mcp__jshook__activate_tools <工具名>` 激活**(详见 [`../tools/mcp-jshook.md`](../tools/mcp-jshook.md) §推荐 profile)。
+
+| 工具 | 域 | 调用时机 |
+|---|---|---|
+| `mcp__jshook__adb_apk_analyze` | adb-bridge | APK 包名 / 权限 / 组件 / 签名静态分析前置 |
+| `mcp__jshook__tls_cert_pin_bypass_frida` | boringssl-inspector | Frida 注入绕过 SSL pinning(BoringSSL / OkHttp / Chrome) |
+| `mcp__jshook__proxy_setup_adb_device` + `mcp__jshook__proxy_status` | proxy | 配置 Android 设备走本地代理,接 Burp / mitm |
+| `mcp__jshook__adb_webview_attach` + `mcp__jshook__adb_webview_list` | adb-bridge | 远调 App 内嵌 WebView,跑 CDP / 注 JS |
+| `mcp__jshook__tls_keylog_enable` + `mcp__jshook__tls_keylog_parse` | boringssl-inspector | 抓 SSLKEYLOGFILE 给 Wireshark 解密用 |
+
+完整映射:[`../tools/mcp-jshook.md`](../tools/mcp-jshook.md)
+
 ## 8. 不要做的事
 
 - **禁**：用拿到的硬编码凭据实际操作云资源（创建 / 删除 / 列举资源）。仅 `sts get-caller-identity` 验证。

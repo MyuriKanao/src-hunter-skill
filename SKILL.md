@@ -136,6 +136,16 @@ level: 2
 
 ---
 
+## MCP 工具集成
+
+本 skill 支持调用本地 MCP 服务器作为工具层。**主选 jshookmcp**(134 工具精选 / 386 全集 / 36 域,内置 Burp Suite bridge / Frida / WASM / 反调试 / Android adb / sourcemap 重构)。完整索引与场景映射:
+
+→ [`references/tools/mcp-jshook.md`](references/tools/mcp-jshook.md)
+
+默认推荐 `search` profile(上下文成本 ~3K token),通过 `mcp__jshook__search_tools` + `mcp__jshook__activate_tools` 按需激活,避免 `full` profile 一次性加载 40K+ token。
+
+---
+
 ## 数据资产规模
 
 | 类别 | 量级 |

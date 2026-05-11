@@ -60,6 +60,19 @@ playbook 是主要入口。所有 playbook 都按黑盒视角编写，默认你�
 
 整体思路不是堆 payload，而是把测试动作、证据留存和报告输出串起来。
 
+## MCP 工具集成
+
+本 skill 集成本地 MCP 服务器作为工具层，让 Claude 在 hunt 阶段能直接调用浏览器自动化、CDP 调试、网络拦截、JS hook、AST 反混淆、Frida 内存验证、WASM 逆向、Source map 重构、Android adb 桥接、SSL pinning 绕过等能力。
+
+**当前主选**：[jshookmcp](https://github.com/vmoranv/jshookmcp) 0.3.0（134 工具精选 / 386 全集 / 36 域），完整索引与场景映射见 [`references/tools/mcp-jshook.md`](references/tools/mcp-jshook.md)。
+
+7 个高关联 playbook（`xss` / `rce` / `ssrf-cache-host` / `mobile` / `oauth-saml-jwt` / `api-rest` / `file-upload`）末尾各有 `## 相关 MCP 工具` 反向锚点，指明该攻击面下应该调哪些 jshook 工具、何时调。
+
+## TODO
+
+- 支持引入更多 tools
+- 多 agent 执行工作流
+
 ## 触发关键词
 
 skill 内置触发词包括：

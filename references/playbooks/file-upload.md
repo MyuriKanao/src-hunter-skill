@@ -249,6 +249,20 @@ GET /uploads/20250509142312poc-2025-05-09.jsp
 
 ---
 
+## 相关 MCP 工具
+
+实战中可调用 jshookmcp 完成自动化。**默认 `search` profile 未预加载工具,调用前先用 `mcp__jshook__activate_tools <工具名>` 激活**(详见 [`../tools/mcp-jshook.md`](../tools/mcp-jshook.md) §推荐 profile)。
+
+| 工具 | 域 | 调用时机 |
+|---|---|---|
+| `mcp__jshook__binary_encode` + `mcp__jshook__binary_decode` | encoding | 构造 polyglot(图片头+脚本尾)/ base64 / hex 转换 |
+| `mcp__jshook__ast_transform_apply` + `mcp__jshook__ast_transform_preview` | transform | 修改 magic byte / 改 polyglot 结构 / 改 MIME 嵌入语义 |
+| `mcp__jshook__http_plain_request` | network | 自定义 multipart 边界 / 改 Content-Disposition 头绕过过滤 |
+| `mcp__jshook__network_replay_request` | network | 重放上传请求并改 filename / Content-Type |
+| `mcp__jshook__protobuf_decode_raw` | encoding | 上传响应是 protobuf 时盲解元数据 |
+
+完整映射:[`../tools/mcp-jshook.md`](../tools/mcp-jshook.md)
+
 ## 8. 不要做的事
 
 - **禁**：上传真正的 webshell（带后门、加密通道）。**只用最简单的 jsp/php**：`<%=Runtime.getRuntime().exec("id").getInputStream()%>`。

@@ -480,6 +480,20 @@ RCE 需用户交互 CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H = 8.8 High
 
 ---
 
+## 相关 MCP 工具
+
+实战中可调用 jshookmcp 完成自动化。**默认 `search` profile 未预加载工具,调用前先用 `mcp__jshook__activate_tools <工具名>` 激活**(详见 [`../tools/mcp-jshook.md`](../tools/mcp-jshook.md) §推荐 profile)。
+
+| 工具 | 域 | 调用时机 |
+|---|---|---|
+| `mcp__jshook__wasm_disassemble` + `mcp__jshook__wasm_decompile` | wasm | 业务侧 WASM 模块逆向 / 反序列化 sink 定位 |
+| `mcp__jshook__antidebug_bypass` | antidebug | 目标主动反调试时先绕过再下断 |
+| `mcp__jshook__generate_hooks` + `mcp__jshook__frida_run_script` | binary-instrument | Frida hook 验证 RCE 落点(只读命令) |
+| `mcp__jshook__electron_ipc_sniff` | platform | Electron 桌面端 IPC 漏洞观察 |
+| `mcp__jshook__mojo_monitor` + `mcp__jshook__syscall_start_monitor` | mojo-ipc / syscall-hook | Chromium 内核漏洞研究 / 系统调用留证 |
+
+完整映射:[`../tools/mcp-jshook.md`](../tools/mcp-jshook.md)
+
 ## 8. 不要做的事
 
 - **禁**：在目标上反弹 shell。**只跑只读命令**：`id`、`whoami`、`uname -a`、`cat /etc/issue`。

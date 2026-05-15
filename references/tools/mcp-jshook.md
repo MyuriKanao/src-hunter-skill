@@ -58,47 +58,47 @@ jshookmcp 把 134+ 工具分布在 36 个 capability domain 中。下表标注�
 
 | 场景 | 漏洞类型 | 推荐工具(`mcp__jshook__*`) | 关联 playbook | 调用时机 |
 |---|---|---|---|---|
-| 拦截外发请求 / 观察 SSRF | SSRF | `mcp__jshook__network_intercept` + `mcp__jshook__network_get_requests` | ssrf-cache-host.md | 探测阶段被动观察 |
-| 构造 HTTP/2 帧探测内网 | SSRF | `mcp__jshook__http2_probe` + `mcp__jshook__http_request_build` | ssrf-cache-host.md | 主动绕过过滤 |
-| 重放修改 SSRF 请求 | SSRF | `mcp__jshook__network_replay_request` | ssrf-cache-host.md | 验证不同协议 / 主机头 |
-| 浏览器执行 XSS payload | XSS | `mcp__jshook__browser_evaluate_cdp_target` + `mcp__jshook__page_evaluate` | xss.md | 验证盲打 / DOM XSS |
-| XSS payload 注入页面 | XSS | `mcp__jshook__page_inject_script` | xss.md | 持久化注入 |
-| 反混淆混淆 JS / AST 改写 | XSS / RCE | `mcp__jshook__ast_transform_apply` + `mcp__jshook__deobfuscate` | xss.md / rce.md | 分析 obfuscated 业务代码 |
-| JSVMP / VM 保护 JS 反混淆 | XSS / RCE | `mcp__jshook__js_deobfuscate_jsvmp` + `mcp__jshook__js_deobfuscate_pipeline` | xss.md / rce.md | 高强度混淆站 |
-| Source map 还原原始源码 | 信息泄露 / XSS | `mcp__jshook__sourcemap_fetch_and_parse` + `mcp__jshook__sourcemap_reconstruct_tree` | xss.md | 找 sink / 找接口 |
-| Webpack bundle 模块枚举 | 信息泄露 | `mcp__jshook__webpack_enumerate` + `mcp__jshook__js_bundle_search` | xss.md | 找前端密钥 / 内部 API |
-| 加密算法识别 / 提取 | OAuth / XSS / API | `mcp__jshook__detect_crypto` + `mcp__jshook__crypto_extract_standalone` | oauth-saml-jwt.md / xss.md | 还原签名逻辑 |
-| eval / atob / Function preset hook | XSS / RCE | `mcp__jshook__hook_preset` | xss.md / rce.md | 找运行时反序列化 sink |
-| 设置 DOM 断点 / 单步追 sink | XSS | `mcp__jshook__debugger_pause` + `mcp__jshook__debugger_step` + `mcp__jshook__get_call_stack` | xss.md | DOM XSS 数据流追踪 |
-| WASM 模块抓取与反汇编 | RCE | `mcp__jshook__wasm_dump` + `mcp__jshook__wasm_disassemble` + `mcp__jshook__wasm_decompile` | rce.md | WASM 业务逻辑逆向 |
-| WASM 反混淆探测 / 转 C | RCE | `mcp__jshook__wasm_detect_obfuscation` + `mcp__jshook__wasm_to_c` | rce.md | 加密 / 风控核心 |
-| Frida 脚本生成与注入 | RCE | `mcp__jshook__generate_hooks` + `mcp__jshook__frida_run_script` | rce.md | 验证 RCE 落点 |
-| Frida hook 导出可运行脚本 | RCE | `mcp__jshook__export_hook_script` | rce.md | 离线复测 |
-| Ghidra 函数反编译 | RCE | `mcp__jshook__ghidra_decompile` | rce.md | 二进制反序列化场景 |
-| 反调试 / debugger 检测绕过 | XSS / RCE / Mobile | `mcp__jshook__antidebug_bypass` | xss.md / rce.md / mobile.md | 目标主动反调试 |
+| 拦截外发请求 / 观察 SSRF | SSRF | `mcp__jshook__network_intercept` + `mcp__jshook__network_get_requests` | ssrf-cache-host/00-index.md | 探测阶段被动观察 |
+| 构造 HTTP/2 帧探测内网 | SSRF | `mcp__jshook__http2_probe` + `mcp__jshook__http_request_build` | ssrf-cache-host/00-index.md | 主动绕过过滤 |
+| 重放修改 SSRF 请求 | SSRF | `mcp__jshook__network_replay_request` | ssrf-cache-host/00-index.md | 验证不同协议 / 主机头 |
+| 浏览器执行 XSS payload | XSS | `mcp__jshook__browser_evaluate_cdp_target` + `mcp__jshook__page_evaluate` | xss/00-index.md | 验证盲打 / DOM XSS |
+| XSS payload 注入页面 | XSS | `mcp__jshook__page_inject_script` | xss/00-index.md | 持久化注入 |
+| 反混淆混淆 JS / AST 改写 | XSS / RCE | `mcp__jshook__ast_transform_apply` + `mcp__jshook__deobfuscate` | xss/00-index.md / rce/00-index.md | 分析 obfuscated 业务代码 |
+| JSVMP / VM 保护 JS 反混淆 | XSS / RCE | `mcp__jshook__js_deobfuscate_jsvmp` + `mcp__jshook__js_deobfuscate_pipeline` | xss/00-index.md / rce/00-index.md | 高强度混淆站 |
+| Source map 还原原始源码 | 信息泄露 / XSS | `mcp__jshook__sourcemap_fetch_and_parse` + `mcp__jshook__sourcemap_reconstruct_tree` | xss/00-index.md | 找 sink / 找接口 |
+| Webpack bundle 模块枚举 | 信息泄露 | `mcp__jshook__webpack_enumerate` + `mcp__jshook__js_bundle_search` | xss/00-index.md | 找前端密钥 / 内部 API |
+| 加密算法识别 / 提取 | OAuth / XSS / API | `mcp__jshook__detect_crypto` + `mcp__jshook__crypto_extract_standalone` | oauth-saml-jwt/00-index.md / xss/00-index.md | 还原签名逻辑 |
+| eval / atob / Function preset hook | XSS / RCE | `mcp__jshook__hook_preset` | xss/00-index.md / rce/00-index.md | 找运行时反序列化 sink |
+| 设置 DOM 断点 / 单步追 sink | XSS | `mcp__jshook__debugger_pause` + `mcp__jshook__debugger_step` + `mcp__jshook__get_call_stack` | xss/00-index.md | DOM XSS 数据流追踪 |
+| WASM 模块抓取与反汇编 | RCE | `mcp__jshook__wasm_dump` + `mcp__jshook__wasm_disassemble` + `mcp__jshook__wasm_decompile` | rce/00-index.md | WASM 业务逻辑逆向 |
+| WASM 反混淆探测 / 转 C | RCE | `mcp__jshook__wasm_detect_obfuscation` + `mcp__jshook__wasm_to_c` | rce/00-index.md | 加密 / 风控核心 |
+| Frida 脚本生成与注入 | RCE | `mcp__jshook__generate_hooks` + `mcp__jshook__frida_run_script` | rce/00-index.md | 验证 RCE 落点 |
+| Frida hook 导出可运行脚本 | RCE | `mcp__jshook__export_hook_script` | rce/00-index.md | 离线复测 |
+| Ghidra 函数反编译 | RCE | `mcp__jshook__ghidra_decompile` | rce/00-index.md | 二进制反序列化场景 |
+| 反调试 / debugger 检测绕过 | XSS / RCE / Mobile | `mcp__jshook__antidebug_bypass` | xss/00-index.md / rce/00-index.md / mobile.md | 目标主动反调试 |
 | Android APK 信息提取 | Mobile | `mcp__jshook__adb_apk_analyze` | mobile.md | 静态分析前置 |
 | Android WebView 远调 | Mobile | `mcp__jshook__adb_webview_attach` + `mcp__jshook__adb_webview_list` | mobile.md | App 内嵌 H5 |
 | SSL pinning 绕过 (Frida) | Mobile | `mcp__jshook__tls_cert_pin_bypass_frida` + `mcp__jshook__tls_cert_pin_bypass` | mobile.md | APK 拦截前置 |
-| SSLKEYLOGFILE 抓密钥 | Mobile / API | `mcp__jshook__tls_keylog_enable` + `mcp__jshook__tls_keylog_parse` | mobile.md / oauth-saml-jwt.md | 对接 Wireshark 解密 |
+| SSLKEYLOGFILE 抓密钥 | Mobile / API | `mcp__jshook__tls_keylog_enable` + `mcp__jshook__tls_keylog_parse` | mobile.md / oauth-saml-jwt/00-index.md | 对接 Wireshark 解密 |
 | 安卓代理接入 | Mobile | `mcp__jshook__proxy_setup_adb_device` + `mcp__jshook__proxy_status` | mobile.md | 流量观察前置 |
-| JWT / token 抽取 | OAuth/SAML/JWT | `mcp__jshook__network_extract_auth` | oauth-saml-jwt.md | 自动找 Authorization / cookie |
-| JWT base64 编解码 | OAuth/SAML/JWT | `mcp__jshook__binary_encode` + `mcp__jshook__binary_decode` | oauth-saml-jwt.md | 篡改 header / payload |
-| redirect_uri 链路调试 | OAuth | `mcp__jshook__debugger_evaluate` + `mcp__jshook__network_replay_request` | oauth-saml-jwt.md | 找 open redirect |
-| GraphQL introspection | API REST | `mcp__jshook__graphql_introspect` | api-rest.md | 资产展开 |
-| GraphQL 历史查询提取 | API REST | `mcp__jshook__graphql_extract_queries` + `mcp__jshook__graphql_replay` | api-rest.md | 重放业务请求 |
-| REST 批量接口探测 | API REST | `mcp__jshook__api_probe_batch` | api-rest.md | 批量 BOLA / mass-assignment |
-| WebSocket 帧捕获 | API REST | `mcp__jshook__ws_monitor` + `mcp__jshook__ws_get_connections` | api-rest.md | 实时业务 / 推送 |
-| 文件上传 polyglot 编码 | File Upload | `mcp__jshook__binary_encode` + `mcp__jshook__binary_decode` | file-upload.md | 构造图片+脚本混合 |
-| 文件上传 AST 改写绕过过滤 | File Upload | `mcp__jshook__ast_transform_apply` + `mcp__jshook__ast_transform_preview` | file-upload.md | 改 magic byte / 修复 polyglot |
-| 文件上传 multipart 边界改 | File Upload | `mcp__jshook__http_plain_request` + `mcp__jshook__network_replay_request` | file-upload.md | 绕过 MIME 校验 |
-| Protobuf 二进制盲解 | API REST / 信息泄露 | `mcp__jshook__protobuf_decode_raw` | api-rest.md | 无 schema 抓包分析 |
-| Electron 应用静态结构 | RCE / 信息泄露 | `mcp__jshook__electron_inspect_app` + `mcp__jshook__asar_search` | rce.md | 桌面端目标 |
-| Electron IPC 监听 | RCE | `mcp__jshook__electron_ipc_sniff` | rce.md | renderer ↔ main IPC 漏洞 |
-| Chromium Mojo IPC 监听 | RCE | `mcp__jshook__mojo_monitor` + `mcp__jshook__mojo_messages_get` | rce.md | 浏览器内核漏洞研究 |
-| 进程 syscall 监听 | RCE | `mcp__jshook__syscall_start_monitor` + `mcp__jshook__syscall_get_stats` | rce.md | 验证 RCE 后行为 |
-| 协议状态机推断 | API / 信息泄露 | `mcp__jshook__proto_infer_state_machine` + `mcp__jshook__proto_visualize_state` | api-rest.md | 自定义协议逆向 |
+| JWT / token 抽取 | OAuth/SAML/JWT | `mcp__jshook__network_extract_auth` | oauth-saml-jwt/00-index.md | 自动找 Authorization / cookie |
+| JWT base64 编解码 | OAuth/SAML/JWT | `mcp__jshook__binary_encode` + `mcp__jshook__binary_decode` | oauth-saml-jwt/00-index.md | 篡改 header / payload |
+| redirect_uri 链路调试 | OAuth | `mcp__jshook__debugger_evaluate` + `mcp__jshook__network_replay_request` | oauth-saml-jwt/00-index.md | 找 open redirect |
+| GraphQL introspection | API REST | `mcp__jshook__graphql_introspect` | api-rest/00-index.md | 资产展开 |
+| GraphQL 历史查询提取 | API REST | `mcp__jshook__graphql_extract_queries` + `mcp__jshook__graphql_replay` | api-rest/00-index.md | 重放业务请求 |
+| REST 批量接口探测 | API REST | `mcp__jshook__api_probe_batch` | api-rest/00-index.md | 批量 BOLA / mass-assignment |
+| WebSocket 帧捕获 | API REST | `mcp__jshook__ws_monitor` + `mcp__jshook__ws_get_connections` | api-rest/00-index.md | 实时业务 / 推送 |
+| 文件上传 polyglot 编码 | File Upload | `mcp__jshook__binary_encode` + `mcp__jshook__binary_decode` | file-upload/00-index.md | 构造图片+脚本混合 |
+| 文件上传 AST 改写绕过过滤 | File Upload | `mcp__jshook__ast_transform_apply` + `mcp__jshook__ast_transform_preview` | file-upload/00-index.md | 改 magic byte / 修复 polyglot |
+| 文件上传 multipart 边界改 | File Upload | `mcp__jshook__http_plain_request` + `mcp__jshook__network_replay_request` | file-upload/00-index.md | 绕过 MIME 校验 |
+| Protobuf 二进制盲解 | API REST / 信息泄露 | `mcp__jshook__protobuf_decode_raw` | api-rest/00-index.md | 无 schema 抓包分析 |
+| Electron 应用静态结构 | RCE / 信息泄露 | `mcp__jshook__electron_inspect_app` + `mcp__jshook__asar_search` | rce/00-index.md | 桌面端目标 |
+| Electron IPC 监听 | RCE | `mcp__jshook__electron_ipc_sniff` | rce/00-index.md | renderer ↔ main IPC 漏洞 |
+| Chromium Mojo IPC 监听 | RCE | `mcp__jshook__mojo_monitor` + `mcp__jshook__mojo_messages_get` | rce/00-index.md | 浏览器内核漏洞研究 |
+| 进程 syscall 监听 | RCE | `mcp__jshook__syscall_start_monitor` + `mcp__jshook__syscall_get_stats` | rce/00-index.md | 验证 RCE 后行为 |
+| 协议状态机推断 | API / 信息泄露 | `mcp__jshook__proto_infer_state_machine` + `mcp__jshook__proto_visualize_state` | api-rest/00-index.md | 自定义协议逆向 |
 | 全流量 trace 持久化 | 调查 / 报告 | `mcp__jshook__trace_recording` + `mcp__jshook__export_trace` | 所有 playbook | 留证 / 时间线复盘 |
-| 反检测 stealth 注入 | 长期挂测 | `mcp__jshook__stealth_inject` + `mcp__jshook__stealth_verify` | xss.md / api-rest.md | 风控站长期观察 |
+| 反检测 stealth 注入 | 长期挂测 | `mcp__jshook__stealth_inject` + `mcp__jshook__stealth_verify` | xss/00-index.md / api-rest/00-index.md | 风控站长期观察 |
 | 跨域证据聚合 | 调查 | `mcp__jshook__cross_domain_correlate_all` + `mcp__jshook__evidence_export` | 所有 playbook | 多源对齐 / 出报告 |
 
 ---
@@ -161,13 +161,13 @@ jshookmcp 上游 README 声明内置 Burp / Ghidra / IDA Pro bridges,但 0.3.0 �
 
 | Playbook | jshook 主要域 | 本 MCP 角色 |
 |---|---|---|
-| [xss.md](../playbooks/xss.md) | browser / debugger / transform / hooks / sourcemap / core | 浏览器执行 + AST 反混淆 + Sink 断点 + Source map 还原 |
-| [rce.md](../playbooks/rce.md) | wasm / antidebug / binary-instrument / memory / platform / mojo-ipc / syscall-hook | WASM 逆向 + Frida 内存验证 + 反调试 + Electron / Chromium IPC |
-| [ssrf-cache-host.md](../playbooks/ssrf-cache-host.md) | network / proxy / protocol-analysis | 网络拦截 + HTTP/2 构造 + 协议状态机推断 |
+| [xss/00-index.md](../playbooks/xss/00-index.md) | browser / debugger / transform / hooks / sourcemap / core | 浏览器执行 + AST 反混淆 + Sink 断点 + Source map 还原 |
+| [rce/](../playbooks/rce/00-index.md) | wasm / antidebug / binary-instrument / memory / platform / mojo-ipc / syscall-hook | WASM 逆向 + Frida 内存验证 + 反调试 + Electron / Chromium IPC |
+| [ssrf-cache-host/00-index.md](../playbooks/ssrf-cache-host/00-index.md) | network / proxy / protocol-analysis | 网络拦截 + HTTP/2 构造 + 协议状态机推断 |
 | [mobile.md](../playbooks/mobile.md) | adb-bridge / boringssl-inspector / proxy / binary-instrument | SSL pinning 绕过 + APK 信息 + WebView 远调 + Frida hook |
-| [oauth-saml-jwt.md](../playbooks/oauth-saml-jwt.md) | network / encoding / debugger / core | JWT 篡改 + redirect_uri 调试 + 加密算法识别 |
-| [api-rest.md](../playbooks/api-rest.md) | graphql / network / workflow / streaming / protocol-analysis | introspection + 批量 API + WebSocket 帧 + 协议盲解 |
-| [file-upload.md](../playbooks/file-upload.md) | encoding / transform / network | polyglot 编码 + AST 改写 + multipart 改包 |
+| [oauth-saml-jwt/00-index.md](../playbooks/oauth-saml-jwt/00-index.md) | network / encoding / debugger / core | JWT 篡改 + redirect_uri 调试 + 加密算法识别 |
+| [api-rest/00-index.md](../playbooks/api-rest/00-index.md) | graphql / network / workflow / streaming / protocol-analysis | introspection + 批量 API + WebSocket 帧 + 协议盲解 |
+| [file-upload/00-index.md](../playbooks/file-upload/00-index.md) | encoding / transform / network | polyglot 编码 + AST 改写 + multipart 改包 |
 
 **未覆盖 playbook**(下次迭代加入):sqli / path-traversal / graphql / arbitrary-x-authz / logic-flaws / unauth-access / info-disclosure / http-smuggling / race-conditions / dos / llm-prompt-injection / intranet-postexp。
 

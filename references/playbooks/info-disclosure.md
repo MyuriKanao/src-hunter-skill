@@ -238,7 +238,7 @@ inurl:wp-config.php.bak
 | `.git` 路径被 nginx 拦 | `.GIT/`、`.GiT/`、`%2egit/`、`/x/../.git/`、`//.git/` |
 | `.env` 拦 | `/static/../.env`、`/uploads/.env`、`/.env%20`、`/.env.bak` |
 | 备份文件后缀拦 | `.bak.bak`、`.swp` 而非 `.bak`、URL encode 后缀 |
-| Cloudflare 拦 | 找 origin IP（绕过 CDN，详见 `ssrf-cache-host.md`） |
+| Cloudflare 拦 | 找 origin IP（绕过 CDN，详见 `ssrf-cache-host/00-index.md`） |
 | 文件名混淆 | 时间戳：`/backup_$(date +%Y%m%d).zip`、`/2024-01-15.sql` |
 | 大小写 | `/Backup.ZIP`、`/Config.PHP.BAK` |
 

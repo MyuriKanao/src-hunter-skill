@@ -257,7 +257,7 @@ hydra -l <user> -P <pass-list-for-vendor>.txt -t 4 -W 2 target http-post-form ..
 
 ```
 playbooks/unauth-access.md       →  国际通用部分（Tomcat/Redis/Mongo/Actuator）
-playbooks/file-upload.md         →  本字典补充 OA 上传路径（万户、用友、金蝶）
+playbooks/file-upload/00-index.md         →  本字典补充 OA 上传路径（万户、用友、金蝶）
 playbooks/sqli.md                →  本字典补充 OA SQL 注入入口
 playbooks/info-disclosure.md     →  本字典补充国产组件信息泄露
 industry/banking-finance.md      →  本字典补充金融运维默认凭据

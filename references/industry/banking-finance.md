@@ -50,12 +50,12 @@
 
 | 漏洞类型 | 高危占比 | 银行特有场景 | 主要 playbook |
 |---------|---------|-------------|--------------|
-| 密码重置 | 88.0% | 网银/手机银行登录密码、交易密码、支付密码 | `logic-flaws.md` §3.1 |
+| 密码重置 | 88.0% | 网银/手机银行登录密码、交易密码、支付密码 | `logic-flaws/00-index.md` §3.1 |
 | 提现 | 83.1% | 转账限额绕过、提现校验缺陷 | 本篇 §4.3 |
-| 金额篡改 | 83.0% | 转账金额、理财金额、还款金额 | `logic-flaws.md` §3.4 |
+| 金额篡改 | 83.0% | 转账金额、理财金额、还款金额 | `logic-flaws/00-index.md` §3.4 |
 | 余额篡改 | 77.9% | 账户余额、积分、虚拟卡 | 本篇 §4.4 |
-| 订单篡改 | 74.2% | 信用卡订单、理财下单 | `logic-flaws.md` §3.4 |
-| 价格篡改 | 74.3% | 理财产品价格、增值服务 | `logic-flaws.md` §3.4 |
+| 订单篡改 | 74.2% | 信用卡订单、理财下单 | `logic-flaws/00-index.md` §3.4 |
+| 价格篡改 | 74.3% | 理财产品价格、增值服务 | `logic-flaws/00-index.md` §3.4 |
 | 支付绕过 | 68.7% | 快捷支付、代扣代付、跨行转账 | 本篇 §4.1 |
 
 ### 3.2 第二梯队：鉴权 / 信息类
@@ -263,7 +263,7 @@ CDN 回源：
 6. 文件上传绕过 ── OA / CMS 编辑器
 ```
 
-详见 `playbooks/rce.md` 和 `playbooks/file-upload.md`。
+详见 `playbooks/rce/00-index.md` 和 `playbooks/file-upload/00-index.md`。
 
 ---
 
@@ -328,9 +328,9 @@ CDN 回源：
 
 ```
 methodology/05-srctimebox-priority.md   →  金融行业的 88% / 83% 重点漏洞
-playbooks/logic-flaws.md                 →  支付 / 订单 / 密码重置详细
+playbooks/logic-flaws/00-index.md                 →  支付 / 订单 / 密码重置详细
 playbooks/arbitrary-x-authz.md           →  任意账号（86.4%）/ 任意操作
-playbooks/oauth-saml-jwt.md              →  SSO / JWT / 联邦身份
+playbooks/oauth-saml-jwt/00-index.md              →  SSO / JWT / 联邦身份
 playbooks/mobile.md                      →  手机银行 APP
 playbooks/race-conditions.md             →  并发提现 / 优惠券
 dictionaries/default-credentials-cn.md   →  网银 / OA / 监控的国产默认凭据

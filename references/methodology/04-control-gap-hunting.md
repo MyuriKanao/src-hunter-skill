@@ -145,7 +145,7 @@
 | 改请求体 `username=victim` | 凭证参数可控 |
 | 撞库（公开数据库 + 无频率限制） | 撞库 |
 
-详见 `playbooks/logic-flaws.md` 4 大密码重置模式。
+详见 `playbooks/logic-flaws/00-index.md` 4 大密码重置模式。
 
 ### 3.11 越权（独立类，常被错过）
 
@@ -229,10 +229,10 @@
 
 | 缺失控制 | 对应 playbook |
 |---------|--------------|
-| 鉴权 / 资源所有权 | `playbooks/unauth-access.md`、`playbooks/logic-flaws.md` (越权) |
-| URL 白名单 / 协议过滤 | `playbooks/ssrf-cache-host.md` |
-| 文件类型 / 路径 | `playbooks/file-upload.md`、`playbooks/path-traversal.md` |
-| 命令白名单 / 拼接 | `playbooks/rce.md` |
-| 验证码 / 凭证绑定 | `playbooks/logic-flaws.md` |
-| 输入验证（SQL / XSS） | `playbooks/sqli.md`、`playbooks/xss.md` |
-| 金额 / 幂等 / 并发 | `playbooks/logic-flaws.md`、`playbooks/race-conditions.md` |
+| 鉴权 / 资源所有权 | `playbooks/unauth-access.md`、`playbooks/logic-flaws/00-index.md` (越权) |
+| URL 白名单 / 协议过滤 | `playbooks/ssrf-cache-host/00-index.md` |
+| 文件类型 / 路径 | `playbooks/file-upload/00-index.md`、`playbooks/path-traversal/00-index.md` |
+| 命令白名单 / 拼接 | `playbooks/rce/00-index.md` |
+| 验证码 / 凭证绑定 | `playbooks/logic-flaws/00-index.md` |
+| 输入验证（SQL / XSS） | `playbooks/sqli.md`、`playbooks/xss/00-index.md` |
+| 金额 / 幂等 / 并发 | `playbooks/logic-flaws/00-index.md`、`playbooks/race-conditions.md` |

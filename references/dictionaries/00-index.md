@@ -20,7 +20,7 @@
 playbooks/unauth-access.md   §2  →  本目录补充"国产中间件 / OA / 网管"维度
 playbooks/info-disclosure.md      →  本目录补充"国产备份路径 / 日志路径"
 playbooks/sqli.md                 →  本目录补充"国产高频注入参数"
-playbooks/file-upload.md          →  本目录补充"国产编辑器 / OA 上传路径"
+playbooks/file-upload/00-index.md          →  本目录补充"国产编辑器 / OA 上传路径"
 industry/banking-finance.md       →  本目录的金融组件指纹（致远 / 用友 / 金蝶）
 industry/telecom-isp.md           →  本目录的电信组件指纹（U2000 / OTNM2000 / SP 平台）
 ```

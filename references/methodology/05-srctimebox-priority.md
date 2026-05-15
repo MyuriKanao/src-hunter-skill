@@ -151,11 +151,11 @@ P2 焦点（60–100%）：
 
 | 排名段 | 主要 playbook |
 |--------|--------------|
-| 1（密码重置） | `playbooks/logic-flaws.md` §3.1 + `oauth-saml-jwt.md` |
+| 1（密码重置） | `playbooks/logic-flaws/00-index.md` §3.1 + `oauth-saml-jwt/00-index.md` |
 | 2/6/11（任意 X） | `playbooks/arbitrary-x-authz.md` |
-| 3/4/5/8/9/12（金融类） | `playbooks/logic-flaws.md` §3.4 + `industry/banking-finance.md` |
-| 7/13（逻辑/设计） | `playbooks/logic-flaws.md` |
+| 3/4/5/8/9/12（金融类） | `playbooks/logic-flaws/00-index.md` §3.4 + `industry/banking-finance.md` |
+| 7/13（逻辑/设计） | `playbooks/logic-flaws/00-index.md` |
 | 10（配置） | `playbooks/unauth-access.md` + `dictionaries/default-credentials-cn.md` |
 | 14（信息泄露） | `playbooks/info-disclosure.md` + `dictionaries/chinese-srcfingerprints.md` |
-| 15（IDOR） | `playbooks/logic-flaws.md` §3.2 + `playbooks/api-rest.md` |
+| 15（IDOR） | `playbooks/logic-flaws/00-index.md` §3.2 + `playbooks/api-rest/00-index.md` |
 | 16（弱口令） | `playbooks/unauth-access.md` + `dictionaries/default-credentials-cn.md` |

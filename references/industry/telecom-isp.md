@@ -308,8 +308,8 @@ methodology/05-srctimebox-priority.md   →  弱口令/越权/未授权 时间�
 playbooks/unauth-access.md               →  默认凭据 / Redis / Mongo / Actuator
 playbooks/arbitrary-x-authz.md           →  任意操作（充值卡 / 套餐订购）
 playbooks/sqli.md                        →  老 ASP/JSP 站 SQL
-playbooks/file-upload.md                 →  FCKeditor / eWeb / UE / Kind
-playbooks/rce.md                         →  Struts2 / WebLogic / Shiro / Fastjson
+playbooks/file-upload/00-index.md                 →  FCKeditor / eWeb / UE / Kind
+playbooks/rce/00-index.md                         →  Struts2 / WebLogic / Shiro / Fastjson
 dictionaries/default-credentials-cn.md   →  华为 / 中兴 / OA / 网管默认凭据
 dictionaries/chinese-srcfingerprints.md  →  致远 / 通达 / 万户 / SP 平台路径
 ```

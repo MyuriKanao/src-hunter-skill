@@ -1,7 +1,7 @@
 # 任意 X 子授权——比 IDOR 更狠的"权限维度"漏洞
 
 > 视角：黑盒
-> 与 `logic-flaws.md` §3.2（IDOR）的关系：IDOR = 访问"他人的"资源；本篇 = 执行"你不应该有的操作"，**无论资源属于谁**。
+> 与 `logic-flaws/00-index.md` §3.2（IDOR）的关系：IDOR = 访问"他人的"资源；本篇 = 执行"你不应该有的操作"，**无论资源属于谁**。
 > 数据基础：529 个真实案例，子类别高危占比 51%–86.4%。
 
 ---
@@ -93,7 +93,7 @@ POST /api/login HTTP/1.1
 
 #### 形态 E：JWT 算法 / kid 切换
 
-详见 `oauth-saml-jwt.md`。简记：
+详见 `oauth-saml-jwt/00-index.md`。简记：
 - `alg=none` 接受
 - `alg=HS256` 用 RS256 公钥当 HMAC 密钥
 - `kid` 路径穿越读 `/dev/null` 当作密钥
@@ -442,9 +442,9 @@ CVSS：`AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H = 8.8` — 接近 RCE。
 
 ## 11. 与其他 playbook 的链接
 
-- 越权 / IDOR 的"维度内"测试 → `playbooks/logic-flaws.md` §3.2
-- API 设计层缺陷（mass assignment / BOLA）→ `playbooks/api-rest.md`
-- JWT / SSO / OAuth 层任意账号 → `playbooks/oauth-saml-jwt.md`
+- 越权 / IDOR 的"维度内"测试 → `playbooks/logic-flaws/00-index.md` §3.2
+- API 设计层缺陷（mass assignment / BOLA）→ `playbooks/api-rest/00-index.md`
+- JWT / SSO / OAuth 层任意账号 → `playbooks/oauth-saml-jwt/00-index.md`
 - 信息泄露找接口 → `playbooks/info-disclosure.md`
 - 配置不当（admin 路径直暴露）→ `playbooks/unauth-access.md`
 

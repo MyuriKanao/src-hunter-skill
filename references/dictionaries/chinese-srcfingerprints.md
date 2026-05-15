@@ -497,7 +497,7 @@ done
 ## 6. 与 playbook / industry 链接
 
 ```
-playbooks/file-upload.md       →  本字典补充国产编辑器 / OA 上传路径
+playbooks/file-upload/00-index.md       →  本字典补充国产编辑器 / OA 上传路径
 playbooks/info-disclosure.md   →  本字典补充国产命中率最高的备份/日志路径
 playbooks/sqli.md              →  本字典补充 27,732 SQLi 案例的高频参数
 playbooks/unauth-access.md     →  本字典补充国产中间件 / OA 默认路径

@@ -87,7 +87,8 @@ skill 内置触发词包括：
 也可以显式调用：
 
 ```text
-/src-hunter <target>
+/src-hunter:src-hunter <target>   # Marketplace 插件安装
+/src-hunter <target>              # Plain git standalone skill
 ```
 
 ## Playbook 列表

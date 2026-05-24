@@ -59,7 +59,12 @@ The skill loads on any of these (and a few more spelled out in `SKILL.md`):
 - 任意账号 / 任意修改 / 任意删除, 密码重置 / 找回密码
 - 默认凭据, Actuator, exposed admin, etc.
 
-Or invoke explicitly: `/src-hunter <target>`.
+Or invoke explicitly:
+
+```text
+/src-hunter:src-hunter <target>   # Marketplace plugin install
+/src-hunter <target>              # Plain git standalone skill
+```
 
 ## Playbook list
 
